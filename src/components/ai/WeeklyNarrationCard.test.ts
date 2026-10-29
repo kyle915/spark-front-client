@@ -44,6 +44,9 @@ describe("dashboard does not require tenantWeeklyNarration", () => {
 
     const card = read("src/components/ai/WeeklyNarrationCard.tsx");
     expect(card).toContain("TenantWeeklyNarrationQuery");
+    expect(card).toContain("narrationSentenceLink");
+    expect(card).toContain("/recaps/list?status=needs_review");
+    expect(card).toContain("when=custom");
     expect(card).not.toMatch(/if\s*\(\s*isClient/);
     expect(card).toMatch(
       /<ErrorBoundary fallback=\{null\}>[\s\S]*<WeeklyNarrationBody/,

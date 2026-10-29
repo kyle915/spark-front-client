@@ -13,9 +13,11 @@
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import SparkEmptyState from "@/shared/SparkEmptyState";
+import SparkSheet from "@/shared/SparkSheet";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
-import { DashboardSkeleton } from "@/layout/PageSkeletons";
+import { DashboardSkeleton, PanelSkeleton } from "@/layout/PageSkeletons";
 import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
@@ -385,12 +387,11 @@ const WeekAheadPanel: React.FC<{
             {`TOP RETAILERS · NEXT ${horizonDays} DAYS`}
           </p>
           {topRetailers.length === 0 ? (
-            <p
-              className="text-[13px]"
-              style={{ color: "rgba(255,255,255,0.45)" }}
-            >
-              Nothing scheduled in this window.
-            </p>
+            <SparkEmptyState
+              className="border-0 bg-transparent py-4"
+              title="Nothing scheduled"
+              body="No events in this window."
+            />
           ) : (
             <ul className="space-y-2">
               {topRetailers.map((row) => (
@@ -442,52 +443,45 @@ const WeekAheadPanel: React.FC<{
             QUICK LINKS
           </p>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => navigate("/recaps/list")}
-              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              Recaps
-            </button>
-            <button
-              onClick={() =>
-                navigate(`/requests/list?when=${trackerWhen}`)
-              }
-              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              Master tracker
-            </button>
-            <button
-              onClick={onOpenApprovals}
-              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              Approvals
-            </button>
-            <button
-              onClick={onOpenPerformance}
-              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              Performance
-            </button>
+            {(
+              [
+                { label: "Approvals", onClick: onOpenApprovals },
+                { label: "Performance", onClick: onOpenPerformance },
+                {
+                  label: "Tracker this week",
+                  onClick: () => {
+                    const today = startOfDay(new Date());
+                    const weekday = today.getDay();
+                    const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+                    const start = new Date(today);
+                    start.setDate(today.getDate() + mondayOffset);
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    navigate(
+                      `/requests/list?when=custom&from=${isoDay(start)}&to=${isoDay(end)}`,
+                    );
+                  },
+                },
+                {
+                  label: "Recaps · Needs review",
+                  onClick: () => navigate("/recaps/list?status=needs_review"),
+                },
+              ] as { label: string; onClick: () => void }[]
+            ).map((link) => (
+              <button
+                key={link.label}
+                type="button"
+                onClick={link.onClick}
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                {link.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -507,6 +501,7 @@ const ClientInner: React.FC = () => {
   // back button traverses between tabs without unmounting the
   // dashboard chrome.
   const [activeTab, setActiveTab] = useState<TabKey>(readTabFromHash);
+  const [approvalsOpen, setApprovalsOpen] = useState(false);
   useEffect(() => {
     const onHashChange = () => setActiveTab(readTabFromHash());
     window.addEventListener("hashchange", onHashChange);
@@ -623,32 +618,14 @@ const ClientInner: React.FC = () => {
             </div>
           }
         >
-          <Suspense
-            fallback={
-              <div
-                className="spark-card p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                Loading approvals…
-              </div>
-            }
-          >
+          <Suspense fallback={<PanelSkeleton label="Loading approvals" />}>
             <ClientApprovalsBody />
           </Suspense>
         </ErrorBoundary>
       )}
 
       {activeTab === "map" && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading account map…
-            </div>
-          }
-        >
+        <Suspense fallback={<PanelSkeleton label="Loading account map" />}>
           <AccountMapBody />
         </Suspense>
       )}
@@ -659,24 +636,41 @@ const ClientInner: React.FC = () => {
         <DashboardProgramSwitch program={program} onChange={choose} />
       ) : null}
 
-      {program === "field" ? null : (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-5 text-sm"
-              style={{ color: "rgba(255,255,255,0.45)" }}
-            >
-              Loading the month ahead…
-            </div>
-          }
+      {counts.approvals > 0 ? (
+        <button
+          type="button"
+          onClick={() => setApprovalsOpen(true)}
+          className="spark-card w-full px-4 py-3 flex items-center justify-between text-left"
         >
+          <span>
+            <span
+              className="mono block text-[10px]"
+              style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
+            >
+              NEEDS YOU
+            </span>
+            <span className="block text-sm font-semibold mt-1">
+              {counts.approvals} approval{counts.approvals === 1 ? "" : "s"} waiting
+            </span>
+          </span>
+          <span
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.14em", color: "var(--spark-orange)" }}
+          >
+            APPROVALS →
+          </span>
+        </button>
+      ) : null}
+
+      {program === "field" ? null : (
+        <Suspense fallback={<PanelSkeleton label="Loading the month ahead" />}>
           <WeekAheadPanel
             tenantId={tenantId ?? null}
             horizonDays={horizonDays}
             onHorizonDays={setHorizonDays}
             dateWindow={dateWindow}
             torch={torch}
-            onOpenApprovals={() => switchTab("approvals")}
+            onOpenApprovals={() => setApprovalsOpen(true)}
             onOpenPerformance={() => switchTab("performance")}
           />
         </Suspense>
@@ -694,6 +688,28 @@ const ClientInner: React.FC = () => {
         </section>
       )}
       </>)}
+
+      <SparkSheet
+        open={approvalsOpen}
+        onOpenChange={setApprovalsOpen}
+        title="Approvals"
+        eyebrow="NEEDS YOU"
+      >
+        <div className="p-4">
+          <ErrorBoundary
+            fallback={
+              <SparkEmptyState
+                title="Approvals couldn't load"
+                body="The rest of your dashboard still works."
+              />
+            }
+          >
+            <Suspense fallback={<PanelSkeleton label="Loading approvals" />}>
+              <ClientApprovalsBody />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </SparkSheet>
     </div>
   );
 };
