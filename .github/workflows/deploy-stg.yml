@@ -22,6 +22,28 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      # Fail closed — empty STG secrets bake `clientId: void 0` into
+      # the bundle. Always build in this job with secrets; never
+      # redeploy a secret-less artifact.
+      - name: Require Vite build secrets
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID_STG }}
+          VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT_STG }}
+          VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+        run: |
+          missing=0
+          for name in VITE_GOOGLE_CLIENT_ID VITE_GRAPHQL_ENDPOINT VITE_MOBILE_LOGIN_URL VITE_GOOGLE_MAPS_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name secret is empty — refusing env-less Hosting build"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Vite build secrets present (values not printed)."
+
       - name: Build
         run: npm run build
         env:
