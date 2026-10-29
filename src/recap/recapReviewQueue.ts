@@ -209,16 +209,27 @@ export function recapQueueWarmTargets(
  * When `lastOpenedUuid` is present in the list, advances past it to the
  * next unapproved item (wrapping to earlier unapproved items if at the end).
  */
+function isQueuedForReview(item: {
+  approved?: boolean;
+  archived?: boolean;
+  archivedAt?: string | null;
+}): boolean {
+  return !item.approved && !item.archived && !item.archivedAt;
+}
+
 export function pickNextReviewItem<
-  T extends { uuid: string; approved?: boolean; archivedAt?: string | null },
+  T extends {
+    uuid: string;
+    approved?: boolean;
+    archived?: boolean;
+    archivedAt?: string | null;
+  },
 >(
   items: readonly T[],
   lastOpenedUuid: string | null | undefined = loadRecapReviewQueue()
     ?.lastOpenedUuid,
 ): T | null {
-  const candidates = items.filter(
-    (item) => !item.approved && !item.archivedAt,
-  );
+  const candidates = items.filter(isQueuedForReview);
   const pool = candidates.length > 0 ? candidates : items;
   if (pool.length === 0) return null;
   if (!lastOpenedUuid) return pool[0];
@@ -227,11 +238,11 @@ export function pickNextReviewItem<
   if (lastIdxInItems >= 0) {
     for (let i = lastIdxInItems + 1; i < items.length; i += 1) {
       const item = items[i];
-      if (!item.approved && !item.archivedAt) return item;
+      if (isQueuedForReview(item)) return item;
     }
     for (let i = 0; i < lastIdxInItems; i += 1) {
       const item = items[i];
-      if (!item.approved && !item.archivedAt) return item;
+      if (isQueuedForReview(item)) return item;
     }
   }
 
