@@ -12,6 +12,8 @@ import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { isTorchTenant } from "@/field/torch";
 import { useDashboardProgram } from "@/field/useDashboardProgram";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
+import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
+import { attentionSnapshotKpis } from "@/shared/sparkStat";
 import { useNavigate } from "react-router";
 import {
   BrandComparePanel,
@@ -30,64 +32,9 @@ import { useBrandView } from "@/components/brandGroup/useBrandView";
 const TodaysSnapshot: React.FC = () => {
   const navigate = useNavigate();
   const counts = useSidebarCounts();
-  const tiles: Array<{
-    label: string;
-    value: number;
-    sub?: string;
-    tone: "lime" | "orange" | "sky" | "gold" | "muted";
-    to: string;
-    hide?: boolean;
-  }> = [
-    {
-      label: "Need your call",
-      value: counts.approvals,
-      sub:
-        counts.approvalsSlaBreach > 0
-          ? `${counts.approvalsSlaBreach} SLA breach`
-          : undefined,
-      tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
-      to: "/approvals",
-      hide: counts.approvals === 0 && counts.approvalsSlaBreach === 0,
-    },
-    {
-      // Wraps the same recapsDue signal the sidebar badge uses, but
-      // surfaces it on the dashboard so kyle sees it on first open
-      // instead of having to scan the sidebar. Drills into the new
-      // /recaps/missing page (PR #488) where he can nudge/file in
-      // one click per row.
-      label: "Recaps due",
-      value: counts.recapsDue,
-      sub:
-        counts.recapsDue > 0
-          ? `Review the ${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} due`
-          : "Caught up",
-      tone: counts.recapsDue > 0 ? "orange" : "gold",
-      to: "/recaps/missing",
-    },
-    {
-      label: "Upcoming · 14d",
-      value: counts.upcoming,
-      tone: "sky",
-      to: "/upcoming",
-      hide: counts.upcoming === 0,
-    },
-    {
-      label: "Unread alerts",
-      value: counts.alertsUnread,
-      tone: "muted",
-      to: "/alerts",
-      hide: counts.alertsUnread === 0,
-    },
-    {
-      label: "Active requests",
-      value: counts.tracker,
-      tone: "muted",
-      to: "/requests/list",
-    },
-  ];
-  const visible = tiles.filter((t) => !t.hide);
-  if (visible.length === 0) return null;
-  const n = visible.length;
+  const tiles = attentionSnapshotKpis(counts);
+  if (tiles.length === 0) return null;
+  const n = tiles.length;
   const gridCols =
     n <= 1
       ? "grid-cols-1"
@@ -99,34 +46,17 @@ const TodaysSnapshot: React.FC = () => {
   return (
     <div className="spark-card p-4 lg:p-5" style={{ borderRadius: 18 }}>
       <div className={`grid ${gridCols} gap-3`}>
-        {visible.map((t) => {
-          const color =
-            t.label === "Recaps due" && t.value > 0
-              ? "var(--spark-orange)"
-              : "var(--spark-text)";
-          return (
-            <button
-              key={t.label}
-              type="button"
-              onClick={() => navigate(t.to)}
-              className="text-left p-1 transition"
-              style={{ background: "transparent", border: "none" }}
-            >
-              <p
-                className="text-sm mb-1"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                {t.label}
-              </p>
-              <p
-                className="tab-num text-2xl lg:text-3xl font-bold leading-none"
-                style={{ color }}
-              >
-                {t.value.toLocaleString()}
-              </p>
-            </button>
-          );
-        })}
+        {tiles.map((t) => (
+          <button
+            key={t.label}
+            type="button"
+            onClick={() => navigate(t.to)}
+            className="text-left p-1 transition"
+            style={{ background: "transparent", border: "none" }}
+          >
+            <SparkKpiLockup {...t} size="lg" />
+          </button>
+        ))}
       </div>
     </div>
   );

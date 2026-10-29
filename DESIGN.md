@@ -6,16 +6,23 @@ This file restates tokens already in `src/index.css` (spark-v2) so coding agents
 
 | Token | Value | CSS |
 | --- | --- | --- |
-| Near-black | `#0a0d09` | `--spark-bg`, Daisy `--color-base-200` |
-| Lime | `#c5f546` | `--spark-lime`, Daisy `--color-primary` |
-| Orange | `#ef5a2a` | `--spark-orange` |
+| Near-black | `#0A0B0D` | `--spark-bg`, Daisy `--color-base-200` |
+| Quiet figure / `--spark-lime` | `#f2f3ee` | Off-white accent token name kept for callers; **not** highlighter lime |
+| Orange | `#ef5a2a` | `--spark-orange` — sole chromatic brand mark (warnings, active nav tick, Needs-you) |
 | Sky | `#5fb8ef` | `--spark-sky` |
-| Surface | `#11140e` / `#161a12` | `--spark-surface` / `--spark-surface-2` |
-| Border | `#1f2418` | `--spark-border` |
+| Surface | `#141416` / `#1a1a1d` | `--spark-surface` / `--spark-surface-2` |
+| Border | `#2a2a2e` | `--spark-border` |
+| Spring | `cubic-bezier(0.22, 1, 0.36, 1)` · `0.35s` | `--spark-spring` / `--spark-spring-duration` |
 
-Use DaisyUI plus the existing `.spark-card`, `.chip`, `.chip-lime`, `.chip-orange`, `.label-mini` utilities. Keep Space Grotesk + JetBrains Mono (already self-hosted). **Do not add San Francisco** (licensing).
+Daisy `--color-primary` on spark-v2 is the quiet off-white (`#f2f3ee`), not neon lime. Use DaisyUI plus `.spark-card`, `.chip`, `.chip-lime` (quiet fill), `.chip-orange`, `.label-mini`. Keep Space Grotesk + JetBrains Mono (already self-hosted). **Do not add San Francisco** (licensing).
 
 Field public URLs live on `client.igniteproductions.co`.
+
+## Quieter dark ops (shipped)
+
+Dashboards and chrome lead with one off-white figure, sentence-case labels, and **orange only** for warnings / Needs-you / the active nav tick. Highlighter lime `#c5f546` is retired from ops chrome. Apple-ops means tighter surfaces, springy sheets (`SparkSheet` / overlays), and ticking KPI numbers (`CountReel`) — not SF Pro, Liquid Glass, lime neon, or a light iOS skin.
+
+Light **RecapDocument** paper stays high-contrast readable. Do not paint dark-ops muted text onto recap paper.
 
 ## Apple-ish (steal 4 treatments, not a new religion)
 
@@ -23,17 +30,17 @@ Kyle liked a bit of Apple-ish scanability. Steal only these, on the dark ops chr
 
 1. **Grouped inset lists** — Recaps compact + Jump groups: small section label, hairline dividers, 12–16px radius container (iOS Settings, not a white sheet).
 2. **Slightly larger card radius** — sheets/cards ~22px. Not squircle soup.
-3. **Frosted topbar** — translucent + blur over the near-black slab. Keep lime chips.
-4. **Soft shadow** — `0 8px 24px rgba(0,0,0,0.28)` on cards. Not neon lime glow, not glassmorphism.
+3. **Frosted topbar** — translucent + blur over the near-black slab. Quiet chips, orange for attention.
+4. **Soft shadow** — `0 8px 24px rgba(0,0,0,0.28)` on cards. Not neon glow, not glassmorphism.
 
-System-like padding in sheets (enough to scan). Not empty marketing whitespace.
+System-like padding in sheets (enough to scan). Not empty marketing whitespace. Sheet / overlay motion uses `--spark-spring`.
 
 ## Popover density (Aakib + Collect UI — steal 3, refuse the rest)
 
 X `1Aakib` 2089078856636588493 was 403 / credits-depleted, so Aakib is inferred from his usual dark SaaS cards (tight hierarchy, compact overlays). Collect UI popup/modal gallery is client-rendered; we stole patterns, not shots.
 
-1. **Stole — compact confirm** — scale+fade from the trigger, dim scrim, 16–20px radius, hairline. Title + one sentence + stacked lime / muted-cancel actions. Not a full-screen takeover.
-2. **Stole — action-sheet grouping** — Jump groups, Ask AI follow-ups, tenant picker rows stay inset lists. Primary lime, cancel muted.
+1. **Stole — compact confirm** — scale+fade from the trigger, dim scrim, 16–20px radius, hairline. Title + one sentence + stacked primary / muted-cancel actions. Not a full-screen takeover.
+2. **Stole — action-sheet grouping** — Jump groups, Ask AI follow-ups, tenant picker rows stay inset lists. Primary quiet off-white or orange when it is attention; cancel muted.
 3. **Stole — share/copy toast** — corner chip, 16px radius, scale+fade. Same chrome as Coming Soon.
 
 Refused: glassmorphism soup, 3D, white iOS sheets, Geist/new fonts, copying Collect UI Dribbble chrome, restyling every page, PhotoLightbox redo (already shipped).
@@ -42,17 +49,17 @@ Refused: glassmorphism soup, 3D, white iOS sheets, Geist/new fonts, copying Coll
 
 Fetched via FxTwitter after X MCP 402 / x.com 403. Posts, not the Best Designs library.
 
-1. **Stole — bento KPI tiles** — Recaps list + Today: compact 3–4 tiles, large tabular number, muted micro-label, optional hint. Lime / orange on real counts only. From Tanjim Lumis dashboard (`2072733178435862728`) and Tanjim data-heavy (`2029592653306753420`).
-2. **Stole — numbered / stat lockups** — Recaps scan rows: stacked ENG / SOLD instead of a mono run-on. Jump: `01` index matching arrow-key order. From Abrar via Best Designs (`2089019356390834639`) + Tanjim data-heavy.
+1. **Stole — bento KPI tiles** — Recaps list + Today / Needs-you: compact tiles, large tabular number (`CountReel` when the count is live), muted micro-label. Orange on real attention counts only.
+2. **Stole — numbered / stat lockups** — Recaps scan rows: stacked ENG / SOLD instead of a mono run-on. Jump: `01` index matching arrow-key order.
 3. **Stole — type hierarchy** — Big number, small label, quieter metadata. Same Space Grotesk + JetBrains Mono. Not a new typeface.
 
-Refused from these posts: light-mode SaaS chrome, “Welcome back Jane”, 3D/isometric template cards, hexagonal heatmaps, honeycomb, dot-matrix charts, neon cyan power-grid viz, sidebar restyle, homepage / liquid metal / orbs / glass soup. Did not redo PR 526 inset/frost/radius/shadow or PR 529 scale-from-trigger / action-sheet / toasts.
+Refused from these posts: light-mode SaaS chrome, “Welcome back Jane”, 3D/isometric template cards, hexagonal heatmaps, honeycomb, dot-matrix charts, neon cyan power-grid viz, sidebar restyle, homepage / liquid metal / orbs / glass soup.
 
 ## Do not
 
 - Restyle to white iOS light mode
 - Liquid metal, orbs, 3D, big marketing heroes
-- Homepage / `ignite-webflow-assets` restyle
-- Install open-design, React Bits, Uiverse, Aura, mapcn
+- Homepage / `igniteproductions.co` / `ignite-webflow-assets` restyle
+- Install open-design, React Bits, Uiverse, Aura, mapcn, or migrate Jump to cmdk
 - Invent trademarks or AI-fake tenant logos — prefer API `image` / `logoUrl`
-- Change lime, orange, or the Spark wordmark
+- Bring back highlighter lime as primary, or change the Spark wordmark

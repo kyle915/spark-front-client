@@ -40,6 +40,7 @@ import {
   BrandViewSwitch,
 } from "@/components/brandGroup/BrandCompare";
 import { useBrandView } from "@/components/brandGroup/useBrandView";
+import { CountReel } from "@/motion/CountReel";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -640,21 +641,29 @@ const ClientInner: React.FC = () => {
         <button
           type="button"
           onClick={() => setApprovalsOpen(true)}
-          className="spark-card w-full px-4 py-3 flex items-center justify-between text-left"
+          className="spark-card w-full px-4 py-3 flex items-center justify-between text-left gap-3"
         >
-          <span>
+          <span className="min-w-0 flex items-baseline gap-3">
             <span
-              className="mono block text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
+              className="tab-num text-3xl font-bold leading-none shrink-0"
+              style={{ color: "var(--spark-orange)" }}
             >
-              NEEDS YOU
+              <CountReel value={counts.approvals} />
             </span>
-            <span className="block text-sm font-semibold mt-1">
-              {counts.approvals} approval{counts.approvals === 1 ? "" : "s"} waiting
+            <span>
+              <span
+                className="mono block text-[10px]"
+                style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
+              >
+                NEEDS YOU
+              </span>
+              <span className="block text-sm font-semibold mt-1">
+                approval{counts.approvals === 1 ? "" : "s"} waiting
+              </span>
             </span>
           </span>
           <span
-            className="mono text-[10px]"
+            className="mono text-[10px] shrink-0"
             style={{ letterSpacing: "0.14em", color: "var(--spark-orange)" }}
           >
             APPROVALS →

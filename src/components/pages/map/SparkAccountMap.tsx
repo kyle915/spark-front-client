@@ -2,7 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   APIProvider,
   Map as GMap,
@@ -148,12 +148,32 @@ const DARK_MAP_STYLE: MapStyleRule[] = [
   },
 ];
 
+const coverageFilterFromParam = (raw: string | null): CoverageFilter => {
+  switch ((raw ?? "").toLowerCase()) {
+    case "sampled":
+      return "sampled";
+    case "repeat":
+      return "repeat";
+    case "never_visited":
+    case "never-visited":
+    case "never":
+      return "never_visited";
+    case "planned":
+      return "planned";
+    default:
+      return "all";
+  }
+};
+
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
-  const [filter, setFilter] = useState<CoverageFilter>("all");
-  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<CoverageFilter>(() =>
+    coverageFilterFromParam(searchParams.get("coverage")),
+  );
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState<string>("all");
   // Single-select retailer filter. "all" = no filter. Values are the
   // exact retailer-name strings we display in the dropdown.
@@ -166,6 +186,22 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
   const [scanned, setScanned] = useState(ACCOUNT_MAP_PAGE_SIZE);
   const [loadingRest, setLoadingRest] = useState(false);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q != null && q !== search) setSearch(q);
+    const cov = coverageFilterFromParam(searchParams.get("coverage"));
+    if (cov !== filter) setFilter(cov);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- URL seeds Jump deep-links once
+  }, [searchParams]);
+
+  const setCoverageFilter = (next: CoverageFilter) => {
+    setFilter(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("coverage");
+    else params.set("coverage", next);
+    setSearchParams(params, { replace: true });
+  };
 
   useEffect(() => {
     if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
@@ -418,46 +454,126 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       {/* Uploader */}
       <AccountUploader onImported={setUploaded} />
 
-      {/* Stats */}
+      {/* Stats — clickable coverage scan */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="spark-card p-4">
-          <p className="label-mini">ACCOUNTS</p>
-          <p className="tab-num text-3xl font-bold mt-1">
-            {counts.all > 0 ? <CountReel value={counts.all} /> : "—"}
-          </p>
-        </div>
-        <div className="spark-card p-4">
-          <p className="label-mini">SAMPLED · 1 VISIT</p>
-          <p
-            className="tab-num text-3xl font-bold mt-1"
-            style={{ color: "var(--spark-lime)" }}
-          >
-            {counts.sampled > 0 ? <CountReel value={counts.sampled} /> : "—"}
-          </p>
-        </div>
-        <div className="spark-card p-4">
-          <p className="label-mini">REPEAT · 2+ VISITS</p>
-          <p
-            className="tab-num text-3xl font-bold mt-1"
-            style={{ color: "var(--spark-sky)" }}
-          >
-            {counts.repeat > 0 ? <CountReel value={counts.repeat} /> : "—"}
-          </p>
-        </div>
-        <div className="spark-card p-4">
-          <p className="label-mini">NEVER VISITED</p>
-          <p
-            className="tab-num text-3xl font-bold mt-1"
-            style={{ color: "var(--spark-orange)" }}
-          >
-            {counts.neverVisited > 0 ? (
-              <CountReel value={counts.neverVisited} />
-            ) : (
-              "—"
-            )}
-          </p>
-        </div>
+        {(
+          [
+            {
+              key: "all" as const,
+              label: "ACCOUNTS",
+              n: counts.all,
+              color: "var(--spark-text)",
+            },
+            {
+              key: "sampled" as const,
+              label: "SAMPLED · 1 VISIT",
+              n: counts.sampled,
+              color: "var(--spark-lime)",
+            },
+            {
+              key: "repeat" as const,
+              label: "REPEAT · 2+ VISITS",
+              n: counts.repeat,
+              color: "var(--spark-sky)",
+            },
+            {
+              key: "never_visited" as const,
+              label: "NEVER VISITED",
+              n: counts.neverVisited,
+              color: "var(--spark-orange)",
+            },
+          ] as const
+        ).map((tile) => {
+          const on = filter === tile.key;
+          return (
+            <button
+              key={tile.key}
+              type="button"
+              onClick={() => setCoverageFilter(tile.key)}
+              className="spark-card p-4 text-left transition"
+              style={{
+                outline: on ? `1.5px solid ${tile.color}` : undefined,
+                background: on ? "rgba(255,255,255,0.03)" : undefined,
+              }}
+              title={`Show ${tile.label.toLowerCase()}`}
+            >
+              <p className="label-mini">{tile.label}</p>
+              <p
+                className="tab-num text-3xl font-bold mt-1"
+                style={{ color: tile.color }}
+              >
+                {tile.n > 0 ? <CountReel value={tile.n} /> : "—"}
+              </p>
+            </button>
+          );
+        })}
       </div>
+
+      {counts.all > 0 ? (
+        <div className="spark-card px-4 py-3 space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.72)" }}>
+              Coverage scan ·{" "}
+              <span style={{ color: "var(--spark-orange)", fontWeight: 600 }}>
+                {counts.neverVisited.toLocaleString()} never visited
+              </span>
+              {" · "}
+              {(
+                ((counts.sampled + counts.repeat) / Math.max(counts.all, 1)) *
+                100
+              ).toFixed(0)}
+              % sampled+
+            </p>
+            {counts.neverVisited > 0 && filter !== "never_visited" ? (
+              <button
+                type="button"
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--spark-orange)",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                }}
+                onClick={() => setCoverageFilter("never_visited")}
+              >
+                SCAN GAPS →
+              </button>
+            ) : null}
+          </div>
+          <div
+            className="h-1.5 rounded-full overflow-hidden flex"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+            aria-hidden
+          >
+            {counts.repeat > 0 ? (
+              <span
+                style={{
+                  width: `${(counts.repeat / counts.all) * 100}%`,
+                  background: "var(--spark-sky)",
+                }}
+              />
+            ) : null}
+            {counts.sampled > 0 ? (
+              <span
+                style={{
+                  width: `${(counts.sampled / counts.all) * 100}%`,
+                  background: "var(--spark-lime)",
+                }}
+              />
+            ) : null}
+            {counts.neverVisited > 0 ? (
+              <span
+                style={{
+                  width: `${(counts.neverVisited / counts.all) * 100}%`,
+                  background: "var(--spark-orange)",
+                  opacity: filter === "never_visited" ? 1 : 0.85,
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {/* Filter row */}
       <SparkFilterBar
@@ -482,7 +598,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         ).map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => setCoverageFilter(f.key)}
             className={f.chip}
             style={
               filter === f.key
@@ -543,10 +659,14 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           search) && (
           <button
             onClick={() => {
-              setFilter("all");
+              setCoverageFilter("all");
               setStateFilter("all");
               setRetailerFilter("all");
               setSearch("");
+              const params = new URLSearchParams(searchParams);
+              params.delete("q");
+              params.delete("coverage");
+              setSearchParams(params, { replace: true });
             }}
             className="mono text-[10px] px-3 py-1.5 rounded-xl"
             style={{
@@ -892,10 +1012,17 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 className="p-6 text-center text-sm"
                 style={{ color: "rgba(255,255,255,0.55)" }}
               >
-                No accounts match.
+                {filter === "never_visited"
+                  ? "No never-visited accounts in this view — coverage looks complete here."
+                  : "No accounts match."}
               </li>
             )}
-            {filtered.slice(0, 200).map((a) => (
+            {(filter === "never_visited"
+              ? [...filtered].sort((a, b) => a.name.localeCompare(b.name))
+              : filtered
+            )
+              .slice(0, 200)
+              .map((a) => (
               <li
                 key={a.key}
                 className="px-4 py-3 transition"

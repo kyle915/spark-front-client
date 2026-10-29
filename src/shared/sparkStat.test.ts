@@ -8,6 +8,7 @@ import {
   recapConversionChip,
   recapListKpis,
   sumConversionBases,
+  attentionSnapshotKpis,
   todayGroundKpis,
 } from "./sparkStat";
 
@@ -313,6 +314,38 @@ describe("3rd-party recaps stay out of totals", () => {
     expect(kpis.find((k) => k.label === "Eng")?.hint).toBe("excl. 1 3rd-party");
     expect(kpis.find((k) => k.label === "Sold")?.hint).toBe("excl. 1 3rd-party");
     expect(kpis.find((k) => k.label === "Conv")?.hint).toBe("Retail + on-prem · excl. 1 3rd-party");
+  });
+});
+
+
+describe("attentionSnapshotKpis", () => {
+  it("hides empty optional tiles and oranges SLA / due", () => {
+    const tiles = attentionSnapshotKpis({
+      approvals: 2,
+      approvalsSlaBreach: 1,
+      recapsDue: 3,
+      upcoming: 0,
+      alertsUnread: 0,
+      tracker: 9,
+    });
+    expect(tiles.map((t) => t.label)).toEqual([
+      "Need your call",
+      "Recaps due",
+      "Active requests",
+    ]);
+    expect(tiles[0]).toMatchObject({
+      count: 2,
+      tone: "orange",
+      deltaAttention: true,
+      to: "/approvals",
+    });
+    expect(tiles[1]).toMatchObject({
+      count: 3,
+      tone: "orange",
+      delta: "Due",
+      to: "/recaps/missing",
+    });
+    expect(tiles[2].to).toBe("/requests/list");
   });
 });
 

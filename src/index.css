@@ -960,6 +960,51 @@ thead .spark-table-sticky-date {
   color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   margin-top: 6px;
 }
+
+/* KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
+.spark-kpi-lockup {
+  min-width: 0;
+}
+.spark-kpi-label {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+.spark-kpi-value {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin: 0;
+  color: var(--spark-text);
+}
+.spark-kpi-value-sm {
+  font-size: 1.25rem;
+}
+.spark-kpi-value-lg {
+  font-size: 2rem;
+}
+.spark-kpi-value.is-lime {
+  color: var(--spark-lime);
+}
+.spark-kpi-value.is-orange {
+  color: var(--spark-orange);
+}
+.spark-kpi-delta {
+  margin: 6px 0 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+}
+.spark-kpi-delta.is-attention {
+  color: var(--spark-orange);
+}
 .spark-idx {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 10px;
@@ -2010,7 +2055,32 @@ tr:hover > td .spark-row-actions > a,
   }
 }
 
-/* Vaul sheet — larger drag affordance + quieter header hairline */
+/* Vaul sheet — springy ops drawer (not Liquid Glass / white iOS) */
+.spark-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(10, 11, 13, 0.55);
+  backdrop-filter: saturate(180%) blur(8px);
+  animation: spark-sheet-scrim-in var(--spark-spring-duration, 0.35s)
+    var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+.spark-sheet-content {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 61;
+  max-height: 92dvh;
+  border-top-left-radius: var(--spark-radius-sheet, 22px);
+  border-top-right-radius: var(--spark-radius-sheet, 22px);
+  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  border: 1px solid var(--spark-border);
+  border-bottom: none;
+  box-shadow: 0 -24px 48px rgba(0, 0, 0, 0.45);
+  transition: transform var(--spark-spring-duration, 0.35s)
+    var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
+}
 .spark-sheet-handle {
   width: 2.75rem;
   height: 0.3rem;
@@ -2021,6 +2091,21 @@ tr:hover > td .spark-row-actions > a,
 .spark-sheet-body {
   /* lf-field-client: clear the home indicator. Parallel PR also edits this file. */
   padding: 0.85rem 1.15rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+@keyframes spark-sheet-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-sheet-scrim,
+  .spark-sheet-content {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* Thin dark scrollbars — main, sidebar, sheets, Jump. Light recap paper keeps the native bar. */

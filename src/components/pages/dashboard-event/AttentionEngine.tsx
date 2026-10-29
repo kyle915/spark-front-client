@@ -3,6 +3,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import { HomeAttentionQuery } from "@/api/queries/HomeAttentionQuery";
 import type { HomeAttentionQuery as HomeAttentionQueryType } from "@api/queries/__generated__/HomeAttentionQuery.graphql";
+import { CountReel } from "@/motion/CountReel";
 import { useAuthStore } from "@/store/authStore";
 
 /**
@@ -15,6 +16,7 @@ import { useAuthStore } from "@/store/authStore";
 
 type AttentionItem = {
   id: string;
+  count: number;
   fact: string;
   cta: string;
   to: string;
@@ -117,27 +119,36 @@ const UpcomingUnscheduledAttention: React.FC<{
 const AttentionRow: React.FC<{ item: AttentionItem }> = ({ item }) => {
   const navigate = useNavigate();
   return (
-    <div
-      className="flex items-center justify-between gap-3 py-3"
-      style={{ borderTop: "1px solid var(--spark-border)" }}
+    <button
+      type="button"
+      onClick={() => navigate(item.to)}
+      className="w-full flex items-center justify-between gap-3 py-3 text-left transition"
+      style={{
+        borderTop: "1px solid var(--spark-border)",
+        background: "transparent",
+        borderLeft: "none",
+        borderRight: "none",
+        borderBottom: "none",
+      }}
     >
-      <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
-        {item.fact}
-      </p>
-      <button
-        type="button"
-        onClick={() => navigate(item.to)}
-        className="text-sm font-medium shrink-0"
-        style={{
-          background: "transparent",
-          color: "rgba(255,255,255,0.72)",
-          border: "none",
-          padding: 0,
-        }}
+      <div className="min-w-0 flex items-baseline gap-3">
+        <span
+          className="tab-num text-2xl font-bold leading-none shrink-0"
+          style={{ color: "var(--spark-orange)" }}
+        >
+          <CountReel value={item.count} />
+        </span>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
+          {item.fact}
+        </p>
+      </div>
+      <span
+        className="mono text-[10px] shrink-0"
+        style={{ letterSpacing: "0.14em", color: "var(--spark-orange)" }}
       >
-        {item.cta}
-      </button>
-    </div>
+        {item.cta.toUpperCase()} →
+      </span>
+    </button>
   );
 };
 
@@ -161,7 +172,8 @@ export const AttentionEngine: React.FC = () => {
   if ((staleCount ?? 0) > 0) {
     items.push({
       id: "stale-pending",
-      fact: `${staleCount} waiting more than 24 hours`,
+      count: staleCount ?? 0,
+      fact: "waiting more than 24 hours",
       cta: "Review now",
       to: "/approvals",
     });
@@ -169,7 +181,8 @@ export const AttentionEngine: React.FC = () => {
   if ((upcomingCount ?? 0) > 0) {
     items.push({
       id: "upcoming-unscheduled",
-      fact: `${upcomingCount} upcoming, not scheduled`,
+      count: upcomingCount ?? 0,
+      fact: "upcoming, not scheduled",
       cta: "Open tracker",
       to: "/requests/list",
     });
@@ -188,10 +201,18 @@ export const AttentionEngine: React.FC = () => {
         onCount={onUpcomingCount}
       />
       {items.length > 0 ? (
-        <div className="flex flex-col">
-          {items.map((it) => (
-            <AttentionRow key={it.id} item={it} />
-          ))}
+        <div className="spark-card px-4 lg:px-5" style={{ borderRadius: 18 }}>
+          <p
+            className="mono text-[10px] pt-3"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
+          >
+            WHAT NEEDS YOU
+          </p>
+          <div className="flex flex-col">
+            {items.map((it) => (
+              <AttentionRow key={it.id} item={it} />
+            ))}
+          </div>
         </div>
       ) : null}
     </>
