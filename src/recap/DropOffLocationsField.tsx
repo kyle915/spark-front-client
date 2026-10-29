@@ -434,10 +434,24 @@ export function DropOffLocationsField({
                       const on = loc.skus.some(
                         (s) => s.productId === p.id && s.cases > 0,
                       );
+                      if (isCheckin) {
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => toggleSku(idx, p)}
+                            className={`recap-option-chip${on ? " is-selected" : ""}`}
+                          >
+                            {p.name}
+                          </button>
+                        );
+                      }
                       return (
                         <button
                           key={p.id}
                           type="button"
+                          aria-pressed={on}
                           onClick={() => toggleSku(idx, p)}
                           style={{
                             padding: "6px 12px",
@@ -445,12 +459,12 @@ export function DropOffLocationsField({
                             fontSize: 13,
                             cursor: "pointer",
                             border: on
-                              ? "none"
-                              : isCheckin
-                                ? "1px solid rgba(0,0,0,0.15)"
-                                : "1px solid rgba(255,255,255,0.2)",
-                            background: on ? accent : "transparent",
-                            color: on ? "#0a0d09" : "inherit",
+                              ? "1px solid var(--spark-orange, #ef5a2a)"
+                              : "1px solid rgba(255,255,255,0.2)",
+                            background: on
+                              ? "rgba(239, 90, 42, 0.85)"
+                              : "transparent",
+                            color: on ? "#fff" : "inherit",
                           }}
                         >
                           {p.name}

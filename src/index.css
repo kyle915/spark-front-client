@@ -1328,20 +1328,40 @@ body { background: var(--spark-bg); }
   font-size: 0.8rem;
   letter-spacing: 0.04em;
 }
-.recap-choice-chip {
+/* Sample format / SKU / choice chips on light paper (RecapDocument +
+   walk-up check-in). Same green selected language as program chip (#793).
+   Off-white --spark-lime (#f2f3ee) washes out on cream — never use it here. */
+.recap-option-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.35rem 0.75rem 0.35rem 0.7rem;
+  padding: 0.35rem 0.75rem;
   border-radius: 999px;
   font-size: 0.8125rem;
   font-weight: 550;
   letter-spacing: 0;
   line-height: 1.25;
   text-transform: none;
+  cursor: pointer;
   color: #14160f;
-  background: #ffffff;
+  background: transparent;
   border: 1px solid #e2e4d8;
-  box-shadow: inset 3px 0 0 #3f5c12;
+  box-shadow: none;
+}
+.recap-choice-chip,
+.recap-option-chip.is-selected {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-transform: none;
+  color: #1f3d0a;
+  background: #d9efb8;
+  border: 1px solid #3f5c12;
+  box-shadow: inset 0 0 0 1px #3f5c12;
+  font-weight: 700;
 }
 .recap-doc .chip {
   font-family: inherit;

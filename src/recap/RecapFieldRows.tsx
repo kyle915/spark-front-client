@@ -59,7 +59,7 @@ export function RecapFieldBlockLabel({ label }: { label: string }) {
   );
 }
 
-/** Product / SKU chip — dark type on white, lime as a hairline accent only. */
+/** Selected Sample format / Product / SKU chip on light paper (green fill). */
 export function RecapChoiceChip({ label }: { label: string }) {
   return <span className="recap-choice-chip">{formatRecapProductName(label)}</span>;
 }

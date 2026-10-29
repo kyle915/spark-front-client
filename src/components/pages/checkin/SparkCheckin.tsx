@@ -4452,7 +4452,7 @@ function RecapForm({
 function MultiselectFieldInput({
   field,
   value,
-  accent,
+  accent: _accent,
   onChange,
   products,
   sampleQtys,
@@ -4547,16 +4547,9 @@ function MultiselectFieldInput({
             <button
               key={o}
               type="button"
+              aria-pressed={on}
               onClick={() => toggle(o)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 999,
-                fontSize: 13,
-                cursor: "pointer",
-                border: on ? "none" : "1px solid rgba(0,0,0,0.15)",
-                background: on ? accent : "transparent",
-                color: on ? "#0a0d09" : "inherit",
-              }}
+              className={`recap-option-chip${on ? " is-selected" : ""}`}
             >
               {o}
             </button>
