@@ -493,8 +493,9 @@ const RecapCard: React.FC<{
     style={{
       ...(selected
         ? {
-            outline: "2px solid var(--spark-lime)",
+            outline: "2px solid rgba(239,90,42,0.85)",
             outlineOffset: 2,
+            boxShadow: "inset 0 0 0 1px rgba(239,90,42,0.35)",
           }
         : {}),
       ...(emptyShell
@@ -537,7 +538,7 @@ const RecapCard: React.FC<{
         onChange={onToggleSelect}
         className="cursor-pointer"
         style={{
-          accentColor: "var(--spark-lime)",
+          accentColor: "var(--spark-orange, #ef5a2a)",
           width: 14,
           height: 14,
           display: "block",
@@ -835,11 +836,15 @@ const RecapCompactRow: React.FC<{
         padding: "3px 10px",
         gap: 8,
         background: focused
-          ? "rgba(239,90,42,0.10)"
+          ? "rgba(239,90,42,0.14)"
           : selected
-            ? "rgba(239,90,42,0.07)"
+            ? "var(--spark-selected-row, rgba(239,90,42,0.18))"
             : "transparent",
-        outline: focused ? "1px solid rgba(239,90,42,0.55)" : undefined,
+        outline: focused
+          ? "1px solid rgba(239,90,42,0.65)"
+          : selected
+            ? "1px solid rgba(239,90,42,0.45)"
+            : undefined,
         outlineOffset: -1,
       }}
     >

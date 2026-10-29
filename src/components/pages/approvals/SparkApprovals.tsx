@@ -154,7 +154,7 @@ const ApprovalRow: React.FC<{
       onClick={onFocus}
       className={
         selected
-          ? "cursor-pointer transition-colors bg-[rgba(242,243,238,0.07)]"
+          ? "spark-row-selected cursor-pointer transition-colors"
           : focused
             ? "cursor-pointer transition-colors bg-[rgba(95,184,239,0.08)]"
             : zebra
@@ -164,7 +164,7 @@ const ApprovalRow: React.FC<{
       style={{
         borderBottom: "1px solid var(--spark-border)",
         outline: selected
-          ? "2px solid var(--spark-lime)"
+          ? "2px solid rgba(239,90,42,0.65)"
           : focused
             ? "2px solid var(--spark-sky)"
             : "none",

@@ -520,11 +520,27 @@ body:has(.spark-login-page) {
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
 }
 .spark-input::placeholder { color: rgba(255, 255, 255, 0.4); }
-.spark-input:hover { border-color: rgba(242, 243, 238, 0.25); }
+.spark-input:hover { border-color: rgba(242, 243, 238, 0.35); }
 .spark-input:focus {
-  border-color: var(--spark-lime, #f2f3ee);
-  box-shadow: 0 0 0 3px rgba(242, 243, 238, 0.15);
+  border-color: rgba(242, 243, 238, 0.7);
+  box-shadow: 0 0 0 3px rgba(242, 243, 238, 0.28);
   background: rgba(17, 20, 14, 0.95);
+}
+.spark-input::selection {
+  background: var(--spark-selection-bg, rgba(239, 90, 42, 0.55));
+  color: var(--spark-selection-fg, #f2f3ee);
+}
+.spark-input::-moz-selection {
+  background: var(--spark-selection-bg, rgba(239, 90, 42, 0.55));
+  color: var(--spark-selection-fg, #f2f3ee);
+}
+.recap-doc .spark-input::selection {
+  background: #d9efb8;
+  color: #1f3d0a;
+}
+.recap-doc .spark-input::-moz-selection {
+  background: #d9efb8;
+  color: #1f3d0a;
 }
 
 /* === Card === */
@@ -659,8 +675,8 @@ body:has(.spark-login-page) {
 .spark-filter-bar input.spark-filter-search:focus,
 .spark-filter-bar input.spark-filter-search:focus-visible,
 .spark-filter-bar select:focus-visible {
-  border-color: rgba(242, 243, 238, 0.45);
-  box-shadow: 0 0 0 2px rgba(242, 243, 238, 0.14);
+  border-color: rgba(242, 243, 238, 0.7);
+  box-shadow: 0 0 0 2px rgba(242, 243, 238, 0.28);
 }
 .spark-filter-bar .chip,
 .spark-filter-bar .pill-btn {
@@ -1994,8 +2010,14 @@ body { background: var(--spark-bg); }
    Focus rings for keyboard users; quieter row-action chrome; sheet hit targets.
    Do not adopt Untitled/Kibo/shadcn kits wholesale. */
 :root {
-  --spark-focus-ring: rgba(242, 243, 238, 0.45);
+  --spark-focus-ring: rgba(242, 243, 238, 0.72);
   --spark-focus-offset: 2px;
+  /* Native copy/paste highlight on dark ops — orange only chromatic. */
+  --spark-selection-bg: rgba(239, 90, 42, 0.55);
+  --spark-selection-fg: #f2f3ee;
+  /* Selected rows / chips on quiet near-black surfaces. */
+  --spark-selected-row: rgba(239, 90, 42, 0.18);
+  --spark-selected-row-hover: rgba(239, 90, 42, 0.26);
   --spark-text-secondary: rgba(255, 255, 255, 0.62);
   --spark-text-meta: rgba(255, 255, 255, 0.48);
   --spark-faint: rgba(255, 255, 255, 0.38);
@@ -2027,9 +2049,36 @@ a.outline-none:focus-visible,
   outline-color: var(--recap-heading, #3f5c12);
 }
 
+/* Copy/paste highlight — quieter chrome left off-white-on-black nearly
+   invisible. Orange on dark ops; green on RecapDocument paper (same
+   affordance family as APPROVED / selected program chip). */
 ::selection {
-  background: rgba(242, 243, 238, 0.28);
-  color: inherit;
+  background: var(--spark-selection-bg, rgba(239, 90, 42, 0.55));
+  color: var(--spark-selection-fg, #f2f3ee);
+}
+::-moz-selection {
+  background: var(--spark-selection-bg, rgba(239, 90, 42, 0.55));
+  color: var(--spark-selection-fg, #f2f3ee);
+}
+.recap-doc ::selection {
+  background: #d9efb8;
+  color: #1f3d0a;
+}
+.recap-doc ::-moz-selection {
+  background: #d9efb8;
+  color: #1f3d0a;
+}
+
+/* Selected list/table rows on dark ops (Tracker, bulk select). */
+.spark-row-selected,
+tr.spark-row-selected,
+[data-spark-row-selected="true"] {
+  background: var(--spark-selected-row, rgba(239, 90, 42, 0.18)) !important;
+}
+.spark-row-selected:hover,
+tr.spark-row-selected:hover,
+[data-spark-row-selected="true"]:hover {
+  background: var(--spark-selected-row-hover, rgba(239, 90, 42, 0.26)) !important;
 }
 
 /* Dark-ops muted ladder must not wash out light recap paper. */

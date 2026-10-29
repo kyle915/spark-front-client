@@ -594,7 +594,7 @@ const TrackerTable: React.FC<{
                 <tr
                   className={
                     selected
-                      ? "cursor-pointer transition-colors bg-[rgba(242,243,238,0.07)] hover:bg-[rgba(242,243,238,0.12)]"
+                      ? "spark-row-selected cursor-pointer transition-colors"
                       : zebra
                         ? "cursor-pointer transition-colors bg-white/[0.025] hover:bg-white/[0.07]"
                         : "cursor-pointer transition-colors hover:bg-white/[0.07]"
@@ -614,7 +614,7 @@ const TrackerTable: React.FC<{
                         className="checkbox checkbox-xs"
                         style={{
                           borderColor: "rgba(255,255,255,0.35)",
-                          accentColor: "var(--spark-lime)",
+                          accentColor: "var(--spark-orange, #ef5a2a)",
                         }}
                       />
                     </td>
