@@ -11,7 +11,7 @@ const TAB_LABELS: Record<RecapDetailTab, string> = {
 };
 
 /**
- * Origin-style detail chrome shared by legacy Recap + CustomRecap views.
+ * Origin-style detail chrome shared by legacy Recap + CustomRecap.
  * Layout only — no GraphQL, no approve/share logic.
  */
 
@@ -25,22 +25,31 @@ export function RecapDetailBackLink({
   children: ReactNode;
 }) {
   const className =
-    "mono text-[11px] transition hover:opacity-90";
-  const style = {
-    letterSpacing: "0.14em" as const,
-    color: "rgba(255,255,255,0.45)",
-  };
+    "recap-detail-back mono text-[11px] transition hover:opacity-90";
   if (to) {
     return (
-      <Link to={to} className={className} style={style}>
+      <Link to={to} className={className}>
         {children}
       </Link>
     );
   }
   return (
-    <button type="button" onClick={onClick} className={className} style={style}>
+    <button type="button" onClick={onClick} className={className}>
       {children}
     </button>
+  );
+}
+
+/** Tight cluster for segmented tabs + KPI strip on the paper. */
+export function RecapDetailChrome({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("recap-detail-chrome", className)}>{children}</div>
   );
 }
 
@@ -140,5 +149,9 @@ export function RecapDetailPanel({
   className?: string;
 }) {
   if (!active) return null;
-  return <div className={cn("space-y-6", className)}>{children}</div>;
+  return (
+    <div className={cn("recap-detail-panel space-y-5", className)}>
+      {children}
+    </div>
+  );
 }
