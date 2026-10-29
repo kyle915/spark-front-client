@@ -2,6 +2,8 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import { PanelSkeleton } from "@/layout/PageSkeletons";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__generated__/RecapsListQuery.graphql";
@@ -394,17 +396,10 @@ const ClientApprovalsInner: React.FC = () => {
 
   if (visibleRows.length === 0) {
     return (
-      <div
-        className="spark-card p-10 text-center"
-        style={{ borderRadius: 16 }}
-      >
-        <p className="display text-2xl font-bold" style={{ letterSpacing: "-0.02em" }}>
-          You&rsquo;re all caught up.
-        </p>
-        <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          Nothing awaiting your approval.
-        </p>
-      </div>
+      <SparkEmptyState
+        title="You're all caught up."
+        body="Nothing awaiting your approval."
+      />
     );
   }
 
@@ -756,17 +751,10 @@ const ClientRequestApprovalsInner: React.FC = () => {
 
   if (visible.length === 0) {
     return (
-      <div className="spark-card p-10 text-center" style={{ borderRadius: 16 }}>
-        <p
-          className="display text-2xl font-bold"
-          style={{ letterSpacing: "-0.02em" }}
-        >
-          You&rsquo;re all caught up.
-        </p>
-        <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-          No requests awaiting your approval.
-        </p>
-      </div>
+      <SparkEmptyState
+        title="You're all caught up."
+        body="No requests awaiting your approval."
+      />
     );
   }
 
@@ -845,16 +833,7 @@ export const ClientApprovalsBody: React.FC = () => {
         ))}
       </div>
 
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-8 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Loading your approvals…
-          </div>
-        }
-      >
+      <Suspense fallback={<PanelSkeleton label="Loading your approvals" />}>
         {tab === "requests" ? (
           <ClientRequestApprovalsInner />
         ) : (

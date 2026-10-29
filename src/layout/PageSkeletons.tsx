@@ -72,6 +72,21 @@ export function AppShellSkeleton({
   );
 }
 
+/** Compact card shimmer for a dashboard panel, map, or KPI slot. */
+export function PanelSkeleton({ label = "Loading" }: { label?: string }) {
+  return (
+    <div
+      className="spark-card p-5 space-y-3"
+      aria-busy="true"
+      aria-label={label}
+    >
+      <div className="skeleton-block" style={{ height: 12, width: 160 }} />
+      <div className="skeleton-block" style={{ height: 96 }} />
+      <div className="skeleton-block" style={{ height: 14, width: "55%" }} />
+    </div>
+  );
+}
+
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl" aria-hidden="true">

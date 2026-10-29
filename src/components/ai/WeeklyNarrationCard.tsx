@@ -1,9 +1,54 @@
 import { Suspense } from "react";
+import { Link } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantWeeklyNarrationQuery } from "@/api/queries/TenantWeeklyNarrationQuery";
 import type { TenantWeeklyNarrationQuery as TenantWeeklyNarrationQueryType } from "@api/queries/__generated__/TenantWeeklyNarrationQuery.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import AiMarkdown from "./AiMarkdown";
+
+const MARKET_SKIP = new Set([
+  "THE",
+  "THIS",
+  "RETAIL",
+  "TOTAL",
+  "WEEK",
+  "ON",
+  "FILED",
+  "PREMISE",
+]);
+
+export function trackerWeekHref(weekStart: string, weekEnd: string): string {
+  return `/requests/list?when=custom&from=${encodeURIComponent(weekStart)}&to=${encodeURIComponent(weekEnd)}`;
+}
+
+/** One action per narration sentence: review queue, a named market, or the week in Tracker. */
+export function narrationSentenceLink(
+  sentence: string,
+  weekStart: string,
+  weekEnd: string,
+): { href: string; action: string } {
+  const tracker = trackerWeekHref(weekStart, weekEnd);
+  if (/\b(needs review|need review|awaiting approval|unapproved)\b/i.test(sentence)) {
+    return { href: "/recaps/list?status=needs_review", action: "Needs review" };
+  }
+  const marketMatch = sentence.match(
+    /\b(?:in|across)\s+([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)?)\b/,
+  );
+  const market = marketMatch?.[1] ?? "";
+  if (market && !MARKET_SKIP.has(market.toUpperCase())) {
+    return {
+      href: `${tracker}&market=${encodeURIComponent(market.toUpperCase())}`,
+      action: market,
+    };
+  }
+  return { href: tracker, action: "Tracker" };
+}
+
+function splitSentences(body: string): string[] {
+  return body
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
 
 /**
  * Stored weekly paragraph from the narration job. Shown on the admin
@@ -60,7 +105,44 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       </div>
       {narration ? (
         <>
-          <AiMarkdown>{narration.body}</AiMarkdown>
+          <ul className="space-y-2">
+            {splitSentences(narration.body).map((sentence) => {
+              const link = narrationSentenceLink(
+                sentence,
+                narration.weekStart,
+                narration.weekEnd,
+              );
+              return (
+                <li key={sentence} className="text-sm leading-relaxed">
+                  <Link to={link.href} style={{ color: "var(--spark-text)" }}>
+                    {sentence}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Link
+              to={trackerWeekHref(narration.weekStart, narration.weekEnd)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              Tracker this week
+            </Link>
+            <Link
+              to="/recaps/list?status=needs_review"
+              className="px-3 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              Needs review
+            </Link>
+          </div>
           <p
             className="mono text-[10px] mt-4"
             style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
