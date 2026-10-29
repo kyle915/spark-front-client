@@ -578,11 +578,7 @@ const RecapCard: React.FC<{
       </span>
       <span
         className={`absolute top-2 right-2 chip ${
-          emptyShell
-            ? ""
-            : approved
-              ? "chip-lime"
-              : "chip-orange"
+          emptyShell ? "" : approved ? "" : "chip-orange"
         }`}
         style={
           emptyShell
@@ -591,7 +587,16 @@ const RecapCard: React.FC<{
                 border: "1px solid rgba(255,255,255,0.18)",
                 color: "rgba(255,255,255,0.62)",
               }
-            : undefined
+            : approved
+              ? {
+                  // Reminted chip-lime is off-white outline — unreadable as
+                  // "approved" on busy hero photos. Match the green used by
+                  // the "Approved by …" meta line under the card title.
+                  background: "rgba(197,245,70,0.92)",
+                  border: "1px solid rgba(197,245,70,1)",
+                  color: "#0a0d09",
+                }
+              : undefined
         }
       >
         ● <StatusMorph value={statusText} />
