@@ -1725,7 +1725,10 @@ const RecapCustomViewInner = ({
                     <StatusMorph value={statusLabel} />
                   </span>
                   {recap.customRecapTemplate?.name && (
-                    <span className="chip chip-muted">
+                    <span
+                      className="chip recap-program-chip is-selected"
+                      aria-current="true"
+                    >
                       {recap.customRecapTemplate.name}
                     </span>
                   )}
