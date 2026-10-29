@@ -439,7 +439,20 @@ const TrackerTable: React.FC<{
                       className="block text-xs mt-0.5"
                       style={{ color: "rgba(255,255,255,0.55)" }}
                     >
-                      {r.type}
+                      {r.market}
+                      {r.assignedBa > 0
+                        ? ` · ${r.assignedBa} BA${r.assignedBa === 1 ? "" : "s"}`
+                        : " · No BA"}
+                      {r.type && r.type !== "—" ? ` · ${r.type}` : ""}
+                    </span>
+                    <span
+                      className="mono block text-[10px] mt-1"
+                      style={{
+                        letterSpacing: "0.12em",
+                        color: "var(--spark-orange)",
+                      }}
+                    >
+                      OPEN →
                     </span>
                   </button>
                 </li>
@@ -2018,6 +2031,7 @@ export default function MasterTracker() {
 
         {torchProgram ? <ProgramSwitch active="retail" /> : null}
 
+        <div className="sticky top-0 z-20 flex flex-col gap-2 spark-sticky-filters">
         <SparkFilterBar
           label="STATUS"
           search={
@@ -2183,6 +2197,7 @@ export default function MasterTracker() {
             </button>
           )}
         </SparkFilterBar>
+        </div>
 
         {planId ? (
           <div
