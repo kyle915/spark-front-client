@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { UploadUrlQuery } from "@/api/queries/UploadUrlQuery";
@@ -34,6 +34,7 @@ type FileRow = {
   id: string;
   name: string;
   state: FileState;
+  previewUrl: string | null;
 };
 
 // NOTE: keep photo accept as the broad `image/*`. iOS Safari falls back
@@ -58,6 +59,17 @@ export const RecapUploader: React.FC<Props> = ({
   const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState<FileRow[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const previewsRef = useRef<string[]>([]);
+  const revokePreviews = () => {
+    for (const url of previewsRef.current) URL.revokeObjectURL(url);
+    previewsRef.current = [];
+  };
+  useEffect(() => {
+    const urls = previewsRef;
+    return () => {
+      for (const url of urls.current) URL.revokeObjectURL(url);
+    };
+  }, []);
 
   const safeFilename = (raw: string) =>
     raw
@@ -65,8 +77,8 @@ export const RecapUploader: React.FC<Props> = ({
       .replace(/_+/g, "_")
       .slice(0, 80);
 
-  const setRow = (id: string, state: FileState) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, state } : r)));
+  const setRow = (id: string, patch: Partial<Pick<FileRow, "state" | "previewUrl">>) =>
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
   // Takes a plain File[] (NOT a live FileList). The caller snapshots
   // the FileList into an array before clearing the <input>, because
@@ -82,13 +94,26 @@ export const RecapUploader: React.FC<Props> = ({
       state: "uploading" as const,
       file,
     }));
+    revokePreviews();
     setBusy(true);
-    setRows(batch.map(({ id, name, state }) => ({ id, name, state })));
+    setRows(
+      batch.map(({ id, name, state }) => ({
+        id,
+        name,
+        state,
+        previewUrl: null,
+      })),
+    );
     let done = 0;
     let failed = 0;
     for (const item of batch) {
       // Photos + image receipts: HEIC→JPEG + downscale. PDFs pass through.
       const prepared = await prepareImageForUpload(item.file);
+      if (prepared.type.startsWith("image/")) {
+        const previewUrl = URL.createObjectURL(prepared);
+        previewsRef.current.push(previewUrl);
+        setRow(item.id, { previewUrl });
+      }
       const contentType = prepared.type || "application/octet-stream";
       const stamp = Date.now();
       const prefix = category === "receipt" ? "recaps/receipts" : "recaps";
@@ -109,10 +134,10 @@ export const RecapUploader: React.FC<Props> = ({
         });
         if (!res.ok) throw new Error(`Upload failed (${res.status})`);
         onUploaded(blobName, category);
-        setRow(item.id, "done");
+        setRow(item.id, { state: "done" });
         done += 1;
       } catch {
-        setRow(item.id, "failed");
+        setRow(item.id, { state: "failed" });
         failed += 1;
       }
     }
@@ -146,7 +171,7 @@ export const RecapUploader: React.FC<Props> = ({
   const totalCount = rows.length;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-64">
       {/* Library: multiple, no capture — iOS Camera Roll multi-select. */}
       <input
         ref={libraryRef}
@@ -191,23 +216,21 @@ export const RecapUploader: React.FC<Props> = ({
           setDragOver(false);
           takeFiles(e.dataTransfer.files);
         }}
-        className="w-full rounded-xl px-4 py-5 text-sm font-semibold transition active:scale-[0.99]"
-        style={{
-          background: dragOver ? "rgba(242,243,238,0.10)" : "transparent",
-          color: "var(--spark-text)",
-          border: `2px dashed ${
-            dragOver ? "var(--spark-lime)" : "var(--spark-border)"
-          }`,
-          opacity: busy ? 0.7 : 1,
-        }}
+        className={`recap-upload-library w-full rounded-xl px-4 py-5 text-sm font-semibold transition active:scale-[0.99]${
+          dragOver ? " is-drag" : ""
+        }${doneCount > 0 ? " is-filled" : ""}`}
+        style={{ opacity: busy ? 0.7 : 1 }}
       >
         <span className="block">{busy ? "Uploading…" : label}</span>
         <span
-          className="mono text-[10px] mt-1 block"
-          style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+          className={`recap-upload-meta mono text-[10px] mt-1 block${
+            totalCount > 0 && doneCount === totalCount ? " is-complete" : ""
+          }`}
         >
           {totalCount > 0
-            ? `${doneCount}/${totalCount}`
+            ? doneCount === totalCount
+              ? `${doneCount} uploaded`
+              : `${doneCount}/${totalCount}`
             : `PHOTO LIBRARY · UP TO ${PHOTO_CAP}`}
         </span>
       </button>
@@ -215,13 +238,8 @@ export const RecapUploader: React.FC<Props> = ({
         type="button"
         onClick={() => cameraRef.current?.click()}
         disabled={busy}
-        className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-[0.99]"
-        style={{
-          background: "transparent",
-          color: "var(--spark-text)",
-          border: "1px solid var(--spark-border)",
-          opacity: busy ? 0.7 : 1,
-        }}
+        className="recap-upload-camera w-full rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-[0.99]"
+        style={{ opacity: busy ? 0.7 : 1 }}
       >
         {cameraLabel}
       </button>
@@ -230,23 +248,19 @@ export const RecapUploader: React.FC<Props> = ({
           {rows.map((row) => (
             <li
               key={row.id}
-              className="flex items-center justify-between gap-3 text-xs"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              className="recap-upload-row flex items-center justify-between gap-3 text-xs"
+              data-state={row.state}
             >
-              <span className="truncate">{row.name}</span>
-              <span
-                className="mono shrink-0"
-                style={{
-                  letterSpacing: "0.12em",
-                  color:
-                    row.state === "done"
-                      ? "var(--spark-lime)"
-                      : row.state === "failed"
-                        ? "var(--spark-orange, #ef5a2a)"
-                        : "rgba(255,255,255,0.45)",
-                }}
-              >
-                {row.state}
+              {row.previewUrl ? (
+                <img src={row.previewUrl} alt="" className="recap-upload-thumb" />
+              ) : null}
+              <span className="truncate flex-1">{row.name}</span>
+              <span className="recap-upload-status shrink-0">
+                {row.state === "done"
+                  ? "✓ Uploaded"
+                  : row.state === "failed"
+                    ? "Failed"
+                    : "Uploading"}
               </span>
             </li>
           ))}
