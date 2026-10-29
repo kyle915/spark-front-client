@@ -193,6 +193,10 @@ type Row = {
   // Activation Plan this request belongs to (null when unplanned).
   planId: string | null;
   planName: string | null;
+  // Assigned RMM (typo preserved from GraphQL: rmmAsigned). Used for
+  // "By RMM" group headers; empty label when unassigned.
+  rmmId: string | null;
+  rmmLabel: string;
 };
 
 export const parseCalendarDate = (
@@ -310,10 +314,18 @@ const fmtGroupHeading = (raw: string): string => {
   });
 };
 
+type TrackerGroupBy = "none" | "date" | "rmm";
+
+const UNASSIGNED_RMM_LABEL = "Unassigned RMM";
+
+const rmmGroupKey = (r: Row): string => r.rmmId ?? "";
+const rmmGroupHeading = (r: Row): string =>
+  r.rmmLabel.trim() || UNASSIGNED_RMM_LABEL;
+
 const TrackerTable: React.FC<{
   rows: Row[];
   mentionables: Mentionable[];
-  groupBy: "none" | "date";
+  groupBy: TrackerGroupBy;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   selectionEnabled?: boolean;
@@ -417,12 +429,37 @@ const TrackerTable: React.FC<{
           />
         ) : (
           <ul className="divide-y" style={{ borderColor: "var(--spark-border)" }}>
-            {visibleRows.map((r) => {
+            {visibleRows.map((r, rowIdx) => {
               const slug = r.statusSlug.toLowerCase();
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
               const label = STATUS_LABEL[slug] ?? r.statusSlug.toUpperCase();
+              const prev = rowIdx > 0 ? visibleRows[rowIdx - 1] : null;
+              const thisDate = r.date.slice(0, 10);
+              const showDateHeader =
+                groupBy === "date" && thisDate !== (prev?.date.slice(0, 10) ?? "");
+              const showRmmHeader =
+                groupBy === "rmm" &&
+                rmmGroupKey(r) !== (prev ? rmmGroupKey(prev) : null);
+              const groupHeading = showDateHeader
+                ? fmtGroupHeading(thisDate)
+                : showRmmHeader
+                  ? rmmGroupHeading(r)
+                  : null;
               return (
                 <li key={r.uuid}>
+                  {groupHeading ? (
+                    <div
+                      className="px-4 py-2 mono"
+                      style={{
+                        letterSpacing: "0.16em",
+                        fontSize: 11,
+                        color: "var(--spark-lime)",
+                        background: "rgba(242,243,238,0.04)",
+                      }}
+                    >
+                      {groupHeading.toUpperCase()}
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     className="w-full text-left px-4 py-3"
@@ -560,13 +597,22 @@ const TrackerTable: React.FC<{
               </tr>
             )}
             {visibleRows.map((r, rowIdx) => {
-              // Date-group headers — insert when the date changes vs the
-              // previous row. Rows are already in DB order; for date grouping
-              // we rely on that ordering being date-sorted (descending).
-              const prevDate = rowIdx > 0 ? visibleRows[rowIdx - 1].date.slice(0, 10) : "";
+              // Group headers — insert when the active group key changes
+              // vs the previous row. Date grouping relies on date sort;
+              // RMM grouping sorts by label in MasterTrackerInner.
+              const prev = rowIdx > 0 ? visibleRows[rowIdx - 1] : null;
               const thisDate = r.date.slice(0, 10);
-              const showGroupHeader =
-                groupBy === "date" && thisDate !== prevDate;
+              const showDateHeader =
+                groupBy === "date" && thisDate !== (prev?.date.slice(0, 10) ?? "");
+              const showRmmHeader =
+                groupBy === "rmm" &&
+                rmmGroupKey(r) !== (prev ? rmmGroupKey(prev) : null);
+              const showGroupHeader = showDateHeader || showRmmHeader;
+              const groupHeading = showDateHeader
+                ? fmtGroupHeading(thisDate)
+                : showRmmHeader
+                  ? rmmGroupHeading(r)
+                  : "";
               const headerEl = showGroupHeader ? (
                 <tr key={`hdr-${rowIdx}`}>
                   <td
@@ -581,7 +627,7 @@ const TrackerTable: React.FC<{
                       borderBottom: "1px solid var(--spark-border)",
                     }}
                   >
-                    {fmtGroupHeading(thisDate).toUpperCase()}
+                    {groupHeading.toUpperCase()}
                   </td>
                 </tr>
               ) : null;
@@ -1127,7 +1173,7 @@ const MasterTrackerInner: React.FC<{
   activeStatus: string;
   search: string;
   rmmFilter: string;
-  groupBy: "none" | "date";
+  groupBy: TrackerGroupBy;
   dateRange: TrackerDateRange;
   customRange: TrackerCustomRange | null;
   sortMode: "date-desc" | "date-asc" | "venue" | "status";
@@ -1312,6 +1358,13 @@ const MasterTrackerInner: React.FC<{
         planName: n.activationPlan?.name
           ? String(n.activationPlan.name)
           : null,
+        rmmId: n.rmmAsigned?.id ? String(n.rmmAsigned.id) : null,
+        rmmLabel: n.rmmAsigned
+          ? [n.rmmAsigned.firstName, n.rmmAsigned.lastName]
+              .filter(Boolean)
+              .join(" ")
+              .trim() || UNASSIGNED_RMM_LABEL
+          : UNASSIGNED_RMM_LABEL,
       };
   }, []);
 
@@ -1438,8 +1491,17 @@ const MasterTrackerInner: React.FC<{
         break;
       }
     }
+    // Contiguous RMM sections for group headers; keep prior sort as
+    // the within-group order via stable secondary compare.
+    if (groupBy === "rmm") {
+      out.sort((a, b) => {
+        const byLabel = rmmGroupHeading(a).localeCompare(rmmGroupHeading(b));
+        if (byLabel !== 0) return byLabel;
+        return 0;
+      });
+    }
     return out;
-  }, [allRows, sortMode, reqNeedle]);
+  }, [allRows, sortMode, reqNeedle, groupBy]);
 
   useEffect(() => {
     if (onVisibleRowsChange) onVisibleRowsChange(rows);
@@ -1580,9 +1642,7 @@ export default function MasterTracker() {
   const [activeStatus, setActiveStatus] = useState<string>(
     initialUrlState.status,
   );
-  // "By RMM" group is on the roadmap — needs rmmAsigned info per row,
-  // which requires extending RequestsQuery.
-  const [groupBy, setGroupBy] = useState<"none" | "date">("none");
+  const [groupBy, setGroupBy] = useState<TrackerGroupBy>("none");
   const [search, setSearch] = useState<string>("");
   const [cancelDemoOpen, setCancelDemoOpen] = useState(false);
   const [rmmFilter, setRmmFilter] = useState<string>("all");
@@ -1702,7 +1762,9 @@ export default function MasterTracker() {
     const nextRange = foundRange === "custom" ? "all" : foundRange;
     const nextMarket = v.marketFilter ?? "all";
     setActiveStatus(nextStatus);
-    setGroupBy(v.groupBy === "date" ? "date" : "none");
+    setGroupBy(
+      v.groupBy === "date" || v.groupBy === "rmm" ? v.groupBy : "none",
+    );
     setSearch(v.search ?? "");
     setRmmFilter(v.rmmFilter ?? "all");
     setDateRange(nextRange);
@@ -1781,6 +1843,7 @@ export default function MasterTracker() {
       "Type",
       "SKUs",
       "Time",
+      "RMM",
       "Scheduling",
       "Non-Active Product",
       "Recap",
@@ -1805,6 +1868,7 @@ export default function MasterTracker() {
           r.type,
           r.skus.join("; "),
           r.timeLabel,
+          r.rmmLabel,
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
             : "",
@@ -1856,6 +1920,7 @@ export default function MasterTracker() {
       "Type",
       "SKUs",
       "Time",
+      "RMM",
       "Scheduling",
       "Non-Active Product",
       "Recap",
@@ -1877,6 +1942,7 @@ export default function MasterTracker() {
           r.type,
           r.skus.join("; "),
           r.timeLabel,
+          r.rmmLabel,
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
             : "",
@@ -2056,6 +2122,12 @@ export default function MasterTracker() {
                   className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
                 >
                   By date
+                </button>
+                <button
+                  onClick={() => setGroupBy("rmm")}
+                  className={`pill-btn ${groupBy === "rmm" ? "on" : ""}`}
+                >
+                  By RMM
                 </button>
               </div>
               <TrackerSavedViews snapshot={viewSnapshot} onApply={applyView} />
