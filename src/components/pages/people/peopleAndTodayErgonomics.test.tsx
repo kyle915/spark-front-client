@@ -49,6 +49,9 @@ describe("People & Today ergonomics", () => {
     );
     expect(peopleSource).toContain("PeopleTabsSwitcher");
     expect(peopleSource).toContain("DefaultRmmSelector");
+    expect(peopleSource).toContain("Load more");
+    expect(peopleSource).toContain("peopleHasMore");
+    expect(peopleSource).toContain("after: endCursor");
 
     const html = renderToStaticMarkup(
       <PeopleTabsSwitcher

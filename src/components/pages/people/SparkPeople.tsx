@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
@@ -34,6 +34,9 @@ import {
 } from "./peopleRoutingControls";
 import {
   PEOPLE_PAGE_SIZE,
+  mergePeopleById,
+  peopleEndCursor,
+  peopleHasMore,
   peopleSearchIsActive,
   peopleServerFilters,
 } from "./peopleListFilters";
@@ -127,6 +130,20 @@ const Inner: React.FC<{
   );
 
   const serverSearch = peopleSearchIsActive(debouncedSearch, roleFilter);
+  const listFilters = useMemo(
+    () =>
+      serverSearch
+        ? peopleServerFilters({
+            tenantId,
+            search: debouncedSearch,
+            role: roleFilter,
+          })
+        : tenantId
+          ? { tenantId }
+          : null,
+    [serverSearch, tenantId, debouncedSearch, roleFilter],
+  );
+
   useEffect(() => {
     if (!serverSearch) {
       setSearchHits(null);
@@ -136,11 +153,7 @@ const Inner: React.FC<{
     let live = true;
     setSearching(true);
     const subscription = fetchQuery<UsersQueryType>(environment, UsersQuery, {
-      filters: peopleServerFilters({
-        tenantId,
-        search: debouncedSearch,
-        role: roleFilter,
-      }),
+      filters: listFilters,
       first: PEOPLE_PAGE_SIZE,
     }).subscribe({
       next: (payload) => {
@@ -158,23 +171,52 @@ const Inner: React.FC<{
       live = false;
       subscription.unsubscribe();
     };
-  }, [serverSearch, debouncedSearch, roleFilter, tenantId]);
+  }, [serverSearch, listFilters]);
 
+  // One roster path for browse + server search: first page from the
+  // active source, later pages appended via cursor Load more.
   const roster = serverSearch && searchHits ? searchHits : data;
+  const page1Rows = useMemo(() => toPeopleRows(roster), [roster]);
+  const [extraRows, setExtraRows] = useState<PersonRow[]>([]);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const loadingMoreRef = useRef(false);
 
-  const rows: PersonRow[] = useMemo(() => toPeopleRows(roster), [roster]);
+  const rosterKey = [
+    tenantId ?? "",
+    serverSearch ? "search" : "browse",
+    debouncedSearch,
+    roleFilter,
+    peopleEndCursor(roster?.users?.pageInfo),
+    String(Boolean(roster?.users?.pageInfo?.hasNextPage)),
+  ].join("|");
+
+  useEffect(() => {
+    setExtraRows([]);
+    setEndCursor(peopleEndCursor(roster?.users?.pageInfo));
+    setHasMore(peopleHasMore(roster?.users?.pageInfo));
+    setLoadMoreError(null);
+    loadingMoreRef.current = false;
+    // rosterKey already encodes first-page cursor + hasNext; do not depend on
+    // the pageInfo object identity or Load more extras get wiped on re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [rosterKey]);
+
+  const rows: PersonRow[] = useMemo(
+    () => mergePeopleById(page1Rows, extraRows),
+    [page1Rows, extraRows],
+  );
   const countRows = useMemo(() => toPeopleRows(data), [data]);
 
   const filtered = useMemo(() => {
+    // Server search already applied name/email/role — do not re-filter the
+    // first page (or later pages) in memory and hide matches past page 1.
+    if (serverSearch && searchHits) return rows;
     const q = search.toLowerCase().trim();
-    const serverApplied = Boolean(serverSearch && searchHits);
     return rows.filter((r) => {
-      if (
-        !serverApplied &&
-        roleFilter !== "all" &&
-        r.roleSlug !== roleFilter
-      )
-        return false;
+      if (roleFilter !== "all" && r.roleSlug !== roleFilter) return false;
       if (
         q &&
         !r.name.toLowerCase().includes(q) &&
@@ -190,11 +232,40 @@ const Inner: React.FC<{
     for (const r of countRows) c[r.roleSlug] = (c[r.roleSlug] ?? 0) + 1;
     return c;
   }, [countRows]);
-  // The users connection caps at 100. Name, email, and role go to the server
-  // so someone past that page can still be found. Counts on the chips stay
-  // on the unfiltered page.
+  // totalCount is the full connection (or search match set). Chip counts
+  // stay on the unfiltered first page until more pages are loaded.
   const totalPeople = roster?.users?.totalCount ?? rows.length;
-  const peopleTruncated = totalPeople > rows.length;
+
+  const loadMore = useCallback(async () => {
+    if (!endCursor || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+    try {
+      const next = await fetchQuery<UsersQueryType>(
+        environment,
+        UsersQuery,
+        {
+          filters: listFilters,
+          first: PEOPLE_PAGE_SIZE,
+          after: endCursor,
+        },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const mapped = toPeopleRows(next);
+      setExtraRows((prev) => mergePeopleById(prev, mapped));
+      setEndCursor(peopleEndCursor(next?.users?.pageInfo));
+      setHasMore(peopleHasMore(next?.users?.pageInfo));
+    } catch (e) {
+      setLoadMoreError(
+        e instanceof Error ? e.message : "Could not load more people.",
+      );
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [endCursor, hasMore, listFilters]);
+
   void navigate;
 
   // Remove flow — Spark-chrome modal + optimistic local removal so the
@@ -643,19 +714,14 @@ const Inner: React.FC<{
             </p>
           )}
 
-          {peopleTruncated && (
+          {(hasMore || rows.length < totalPeople) && (
             <p
-              className="text-xs px-4 py-3 rounded-xl mb-3"
-              style={{
-                background: "rgba(255,200,60,0.08)",
-                border: "1px solid rgba(255,200,60,0.25)",
-                color: "rgba(255,255,255,0.75)",
-              }}
+              className="text-xs px-1"
+              style={{ color: "rgba(255,255,255,0.55)" }}
               role="status"
             >
-              Showing the first {rows.length} of {totalPeople}{" "}
-              {serverSearch ? "matches" : "people"}. Search by name or email
-              to find someone further down.
+              Showing {rows.length} of {totalPeople}{" "}
+              {serverSearch ? "matches" : "people"}.
             </p>
           )}
 
@@ -822,6 +888,53 @@ const Inner: React.FC<{
               </table>
             </div>
           </div>
+
+          {(hasMore || loadingMore || loadMoreError) && (
+            <div className="flex flex-col items-center gap-2 py-2">
+              {loadMoreError ? (
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <p
+                    className="text-xs"
+                    style={{ color: "rgba(255,255,255,0.7)" }}
+                    role="alert"
+                  >
+                    Couldn’t load more. The {rows.length} already on screen are
+                    still here.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadMore()}
+                    className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+                    style={{
+                      background: "transparent",
+                      color: "var(--spark-orange)",
+                      border: "1px solid rgba(239,90,42,0.45)",
+                    }}
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore || !hasMore}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-orange)",
+                    border: "1px solid rgba(239,90,42,0.45)",
+                    opacity: loadingMore ? 0.6 : 1,
+                    cursor: loadingMore ? "default" : "pointer",
+                  }}
+                >
+                  {loadingMore
+                    ? "Loading more…"
+                    : `Load more · ${rows.length} of ${totalPeople}`}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-3">
             <a

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   PEOPLE_PAGE_SIZE,
+  mergePeopleById,
+  peopleEndCursor,
+  peopleHasMore,
   peopleSearchIsActive,
   peopleServerFilters,
 } from "./peopleListFilters";
@@ -9,6 +12,19 @@ describe("peopleServerFilters", () => {
   it("keeps a page inside the server cap", () => {
     expect(PEOPLE_PAGE_SIZE).toBeLessThanOrEqual(100);
     expect(PEOPLE_PAGE_SIZE).toBeGreaterThan(0);
+  });
+
+  it("reads pageInfo for cursor Load more", () => {
+    expect(peopleHasMore({ hasNextPage: true, endCursor: "c2" })).toBe(true);
+    expect(peopleHasMore({ hasNextPage: true, endCursor: null })).toBe(false);
+    expect(peopleHasMore({ hasNextPage: false, endCursor: "c2" })).toBe(false);
+    expect(peopleEndCursor({ hasNextPage: true, endCursor: "c2" })).toBe("c2");
+    expect(
+      mergePeopleById(
+        [{ id: "a" }, { id: "b" }],
+        [{ id: "b" }, { id: "c" }],
+      ).map((r) => r.id),
+    ).toEqual(["a", "b", "c"]);
   });
 
   it("sends name, email, and role so people past the page can be found", () => {
