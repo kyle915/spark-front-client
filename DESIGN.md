@@ -24,6 +24,14 @@ Dashboards and chrome lead with one off-white figure, sentence-case labels, and 
 
 Light **RecapDocument** paper stays high-contrast readable. Do not paint dark-ops muted text onto recap paper.
 
+**Less chrome (Linear restraint):** prefer `SparkPageHeader` (`.spark-page-header`) over handmade hero h1 stacks — quieter eyebrow, smaller title, shorter support.
+
+## Pattern steals (into existing components — no stack swap)
+
+1. **Tremor KPI lockups** — `.spark-kpi-lockup`: JetBrains figure, muted Space Grotesk label, optional `.spark-kpi-delta.is-attention`. Insights / AttentionEngine / Needs-you / Account Map. Chart.js stays; empty charts use `.spark-chart-empty`.
+2. **DashWind card/stat spacing** — `.spark-stat-band` + `.spark-stat-band-grid` on Client Home / Today / Needs-you. Near-black + orange tokens only (ignore colorful Daisy themes).
+3. **Origin / coss Jump** — refine `CommandPalette` (recents, recaps, events, requests, stores → Account Map `?q=`, clients, people). Spring from trigger. **No cmdk.**
+
 ## Apple-ish (steal 4 treatments, not a new religion)
 
 Kyle liked a bit of Apple-ish scanability. Steal only these, on the dark ops chrome:

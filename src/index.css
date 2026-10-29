@@ -564,6 +564,22 @@ body:has(.spark-login-page) {
   letter-spacing: -0.045em;
   line-height: 1.1;
 }
+/* Linear-ish less chrome — quieter page headers by default */
+.spark-page-header .spark-title {
+  font-size: clamp(1.5rem, 2.4vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.spark-page-header .label-mini {
+  color: rgba(255, 255, 255, 0.32);
+  margin-bottom: 0.35rem;
+}
+.spark-page-header .spark-support {
+  margin-top: 0.45rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.48);
+  max-width: 32rem;
+}
 .spark-support {
   color: var(--spark-muted);
   font-size: 0.95rem;
@@ -908,19 +924,29 @@ thead .spark-table-sticky-date {
   margin-top: 0.4rem;
 }
 
-/* Tanjim / Abrar lockups — Recaps scan, Today strip, Jump index.
-   Dense numbers + muted labels. Not a new product look. */
+/* Tanjim / Abrar + Tremor lockups — Recaps, Today, Needs-you, Insights.
+   JetBrains figure + muted Space Grotesk label. Orange delta only when
+   attention-worthy. DashWind-ish band spacing on Spark near-black cards. */
 .spark-bento {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
-  gap: 8px;
+  gap: 12px;
 }
 .spark-bento-tile {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--spark-border);
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   min-width: 0;
+}
+.spark-stat-band {
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
+}
+.spark-stat-band-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem 1rem;
 }
 .spark-stat {
   display: flex;
@@ -946,48 +972,52 @@ thead .spark-table-sticky-date {
 .spark-stat-value.is-lime { color: var(--spark-lime); }
 .spark-stat-value.is-orange { color: var(--spark-orange); }
 .spark-stat-label {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
 }
 .spark-stat-hint {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: -0.005em;
   color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   margin-top: 6px;
 }
 
-/* KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
+/* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
 .spark-kpi-lockup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   min-width: 0;
 }
 .spark-kpi-label {
   font-family: "Space Grotesk", system-ui, sans-serif;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
-  margin: 0 0 6px;
-  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.48);
+  margin: 0;
+  line-height: 1.25;
 }
 .spark-kpi-value {
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 1.75rem;
+  font-size: clamp(1.65rem, 3.5vw, 2.15rem);
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
   margin: 0;
   color: var(--spark-text);
 }
 .spark-kpi-value-sm {
-  font-size: 1.25rem;
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 600;
 }
 .spark-kpi-value-lg {
-  font-size: 2rem;
+  font-size: clamp(2.1rem, 4.5vw, 2.75rem);
 }
 .spark-kpi-value.is-lime {
   color: var(--spark-lime);
@@ -996,11 +1026,12 @@ thead .spark-table-sticky-date {
   color: var(--spark-orange);
 }
 .spark-kpi-delta {
-  margin: 6px 0 0;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.4);
+  margin: 0.15rem 0 0;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: rgba(255, 255, 255, 0.5);
 }
 .spark-kpi-delta.is-attention {
   color: var(--spark-orange);
@@ -1769,7 +1800,7 @@ body { background: var(--spark-bg); }
   color: var(--recap-heading);
 }
 
-/* Tremor-style empty chart shell */
+/* Tremor-style empty chart shell — denser hatch + quieter copy */
 .spark-chart-empty {
   width: 100%;
   height: 100%;
@@ -1779,14 +1810,15 @@ body { background: var(--spark-bg); }
   border-radius: 14px;
   border: 1px dashed rgba(255, 255, 255, 0.12);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 55%),
     repeating-linear-gradient(
       -12deg,
       transparent,
       transparent 10px,
-      rgba(255, 255, 255, 0.015) 10px,
-      rgba(255, 255, 255, 0.015) 11px
+      rgba(255, 255, 255, 0.018) 10px,
+      rgba(255, 255, 255, 0.018) 11px
     );
+  font-family: "Space Grotesk", system-ui, sans-serif;
   color: rgba(255, 255, 255, 0.45);
   font-size: 0.8125rem;
   text-align: center;

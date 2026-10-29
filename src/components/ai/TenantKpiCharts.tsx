@@ -235,32 +235,19 @@ const PrimaryFigure: React.FC<{
   count?: number;
   sub?: string;
 }> = ({ label, value, count, sub }) => (
-  <div className="py-1">
-    <p
-      className="display text-sm"
-      style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}
-    >
-      {label}
-    </p>
-    <p
-      className="display tab-num font-bold mt-1"
-      style={{
-        fontSize: "clamp(2.4rem, 5vw, 3.25rem)",
-        letterSpacing: "-0.045em",
-        lineHeight: 1,
-        color: "var(--spark-text)",
-      }}
-    >
+  <div className="spark-kpi-lockup py-1">
+    <p className="spark-kpi-label">{label}</p>
+    <p className="spark-kpi-value spark-kpi-value-lg">
       {typeof count === "number" ? <CountReel value={count} /> : value}
     </p>
-    {sub && (
+    {sub ? (
       <p
-        className="text-[13px] mt-2 leading-snug"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        className="spark-stat-hint"
+        style={{ fontSize: "0.8125rem", letterSpacing: "-0.005em" }}
       >
         {sub}
       </p>
-    )}
+    ) : null}
   </div>
 );
 
@@ -270,33 +257,18 @@ const QuietStat: React.FC<{
   count?: number;
   sub?: string;
 }> = ({ label, value, count, sub }) => (
-  <div className="min-w-0 px-3 first:pl-0 last:pr-0">
-    <p
-      className="display text-[12px]"
-      style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "-0.01em" }}
-    >
+  <div className="spark-kpi-lockup min-w-0 px-3 first:pl-0 last:pr-0">
+    <p className="spark-kpi-label" style={{ fontSize: "0.75rem" }}>
       {label}
     </p>
-    <p
-      className="tab-num font-semibold mt-0.5"
-      style={{
-        fontFamily: "JetBrains Mono, ui-monospace, monospace",
-        fontSize: "clamp(1.05rem, 2vw, 1.25rem)",
-        letterSpacing: "-0.03em",
-        lineHeight: 1.15,
-        color: "var(--spark-text)",
-      }}
-    >
+    <p className="spark-kpi-value spark-kpi-value-sm">
       {typeof count === "number" ? <CountReel value={count} /> : value}
     </p>
-    {sub && (
-      <p
-        className="text-[11px] mt-1 leading-snug"
-        style={{ color: "rgba(255,255,255,0.4)" }}
-      >
+    {sub ? (
+      <p className="spark-stat-hint" style={{ letterSpacing: "-0.005em" }}>
         {sub}
       </p>
-    )}
+    ) : null}
   </div>
 );
 

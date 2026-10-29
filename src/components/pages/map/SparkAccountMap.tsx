@@ -30,7 +30,6 @@ import {
   accountMapTruncation,
 } from "./accountMapPages";
 import useSparkRole from "@/hooks/useSparkRole";
-import { CountReel } from "@/motion/CountReel";
 import {
   loadUploadedAccounts,
   type UploadedAccount,
@@ -38,6 +37,7 @@ import {
 import AccountUploader from "./AccountUploader";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkFilterBar from "@/shared/SparkFilterBar";
+import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
 
 /**
  * Spark v2 — Account Map (Google Maps).
@@ -454,59 +454,69 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       {/* Uploader */}
       <AccountUploader onImported={setUploaded} />
 
-      {/* Stats — clickable coverage scan */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {(
-          [
-            {
-              key: "all" as const,
-              label: "ACCOUNTS",
-              n: counts.all,
-              color: "var(--spark-text)",
-            },
-            {
-              key: "sampled" as const,
-              label: "SAMPLED · 1 VISIT",
-              n: counts.sampled,
-              color: "var(--spark-lime)",
-            },
-            {
-              key: "repeat" as const,
-              label: "REPEAT · 2+ VISITS",
-              n: counts.repeat,
-              color: "var(--spark-sky)",
-            },
-            {
-              key: "never_visited" as const,
-              label: "NEVER VISITED",
-              n: counts.neverVisited,
-              color: "var(--spark-orange)",
-            },
-          ] as const
-        ).map((tile) => {
-          const on = filter === tile.key;
-          return (
-            <button
-              key={tile.key}
-              type="button"
-              onClick={() => setCoverageFilter(tile.key)}
-              className="spark-card p-4 text-left transition"
-              style={{
-                outline: on ? `1.5px solid ${tile.color}` : undefined,
-                background: on ? "rgba(255,255,255,0.03)" : undefined,
-              }}
-              title={`Show ${tile.label.toLowerCase()}`}
-            >
-              <p className="label-mini">{tile.label}</p>
-              <p
-                className="tab-num text-3xl font-bold mt-1"
-                style={{ color: tile.color }}
+      {/* Coverage KPIs — Tremor lockups; orange only on never-visited */}
+      <div className="spark-card spark-stat-band">
+        <div className="spark-stat-band-grid">
+          {(
+            [
+              {
+                key: "all" as const,
+                label: "Accounts",
+                n: counts.all,
+                tone: "default" as const,
+              },
+              {
+                key: "sampled" as const,
+                label: "Sampled · 1 visit",
+                n: counts.sampled,
+                tone: "lime" as const,
+              },
+              {
+                key: "repeat" as const,
+                label: "Repeat · 2+ visits",
+                n: counts.repeat,
+                tone: "default" as const,
+              },
+              {
+                key: "never_visited" as const,
+                label: "Never visited",
+                n: counts.neverVisited,
+                tone: "orange" as const,
+              },
+            ] as const
+          ).map((tile) => {
+            const on = filter === tile.key;
+            return (
+              <button
+                key={tile.key}
+                type="button"
+                onClick={() => setCoverageFilter(tile.key)}
+                className="text-left transition rounded-xl"
+                style={{
+                  background: on ? "rgba(255,255,255,0.04)" : "transparent",
+                  border: on
+                    ? "1px solid var(--spark-border)"
+                    : "1px solid transparent",
+                  padding: "0.35rem 0.4rem",
+                }}
+                title={`Show ${tile.label.toLowerCase()}`}
               >
-                {tile.n > 0 ? <CountReel value={tile.n} /> : "—"}
-              </p>
-            </button>
-          );
-        })}
+                <SparkKpiLockup
+                  label={tile.label}
+                  value={tile.n > 0 ? tile.n.toLocaleString() : "—"}
+                  count={tile.n > 0 ? tile.n : undefined}
+                  tone={tile.n > 0 ? tile.tone : "default"}
+                  delta={
+                    tile.key === "never_visited" && tile.n > 0
+                      ? "Coverage gap"
+                      : undefined
+                  }
+                  deltaAttention={tile.key === "never_visited" && tile.n > 0}
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {counts.all > 0 ? (

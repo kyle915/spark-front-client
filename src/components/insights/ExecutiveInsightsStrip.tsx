@@ -42,15 +42,13 @@ const ACTIVATION_BADGE_COLOR: Record<string, string> = {
   event: "var(--spark-sky)",
 };
 
-const rateChip = (d: RateDelta): { label: string; color: string } | null => {
+const rateChip = (
+  d: RateDelta,
+): { label: string; attention: boolean } | null => {
   if (d.kind === "none") return null;
-  const color =
-    d.kind === "pts" && d.pts > 0
-      ? "var(--spark-text)"
-      : d.kind === "pts" && d.pts < 0
-        ? "var(--spark-orange)"
-        : "rgba(255,255,255,0.55)";
-  return { label: formatRateDeltaLabel(d), color };
+  // Orange only when the rate moved the wrong way (attention-worthy).
+  const attention = d.kind === "pts" && d.pts < 0;
+  return { label: formatRateDeltaLabel(d), attention };
 };
 
 const Tile: React.FC<{
@@ -58,11 +56,11 @@ const Tile: React.FC<{
   label: string;
   value: string;
   hint?: string;
-  chip?: { label: string; color: string } | null;
+  chip?: { label: string; attention: boolean } | null;
   accent?: "good" | "orange" | "neutral";
 }> = ({ eyebrow, label, value, hint, chip, accent = "neutral" }) => (
   <div
-    className="py-1 px-1"
+    className="spark-kpi-lockup py-1 px-1"
     style={{
       borderLeft:
         accent === "orange"
@@ -71,53 +69,38 @@ const Tile: React.FC<{
       paddingLeft: 14,
     }}
   >
-    <p
-      className="display text-[12px]"
-      style={{ color: "rgba(255,255,255,0.45)" }}
-    >
+    <p className="spark-kpi-label" style={{ fontSize: "0.7rem" }}>
       {eyebrow}
     </p>
     <p
-      className="display text-[13px] mt-0.5"
+      className="spark-kpi-label mt-0.5"
       style={{ color: "rgba(255,255,255,0.62)" }}
     >
       {label}
     </p>
     <div className="flex items-baseline gap-2 mt-1 flex-wrap">
       <p
-        className="tab-num font-bold text-2xl"
-        style={{
-          fontFamily: "JetBrains Mono, ui-monospace, monospace",
-          letterSpacing: "-0.03em",
-          color:
-            accent === "orange"
-              ? "var(--spark-orange)"
-              : "var(--spark-text)",
-        }}
+        className={`spark-kpi-value${accent === "orange" ? " is-orange" : ""}`}
+        style={{ fontSize: "1.5rem" }}
       >
         {value}
       </p>
-      {chip && (
+      {chip ? (
         <span
-          className="display text-[11px] px-2 py-0.5 rounded-md"
-          style={{
-            color: chip.color,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid var(--spark-border)",
-          }}
+          className={`spark-kpi-delta${chip.attention ? " is-attention" : ""}`}
         >
           {chip.label}
         </span>
-      )}
+      ) : null}
     </div>
-    {hint && (
+    {hint ? (
       <p
-        className="text-[12px] mt-1.5 leading-snug"
-        style={{ color: "rgba(255,255,255,0.5)" }}
+        className="spark-stat-hint mt-1.5"
+        style={{ fontSize: "0.75rem", letterSpacing: "-0.005em" }}
       >
         {hint}
       </p>
-    )}
+    ) : null}
   </div>
 );
 
