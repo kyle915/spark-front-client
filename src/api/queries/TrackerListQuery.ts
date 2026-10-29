@@ -52,6 +52,12 @@ export const TrackerListQuery = graphql`
             name
             slug
           }
+          # RMM owner for Master Tracker "By RMM" group headers.
+          rmmAsigned {
+            id
+            firstName
+            lastName
+          }
           event {
             id
             uuid
