@@ -428,7 +428,7 @@ h1, h2, h3, h4, h5, h6, .display {
   --spark-radius-control: 8px;
   --spark-radius-card: 14px;
   --spark-radius-panel: 18px;
-  --spark-radius-sheet: 22px;
+  --spark-radius-sheet: 18px;
   --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);
   --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
   --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);
@@ -1577,14 +1577,25 @@ body { background: var(--spark-bg); }
 }
 
 /* === Recap detail (Origin-style shell) === */
-.recap-detail-tabs {
+.recap-detail-back {
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.45);
+}
+.recap-detail-chrome {
   display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+}
+.recap-detail-tabs {
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border-radius: 14px;
-  border: 1px solid var(--spark-border);
-  background: rgba(255, 255, 255, 0.02);
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: var(--spark-radius-control, 8px);
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+  background: rgba(255, 255, 255, 0.03);
   width: fit-content;
   max-width: 100%;
 }
@@ -1593,46 +1604,56 @@ body { background: var(--spark-bg); }
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.55);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  padding: 0.45rem 0.9rem;
-  border-radius: 10px;
+  padding: 0.35rem 0.7rem;
+  border-radius: calc(var(--spark-radius-control, 8px) - 2px);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  min-height: 30px;
+  transition:
+    background var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+    color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
 }
 .recap-detail-tab:hover {
   color: var(--spark-text);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
 }
 .recap-detail-tab.is-active {
-  color: #0a0d09;
+  color: #0a0b0d;
   background: var(--spark-lime);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .recap-detail-tab:focus-visible {
   outline: 2px solid rgba(242, 243, 238, 0.75);
   outline-offset: 2px;
 }
+@media (prefers-reduced-motion: reduce) {
+  .recap-detail-tab {
+    transition: none;
+  }
+}
 .recap-kpi-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--spark-border);
-  border-radius: var(--spark-radius-panel, 18px);
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+  border-radius: var(--spark-radius-card, 14px);
   overflow: hidden;
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.03),
-    rgba(10, 13, 9, 0.35)
+    rgba(10, 11, 13, 0.35)
   );
 }
 @media (min-width: 1024px) {
   .recap-kpi-strip {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }
 .recap-kpi-cell {
   position: relative;
-  padding: 1rem 1.15rem 1.15rem;
+  padding: 0.75rem 0.9rem 0.85rem;
   min-width: 0;
 }
 .recap-kpi-cell:not(:last-child)::after {
@@ -1653,28 +1674,28 @@ body { background: var(--spark-bg); }
   color: var(--spark-lime);
 }
 .recap-kpi-icon {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  margin-bottom: 0.5rem;
-  font-size: 0.75rem;
-  background: rgba(242, 243, 238, 0.12);
-  border: 1px solid rgba(242, 243, 238, 0.28);
+  margin-bottom: 0.35rem;
+  font-size: 0.7rem;
+  background: rgba(242, 243, 238, 0.1);
+  border: 1px solid rgba(242, 243, 238, 0.22);
   color: var(--spark-lime);
 }
 .recap-kpi-label {
-  font-size: 0.65rem;
+  font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.48);
   font-family: "JetBrains Mono", monospace;
 }
 .recap-kpi-value {
-  margin-top: 0.35rem;
-  font-size: 1.65rem;
+  margin-top: 0.25rem;
+  font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
@@ -1687,13 +1708,18 @@ body { background: var(--spark-bg); }
  * strip) defaults to dark-ops white/rgba text — re-token under .recap-doc
  * so inactive tabs, labels, and kickers stay readable without breaking
  * dark admin usage outside the document.
+ * Active segmented pill on paper uses brand green — off-white --spark-lime
+ * washes out on the cream field (same lesson as photo Uploaded chips).
  */
 .recap-doc .recap-doc-kicker {
   color: var(--recap-muted);
   font-weight: 500;
 }
+.recap-doc .recap-detail-chrome {
+  gap: 0.5rem;
+}
 .recap-doc .recap-detail-tabs {
-  background: rgba(20, 22, 15, 0.04);
+  background: rgba(20, 22, 15, 0.05);
   border-color: var(--recap-border);
 }
 .recap-doc .recap-detail-tab {
@@ -1701,11 +1727,15 @@ body { background: var(--spark-bg); }
 }
 .recap-doc .recap-detail-tab:hover {
   color: var(--recap-text);
-  background: rgba(20, 22, 15, 0.06);
+  background: rgba(20, 22, 15, 0.07);
 }
 .recap-doc .recap-detail-tab.is-active {
-  color: #0a0d09;
-  background: var(--spark-lime);
+  color: #f6f6f2;
+  background: var(--recap-heading, #3f5c12);
+  box-shadow: none;
+}
+.recap-doc .recap-detail-tab:focus-visible {
+  outline-color: var(--recap-heading, #3f5c12);
 }
 .recap-doc .recap-kpi-strip {
   border-color: var(--recap-border);
@@ -2055,7 +2085,7 @@ tr:hover > td .spark-row-actions > a,
   }
 }
 
-/* Vaul sheet — springy ops drawer (not Liquid Glass / white iOS) */
+/* Vaul sheet — springy scrim + denser Origin header */
 .spark-sheet-scrim {
   position: fixed;
   inset: 0;
@@ -2072,25 +2102,90 @@ tr:hover > td .spark-row-actions > a,
   right: 0;
   z-index: 61;
   max-height: 92dvh;
-  border-top-left-radius: var(--spark-radius-sheet, 22px);
-  border-top-right-radius: var(--spark-radius-sheet, 22px);
+  border-top-left-radius: var(--spark-radius-sheet, 18px);
+  border-top-right-radius: var(--spark-radius-sheet, 18px);
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
   border: 1px solid var(--spark-border);
   border-bottom: none;
-  box-shadow: 0 -24px 48px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 -18px 40px rgba(0, 0, 0, 0.42);
   transition: transform var(--spark-spring-duration, 0.35s)
     var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
 }
 .spark-sheet-handle {
-  width: 2.75rem;
-  height: 0.3rem;
+  width: 2.25rem;
+  height: 0.25rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  margin: 0.7rem auto 0.35rem;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0.5rem auto 0.2rem;
+}
+.spark-sheet-header {
+  padding: 0.35rem 1rem 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.spark-sheet-eyebrow {
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.45);
+}
+.spark-sheet-title {
+  font-size: 1.125rem;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--spark-text);
+}
+.spark-sheet-close {
+  letter-spacing: 0.12em;
+  min-width: var(--spark-hit, 44px);
+  min-height: var(--spark-hit, 44px);
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.spark-sheet-close:hover {
+  color: var(--spark-text);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
 }
 .spark-sheet-body {
   /* lf-field-client: clear the home indicator. Parallel PR also edits this file. */
-  padding: 0.85rem 1.15rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  padding: 0.7rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Sticky ops bar — denser dark chrome around the light paper */
+.recap-sticky-ops {
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--spark-radius-card, 14px);
+  background: rgba(10, 11, 13, 0.94);
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+.recap-sticky-ops-label {
+  letter-spacing: 0.16em;
+  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+}
+.recap-sticky-ops-queue {
+  border-right: 1px solid var(--spark-hairline, var(--spark-border));
+}
+.recap-sticky-ops-nav {
+  background: transparent;
+  color: var(--spark-text);
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+}
+.recap-sticky-ops-nav:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.recap-sticky-ops-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.recap-sticky-ops-count {
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.7);
 }
 @keyframes spark-sheet-scrim-in {
   from {

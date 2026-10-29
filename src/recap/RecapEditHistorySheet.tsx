@@ -28,7 +28,7 @@ export function RecapEditHistorySheet({
       eyebrow="RECAP · EDIT HISTORY · ADMIN ONLY"
       title="Staff corrections"
     >
-      <div className="max-w-3xl mx-auto px-5 py-4 space-y-4">
+      <div className="max-w-3xl mx-auto space-y-3">
         <p className="text-sm" style={muted}>
           Every change Ignite staff made after the BA submitted. Totals in
           Insights, Recaps, exports and client views use the current values;

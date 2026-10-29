@@ -8,6 +8,7 @@ import {
 } from "@/motion/opsMotion";
 import {
   RecapDetailBackLink,
+  RecapDetailChrome,
   RecapDetailPanel,
   RecapDetailTabs,
   RecapKpiStrip,
@@ -1274,22 +1275,24 @@ const SparkRecapInner: React.FC<{
         </Suspense>
       )}
 
-      <RecapDetailTabs
-        value={detailTab}
-        onChange={setDetailTab}
-        photoCount={allFiles.length}
-      />
-
-      {kpiTiles.length > 0 ? (
-        <RecapKpiStrip
-          items={kpiTiles.map((t) => ({
-            label: t.label,
-            value: fmtNum(t.value),
-            glow: t.glow,
-            icon: t.icon,
-          }))}
+      <RecapDetailChrome>
+        <RecapDetailTabs
+          value={detailTab}
+          onChange={setDetailTab}
+          photoCount={allFiles.length}
         />
-      ) : null}
+
+        {kpiTiles.length > 0 ? (
+          <RecapKpiStrip
+            items={kpiTiles.map((t) => ({
+              label: t.label,
+              value: fmtNum(t.value),
+              glow: t.glow,
+              icon: t.icon,
+            }))}
+          />
+        ) : null}
+      </RecapDetailChrome>
 
       <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
       {/* Quality check — server-computed review aid for the approver. Legacy

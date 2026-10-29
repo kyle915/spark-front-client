@@ -139,6 +139,7 @@ import {
 } from "@/recap/fileRecapCategoryOptions";
 import {
   RecapDetailBackLink,
+  RecapDetailChrome,
   RecapDetailPanel,
   RecapDetailTabs,
   RecapKpiStrip,
@@ -1786,41 +1787,43 @@ const RecapCustomViewInner = ({
             </div>
           </div>
 
-          <RecapDetailTabs
-            value={detailTab}
-            onChange={setDetailTab}
-            photoCount={flatImages.length}
-          />
-
-          {!isEditingValues && (
-            <RecapKpiStrip
-              items={[
-                {
-                  label: "Engagements",
-                  value:
-                    typeof recap.totalEngagements === "number"
-                      ? recap.totalEngagements.toLocaleString()
-                      : "—",
-                  glow: true,
-                },
-                ...(recap.customRecapProductSample &&
-                recap.customRecapProductSample.length > 0
-                  ? [
-                      {
-                        label: qtyLabels.total || "Units sampled",
-                        value: recap.customRecapProductSample
-                          .reduce((sum, s) => sum + (s.quantity ?? 0), 0)
-                          .toLocaleString(),
-                      },
-                    ]
-                  : []),
-                {
-                  label: "Photos",
-                  value: String(flatImages.length),
-                },
-              ]}
+          <RecapDetailChrome>
+            <RecapDetailTabs
+              value={detailTab}
+              onChange={setDetailTab}
+              photoCount={flatImages.length}
             />
-          )}
+
+            {!isEditingValues && (
+              <RecapKpiStrip
+                items={[
+                  {
+                    label: "Engagements",
+                    value:
+                      typeof recap.totalEngagements === "number"
+                        ? recap.totalEngagements.toLocaleString()
+                        : "—",
+                    glow: true,
+                  },
+                  ...(recap.customRecapProductSample &&
+                  recap.customRecapProductSample.length > 0
+                    ? [
+                        {
+                          label: qtyLabels.total || "Units sampled",
+                          value: recap.customRecapProductSample
+                            .reduce((sum, s) => sum + (s.quantity ?? 0), 0)
+                            .toLocaleString(),
+                        },
+                      ]
+                    : []),
+                  {
+                    label: "Photos",
+                    value: String(flatImages.length),
+                  },
+                ]}
+              />
+            )}
+          </RecapDetailChrome>
 
           <RecapDetailPanel
             active={isRecapBodyTab(detailTab) || isEditingValues}
