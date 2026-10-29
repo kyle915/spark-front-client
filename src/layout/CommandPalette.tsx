@@ -2,6 +2,8 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router";
 import {
+  SPARK_SPRING_DURATION_S,
+  SPARK_SPRING_EASE,
   jumpOriginCss,
   jumpOriginFromEvent,
   type JumpOrigin,
@@ -18,6 +20,8 @@ import { EventSearchQuery } from "@/api/queries/EventSearchQuery";
 import type { EventSearchQuery as EventSearchQueryType } from "@api/queries/__generated__/EventSearchQuery.graphql";
 import { ClientSearchQuery } from "@/api/queries/ClientSearchQuery";
 import type { ClientSearchQuery as ClientSearchQueryType } from "@api/queries/__generated__/ClientSearchQuery.graphql";
+import { RetailersSearchQuery } from "@/api/queries/RetailersSearchQuery";
+import type { RetailersSearchQuery as RetailersSearchQueryType } from "@api/queries/__generated__/RetailersSearchQuery.graphql";
 import {
   Building2,
   LayoutDashboard,
@@ -38,6 +42,7 @@ import {
   Clock,
   AlertCircle,
   Sun,
+  Store,
 } from "lucide-react";
 import useSparkRole from "@/hooks/useSparkRole";
 import {
@@ -257,7 +262,8 @@ export const CommandPalette: React.FC = () => {
     };
   }, [open, query]);
 
-  // Live event search. `events(q)` is a contains match on the event name.
+  // Live event search. `events(q)` is a contains match on the event name;
+  // address deepens the hint for store-ish queries.
   const [eventEntries, setEventEntries] = useState<CommandEntry[]>([]);
   useEffect(() => {
     const q = query.trim();
@@ -284,12 +290,11 @@ export const CommandPalette: React.FC = () => {
                     day: "numeric",
                   })
                 : "";
+              const place = (n.address || n.request?.retailer?.name || "").trim();
               return {
                 id: `event-${n.uuid}`,
                 label: n.name || "Event",
-                hint: ["Event", n.request?.retailer?.name, when]
-                  .filter(Boolean)
-                  .join(" · "),
+                hint: ["Event", place, when].filter(Boolean).join(" · "),
                 to: `/event/view/${n.uuid}`,
                 Icon: Calendar,
               } as CommandEntry;
@@ -298,6 +303,49 @@ export const CommandPalette: React.FC = () => {
         })
         .catch(() => {
           if (!cancelled) setEventEntries([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query]);
+
+  // Live store / retailer search → Account Map, prefilled search.
+  const [storeEntries, setStoreEntries] = useState<CommandEntry[]>([]);
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || q.length < 2) {
+      setStoreEntries([]);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      fetchQuery<RetailersSearchQueryType>(environment, RetailersSearchQuery, {
+        q,
+        first: 6,
+        filters: {},
+      })
+        .toPromise()
+        .then((data) => {
+          if (cancelled) return;
+          const rows = (data?.retailers?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map((n) => {
+              const params = new URLSearchParams({ q: n.name || "" });
+              return {
+                id: `store-${n.uuid}`,
+                label: n.name || "Store",
+                hint: ["Store", n.address].filter(Boolean).join(" · "),
+                to: `/account-map?${params.toString()}`,
+                Icon: Store,
+              } as CommandEntry;
+            });
+          setStoreEntries(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setStoreEntries([]);
         });
     }, 220);
     return () => {
@@ -459,6 +507,7 @@ export const CommandPalette: React.FC = () => {
       ...recentEntries,
       ...recapEntries,
       ...eventEntries,
+      ...storeEntries,
       ...requestEntries,
       ...clientEntries,
       ...baEntries,
@@ -469,6 +518,7 @@ export const CommandPalette: React.FC = () => {
     baEntries,
     requestEntries,
     eventEntries,
+    storeEntries,
     clientEntries,
     recapEntries,
     recents,
@@ -529,7 +579,7 @@ export const CommandPalette: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.18, ease: SPARK_SPRING_EASE }}
     >
       <motion.div
         onClick={(e) => e.stopPropagation()}
@@ -539,10 +589,13 @@ export const CommandPalette: React.FC = () => {
           padding: 0,
           transformOrigin: jumpOriginCss(origin),
         }}
-        initial={{ opacity: 0, scale: 0.94 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0, scale: 0.94, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 4 }}
+        transition={{
+          duration: SPARK_SPRING_DURATION_S,
+          ease: SPARK_SPRING_EASE,
+        }}
       >
         <input
           ref={inputRef}
@@ -552,7 +605,7 @@ export const CommandPalette: React.FC = () => {
             setActive(0);
           }}
           onKeyDown={onKey}
-          placeholder="Jump to a recap, a screen, or search…"
+          placeholder="Jump to a recap, store, event, or screen…"
           className="w-full text-base"
           style={{
             background: "transparent",
@@ -602,15 +655,15 @@ export const CommandPalette: React.FC = () => {
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{
-                          duration: 0.16,
+                          duration: 0.2,
                           delay: Math.min(i * 0.028, 0.16),
-                          ease: [0.16, 1, 0.3, 1],
+                          ease: SPARK_SPRING_EASE,
                         }}
                         style={{
                           background: on
-                            ? "rgba(242,243,238,0.08)"
+                            ? "rgba(239,90,42,0.10)"
                             : "transparent",
-                          color: on ? "var(--spark-lime)" : "var(--spark-text)",
+                          color: "var(--spark-text)",
                           borderRadius: 0,
                         }}
                       >
@@ -619,7 +672,7 @@ export const CommandPalette: React.FC = () => {
                           aria-hidden
                           style={{
                             color: on
-                              ? "rgba(242,243,238,0.55)"
+                              ? "rgba(239,90,42,0.85)"
                               : "rgba(255,255,255,0.28)",
                           }}
                         >
@@ -630,7 +683,7 @@ export const CommandPalette: React.FC = () => {
                           className="shrink-0"
                           style={{
                             color: on
-                              ? "var(--spark-lime)"
+                              ? "var(--spark-orange)"
                               : "rgba(255,255,255,0.55)",
                           }}
                         />
@@ -655,7 +708,7 @@ export const CommandPalette: React.FC = () => {
                             className="mono text-[10px] shrink-0"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "var(--spark-lime)",
+                              color: "var(--spark-orange)",
                             }}
                           >
                             ↵ OPEN

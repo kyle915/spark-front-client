@@ -65,6 +65,7 @@ export type JumpGroupId =
   | "recents"
   | "recaps"
   | "events"
+  | "stores"
   | "requests"
   | "clients"
   | "people"
@@ -74,6 +75,7 @@ export const JUMP_GROUP_LABEL: Record<JumpGroupId, string> = {
   recents: "Recents",
   recaps: "Recaps",
   events: "Events",
+  stores: "Stores",
   requests: "Requests",
   clients: "Clients",
   people: "People",
@@ -84,6 +86,7 @@ export const JUMP_GROUP_ORDER: JumpGroupId[] = [
   "recents",
   "recaps",
   "events",
+  "stores",
   "requests",
   "clients",
   "people",
@@ -94,6 +97,7 @@ export function jumpGroupOf(id: string): JumpGroupId {
   if (id.startsWith("recent-")) return "recents";
   if (id.startsWith("recap-") || id.startsWith("crecap-")) return "recaps";
   if (id.startsWith("event-")) return "events";
+  if (id.startsWith("store-")) return "stores";
   if (id.startsWith("req-")) return "requests";
   if (id.startsWith("client-")) return "clients";
   if (id.startsWith("ba-")) return "people";

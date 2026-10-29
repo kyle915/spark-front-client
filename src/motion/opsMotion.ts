@@ -2,6 +2,14 @@ export type ActionPhase = "idle" | "pending" | "success";
 
 export type JumpOrigin = { x: number; y: number };
 
+/** Shared spring for overlays / sheets / Jump — matches `--spark-spring`. */
+export const SPARK_SPRING_EASE: [number, number, number, number] = [
+  0.22, 1, 0.36, 1,
+];
+export const SPARK_SPRING_DURATION_S = 0.35;
+export const SPARK_SPRING_CSS =
+  "cubic-bezier(0.22, 1, 0.36, 1)";
+
 export const ACTION_SUCCESS_HOLD_MS = 520;
 
 export const ASK_AI_FOLLOWUPS = [

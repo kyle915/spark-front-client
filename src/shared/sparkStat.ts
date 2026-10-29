@@ -14,7 +14,79 @@ export type SparkStatItem = {
   count?: number;
   hint?: string;
   tone?: SparkStatTone;
+  /** Optional change chip — orange only when deltaAttention. */
+  delta?: string;
+  /** True → orange delta (SLA, due). False/omit → muted. */
+  deltaAttention?: boolean;
 };
+
+/** Clickable Needs-you / home snapshot tiles. Orange only on real attention. */
+export type SparkStatNavItem = SparkStatItem & { to: string };
+
+export function attentionSnapshotKpis(input: {
+  approvals: number;
+  approvalsSlaBreach: number;
+  recapsDue: number;
+  upcoming: number;
+  alertsUnread: number;
+  tracker: number;
+}): SparkStatNavItem[] {
+  const tiles: SparkStatNavItem[] = [];
+  if (input.approvals > 0 || input.approvalsSlaBreach > 0) {
+    tiles.push({
+      label: "Need your call",
+      value: input.approvals.toLocaleString(),
+      count: input.approvals,
+      hint:
+        input.approvalsSlaBreach > 0
+          ? `${input.approvalsSlaBreach} SLA breach`
+          : undefined,
+      tone: input.approvalsSlaBreach > 0 ? "orange" : "default",
+      delta:
+        input.approvalsSlaBreach > 0
+          ? `${input.approvalsSlaBreach} SLA`
+          : undefined,
+      deltaAttention: input.approvalsSlaBreach > 0,
+      to: "/approvals",
+    });
+  }
+  tiles.push({
+    label: "Recaps due",
+    value: input.recapsDue.toLocaleString(),
+    count: input.recapsDue,
+    hint:
+      input.recapsDue > 0
+        ? `Review the ${input.recapsDue} recap${input.recapsDue === 1 ? "" : "s"} due`
+        : "Caught up",
+    tone: input.recapsDue > 0 ? "orange" : "default",
+    delta: input.recapsDue > 0 ? "Due" : undefined,
+    deltaAttention: input.recapsDue > 0,
+    to: "/recaps/missing",
+  });
+  if (input.upcoming > 0) {
+    tiles.push({
+      label: "Upcoming · 14d",
+      value: input.upcoming.toLocaleString(),
+      count: input.upcoming,
+      to: "/upcoming",
+    });
+  }
+  if (input.alertsUnread > 0) {
+    tiles.push({
+      label: "Unread alerts",
+      value: input.alertsUnread.toLocaleString(),
+      count: input.alertsUnread,
+      to: "/alerts",
+    });
+  }
+  tiles.push({
+    label: "Active requests",
+    value: input.tracker.toLocaleString(),
+    count: input.tracker,
+    to: "/requests/list",
+  });
+  return tiles;
+}
 
 export type RecapKpiRow = {
   requestType: string | null | undefined;

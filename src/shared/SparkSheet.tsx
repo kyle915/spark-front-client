@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 /**
  * Mobile-first bottom sheet (vaul). Prefer over centered modals on phone
  * for share / short forms. Desktop callers can still use SparkOverlay.
- * Untitled-inspired: clearer handle, quieter header, focusable close.
+ * Springy ops motion via `--spark-spring` — not Liquid Glass / white iOS.
  */
 export function SparkSheet({
   open,
@@ -22,26 +22,8 @@ export function SparkSheet({
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange} shouldScaleBackground>
       <Drawer.Portal>
-        <Drawer.Overlay
-          className="fixed inset-0 z-[60]"
-          style={{
-            background: "rgba(10,11,13,0.55)",
-            backdropFilter: "saturate(180%) blur(8px)",
-          }}
-        />
-        <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-[61] outline-none flex flex-col"
-          style={{
-            maxHeight: "92dvh",
-            borderTopLeftRadius: 22,
-            borderTopRightRadius: 22,
-            background:
-              "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
-            border: "1px solid var(--spark-border)",
-            borderBottom: "none",
-            boxShadow: "0 -24px 48px rgba(0,0,0,0.45)",
-          }}
-        >
+        <Drawer.Overlay className="spark-sheet-scrim" />
+        <Drawer.Content className="spark-sheet-content outline-none flex flex-col">
           <div className="spark-sheet-handle" aria-hidden />
           <div
             className="px-5 pb-3 pt-1 flex items-start gap-3"
