@@ -28,8 +28,12 @@ describe("client home stays slim", () => {
     expect(dash).not.toContain("performanceOpen");
     expect(dash).not.toContain('"HIDE"');
     expect(dash).not.toContain('"SHOW"');
-    expect(dash).toContain("Pace, charts, markets, and timeline");
+    expect(dash).toContain("NEEDS YOU");
+    expect(dash).toContain("Tracker this week");
+    expect(dash).toContain("Recaps · Needs review");
+    expect(dash).toContain("<SparkSheet");
     expect(dash).toContain("<InsightsBody embedded omitNarration />");
+    expect(insights).toContain("rangePills");
     expect(insights).toContain("omitNarration");
     expect(insights).toContain("<WeeklyNarrationCard");
     expect(insights).toContain("<PaceToGoalHero");
