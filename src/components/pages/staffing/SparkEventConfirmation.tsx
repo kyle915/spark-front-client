@@ -303,6 +303,7 @@ const HistoryRow: React.FC<{
   const failed = row.sends.filter((s) => !s.sentAt && s.attempts > 0);
   const fromSheet = (row.source || "").trim().toLowerCase() === "sheet";
   const stampRaw = (row.sheetStampStatus || "").trim();
+  const stampIsError = stampRaw.toLowerCase().includes("error");
   let stampWhen = "";
   if (row.sheetStampedAt) {
     try {
