@@ -416,10 +416,7 @@ const TrackerTable: React.FC<{
   };
 
   return (
-    <div
-      className="spark-card overflow-hidden"
-      style={{ borderRadius: 20 }}
-    >
+    <div className="spark-card spark-tracker-shell overflow-hidden">
       <div className="md:hidden">
         {rows.length === 0 ? (
           <SparkEmptyState
@@ -428,7 +425,7 @@ const TrackerTable: React.FC<{
             body="Try clearing status, when, or market filters."
           />
         ) : (
-          <ul className="divide-y" style={{ borderColor: "var(--spark-border)" }}>
+          <ul className="divide-y" style={{ borderColor: "var(--spark-hairline, var(--spark-border))" }}>
             {visibleRows.map((r, rowIdx) => {
               const slug = r.statusSlug.toLowerCase();
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
@@ -449,20 +446,14 @@ const TrackerTable: React.FC<{
                 <li key={r.uuid}>
                   {groupHeading ? (
                     <div
-                      className="px-4 py-2 mono"
-                      style={{
-                        letterSpacing: "0.16em",
-                        fontSize: 11,
-                        color: "var(--spark-lime)",
-                        background: "rgba(242,243,238,0.04)",
-                      }}
+                      className="px-3 py-1.5 mono spark-tracker-group"
                     >
                       {groupHeading.toUpperCase()}
                     </div>
                   ) : null}
                   <button
                     type="button"
-                    className="w-full text-left px-4 py-3"
+                    className="w-full text-left px-3 py-2.5"
                     onClick={() => openRow(r)}
                   >
                     <span className="flex items-start justify-between gap-3">
@@ -499,89 +490,29 @@ const TrackerTable: React.FC<{
         )}
       </div>
       <div className="hidden md:block overflow-auto max-h-[75vh]">
+        {/* Daisy table APIs only (table / table-sm / table-pin-rows) —
+            Tabler density + hairlines live in .spark-tracker-table CSS. */}
         <table
-          className="w-full text-sm"
+          className="table table-sm table-pin-rows spark-tracker-table w-full"
           style={{ minWidth: 1200 }}
         >
-          <thead
-            className="sticky top-0 z-10"
-            style={{
-              background: "var(--spark-surface-2, #0A0B0D)",
-              borderBottom: "1px solid var(--spark-border)",
-            }}
-          >
-            <tr
-              className="text-left mono"
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                color: "var(--spark-muted, rgba(255,255,255,0.5))",
-              }}
-            >
+          <thead>
+            <tr className="text-left mono">
               {selectionEnabled ? (
-                <th
-                  className="px-3 py-2 w-10 sticky top-0 z-10"
-                  style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-                  aria-label="Select"
-                />
+                <th className="w-10 spark-table-sticky-bg" aria-label="Select" />
               ) : null}
-              <th className="px-3 py-2 sticky top-0 spark-table-sticky-date">
-                DATE
-              </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                STATUS
-              </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                MARKET
-              </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                VENUE
-              </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10 spark-table-hide-sm"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
+              <th className="spark-table-sticky-date">DATE</th>
+              <th className="spark-table-sticky-bg">STATUS</th>
+              <th className="spark-table-sticky-bg">MARKET</th>
+              <th className="spark-table-sticky-bg">VENUE</th>
+              <th className="spark-table-sticky-bg spark-table-hide-sm">
                 ADDRESS
               </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                TYPE
-              </th>
-              <th
-                className="px-3 py-2 text-right sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                CONSUMERS
-              </th>
-              <th
-                className="px-3 py-2 text-right sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                1ST-TIME
-              </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                RECAP
-              </th>
-              <th
-                className="px-3 py-2 sticky top-0 z-10"
-                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
-              >
-                NOTES
-              </th>
+              <th className="spark-table-sticky-bg">TYPE</th>
+              <th className="text-right spark-table-sticky-bg">CONSUMERS</th>
+              <th className="text-right spark-table-sticky-bg">1ST-TIME</th>
+              <th className="spark-table-sticky-bg">RECAP</th>
+              <th className="spark-table-sticky-bg">NOTES</th>
             </tr>
           </thead>
           <tbody>
@@ -614,19 +545,8 @@ const TrackerTable: React.FC<{
                   ? rmmGroupHeading(r)
                   : "";
               const headerEl = showGroupHeader ? (
-                <tr key={`hdr-${rowIdx}`}>
-                  <td
-                    colSpan={colCount}
-                    className="px-3 py-2 mono"
-                    style={{
-                      letterSpacing: "0.16em",
-                      fontSize: 11,
-                      color: "var(--spark-lime)",
-                      background: "rgba(242,243,238,0.04)",
-                      borderTop: "1px solid var(--spark-border)",
-                      borderBottom: "1px solid var(--spark-border)",
-                    }}
-                  >
+                <tr key={`hdr-${rowIdx}`} className="spark-tracker-group-row">
+                  <td colSpan={colCount} className="mono spark-tracker-group">
                     {groupHeading.toUpperCase()}
                   </td>
                 </tr>
@@ -676,17 +596,14 @@ const TrackerTable: React.FC<{
                     selected
                       ? "cursor-pointer transition-colors bg-[rgba(242,243,238,0.07)] hover:bg-[rgba(242,243,238,0.12)]"
                       : zebra
-                        ? "cursor-pointer transition-colors bg-white/[0.04] hover:bg-white/[0.09]"
-                        : "cursor-pointer transition-colors hover:bg-white/[0.09]"
+                        ? "cursor-pointer transition-colors bg-white/[0.025] hover:bg-white/[0.07]"
+                        : "cursor-pointer transition-colors hover:bg-white/[0.07]"
                   }
-                  style={{
-                    borderBottom: "1px solid var(--spark-border)",
-                  }}
                   onClick={onClick}
                 >
                   {selectionEnabled && onToggleSelect ? (
                     <td
-                      className="px-3 py-2 align-top"
+                      className="align-top"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
@@ -694,7 +611,7 @@ const TrackerTable: React.FC<{
                         checked={selectedIds?.has(r.id) ?? false}
                         onChange={() => onToggleSelect(r.id)}
                         aria-label={`Select ${r.venue}`}
-                        className="checkbox checkbox-sm"
+                        className="checkbox checkbox-xs"
                         style={{
                           borderColor: "rgba(255,255,255,0.35)",
                           accentColor: "var(--spark-lime)",
@@ -702,25 +619,16 @@ const TrackerTable: React.FC<{
                       />
                     </td>
                   ) : null}
-                  <td
-                    className="px-3 py-2 align-top spark-table-sticky-date"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
-                  >
-                    <p className="text-sm">{r.dateLabel}</p>
+                  <td className="align-top spark-table-sticky-date">
+                    <p className="text-[13px] leading-tight">{r.dateLabel}</p>
                     {r.timeLabel && (
-                      <p
-                        className="mono text-[10px] mt-0.5"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "var(--spark-muted, rgba(255,255,255,0.5))",
-                        }}
-                      >
+                      <p className="mono text-[10px] mt-0.5 spark-tracker-cell-muted tracking-[0.14em]">
                         {r.timeLabel}
                       </p>
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-col items-start gap-1">
+                  <td>
+                    <div className="flex flex-col items-start gap-0.5">
                       <span className={`${chipClass} chip-sm`}>{label}</span>
                       {r.assignedBa > 0 ? (
                         <span
@@ -767,11 +675,15 @@ const TrackerTable: React.FC<{
                         ))}
                     </div>
                   </td>
-                  <td className="px-3 py-2">{r.market}</td>
-                  <td className="px-3 py-2">
-                    <span className="font-semibold text-[15px]">{r.venue}</span>
+                  <td className="spark-tracker-cell-muted text-[12px]">
+                    {r.market}
+                  </td>
+                  <td>
+                    <span className="font-semibold text-[13px] leading-tight spark-tracker-cell-primary">
+                      {r.venue}
+                    </span>
                     <span
-                      className="block text-[11px] mt-0.5 opacity-60 tracking-wide"
+                      className="block text-[10px] mt-0.5 spark-tracker-cell-muted tracking-wide"
                       style={{ fontVariantNumeric: "tabular-nums" }}
                       title="Request number — search the tracker by this (e.g. REQ-925)"
                     >
@@ -779,11 +691,7 @@ const TrackerTable: React.FC<{
                     </span>
                     {r.planName ? (
                       <span
-                        className="block mono text-[9px] mt-1 truncate max-w-[160px]"
-                        style={{
-                          letterSpacing: "0.1em",
-                          color: "rgba(242,243,238,0.75)",
-                        }}
+                        className="block mono text-[9px] mt-0.5 truncate max-w-[160px] spark-tracker-cell-muted tracking-[0.1em]"
                         title={`Plan: ${r.planName}`}
                       >
                         ▸ {r.planName}
@@ -841,21 +749,14 @@ const TrackerTable: React.FC<{
                       </span>
                     ) : null}
                   </td>
-                  <td
-                    className="px-3 py-2 text-[13px] max-w-[280px] spark-table-hide-sm"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
-                  >
+                  <td className="text-[12px] max-w-[280px] spark-table-hide-sm spark-tracker-cell-muted">
                     <span className="line-clamp-2">{r.address || "—"}</span>
                   </td>
-                  <td
-                    className="px-3 py-2 text-xs"
-                    style={{ color: "rgba(255,255,255,0.7)" }}
-                  >
+                  <td className="text-xs spark-tracker-cell-muted">
                     {r.type}
                     {r.skus.length > 0 ? (
                       <span
-                        className="block mt-1 text-[11px] line-clamp-2"
-                        style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+                        className="block mt-0.5 text-[10px] line-clamp-2 spark-tracker-cell-muted"
                         title={r.skus.join(", ")}
                       >
                         {r.skus.join(", ")}
@@ -863,22 +764,24 @@ const TrackerTable: React.FC<{
                     ) : null}
                   </td>
                   <td
-                    className="px-3 py-2 text-right tab-num"
+                    className="text-right tab-num spark-tracker-cell-muted"
                     style={{
-                      color: isDone ? "var(--spark-text)" : "rgba(255,255,255,0.3)",
+                      color: isDone ? "var(--spark-text)" : undefined,
                     }}
                   >
                     {isDone ? "—" : "—"}
                   </td>
                   <td
-                    className="px-3 py-2 text-right tab-num"
+                    className="text-right tab-num"
                     style={{
-                      color: isDone ? "var(--spark-lime)" : "rgba(255,255,255,0.3)",
+                      color: isDone
+                        ? "var(--spark-lime)"
+                        : "var(--spark-text-meta, rgba(255,255,255,0.3))",
                     }}
                   >
                     —
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="whitespace-nowrap">
                     {r.recapStatus === "submitted" ? (
                       <span
                         className="chip chip-lime chip-sm"
@@ -891,26 +794,14 @@ const TrackerTable: React.FC<{
                         ◌ DUE
                       </span>
                     ) : (
-                      <span
-                        className="mono text-[10px]"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.3)",
-                        }}
-                      >
+                      <span className="mono text-[10px] tracking-[0.14em] spark-tracker-cell-muted">
                         —
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="whitespace-nowrap">
                     {isClient ? (
-                      <span
-                        className="mono text-[10px]"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.3)",
-                        }}
-                      >
+                      <span className="mono text-[10px] tracking-[0.14em] spark-tracker-cell-muted">
                         —
                       </span>
                     ) : (
@@ -1019,8 +910,8 @@ const TrackerTable: React.FC<{
                   </td>
                 </tr>
                 {isExpanded && !isClient && (
-                  <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
-                    <td colSpan={colCount} style={{ padding: "0.5rem 1rem 1rem" }}>
+                  <tr>
+                    <td colSpan={colCount} className="!py-2 !px-3">
                       <InternalNotesPanel
                         requestUuid={r.uuid}
                         requestLabel={`${r.venue} · ${r.market}`}
@@ -2013,8 +1904,10 @@ export default function MasterTracker() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl spark-fade-in">
+      <div className="spark-page spark-page-wide spark-tracker-page spark-fade-in">
         <SparkPageHeader
+          className="spark-tracker-header"
+          titleClassName="text-3xl md:text-4xl font-bold"
           eyebrow={isClient ? "YOUR EVENTS" : "ALL EVENTS · ONE TABLE"}
           title={isClient ? "My requests." : "Master tracker."}
           support={
@@ -2097,7 +1990,7 @@ export default function MasterTracker() {
 
         {torchProgram ? <ProgramSwitch active="retail" /> : null}
 
-        <div className="sticky top-0 z-20 flex flex-col gap-2 spark-sticky-filters">
+        <div className="sticky top-0 z-20 flex flex-col spark-sticky-filters spark-tracker-filters">
         <SparkFilterBar
           label="STATUS"
           search={
@@ -2314,12 +2207,12 @@ export default function MasterTracker() {
           </div>
         ) : null}
 
-        {/* Totals strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4">
+        {/* Totals strip — shadcn-admin-style KPI lockup under filters */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 spark-tracker-kpis">
+          <div className="spark-card p-3">
             <p className="label-mini">SCHEDULED</p>
             <p
-              className="tab-num text-3xl font-bold mt-1"
+              className="tab-num text-2xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
               title="Master Tracker requests (all statuses). Insights 'events' count only those with filed recaps."
             >
@@ -2338,9 +2231,9 @@ export default function MasterTracker() {
               TRACKER REQUESTS
             </p>
           </div>
-          <div className="spark-card p-4">
+          <div className="spark-card p-3">
             <p className="label-mini">CONSUMERS</p>
-            <p className="tab-num text-3xl font-bold mt-1">
+            <p className="tab-num text-2xl font-bold mt-1">
               {tenantId ? (
                 <Suspense
                   fallback={<span style={{ opacity: 0.4 }}>…</span>}
@@ -2362,9 +2255,9 @@ export default function MasterTracker() {
               ALL-TIME · ALL MARKETS
             </p>
           </div>
-          <div className="spark-card p-4">
+          <div className="spark-card p-3">
             <p className="label-mini">FIRST-TIME</p>
-            <p className="tab-num text-3xl font-bold mt-1">
+            <p className="tab-num text-2xl font-bold mt-1">
               {tenantId ? (
                 <Suspense
                   fallback={<span style={{ opacity: 0.4 }}>…</span>}
@@ -2386,9 +2279,9 @@ export default function MasterTracker() {
               ALL-TIME · ALL MARKETS
             </p>
           </div>
-          <div className="spark-card p-4">
+          <div className="spark-card p-3">
             <p className="label-mini">PRODUCTS PURCHASED</p>
-            <p className="tab-num text-3xl font-bold mt-1">
+            <p className="tab-num text-2xl font-bold mt-1">
               {tenantId ? (
                 <Suspense
                   fallback={<span style={{ opacity: 0.4 }}>…</span>}
