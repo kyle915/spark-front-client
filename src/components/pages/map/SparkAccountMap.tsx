@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { useNavigate } from "react-router";
@@ -976,14 +977,7 @@ export const AccountMapBody: React.FC = () => {
     ?.VITE_GOOGLE_MAPS_API_KEY;
   return (
     <Suspense
-      fallback={
-        <div
-          className="spark-card p-8 text-center text-sm max-w-7xl"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          Loading account map…
-        </div>
-      }
+      fallback={<PanelSkeleton label="Loading account map" />}
     >
       <Inner apiKey={apiKey} />
     </Suspense>

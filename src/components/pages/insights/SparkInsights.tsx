@@ -17,6 +17,7 @@ import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
 import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
 import {
   buildProgramPulseCopy,
@@ -634,34 +635,29 @@ export function InsightsBody({
       </p>
     );
 
+  const rangePills = fieldProgram ? null : (
+    <div className="pill-group">
+      {RANGES.map((r) => (
+        <button
+          key={r.key}
+          type="button"
+          onClick={() => {
+            setRange(r.key);
+            setSelectedState(null);
+          }}
+          className={`pill-btn ${r.key === range ? "on" : ""}`}
+        >
+          {r.label}
+        </button>
+      ))}
+    </div>
+  );
+
   const stickyRangeBar = (
     <div className="spark-insights-range sticky z-20 overflow-visible">
-      {/*
-        Keep eyebrow, support, pills, and SHOWING inside the sticky chrome.
-        A sibling under the bar with negative margin used to tuck under the
-        opaque sticky background (z-20) and look clipped.
-      */}
-      <div className="flex flex-col gap-3">
-        <div className="min-w-0 w-full">
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {fieldProgram ? "FIELD MARKETING" : "PROGRAM PERFORMANCE"}
-          </p>
-          <p
-            className="mt-1.5 text-sm min-w-0 whitespace-normal"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            {fieldProgram
-              ? "Monthly scorecard from logged field events. Retail sampling stays on the other tab."
-              : "Range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."}
-          </p>
-        </div>
-        <div className="w-full min-w-0">{rangeControls}</div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {programSwitch}
+        {rangePills}
         {showingLine}
       </div>
     </div>
@@ -717,16 +713,7 @@ export function InsightsBody({
           </div>
           <div style={{ borderTop: "1px solid var(--spark-border)" }} />
           <div className="p-5 lg:p-6">
-            <Suspense
-              fallback={
-                <div
-                  className="p-6 text-center text-sm"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  Loading program KPIs…
-                </div>
-              }
-            >
+            <Suspense fallback={<PanelSkeleton label="Loading program KPIs" />}>
               <TenantKpiCharts
                 tenantId={tenantId}
                 scopeNote={`Calendar ${kpiYear} · not scoped to ${rangeLabel}`}
