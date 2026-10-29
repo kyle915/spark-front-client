@@ -1,7 +1,7 @@
 import { useRef, type ChangeEvent, type CSSProperties, type RefObject } from "react";
 import { PHOTO_CAP } from "./photoCap";
 import { bucketCountHint } from "./photoBuckets";
-import { helperText, label, photoBadge, photoRemove } from "./checkinStyles";
+import { helperText, label, photoRemove } from "./checkinStyles";
 import type { Photo, PhotoBucket } from "./checkinTypes";
 
 // Photo step components extracted from SparkCheckin.tsx in the step split —
@@ -176,6 +176,57 @@ export function PhotoFileInputs({
   );
 }
 
+/** Uploaded slots get a solid green frame. Empty tiles stay a quiet hairline. */
+function photoSlotFrame(state: Photo["state"]): CSSProperties {
+  switch (state) {
+    case "done":
+      return {
+        border: "3px solid #166534",
+        boxShadow: "0 0 0 3px rgba(22, 101, 52, 0.28)",
+      };
+    case "failed":
+      return { border: "3px solid #9b2c14" };
+    case "uploading":
+      return { border: "1px solid rgba(0,0,0,0.12)" };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Solid chip so "Uploaded" stays readable on a bright photo. Not a washed overlay. */
+function photoStatusChip(state: Photo["state"]): CSSProperties {
+  const base: CSSProperties = {
+    position: "absolute",
+    left: 6,
+    right: 6,
+    bottom: 6,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 26,
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.01em",
+    color: "#fff",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.35)",
+  };
+  switch (state) {
+    case "done":
+      return { ...base, background: "#166534" };
+    case "failed":
+      return { ...base, background: "#9b2c14" };
+    case "uploading":
+      return { ...base, background: "rgba(20, 24, 26, 0.88)" };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
 export function PhotoGrid({
   photos,
   onAdd,
@@ -238,8 +289,8 @@ export function PhotoGrid({
                   height: 120,
                   objectFit: "cover",
                   borderRadius: 10,
-                  opacity: p.state === "done" ? 1 : 0.5,
-                  border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
+                  opacity: p.state === "done" ? 1 : 0.55,
+                  ...photoSlotFrame(p.state),
                   background: "#111",
                 }}
               />
@@ -252,8 +303,8 @@ export function PhotoGrid({
                   height: 120,
                   objectFit: "cover",
                   borderRadius: 10,
-                  opacity: p.state === "done" ? 1 : 0.5,
-                  border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
+                  opacity: p.state === "done" ? 1 : 0.55,
+                  ...photoSlotFrame(p.state),
                 }}
               />
             ) : (
@@ -262,28 +313,19 @@ export function PhotoGrid({
                   width: 120,
                   height: 120,
                   borderRadius: 10,
-                  background: "#e7e5e4",
-                  border: "1px solid rgba(0,0,0,0.1)",
+                  background: p.state === "done" ? "#e7f6df" : "#e7e5e4",
+                  ...photoSlotFrame(p.state),
                 }}
               />
             )}
-            <span
-              style={{
-                ...photoBadge,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                background:
-                  p.state === "failed"
-                    ? "rgba(239,90,42,0.72)"
-                    : p.state === "uploading"
-                      ? "rgba(20,24,26,0.55)"
-                      : "rgba(46,125,50,0.55)",
-                color: "#fff",
-              }}
-            >
-              {p.state === "done" && isVideo ? "video" : p.state}
+            <span style={photoStatusChip(p.state)}>
+              {p.state === "done"
+                ? isVideo
+                  ? "✓ Video"
+                  : "✓ Uploaded"
+                : p.state === "failed"
+                  ? "Failed"
+                  : "Uploading"}
             </span>
             <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
               ×

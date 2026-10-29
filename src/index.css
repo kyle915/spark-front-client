@@ -1223,6 +1223,127 @@ body { background: var(--spark-bg); }
   background: #ffffff;
 }
 
+/* Photo upload status. Dark ops: orange is the only chromatic mark.
+   Light recap paper overrides below with a green "Uploaded" chip —
+   off-white --spark-lime (#f2f3ee) disappeared on the white card. */
+.recap-upload-library,
+.recap-upload-camera {
+  background: transparent;
+  color: var(--spark-text);
+}
+.recap-upload-library {
+  border: 2px dashed var(--spark-border);
+}
+.recap-upload-library.is-drag {
+  background: rgba(239, 90, 42, 0.08);
+  border-color: var(--spark-orange, #ef5a2a);
+}
+.recap-upload-library.is-filled {
+  border-style: solid;
+  border-color: var(--spark-orange, #ef5a2a);
+  background: rgba(239, 90, 42, 0.1);
+}
+.recap-upload-camera {
+  border: 1px solid var(--spark-border);
+}
+.recap-upload-meta {
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.55);
+}
+.recap-upload-meta.is-complete {
+  color: #ff8a4c;
+  font-weight: 700;
+}
+.recap-upload-row {
+  color: rgba(255, 255, 255, 0.86);
+  border-radius: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+}
+.recap-upload-row[data-state="done"] {
+  background: rgba(239, 90, 42, 0.16);
+  border-color: var(--spark-orange, #ef5a2a);
+}
+.recap-upload-row[data-state="failed"] {
+  background: rgba(255, 84, 112, 0.12);
+  border-color: #ff5470;
+}
+.recap-upload-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+.recap-upload-row[data-state="done"] .recap-upload-thumb {
+  box-shadow: 0 0 0 2px #ff8a4c;
+}
+.recap-doc .recap-upload-thumb {
+  background: #fff;
+  box-shadow: 0 0 0 1px #d6d3c8;
+}
+.recap-doc .recap-upload-row[data-state="done"] .recap-upload-thumb {
+  box-shadow: 0 0 0 2px #166534;
+}
+.recap-upload-status {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.recap-upload-row[data-state="done"] .recap-upload-status {
+  color: #1a0a04;
+  background: #ff8a4c;
+}
+.recap-upload-row[data-state="failed"] .recap-upload-status {
+  color: #fff;
+  background: #9f1239;
+}
+.recap-upload-row[data-state="uploading"] .recap-upload-status {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.08);
+}
+.recap-doc .recap-upload-library.is-drag,
+.recap-doc .recap-upload-library.is-filled {
+  border-color: #166534;
+  background: #e7f6df;
+}
+.recap-doc .recap-upload-meta {
+  color: var(--recap-muted, #5c6154);
+}
+.recap-doc .recap-upload-meta.is-complete {
+  color: #14532d;
+}
+.recap-doc .recap-upload-row {
+  color: #14160f;
+}
+.recap-doc .recap-upload-row[data-state="done"] {
+  background: #e7f6df;
+  border-color: #166534;
+}
+.recap-doc .recap-upload-row[data-state="done"] .recap-upload-status {
+  color: #14532d;
+  background: #d9efb8;
+  border: 1px solid #166534;
+}
+.recap-doc .recap-upload-row[data-state="failed"] {
+  background: rgba(239, 90, 42, 0.08);
+  border-color: #9b2c14;
+}
+.recap-doc .recap-upload-row[data-state="failed"] .recap-upload-status {
+  color: #9b2c14;
+  background: #fff1ec;
+  border: 1px solid #9b2c14;
+}
+.recap-doc .recap-upload-row[data-state="uploading"] .recap-upload-status {
+  color: #3f3a34;
+  background: rgba(20, 22, 15, 0.06);
+  border: 1px solid #d6d3c8;
+}
+
 /* ============================================================
    Print stylesheet — clean brief sheet for BAs heading to the
    venue. Strips chrome (sidebar, header, action buttons) and
