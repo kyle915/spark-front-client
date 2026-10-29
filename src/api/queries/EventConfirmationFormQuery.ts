@@ -23,6 +23,12 @@ export const EventConfirmationFormQuery = graphql`
       brandName
       hasRecapLink
       hasTrainingLink
+      sheetAutomation {
+        key
+        label
+        sheetId
+        sheetUrl
+      }
       timezones {
         id
         name
@@ -53,8 +59,16 @@ export const EventConfirmationFormQuery = graphql`
       dateLabel
       timeLabel
       products
+      brandSlugs
+      source
+      sheetKey
+      sheetId
+      sheetRow
+      sheetStampStatus
+      sheetStampedAt
       sendReminders
       cancelledAt
+      createdAt
       sends {
         stage
         sentAt
