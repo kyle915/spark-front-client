@@ -889,8 +889,6 @@ const SparkRecapInner: React.FC<{
           };
           if (approved) {
             setApprovePhase("success");
-            // Shorter morph when advancing the queue — keep approval manual,
-            // just spend less time celebrating before the next recap.
             void holdActionSuccess(nextItemHref ? 180 : undefined).then(finish);
             return;
           }
