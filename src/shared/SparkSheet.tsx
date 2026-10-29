@@ -4,8 +4,6 @@ import type { ReactNode } from "react";
 /**
  * Mobile-first bottom sheet (vaul). Prefer over centered modals on phone
  * for share / short forms. Desktop callers can still use SparkOverlay.
- * Origin / coss density + springy ops motion via `--spark-spring` —
- * not Liquid Glass / white iOS, no Base UI migration.
  */
 export function SparkSheet({
   open,
