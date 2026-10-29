@@ -32,6 +32,11 @@ on:
 #
 # Locally `firebase deploy --only hosting` works because kyle has the
 # targets pre-applied in his checkout — CI starts from scratch each run.
+#
+# Auth / IAM: same as deploy-prod.yml — FIREBASE_SERVICE_ACCOUNT_DENO
+# (firebase-adminsdk-fbsvc@spark-479222) needs firebasehosting.admin +
+# serviceusage.serviceUsageConsumer. Always build with VITE_* secrets
+# in this job; never redeploy a secret-less dist/ artifact.
 
 # Project ID is visible in `.firebaserc` (not sensitive) and the
 # previous `FIREBASE_PROJECT_ID` secret was resolving to a different
@@ -41,6 +46,7 @@ on:
 # source of truth.
 env:
   FIREBASE_PROJECT_ID: spark-479222
+  GOOGLE_CLOUD_QUOTA_PROJECT: spark-479222
 
 jobs:
   build_and_deploy:
@@ -57,6 +63,25 @@ jobs:
 
       - name: Install Dependencies
         run: npm install
+
+      - name: Require Vite build secrets
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT }}
+          VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+        run: |
+          missing=0
+          for name in VITE_GOOGLE_CLIENT_ID VITE_GRAPHQL_ENDPOINT VITE_MOBILE_LOGIN_URL VITE_GOOGLE_MAPS_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name secret is empty — refusing env-less Hosting build"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Vite build secrets present (values not printed)."
 
       - name: Build
         run: npm run build
@@ -78,6 +103,7 @@ jobs:
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}' > "$HOME/firebase-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> "$GITHUB_ENV"
+          python3 -c "import json; print('CI SA:', json.load(open('$HOME/firebase-key.json'))['client_email'])"
 
       # Explicitly register the target → resource mapping in CI's
       # project context so `--only hosting:admin / hosting:client`

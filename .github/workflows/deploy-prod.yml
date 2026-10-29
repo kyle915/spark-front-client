@@ -19,6 +19,19 @@ name: Deploy main to Firebase Hosting
 # config that didn't know about the admin/client target split and
 # failed every main push with:
 #   "Deploy target admin not configured for project ***"
+#
+# Auth: FIREBASE_SERVICE_ACCOUNT_DENO is firebase-adminsdk-fbsvc@
+# spark-479222 (not github-hosting-deployer). That SA needs
+# roles/firebasehosting.admin + roles/serviceusage.serviceUsageConsumer
+# on spark-479222. firebase-tools@latest calls Service Usage before
+# Hosting deploy; without those roles CI fails 403 on
+# serviceusage.googleapis.com even when the build succeeded.
+# Prefer granting those two roles over reminting keys.
+#
+# Never deploy a Hosting channel from a prebuilt artifact that was
+# compiled without the VITE_* secrets — that ships
+# `clientId: void 0` and breaks Google login. Always `npm run build`
+# in this job with the secrets below, then deploy that dist/.
 
 on:
   push:
@@ -33,6 +46,9 @@ on:
 
 env:
   FIREBASE_PROJECT_ID: spark-479222
+  # Same quota project local tip deploys use. Without it, ADC can
+  # bill/check Service Usage against a different project and 403.
+  GOOGLE_CLOUD_QUOTA_PROJECT: spark-479222
 
 jobs:
   build_and_deploy:
@@ -50,6 +66,27 @@ jobs:
 
       - name: Install Dependencies
         run: npm install
+
+      # Fail closed before Vite compiles — empty secrets bake
+      # `clientId: void 0` into the bundle and break prod login.
+      - name: Require Vite build secrets
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT }}
+          VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+        run: |
+          missing=0
+          for name in VITE_GOOGLE_CLIENT_ID VITE_GRAPHQL_ENDPOINT VITE_MOBILE_LOGIN_URL VITE_GOOGLE_MAPS_API_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name secret is empty — refusing env-less Hosting build"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          echo "Vite build secrets present (values not printed)."
 
       - name: Build
         run: npm run build
@@ -71,6 +108,8 @@ jobs:
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}' > "$HOME/firebase-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> "$GITHUB_ENV"
+          # Identity only — never print private_key.
+          python3 -c "import json; print('CI SA:', json.load(open('$HOME/firebase-key.json'))['client_email'])"
 
       - name: Apply hosting targets
         run: |
