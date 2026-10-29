@@ -1576,7 +1576,8 @@ body { background: var(--spark-bg); }
   }
 }
 
-/* === Recap detail (Origin-style shell) === */
+/* === Recap detail (Origin / coss segmented chrome) ===
+   Steal density + spring into existing shells — no Base UI migration. */
 .recap-detail-back {
   letter-spacing: 0.14em;
   color: rgba(255, 255, 255, 0.45);
