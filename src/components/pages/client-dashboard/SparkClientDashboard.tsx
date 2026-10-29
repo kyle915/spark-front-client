@@ -247,16 +247,11 @@ const WeekAheadPanel: React.FC<{
   return (
     <>
       {/* Month-ahead bars */}
-      <div className="spark-card p-5">
+      <div className="spark-card spark-stat-band">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {horizonDays}-DAY FORWARD · {totalThisWeek} EVENTS
+          <p className="spark-kpi-label">
+            {horizonDays}-day forward ·{" "}
+            <CountReel value={totalThisWeek} /> events
           </p>
           <div className="flex items-center gap-1">
             {([7, 30, 90] as AheadHorizon[]).map((d) => (
@@ -377,15 +372,9 @@ const WeekAheadPanel: React.FC<{
 
       {/* Top retailers + quick links */}
       <div className="grid lg:grid-cols-2 gap-3">
-        <div className="spark-card p-5">
-          <p
-            className="mono text-[10px] mb-3"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {`TOP RETAILERS · NEXT ${horizonDays} DAYS`}
+        <div className="spark-card spark-stat-band">
+          <p className="spark-kpi-label mb-3">
+            Top retailers · next {horizonDays} days
           </p>
           {topRetailers.length === 0 ? (
             <SparkEmptyState
@@ -433,16 +422,8 @@ const WeekAheadPanel: React.FC<{
           )}
         </div>
 
-        <div className="spark-card p-5">
-          <p
-            className="mono text-[10px] mb-3"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            QUICK LINKS
-          </p>
+        <div className="spark-card spark-stat-band">
+          <p className="spark-kpi-label mb-3">Quick links</p>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -641,32 +622,21 @@ const ClientInner: React.FC = () => {
         <button
           type="button"
           onClick={() => setApprovalsOpen(true)}
-          className="spark-card w-full px-4 py-3 flex items-center justify-between text-left gap-3"
+          className="spark-card spark-stat-band w-full flex items-center justify-between text-left gap-3"
         >
-          <span className="min-w-0 flex items-baseline gap-3">
-            <span
-              className="tab-num text-3xl font-bold leading-none shrink-0"
-              style={{ color: "var(--spark-orange)" }}
-            >
-              <CountReel value={counts.approvals} />
-            </span>
-            <span>
-              <span
-                className="mono block text-[10px]"
-                style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
-              >
-                NEEDS YOU
+          <span className="spark-kpi-lockup min-w-0">
+            <span className="spark-kpi-delta is-attention">Needs you</span>
+            <span className="flex items-baseline gap-2 mt-1 min-w-0">
+              <span className="spark-kpi-value spark-kpi-value-sm is-orange">
+                <CountReel value={counts.approvals} />
               </span>
-              <span className="block text-sm font-semibold mt-1">
+              <span className="spark-kpi-label truncate">
                 approval{counts.approvals === 1 ? "" : "s"} waiting
               </span>
             </span>
           </span>
-          <span
-            className="mono text-[10px] shrink-0"
-            style={{ letterSpacing: "0.14em", color: "var(--spark-orange)" }}
-          >
-            APPROVALS →
+          <span className="spark-kpi-delta is-attention shrink-0">
+            Approvals →
           </span>
         </button>
       ) : null}

@@ -14,6 +14,7 @@ import { useDashboardProgram } from "@/field/useDashboardProgram";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
 import { attentionSnapshotKpis } from "@/shared/sparkStat";
+import SparkPageHeader from "@/shared/SparkPageHeader";
 import { useNavigate } from "react-router";
 import {
   BrandComparePanel,
@@ -22,9 +23,9 @@ import {
 import { useBrandView } from "@/components/brandGroup/useBrandView";
 
 /**
- * Compact priority-glance card: shows pending approvals (with SLA
- * breach call-out), upcoming events in the next 14d, and unread
- * alerts. Each tile is clickable and routes to the relevant page.
+ * Compact priority-glance card: pending approvals (SLA), recaps due,
+ * upcoming 14d, unread alerts. Tremor lockups + CountReel; orange only
+ * when attention-worthy. DashWind-ish band spacing.
  *
  * Sourced from useSidebarCounts so tracker / approvals / recaps-due
  * share the sidebar's server scalars — no extra 2,000-row fetch.
@@ -34,27 +35,19 @@ const TodaysSnapshot: React.FC = () => {
   const counts = useSidebarCounts();
   const tiles = attentionSnapshotKpis(counts);
   if (tiles.length === 0) return null;
-  const n = tiles.length;
-  const gridCols =
-    n <= 1
-      ? "grid-cols-1"
-      : n === 2
-        ? "grid-cols-2"
-        : n === 3
-          ? "grid-cols-2 lg:grid-cols-3"
-          : "grid-cols-2 lg:grid-cols-4";
   return (
-    <div className="spark-card p-4 lg:p-5" style={{ borderRadius: 18 }}>
-      <div className={`grid ${gridCols} gap-3`}>
+    <div className="spark-card spark-stat-band">
+      <p className="spark-kpi-label mb-3">Needs you</p>
+      <div className="spark-stat-band-grid">
         {tiles.map((t) => (
           <button
             key={t.label}
             type="button"
             onClick={() => navigate(t.to)}
-            className="text-left p-1 transition"
-            style={{ background: "transparent", border: "none" }}
+            className="text-left transition"
+            style={{ background: "transparent", border: "none", padding: 0 }}
           >
-            <SparkKpiLockup {...t} size="lg" />
+            <SparkKpiLockup {...t} />
           </button>
         ))}
       </div>
@@ -87,61 +80,60 @@ function DashboardInner() {
     : "";
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <h1
-            className="display text-2xl lg:text-3xl font-bold leading-[1.1]"
-            style={{ letterSpacing: "-0.03em" }}
-          >
-            Dashboard
-          </h1>
-          <div className="mt-2">
+    <div className="space-y-5 lg:space-y-6 max-w-7xl">
+      <SparkPageHeader
+        eyebrow="OPS"
+        title="Dashboard"
+        support="Due recaps, clock, what needs you — then program performance."
+        action={
+          <div className="flex items-center gap-2 flex-wrap">
             <Suspense
               fallback={<AskAiButton tenantId={tenantId} variant="text" />}
             >
               <ActiveTenantAskAi variant="text" />
             </Suspense>
+            <BrandViewSwitch
+              tenantId={tenantId}
+              view={view}
+              onChange={chooseView}
+            />
+            {torch && !comparing ? (
+              <DashboardProgramSwitch program={program} onChange={choose} />
+            ) : null}
+            {linkedSheetUrl ? (
+              <a
+                href={linkedSheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
+                style={{
+                  background: "rgba(95,184,239,0.10)",
+                  color: "var(--spark-sky)",
+                  border: "1px solid rgba(95,184,239,0.35)",
+                  textDecoration: "none",
+                }}
+                title="Open the brand's linked Google Sheet in a new tab"
+              >
+                Sheet ↗
+              </a>
+            ) : null}
+            {comparing ? null : (
+              <a
+                href="#performance"
+                className="px-3 py-2 rounded-xl text-sm font-medium"
+                style={{
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.7)",
+                  border: "1px solid var(--spark-border)",
+                  textDecoration: "none",
+                }}
+              >
+                Performance ↓
+              </a>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <BrandViewSwitch tenantId={tenantId} view={view} onChange={chooseView} />
-          {torch && !comparing ? (
-            <DashboardProgramSwitch program={program} onChange={choose} />
-          ) : null}
-          {linkedSheetUrl && (
-            <a
-              href={linkedSheetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
-              style={{
-                background: "rgba(95,184,239,0.10)",
-                color: "var(--spark-sky)",
-                border: "1px solid rgba(95,184,239,0.35)",
-                textDecoration: "none",
-              }}
-              title="Open the brand's linked Google Sheet in a new tab"
-            >
-              📊 Sheet ↗
-            </a>
-          )}
-          {comparing ? null : (
-          <a
-            href="#performance"
-            className="px-3 py-2 rounded-xl text-sm font-medium"
-            style={{
-              background: "transparent",
-              color: "rgba(255,255,255,0.7)",
-              border: "1px solid var(--spark-border)",
-              textDecoration: "none",
-            }}
-          >
-            Performance ↓
-          </a>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {comparing && tenantId ? (
         <BrandComparePanel tenantId={tenantId} canManageAccess={isAdmin} />

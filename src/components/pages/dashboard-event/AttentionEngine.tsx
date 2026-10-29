@@ -132,10 +132,7 @@ const AttentionRow: React.FC<{ item: AttentionItem }> = ({ item }) => {
       }}
     >
       <div className="min-w-0 flex items-baseline gap-3">
-        <span
-          className="tab-num text-2xl font-bold leading-none shrink-0"
-          style={{ color: "var(--spark-orange)" }}
-        >
+        <span className="spark-kpi-value spark-kpi-value-sm is-orange shrink-0">
           <CountReel value={item.count} />
         </span>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
@@ -201,13 +198,8 @@ export const AttentionEngine: React.FC = () => {
         onCount={onUpcomingCount}
       />
       {items.length > 0 ? (
-        <div className="spark-card px-4 lg:px-5" style={{ borderRadius: 18 }}>
-          <p
-            className="mono text-[10px] pt-3"
-            style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
-          >
-            WHAT NEEDS YOU
-          </p>
+        <div className="spark-card spark-stat-band">
+          <p className="spark-kpi-delta is-attention mb-1">Attention</p>
           <div className="flex flex-col">
             {items.map((it) => (
               <AttentionRow key={it.id} item={it} />

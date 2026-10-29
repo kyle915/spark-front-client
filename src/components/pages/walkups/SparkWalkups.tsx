@@ -14,6 +14,7 @@ import type { WalkupMutationsBulkConfirmMutation as BulkConfirmType } from "@api
 import type { WalkupMutationsBulkRejectMutation as BulkRejectType } from "@api/mutations/__generated__/WalkupMutationsBulkRejectMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
+import SparkPageHeader from "@/shared/SparkPageHeader";
 import StandingCheckinLink from "./StandingCheckinLink";
 import ClockLinks from "./ClockLinks";
 
@@ -380,20 +381,18 @@ export default function SparkWalkups() {
 
   return (
     <div className="p-5 md:p-8 max-w-4xl mx-auto">
-      <p
-        className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
-      >
-        WORKSPACE
-      </p>
-      <h1 className="display text-2xl font-bold mb-1">Walk-ups</h1>
-      <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
-        {tab === "codes"
-          ? "Standing check-in links for each brand. Share the live code."
-          : tab === "queue"
-            ? "Self-serve clock-ins from a check-in link or event code. Confirm to count their hours (and activate a new BA), or reject."
-            : "Generic clock in/out pages for any crew. Every punch saves GPS and lands in a Google Sheet."}
-      </p>
+      <SparkPageHeader
+        className="mb-4"
+        eyebrow="WORKSPACE"
+        title="Walk-ups"
+        support={
+          tab === "codes"
+            ? "Standing check-in links for each brand. Share the live code."
+            : tab === "queue"
+              ? "Self-serve clock-ins from a check-in link or event code. Confirm to count hours, or reject."
+              : "Generic clock in/out pages for any crew. Punches save GPS and land in a Sheet."
+        }
+      />
 
       <div className="flex items-center gap-5 mb-5" style={{ borderBottom: "1px solid var(--spark-border)" }}>
         {(
