@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   reviewCheckCounts,
   reviewCheckTint,
+  reviewFlagBadges,
+  reviewFlagShortLabel,
   visibleReviewChecks,
 } from "./reviewCheckDisplay";
 
@@ -46,3 +48,31 @@ describe("reviewCheckTint", () => {
     expect(reviewCheckTint("na").mark).toBe("–");
   });
 });
+
+describe("reviewFlagBadges", () => {
+  it("maps flagged codes to short list labels in stable order", () => {
+    expect(
+      reviewFlagBadges([
+        { code: "duplicate_photos", label: "2 identical photos" },
+        { code: "gps_distance", label: "Clock-in 3mi away" },
+        { code: "photo_buckets", label: "Missing: Table Set Up" },
+      ]).map((b) => b.badge),
+    ).toEqual(["GPS", "Photos", "Dupes"]);
+  });
+
+  it("handles empty input", () => {
+    expect(reviewFlagBadges(null)).toEqual([]);
+    expect(reviewFlagBadges([])).toEqual([]);
+  });
+});
+
+describe("reviewFlagShortLabel", () => {
+  it("maps known codes to short list badges", () => {
+    expect(reviewFlagShortLabel("gps_distance")).toBe("GPS");
+    expect(reviewFlagShortLabel("photo_buckets")).toBe("Photos");
+    expect(reviewFlagShortLabel("engagements_rate")).toBe("Hours");
+    expect(reviewFlagShortLabel("spend_without_receipt")).toBe("Receipt");
+    expect(reviewFlagShortLabel("duplicate_photos")).toBe("Dupes");
+  });
+});
+

@@ -6209,6 +6209,7 @@ type Query {
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
+  recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   tenantBaActivation(tenantId: ID!): [BaActivationRow!]!
@@ -6907,6 +6908,16 @@ type RecapReviewCheck {
   label: String!
   status: String!
   detail: String!
+}
+
+type RecapReviewFlagSummary {
+  code: String!
+  label: String!
+}
+
+type RecapReviewFlagsForRecap {
+  recapId: ID!
+  flags: [RecapReviewFlagSummary!]!
 }
 
 """

@@ -84,9 +84,11 @@ import {
   type RecapListReturnFilters,
   type RecapsListNavState,
 } from "./recapListFilters";
+import { prefetchRecapDetails } from "./prefetchRecapDetail";
 import {
   markRecapOpenedInQueue,
   pickNextReviewItem,
+  recapQueueWarmTargets,
   saveRecapReviewQueue,
 } from "./recapReviewQueue";
 import {
@@ -98,6 +100,9 @@ import {
 } from "@/lib/activationBucket";
 import { BaNameFilter } from "./BaNameFilter";
 import { RecapTypeChips } from "./RecapTypeChips";
+import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
+import { useRecapReviewFlags } from "./useRecapReviewFlags";
+import type { ReviewFlagSummary } from "./reviewCheckDisplay";
 import { useRecapTypeCounts } from "./useRecapTypeCounts";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
@@ -231,6 +236,8 @@ type Recap = {
   shareToken: string | null;
   sharedAt: string | null;
   archivedAt: string | null;
+  /** Advisory flagged review-check summaries (Needs-review list badges). */
+  reviewFlags?: { code: string; label: string }[];
 };
 
 // CONV = products sold ÷ consumers sampled for product retail, and
@@ -462,7 +469,8 @@ const RecapCard: React.FC<{
   // Ops-only: pick which of this recap's numbers count toward a plan.
   onPushToPlan?: ((recap: Recap) => void) | null;
   onOpenRecap?: ((recap: Recap) => void) | null;
-}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap }) => {
+  reviewFlags?: readonly ReviewFlagSummary[] | null;
+}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap, reviewFlags }) => {
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -677,6 +685,11 @@ const RecapCard: React.FC<{
         </p>
       ) : null}
       {showSla && !emptyShell && recap.date ? <SlaHours since={recap.date} /> : null}
+      {!emptyShell && !approved ? (
+        <div className="mt-2">
+          <RecapReviewFlagBadges flags={reviewFlags} />
+        </div>
+      ) : null}
 
       <div className="relative z-10 spark-row-actions spark-row-actions--until-hover mt-2">
         {recap.requestUuid && onOpenRequest && (
@@ -808,7 +821,8 @@ const RecapCompactRow: React.FC<{
   onToggleSelect: () => void;
   forceApproved?: boolean;
   onOpenRecap?: ((recap: Recap) => void) | null;
-}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap }) => {
+  reviewFlags?: readonly ReviewFlagSummary[] | null;
+}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap, reviewFlags }) => {
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -817,8 +831,8 @@ const RecapCompactRow: React.FC<{
     <div
       className="spark-inset-row relative"
       style={{
-        minHeight: 42,
-        padding: "4px 10px",
+        minHeight: 40,
+        padding: "3px 10px",
         gap: 8,
         background: focused
           ? "rgba(239,90,42,0.10)"
@@ -886,6 +900,11 @@ const RecapCompactRow: React.FC<{
         ) : recap.sourceLabel ? (
           <div className="mt-1 flex items-center gap-1 flex-wrap">
             <RecapSourceBadge compact label={recap.sourceLabel} />
+          </div>
+        ) : null}
+        {!emptyShell && !approved ? (
+          <div className="mt-1">
+            <RecapReviewFlagBadges flags={reviewFlags} compact />
           </div>
         ) : null}
         <p
@@ -1117,7 +1136,8 @@ const RecapsListInner: React.FC<{
   onPageChange: (page: number) => void;
   returnFilters?: RecapListReturnFilters | null;
   onOpenRecap?: ((recap: Recap) => void) | null;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap, targetPage, onPageChange, returnFilters, onOpenRecap }) => {
+  reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap, targetPage, onPageChange, returnFilters, onOpenRecap, reviewFlagsById }) => {
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
   // client login) must NOT see unapproved drafts — only approved recaps.
@@ -1245,6 +1265,7 @@ const RecapsListInner: React.FC<{
     onPageChange,
     returnFilters,
     onOpenRecap,
+    reviewFlagsById,
   } as const;
 
   // Mount both page queries in one component when both kinds exist so
@@ -1353,6 +1374,7 @@ const RecapsBothLive: React.FC<{
   onPageChange: (page: number) => void;
   returnFilters?: RecapListReturnFilters | null;
   onOpenRecap?: ((recap: Recap) => void) | null;
+  reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
 }> = ({ legacyVariables, customVariables, fetchPolicy, fetchKey, ...rest }) => {
   const data = useLazyLoadQuery<RecapsListQueryType>(
     RecapsListQuery,
@@ -1417,6 +1439,7 @@ const RecapsListFetched: React.FC<{
   onPageChange: (page: number) => void;
   returnFilters?: RecapListReturnFilters | null;
   onOpenRecap?: ((recap: Recap) => void) | null;
+  reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
 }> = ({
   data,
   customData,
@@ -1459,6 +1482,7 @@ const RecapsListFetched: React.FC<{
   onPageChange,
   returnFilters,
   onOpenRecap,
+  reviewFlagsById,
 }) => {
   const navigate = useNavigate();
   const { tenantSlug, tenantMeta } = useAuthStore();
@@ -1972,6 +1996,7 @@ const RecapsListFetched: React.FC<{
               onToggleSelect={() => onToggleSelected(r.id)}
               forceApproved={justApprovedIds.has(r.id)}
               onOpenRecap={onOpenRecap}
+              reviewFlags={reviewFlagsById?.get(r.id)}
             />
           ))}
         </div>
@@ -1983,7 +2008,7 @@ const RecapsListFetched: React.FC<{
 
   return (
     <>
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {windowed.map((r) => (
         <RecapCard
           key={r.uuid}
@@ -1997,6 +2022,7 @@ const RecapsListFetched: React.FC<{
           onShare={setShareTarget}
           onPushToPlan={plansOn ? setPlanTarget : null}
           onOpenRecap={onOpenRecap}
+          reviewFlags={reviewFlagsById?.get(r.id)}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
@@ -2344,6 +2370,23 @@ export default function SparkRecapsList() {
     (item) => !item.approved && !item.archived,
   ).length;
 
+  const flagTargets = useMemo(
+    () =>
+      visibleRecaps
+        .filter(
+          (r) =>
+            !r.approved &&
+            !justApprovedIds.has(r.id) &&
+            !recapIsEmptyShell(r),
+        )
+        .map((r) => ({ id: r.id, kind: r.kind })),
+    [visibleRecaps, justApprovedIds],
+  );
+  const flagsEnabled =
+    !isClient &&
+    (statusFilter === "needs_review" || statusFilter === "draft");
+  const reviewFlagsById = useRecapReviewFlags(flagTargets, flagsEnabled);
+
   useEffect(() => {
     if (isClient || queueItems.length === 0) return;
     saveRecapReviewQueue({
@@ -2363,8 +2406,17 @@ export default function SparkRecapsList() {
       } else {
         markRecapOpenedInQueue(r.uuid);
       }
+      if (!isClient) {
+        prefetchRecapDetails(
+          environment,
+          recapQueueWarmTargets(r.uuid).map((item) => ({
+            uuid: item.uuid,
+            isCustom: item.isCustom,
+          })),
+        );
+      }
     },
-    [isClient, queueItems, currentReturnHref],
+    [currentReturnHref, environment, isClient, queueItems],
   );
 
   const openNextReview = useCallback(async () => {
@@ -2378,6 +2430,13 @@ export default function SparkRecapsList() {
         lastOpenedUuid: nextInVisible.uuid,
         returnHref: currentReturnHref,
       });
+      prefetchRecapDetails(environment, [
+        {
+          uuid: nextInVisible.uuid,
+          isCustom: nextInVisible.isCustom,
+        },
+        ...recapQueueWarmTargets(nextInVisible.uuid),
+      ]);
       navigate(nextInVisible.href);
       return;
     }
@@ -2439,6 +2498,10 @@ export default function SparkRecapsList() {
         lastOpenedUuid: next.uuid,
         returnHref: currentReturnHref,
       });
+      prefetchRecapDetails(environment, [
+        { uuid: next.uuid, isCustom: next.isCustom },
+        ...recapQueueWarmTargets(next.uuid),
+      ]);
       navigate(next.href);
     } catch {
       showAlert("Couldn't open the next recap.", "error");
@@ -2457,6 +2520,16 @@ export default function SparkRecapsList() {
     statusFilter,
     tenantId,
   ]);
+
+  // Warm the first few Needs-review details so Review next / j-Enter feel instant.
+  useEffect(() => {
+    if (isClient || !flagsEnabled || queueItems.length === 0) return;
+    const head = queueItems
+      .filter((item) => !item.approved && !item.archived)
+      .slice(0, 3);
+    if (head.length === 0) return;
+    prefetchRecapDetails(environment, head);
+  }, [environment, flagsEnabled, isClient, queueItems]);
 
   useEffect(() => {
     try {
@@ -2509,6 +2582,11 @@ export default function SparkRecapsList() {
         }
         return;
       }
+      if ((e.key === "n" || e.key === "N") && !e.metaKey && !e.ctrlKey && !isClient) {
+        e.preventDefault();
+        void openNextReview();
+        return;
+      }
       if (visibleRecaps.length === 0) return;
       const focused = focusedIdx >= 0 ? visibleRecaps[focusedIdx] : null;
       if (e.key === "j" || e.key === "ArrowDown") {
@@ -2528,7 +2606,7 @@ export default function SparkRecapsList() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [focusedIdx, handleOpenRecap, navigate, returnFilters, showHelp, statusFilter, activationFilter, visibleRecaps]);
+  }, [focusedIdx, handleOpenRecap, isClient, navigate, openNextReview, returnFilters, showHelp, statusFilter, activationFilter, visibleRecaps]);
 
   // ─── Campaign report multi-select ────────────────────────────
   // Set of recap.id (relay id) the user has ticked. Survives filter
@@ -3154,12 +3232,12 @@ export default function SparkRecapsList() {
 
   return (
     <Layout>
-      <div className="space-y-4 max-w-7xl spark-fade-in">
+      <div className="space-y-3 max-w-7xl spark-fade-in">
         <SparkPageHeader
           eyebrow={`RECAPS · ${windowLabel}`}
           title="Recaps"
           titleClassName="text-3xl md:text-4xl font-bold"
-          support="Filed activations — filter, review, share."
+          support="Scan, flag-check, approve. Advisory badges never auto-approve."
           action={
             !isClient ? (
               <div className="flex flex-wrap gap-2">
@@ -3169,7 +3247,7 @@ export default function SparkRecapsList() {
                     void openNextReview();
                   }}
                 >
-                  {reviewNextBusy ? "Opening…" : "Next to review"}
+                  {reviewNextBusy ? "Opening…" : "Review next"}
                 </SparkGhostButton>
                 <SparkPrimaryButton
                   onClick={() => {
@@ -3183,7 +3261,12 @@ export default function SparkRecapsList() {
           }
         />
         <div
-          className="sticky top-0 z-20 spark-card spark-sticky-filters !bg-[#0A0B0D] flex flex-col"
+          className="sticky top-0 z-20 spark-sticky-filters flex flex-col"
+          style={{
+            background: "rgba(10, 11, 13, 0.94)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 10,
+          }}
         >
           <div className="flex flex-wrap gap-2 items-center">
             <div className="min-w-[120px] mr-1 shrink-0">
@@ -4007,6 +4090,7 @@ export default function SparkRecapsList() {
             onPageChange={setPage}
             returnFilters={returnFilters}
             onOpenRecap={handleOpenRecap}
+            reviewFlagsById={reviewFlagsById}
             focusedId={
               focusedIdx >= 0 ? visibleRecaps[focusedIdx]?.uuid ?? null : null
             }
@@ -4210,6 +4294,7 @@ export default function SparkRecapsList() {
             <div className="spark-inset-group">
               {[
                 ["/", "Focus search"],
+                ["n", "Review next"],
                 ["j / k", "Move focus"],
                 ["Enter", "Open recap"],
                 ["?", "This help"],

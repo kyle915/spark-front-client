@@ -87,3 +87,61 @@ export function reviewCheckTint(status: ReviewCheckStatus): {
     }
   }
 }
+
+/**
+ * Short Needs-review list badge labels. Detail keeps the full check label;
+ * the list only needs a glanceable code (GPS / Photos / Hours / …).
+ */
+const REVIEW_FLAG_BADGE_LABEL: Record<string, string> = {
+  engagements_rate: "Hours",
+  gps_distance: "GPS",
+  photo_buckets: "Photos",
+  duplicate_photos: "Dupes",
+  spend_without_receipt: "Receipt",
+};
+
+export type ReviewFlagBadge = {
+  code: string;
+  /** Short chip text for the list row. */
+  badge: string;
+  /** Full server label — used as the chip title/tooltip. */
+  label: string;
+};
+
+/** Map batched flagged summaries onto short list badges (stable code order). */
+export function reviewFlagBadges(
+  flags: readonly { code: string; label: string }[] | null | undefined,
+): ReviewFlagBadge[] {
+  const order = Object.keys(REVIEW_FLAG_BADGE_LABEL);
+  const byCode = new Map<string, string>();
+  for (const flag of flags ?? []) {
+    if (!flag?.code) continue;
+    byCode.set(flag.code, flag.label || flag.code);
+  }
+  const badges: ReviewFlagBadge[] = [];
+  for (const code of order) {
+    const label = byCode.get(code);
+    if (!label) continue;
+    badges.push({
+      code,
+      badge: REVIEW_FLAG_BADGE_LABEL[code] ?? code,
+      label,
+    });
+    byCode.delete(code);
+  }
+  for (const [code, label] of byCode) {
+    badges.push({ code, badge: code, label });
+  }
+  return badges;
+}
+
+/** Short list-badge copy for a flagged check code (GPS / Photos / …). */
+export function reviewFlagShortLabel(code: string): string {
+  return REVIEW_FLAG_BADGE_LABEL[code] ?? "Flag";
+}
+
+export type ReviewFlagSummary = {
+  code: string;
+  label: string;
+};
+
