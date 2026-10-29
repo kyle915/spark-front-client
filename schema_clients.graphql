@@ -3641,6 +3641,13 @@ type EventAttendanceRow {
   clockOutAttendanceUuid: ID
 }
 
+type SheetConfirmationAutomationInfo {
+  key: String!
+  label: String!
+  sheetId: String!
+  sheetUrl: String!
+}
+
 type EventConfirmationFormOptions {
   productOptions: [String!]!
   recapUrl: String!
@@ -3653,6 +3660,7 @@ type EventConfirmationFormOptions {
   brandName: String!
   hasRecapLink: Boolean!
   hasTrainingLink: Boolean!
+  sheetAutomation: SheetConfirmationAutomationInfo
 }
 
 type EventConfirmationRow {
@@ -3667,6 +3675,13 @@ type EventConfirmationRow {
   dateLabel: String!
   timeLabel: String!
   products: [String!]!
+  brandSlugs: [String!]!
+  source: String!
+  sheetKey: String!
+  sheetId: String!
+  sheetRow: Int
+  sheetStampStatus: String!
+  sheetStampedAt: String
   sendReminders: Boolean!
   cancelledAt: String
   createdAt: String

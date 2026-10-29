@@ -96,6 +96,16 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
         </h3>
         <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
           Spark-form and request rows append to the linked sheet automatically.
+          Torch / Pivot / Famus BA confirmation Send stamps are a separate Apps
+          Script path — see{" "}
+          <Link
+            to="/event-confirmation"
+            className="underline"
+            style={{ color: "var(--spark-lime)" }}
+          >
+            Event confirmation
+          </Link>{" "}
+          for what emailed and the last sheet stamp.
         </p>
       </div>
 

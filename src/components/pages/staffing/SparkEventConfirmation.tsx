@@ -301,6 +301,31 @@ const HistoryRow: React.FC<{
     row.sends.filter((s) => s.sentAt).map((s) => s.stage),
   );
   const failed = row.sends.filter((s) => !s.sentAt && s.attempts > 0);
+  const fromSheet = (row.source || "").trim().toLowerCase() === "sheet";
+  const stampRaw = (row.sheetStampStatus || "").trim();
+  const stampIsError = stampRaw.toLowerCase().includes("error");
+  let stampWhen = "";
+  if (row.sheetStampedAt) {
+    try {
+      stampWhen = new Date(row.sheetStampedAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    } catch {
+      stampWhen = row.sheetStampedAt;
+    }
+  }
+  const stampBit = stampRaw
+    ? `stamp ${stampRaw}${stampWhen ? ` · ${stampWhen}` : ""}`
+    : null;
+  const sheetBits = [
+    fromSheet ? "Sheet" : "Admin tab",
+    row.sheetRow != null ? `row ${row.sheetRow}` : null,
+    stampBit,
+    row.brandSlugs?.length ? row.brandSlugs.join(", ") : null,
+  ].filter(Boolean);
 
   return (
     <div
@@ -323,6 +348,14 @@ const HistoryRow: React.FC<{
               .filter(Boolean)
               .join(" | ")}
           </p>
+          {sheetBits.length > 0 ? (
+            <p
+              className="text-[11px] mt-0.5"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              {sheetBits.join(" · ")}
+            </p>
+          ) : null}
           {row.products.length > 0 ? (
             <p
               className="text-[11px] mt-0.5"
@@ -334,6 +367,26 @@ const HistoryRow: React.FC<{
         </div>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
           <ConfirmationStatusChip status={confirmationChip(row.sends)} />
+          {stampRaw ? (
+            <span
+              className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
+              style={
+                stampIsError
+                  ? {
+                      background: "rgba(239,90,42,0.12)",
+                      border: "1px solid rgba(239,90,42,0.4)",
+                      color: "var(--spark-orange)",
+                    }
+                  : {
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid var(--spark-border)",
+                      color: "rgba(255,255,255,0.75)",
+                    }
+              }
+            >
+              Sheet {stampRaw}
+            </span>
+          ) : null}
           {["booked", "t24", "t3"].map((stage) => (
             <StageBadge
               key={stage}
@@ -382,6 +435,11 @@ const HistoryRow: React.FC<{
                 }`,
             )
             .join("; ")}
+        </p>
+      ) : null}
+      {stampRaw.toLowerCase().includes("error") ? (
+        <p className="text-[11px] mt-1" style={{ color: "var(--spark-orange)" }}>
+          Sheet stamp Error — check Confirmation Error on the workbook row.
         </p>
       ) : null}
     </div>
@@ -555,6 +613,34 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
             : !opts.hasRecapLink
               ? "This client has no check-in code yet, so the email will go out without the Open Recap Form button."
               : "This client has no training site set, so the email will go out without the Review Training Site button."}
+        </div>
+      ) : null}
+
+      {opts.sheetAutomation ? (
+        <div
+          className="px-4 py-3 rounded-xl text-sm"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid var(--spark-border)",
+            color: "rgba(255,255,255,0.7)",
+          }}
+        >
+          <p className="mb-1" style={{ color: "var(--spark-text)" }}>
+            Sheet confirmations: {opts.sheetAutomation.label}
+          </p>
+          <p className="mb-1 text-[12px]">
+            Apps Script Send / stamp status lives on this workbook, not the
+            Settings linked-sheet (request append).
+          </p>
+          <a
+            href={opts.sheetAutomation.sheetUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[12px] font-semibold underline"
+            style={{ color: "var(--spark-lime)" }}
+          >
+            Open confirmation sheet →
+          </a>
         </div>
       ) : null}
 
@@ -766,7 +852,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
         <h2 className="display text-lg font-bold mb-1">Sent confirmations</h2>
         <p className="text-[12px] mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
           A tick means that stage has gone out. The 24h and 3h re-sends fire on
-          their own.
+          their own. Sheet rows show workbook provenance and the last stamp.
         </p>
         {data.eventConfirmations.length === 0 ? (
           <p
