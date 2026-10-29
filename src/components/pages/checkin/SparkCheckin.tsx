@@ -2691,7 +2691,13 @@ function CheckedInFlow({
               Time clock
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
-              {effectiveClock === "clocked_in" ? "On the clock" : effectiveClock === "clocked_out" ? "Clocked out" : "Not started"}
+              {effectiveClock === "clocked_in"
+                ? hasRecap
+                  ? "On the clock · ready to clock out"
+                  : "On the clock · recap still open"
+                : effectiveClock === "clocked_out"
+                  ? "Clocked out"
+                  : "Not started"}
             </div>
             {ctx.event?.date ? (
               <div style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 2 }}>
@@ -2953,13 +2959,13 @@ function CheckedInFlow({
       {effectiveClock === "clocked_in" && !hasRecap ? (
         <p style={{ color: "#44403c", fontSize: 13, opacity: 1, textAlign: "center" }}>
           {draftWaiting
-            ? "Your answers are saved on this phone. Continue your recap whenever you're ready — reopen this check-in link if you leave."
-            : "You're on the clock. File your recap when you're done. If it won't go through, clock out anyway — you can come back and file it after."}
+            ? "Next: continue your recap. Answers stay on this phone — reopen this check-in link if you leave."
+            : "Next: file your recap while you're still on site. If it won't go through, clock out anyway — you can come back and file it after."}
         </p>
       ) : null}
       {effectiveClock === "clocked_in" && hasRecap ? (
         <p style={{ color: "#44403c", fontSize: 13, opacity: 1, textAlign: "center" }}>
-          Recap's in. Clock out to finish your shift.
+          Next: clock out to finish your shift.
         </p>
       ) : null}
       {shiftActionsAway ? (
@@ -4376,8 +4382,9 @@ function RecapForm({
           gap: 8,
           marginTop: 4,
           paddingTop: 10,
-          paddingBottom: "calc(4px + env(safe-area-inset-bottom, 0px))",
+          paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
           background: "#faf7f1",
+          borderTop: "1px solid rgba(28, 25, 23, 0.08)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 18 }}>
@@ -4395,7 +4402,9 @@ function RecapForm({
               {draftSavedLabel(savedAt)}
             </p>
           ) : (
-            <span />
+            <span style={{ color: "#78716c", fontSize: 12 }}>
+              Photos: library or camera · multiple OK
+            </span>
           )}
           <button
             type="button"
