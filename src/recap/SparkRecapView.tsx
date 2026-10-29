@@ -852,9 +852,17 @@ const SparkRecapInner: React.FC<{
   const setApproved = (approved: boolean, advanceToNext = false) => {
     if (isApproving || approvePhase !== "idle") return;
     if (approved) setApprovePhase("pending");
-    const nextItemHref = advanceToNext
-      ? queueInfo?.nextUnapproved?.href ?? null
-      : null;
+    const nextUnapproved = advanceToNext ? queueInfo?.nextUnapproved : null;
+    const nextItemHref = nextUnapproved?.href ?? null;
+    if (nextUnapproved) {
+      prefetchRecapDetails(environment, [
+        {
+          uuid: nextUnapproved.uuid,
+          isCustom: nextUnapproved.isCustom,
+        },
+        ...recapQueueWarmTargets(nextUnapproved.uuid),
+      ]);
+    }
     commitApprove({
       variables: { input: { id: recap.id, approved } },
       onCompleted: (res) => {
@@ -881,7 +889,9 @@ const SparkRecapInner: React.FC<{
           };
           if (approved) {
             setApprovePhase("success");
-            void holdActionSuccess().then(finish);
+            // Shorter morph when advancing the queue — keep approval manual,
+            // just spend less time celebrating before the next recap.
+            void holdActionSuccess(nextItemHref ? 180 : undefined).then(finish);
             return;
           }
           finish();
@@ -2574,6 +2584,12 @@ const SparkRecapInner: React.FC<{
                   nextHref: queueInfo.next?.href ?? null,
                   pending: queueNavPending,
                   onNavigate: goToQueueRecap,
+                  onApproveNext:
+                    !recap.approved &&
+                    !recap.archivedAt &&
+                    queueInfo.nextUnapproved
+                      ? () => setApproved(true, true)
+                      : null,
                 }
               : null
           }
@@ -2721,7 +2737,7 @@ const SparkRecapInner: React.FC<{
                       boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                       opacity: isApproving ? 0.5 : 1,
                     }}
-                    title="Approve this recap and advance to the next unapproved recap in the queue"
+                    title="Approve this recap and advance to the next unapproved recap in the queue (a)"
                     pendingLabel="Approving…"
                     successLabel="Approved →"
                   >

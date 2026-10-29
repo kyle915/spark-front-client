@@ -142,7 +142,6 @@ describe("recapReviewQueue", () => {
     ]);
     expect(targets.some((item) => item.uuid === "u-1")).toBe(false);
   });
-});
 
   it("skips archived boolean items in pickNextReviewItem", () => {
     const list = [
@@ -152,4 +151,5 @@ describe("recapReviewQueue", () => {
     ];
     expect(pickNextReviewItem(list)?.uuid).toBe("u-2");
   });
+});
 

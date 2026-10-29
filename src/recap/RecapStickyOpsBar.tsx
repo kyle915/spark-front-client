@@ -8,6 +8,8 @@ export type RecapStickyQueueNav = {
   onNavigate: (href: string) => void;
   /** True while the next recap page is still resolving. */
   pending?: boolean;
+  /** Manual Approve & next — `a` keyboard shortcut when set. */
+  onApproveNext?: (() => void) | null;
 };
 
 /**
@@ -51,6 +53,9 @@ export function RecapStickyOpsBar({
           e.preventDefault();
           queueNav.onNavigate(queueNav.nextHref);
         }
+      } else if ((e.key === "a" || e.key === "A") && queueNav.onApproveNext) {
+        e.preventDefault();
+        queueNav.onApproveNext();
       }
     };
     window.addEventListener("keydown", onKeyDown);

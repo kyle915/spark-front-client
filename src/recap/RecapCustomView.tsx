@@ -1037,9 +1037,17 @@ const RecapCustomViewInner = ({
     (advanceToNext = false) => {
       if (!recap?.id || approvePhase !== "idle") return;
       setApprovePhase("pending");
-      const nextItemHref = advanceToNext
-        ? queueInfo?.nextUnapproved?.href ?? null
-        : null;
+      const nextUnapproved = advanceToNext ? queueInfo?.nextUnapproved : null;
+      const nextItemHref = nextUnapproved?.href ?? null;
+      if (nextUnapproved) {
+        prefetchRecapDetails(environment, [
+          {
+            uuid: nextUnapproved.uuid,
+            isCustom: nextUnapproved.isCustom,
+          },
+          ...recapQueueWarmTargets(nextUnapproved.uuid),
+        ]);
+      }
       commitApprove({
         variables: { input: { id: recap.id as string, approved: true } },
         onCompleted: (res) => {
@@ -1052,7 +1060,7 @@ const RecapCustomViewInner = ({
               "success",
             );
             setApprovePhase("success");
-            void holdActionSuccess().then(() => {
+            void holdActionSuccess(nextItemHref ? 180 : undefined).then(() => {
               markRecapsListNeedsRefresh();
               if (nextItemHref) {
                 goToQueueRecap(nextItemHref);
@@ -1085,7 +1093,7 @@ const RecapCustomViewInner = ({
       goToQueueRecap,
       navigate,
       searchParams,
-      queueInfo?.nextUnapproved?.href,
+      queueInfo?.nextUnapproved,
       uuid,
       environment,
       tenantId,
@@ -3021,6 +3029,12 @@ const RecapCustomViewInner = ({
                   nextHref: queueInfo.next?.href ?? null,
                   pending: queueNavPending,
                   onNavigate: goToQueueRecap,
+                  onApproveNext:
+                    !recap.approved &&
+                    !recap.archivedAt &&
+                    queueInfo.nextUnapproved
+                      ? () => handleApprove(true)
+                      : null,
                 }
               : null
           }
@@ -3113,7 +3127,7 @@ const RecapCustomViewInner = ({
                   phase={approvePhase}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                   style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
-                  title="Approve recap and advance to the next unapproved recap in the queue"
+                  title="Approve recap and advance to the next unapproved recap in the queue (a)"
                   pendingLabel="Approving…"
                   successLabel="Approved →"
                 >
