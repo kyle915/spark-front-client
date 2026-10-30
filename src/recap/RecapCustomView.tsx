@@ -2511,6 +2511,7 @@ const RecapCustomViewInner = ({
                                     <button
                                       key={opt}
                                       type="button"
+                                      aria-pressed={isOn}
                                       onClick={() => {
                                         const next = isOn
                                           ? selected.filter((s) => s !== opt)
@@ -2520,8 +2521,7 @@ const RecapCustomViewInner = ({
                                           [fieldId]: JSON.stringify(next),
                                         }));
                                       }}
-                                      className="px-3 py-1.5 rounded-xl text-sm font-semibold transition"
-                                      style={isOn ? limeBtn : ghostBtn}
+                                      className={`recap-option-chip${isOn ? " is-selected" : ""}`}
                                     >
                                       {opt}
                                     </button>

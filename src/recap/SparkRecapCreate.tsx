@@ -1726,11 +1726,12 @@ const ProductsSampledPillsField: React.FC<{
               }}
               className="px-3 py-1.5 rounded-lg text-xs border transition-colors"
               style={{
+                /* Dark ops: orange selected (spark-lime is off-white after quieter chrome). */
                 borderColor: on
-                  ? "var(--spark-lime)"
+                  ? "var(--spark-orange, #ef5a2a)"
                   : "rgba(255,255,255,0.15)",
-                background: on ? "var(--spark-lime)" : "transparent",
-                color: on ? "#0a0d09" : "rgba(255,255,255,0.8)",
+                background: on ? "rgba(239, 90, 42, 0.85)" : "transparent",
+                color: on ? "#fff" : "rgba(255,255,255,0.8)",
               }}
             >
               {o}
