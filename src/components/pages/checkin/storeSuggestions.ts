@@ -1,6 +1,11 @@
 import { retailerMatchesSearch } from "@/utils/retailerOptionLabel";
 
-export type StoreSuggestion = { name: string; address: string };
+export type StoreSuggestion = {
+  name: string;
+  address: string;
+  lat?: number | null;
+  lng?: number | null;
+};
 
 /** Roster accounts whose trading name or address contains every typed word. */
 export function matchingStores(
