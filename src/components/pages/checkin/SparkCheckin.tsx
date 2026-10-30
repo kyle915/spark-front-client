@@ -5,6 +5,15 @@ import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoChe
 import { applyVoiceFills, type VoiceFill } from "./voiceDraft";
 import { VoiceRecapCard } from "./VoiceRecapCard";
 import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
+import {
+  decideStoreProximity,
+  geocodeStoreAddress,
+  haversineMiles,
+  isFiniteLatLng,
+  proximityConfirmCopy,
+  proximityIdentifyFields,
+  type LatLng,
+} from "./storeProximity";
 import { PHOTO_CAP } from "./photoCap";
 import {
   AUTO_RETRY_DELAYS_MS,
@@ -976,6 +985,19 @@ function IdentifyStep({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  /** GPS from "Use my current location" — required for proximity confirm. */
+  const [gpsFix, setGpsFix] = useState<LatLng | null>(null);
+  /** Normalized address accepted unchanged from that GPS snap (never nags). */
+  const [gpsTrustedKey, setGpsTrustedKey] = useState<string | null>(null);
+  /** Store the BA already said "continue anyway" for this GPS session. */
+  const [proximityConfirmedKey, setProximityConfirmedKey] = useState<string | null>(null);
+  const [proximityMiles, setProximityMiles] = useState<number | null>(null);
+  const [proximityChecking, setProximityChecking] = useState(false);
+  const [pendingProximity, setPendingProximity] = useState<{
+    hit: StoreSuggestion;
+    miles: number;
+    label: string;
+  } | null>(null);
   const [unfiled, setUnfiled] = useState<UnfiledShift[]>([]);
   const [openShift, setOpenShift] = useState<OpenShift | null>(null);
   const [planGigs, setPlanGigs] = useState<PlanGig[]>([]);
@@ -1019,11 +1041,78 @@ function IdentifyStep({
   // `l.name` is sometimes the walk-in event TITLE — "8/2/2026 - 1155 E State St".
   // Copying one of those into the store-name box got it appended in parentheses.
   // Only carry a name that actually names a store.
-  const chooseStore = (hit: StoreSuggestion) => {
+  const applyStoreSelection = (hit: StoreSuggestion) => {
     setAddress(hit.address);
     const label = storeNameForPicker(hit);
     if (label) setStoreName(label);
     setStoreSuggestField(null);
+    setPendingProximity(null);
+  };
+  const storeCoordsOf = (hit: StoreSuggestion): LatLng | null => {
+    const point = { lat: Number(hit.lat), lng: Number(hit.lng) };
+    return isFiniteLatLng(point) ? point : null;
+  };
+  const storeLabelOf = (hit: StoreSuggestion): string =>
+    storeNameForPicker(hit) || hit.name.trim() || hit.address.trim() || "this store";
+
+  /**
+   * GPS + store coords + farther than ~0.75 mi → ask before accepting.
+   * Missing GPS/coords, the GPS-trusted nearest match, or a prior
+   * continue-anyway for this store all pass through quietly.
+   */
+  const gateStoreProximity = async (hit: StoreSuggestion): Promise<"allow" | "confirm"> => {
+    const key = normalizePlace(hit.address);
+    let storePoint = storeCoordsOf(hit);
+    if (!storePoint && gpsFix) {
+      storePoint = await geocodeStoreAddress(hit.address);
+    }
+    const decision = decideStoreProximity({
+      gps: gpsFix,
+      store: storePoint,
+      storeKey: key,
+      trustedKey: gpsTrustedKey,
+      confirmedKey: proximityConfirmedKey,
+    });
+    if (decision.action === "allow") {
+      if (
+        (decision.reason === "nearby" || decision.reason === "trusted") &&
+        storePoint &&
+        gpsFix
+      ) {
+        setProximityMiles(haversineMiles(gpsFix, storePoint));
+      }
+      return "allow";
+    }
+    setProximityMiles(decision.miles);
+    setPendingProximity({
+      hit,
+      miles: decision.miles,
+      label: storeLabelOf(hit),
+    });
+    return "confirm";
+  };
+  const chooseStore = (hit: StoreSuggestion) => {
+    void (async () => {
+      setErr(null);
+      setProximityChecking(true);
+      try {
+        const gate = await gateStoreProximity(hit);
+        if (gate === "allow") applyStoreSelection(hit);
+      } finally {
+        setProximityChecking(false);
+      }
+    })();
+  };
+  const confirmPendingStore = () => {
+    if (!pendingProximity) return;
+    const key = normalizePlace(pendingProximity.hit.address);
+    setProximityConfirmedKey(key);
+    setProximityMiles(pendingProximity.miles);
+    applyStoreSelection(pendingProximity.hit);
+  };
+  const dismissPendingStore = () => {
+    setPendingProximity(null);
+    setStoreSuggestField("name");
   };
   const pickStore = (value: string) => {
     setAddress(value);
@@ -1042,6 +1131,10 @@ function IdentifyStep({
   // normalized address, so a GPS-derived string that differs by a word from
   // the spelling the first BA used would fork a second event for the same
   // activation — the exact thing this flow exists to prevent.
+  //
+  // That snap (or the reverse-geocoded address) is the trusted nearest match:
+  // we remember GPS + that key so a later wrong-store tap can confirm, without
+  // nagging when they leave the GPS pick alone.
   const useMyLocation = () => {
     setErr(null);
     if (!navigator.geolocation) {
@@ -1051,6 +1144,14 @@ function IdentifyStep({
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        const fix = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+        setGpsFix(isFiniteLatLng(fix) ? fix : null);
+        setProximityConfirmedKey(null);
+        setPendingProximity(null);
+        setProximityMiles(null);
         try {
           const res = await fetch(
             `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/where`,
@@ -1068,12 +1169,16 @@ function IdentifyStep({
             const known = recentLocations.find(
               (l) => normalizePlace(l.address) === normalizePlace(json.address),
             );
+            const trustedAddress = known?.address || String(json.address);
+            setGpsTrustedKey(normalizePlace(trustedAddress));
             if (known) pickStore(known.address);
             else setAddress(json.address);
           } else {
+            setGpsTrustedKey(null);
             setErr("Couldn't name that spot — type the address instead.");
           }
         } catch {
+          setGpsTrustedKey(null);
           setErr("Couldn't look that up. Type the address instead.");
         } finally {
           setLocating(false);
@@ -1081,6 +1186,8 @@ function IdentifyStep({
       },
       () => {
         setLocating(false);
+        setGpsFix(null);
+        setGpsTrustedKey(null);
         setErr("Location is off for this site. Type the address instead.");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
@@ -1193,6 +1300,47 @@ function IdentifyStep({
         clearChosenShiftDate(code);
       }
     }
+    // Far-from-GPS store pick (suggestion or typed after location) must confirm
+    // before identify — same gate as tapping a suggestion.
+    if (
+      needsEventDetails &&
+      !omitPlace &&
+      !onGig &&
+      !marketPicker &&
+      !overrides &&
+      gpsFix &&
+      addr.trim()
+    ) {
+      const known =
+        recentLocations.find((l) => normalizePlace(l.address) === normalizePlace(addr)) ?? null;
+      const hit: StoreSuggestion = known ?? {
+        name: storeName,
+        address: addr,
+      };
+      const key = normalizePlace(hit.address);
+      if (
+        key !== gpsTrustedKey &&
+        key !== proximityConfirmedKey &&
+        !pendingProximity
+      ) {
+        setBusy(false);
+        setProximityChecking(true);
+        const gate = await gateStoreProximity(hit);
+        setProximityChecking(false);
+        if (gate === "confirm") {
+          setErr(null);
+          return;
+        }
+      }
+      if (pendingProximity) {
+        setErr("Confirm the store below, or pick again.");
+        return;
+      }
+    }
+
+    const confirmedDespite =
+      Boolean(proximityConfirmedKey) &&
+      normalizePlace(addr) === proximityConfirmedKey;
     const identifyBody: Record<string, unknown> = needsEventDetails
       ? {
           firstName,
@@ -1210,7 +1358,14 @@ function IdentifyStep({
             ? {}
             : marketPicker
               ? { market: mkt }
-              : { storeName, address: addr }),
+              : {
+                  storeName,
+                  address: addr,
+                  ...proximityIdentifyFields({
+                    miles: proximityMiles,
+                    confirmedDespiteDistance: confirmedDespite,
+                  }),
+                }),
         }
       : { firstName, lastName, phone, email };
     setBusy(true);
@@ -1581,6 +1736,59 @@ function IdentifyStep({
           />
           {storeSuggestField === "name" ? (
             <CheckinStoreSuggestions hits={nameHits} onPick={chooseStore} />
+          ) : null}
+          {proximityChecking ? (
+            <p style={{ color: "#44403c", fontSize: 12, margin: "8px 0 0" }}>
+              Checking how far that store is…
+            </p>
+          ) : null}
+          {pendingProximity ? (
+            <div
+              role="alertdialog"
+              aria-labelledby="store-proximity-title"
+              style={{
+                marginTop: 12,
+                padding: "14px 14px 12px",
+                borderRadius: 12,
+                border: "1px solid rgba(239,90,42,0.45)",
+                background: "rgba(239,90,42,0.06)",
+              }}
+            >
+              <p
+                id="store-proximity-title"
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#1c1917",
+                  lineHeight: 1.4,
+                }}
+              >
+                {proximityConfirmCopy({
+                  miles: pendingProximity.miles,
+                  storeLabel: pendingProximity.label,
+                })}
+              </p>
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: "#44403c", lineHeight: 1.4 }}>
+                GPS put you somewhere else. Continue only if this is the right stop.
+              </p>
+              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={confirmPendingStore}
+                  style={{
+                    ...secondaryBtn,
+                    borderColor: "rgba(239,90,42,0.55)",
+                    color: "#c2410c",
+                  }}
+                >
+                  Continue anyway
+                </button>
+                <button type="button" onClick={dismissPendingStore} style={secondaryBtn}>
+                  Pick again
+                </button>
+              </div>
+            </div>
           ) : null}
             </>
           )}

@@ -110,7 +110,13 @@ export type CheckinResource = {
   url: string;
   note?: string;
 };
-export type StoreOption = { name: string; address: string };
+export type StoreOption = {
+  name: string;
+  address: string;
+  /** Present when the API knows the account/event pin. Optional — missing skips proximity. */
+  lat?: number | null;
+  lng?: number | null;
+};
 export type UnfiledShift = {
   eventDate: string | null;
   name: string;
