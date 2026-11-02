@@ -70,8 +70,11 @@ import { isRecapDue } from "../lib/recapDue";
  *
  *   [SCHEDULED] [CONSUMERS] [FIRST-TIME] [PRODUCTS PURCHASED]
  *
- *   | DATE | STATUS | MARKET | VENUE | TYPE | CONSUMERS | 1ST-TIME | RECAP |
+ *   | DATE | REQUESTED | STATUS | MARKET | VENUE | TYPE | CONSUMERS | 1ST-TIME | RECAP |
  *   ...
+ *
+ * DATE is the venue calendar day. REQUESTED is Request.startTime–endTime
+ * (the demo/event window the client asked for) — not BA shift clock times.
  */
 
 const STATUS_CHIP: Record<string, string> = {
@@ -151,6 +154,8 @@ type Row = {
   id: string;
   date: string;
   dateLabel: string;
+  // Requested demo/event window from Request.startTime / endTime.
+  // Empty string when the request has no start/end (rare legacy rows).
   timeLabel: string;
   statusSlug: string;
   market: string;
@@ -352,7 +357,7 @@ const TrackerTable: React.FC<{
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const colCount = selectionEnabled ? 11 : 10;
+  const colCount = selectionEnabled ? 12 : 11;
 
   // Inline request approval from the Tracker (clients + admins). Backend
   // `approveRequest` enforces tenant membership + blocks BAs (same as the
@@ -459,6 +464,14 @@ const TrackerTable: React.FC<{
                     <span className="flex items-start justify-between gap-3">
                       <span className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
                         {r.dateLabel}
+                        {r.timeLabel ? (
+                          <span
+                            className="mono block text-[10px] mt-0.5 tracking-[0.08em]"
+                            style={{ color: "rgba(255,255,255,0.55)" }}
+                          >
+                            Requested {r.timeLabel}
+                          </span>
+                        ) : null}
                       </span>
                       <span className={`${chipClass} chip-sm`}>{label}</span>
                     </span>
@@ -502,6 +515,9 @@ const TrackerTable: React.FC<{
                 <th className="w-10 spark-table-sticky-bg" aria-label="Select" />
               ) : null}
               <th className="spark-table-sticky-date">DATE</th>
+              <th className="spark-table-sticky-bg" title="Requested demo / event window">
+                REQUESTED
+              </th>
               <th className="spark-table-sticky-bg">STATUS</th>
               <th className="spark-table-sticky-bg">MARKET</th>
               <th className="spark-table-sticky-bg">VENUE</th>
@@ -621,10 +637,17 @@ const TrackerTable: React.FC<{
                   ) : null}
                   <td className="align-top spark-table-sticky-date">
                     <p className="text-[13px] leading-tight">{r.dateLabel}</p>
-                    {r.timeLabel && (
-                      <p className="mono text-[10px] mt-0.5 spark-tracker-cell-muted tracking-[0.14em]">
+                  </td>
+                  <td className="align-top whitespace-nowrap">
+                    {r.timeLabel ? (
+                      <p
+                        className="mono text-[12px] leading-tight spark-tracker-cell-primary tracking-[0.04em]"
+                        title="Requested start–end"
+                      >
                         {r.timeLabel}
                       </p>
+                    ) : (
+                      <span className="spark-tracker-cell-muted">—</span>
                     )}
                   </td>
                   <td>
@@ -1220,6 +1243,8 @@ const MasterTrackerInner: React.FC<{
         id: String(n.id),
         date: activationDate ?? "",
         dateLabel: fmtDateLabel(activationDate),
+        // Requested window on the Request row (spark-form / Create Request),
+        // not event clock-in/out or BA shift times.
         timeLabel: fmtTimeRange(n.startTime, n.endTime),
         statusSlug: (n.status?.slug ?? n.status?.name ?? "pending")
           .toString()
@@ -1727,13 +1752,13 @@ export default function MasterTracker() {
     }
     const header = [
       "Date",
+      "Requested time",
       "Status",
       "Market",
       "Venue",
       "Address",
       "Type",
       "SKUs",
-      "Time",
       "RMM",
       "Scheduling",
       "Non-Active Product",
@@ -1752,13 +1777,13 @@ export default function MasterTracker() {
       lines.push(
         [
           r.dateLabel,
+          r.timeLabel,
           r.statusSlug,
           r.market,
           r.venue,
           r.address,
           r.type,
           r.skus.join("; "),
-          r.timeLabel,
           r.rmmLabel,
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
@@ -1804,13 +1829,13 @@ export default function MasterTracker() {
     setCopyState("copying");
     const headers = [
       "Date",
+      "Requested time",
       "Status",
       "Market",
       "Venue",
       "Address",
       "Type",
       "SKUs",
-      "Time",
       "RMM",
       "Scheduling",
       "Non-Active Product",
@@ -1826,13 +1851,13 @@ export default function MasterTracker() {
       rows.push(
         [
           r.dateLabel,
+          r.timeLabel,
           r.statusSlug,
           r.market,
           r.venue,
           r.address,
           r.type,
           r.skus.join("; "),
-          r.timeLabel,
           r.rmmLabel,
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
