@@ -40,6 +40,7 @@ import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
 import PushToPlanSheet from "@/field/PushToPlanSheet";
+import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
@@ -2100,8 +2101,12 @@ const RmmFilterDropdown: React.FC<{
 };
 
 export default function SparkRecapsList() {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
+  const missingRecapsOn = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -3483,7 +3488,7 @@ export default function SparkRecapsList() {
                       ))}
                     </select>
                   )}
-                  {!isClient && (
+                  {!isClient && missingRecapsOn && (
                     <button
                       type="button"
                       onClick={() => {
@@ -3648,7 +3653,7 @@ export default function SparkRecapsList() {
                 ))}
               </select>
             )}
-            {!isClient && (
+            {!isClient && missingRecapsOn && (
               <button
                 type="button"
                 onClick={() => navigate("/recaps/missing")}

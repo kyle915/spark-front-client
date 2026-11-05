@@ -3,6 +3,8 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import { TenantProgramHealthQuery } from "@/api/queries/TenantProgramHealthQuery";
 import type { TenantProgramHealthQuery as TenantProgramHealthQueryType } from "@api/queries/__generated__/TenantProgramHealthQuery.graphql";
+import { showsMissingRecaps } from "@/field/missingRecaps";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Program-health funnel for the Insights page range: scheduled → filed
@@ -17,6 +19,11 @@ const Inner: React.FC<{
   rangeLabel: string;
 }> = ({ tenantId, startDate, endDate, rangeLabel }) => {
   const navigate = useNavigate();
+  const { tenantSlug, tenantMeta } = useAuthStore();
+  const missingRecapsOn = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
   const data = useLazyLoadQuery<TenantProgramHealthQueryType>(
     TenantProgramHealthQuery,
     { tenantId, startDate, endDate },
@@ -47,20 +54,22 @@ const Inner: React.FC<{
             Scheduled → filed → approved
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate("/recaps/missing")}
-          className="mono text-[10px] px-3 py-1.5 rounded-lg"
-          style={{
-            letterSpacing: "0.12em",
-            color: weak ? "var(--spark-orange)" : "rgba(255,255,255,0.55)",
-            border: `1px solid ${
-              weak ? "rgba(239,90,42,0.40)" : "var(--spark-border)"
-            }`,
-          }}
-        >
-          {missing > 0 ? `${missing} MISSING →` : "MISSING RECAPS →"}
-        </button>
+        {missingRecapsOn ? (
+          <button
+            type="button"
+            onClick={() => navigate("/recaps/missing")}
+            className="mono text-[10px] px-3 py-1.5 rounded-lg"
+            style={{
+              letterSpacing: "0.12em",
+              color: weak ? "var(--spark-orange)" : "rgba(255,255,255,0.55)",
+              border: `1px solid ${
+                weak ? "rgba(239,90,42,0.40)" : "var(--spark-border)"
+              }`,
+            }}
+          >
+            {missing > 0 ? `${missing} MISSING →` : "MISSING RECAPS →"}
+          </button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-3">

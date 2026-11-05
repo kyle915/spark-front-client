@@ -1,8 +1,9 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
+import { showsMissingRecaps } from "@/field/missingRecaps";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { MissingRecapEventsQuery } from "@/api/queries/MissingRecapEventsQuery";
@@ -562,9 +563,13 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
 };
 
 export default function SparkRecapsMissing() {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const [lookback, setLookback] = useState<LookbackKey>("30");
   const lookbackDays = Number(lookback);
+
+  if (!showsMissingRecaps(tenantSlug, tenantMeta?.requestUrlName)) {
+    return <Navigate to="/recaps/list" replace />;
+  }
 
   return (
     <Layout>

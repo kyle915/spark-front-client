@@ -44,7 +44,9 @@ import {
   Sun,
   Store,
 } from "lucide-react";
+import { showsMissingRecaps } from "@/field/missingRecaps";
 import useSparkRole from "@/hooks/useSparkRole";
+import { useAuthStore } from "@/store/authStore";
 import {
   JUMP_GROUP_LABEL,
   JUMP_GROUP_ORDER,
@@ -120,6 +122,11 @@ const score = (entry: CommandEntry, q: string) => {
 export const CommandPalette: React.FC = () => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
+  const { tenantSlug, tenantMeta } = useAuthStore();
+  const missingRecapsOn = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -480,11 +487,12 @@ export const CommandPalette: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const visible = ENTRIES.filter((e) => !(isClient && e.adminOnly)).map(
+    const visible = ENTRIES.filter(
       (e) =>
-        isClient && e.clientTo
-          ? { ...e, to: e.clientTo }
-          : e,
+        !(isClient && e.adminOnly) &&
+        !(e.id === "recaps-missing" && !missingRecapsOn),
+    ).map((e) =>
+      isClient && e.clientTo ? { ...e, to: e.clientTo } : e,
     );
     const pages = visible
       .map((e) => ({ entry: e, s: score(e, q) }))
@@ -523,6 +531,7 @@ export const CommandPalette: React.FC = () => {
     recapEntries,
     recents,
     isClient,
+    missingRecapsOn,
   ]);
 
   const grouped = useMemo(
