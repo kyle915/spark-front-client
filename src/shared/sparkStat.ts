@@ -30,6 +30,8 @@ export function attentionSnapshotKpis(input: {
   upcoming: number;
   alertsUnread: number;
   tracker: number;
+  /** When false, skip the Recaps-due tile (Famus Missing Recaps off). */
+  showMissingRecaps?: boolean;
 }): SparkStatNavItem[] {
   const tiles: SparkStatNavItem[] = [];
   if (input.approvals > 0 || input.approvalsSlaBreach > 0) {
@@ -50,19 +52,21 @@ export function attentionSnapshotKpis(input: {
       to: "/approvals",
     });
   }
-  tiles.push({
-    label: "Recaps due",
-    value: input.recapsDue.toLocaleString(),
-    count: input.recapsDue,
-    hint:
-      input.recapsDue > 0
-        ? `Review the ${input.recapsDue} recap${input.recapsDue === 1 ? "" : "s"} due`
-        : "Caught up",
-    tone: input.recapsDue > 0 ? "orange" : "default",
-    delta: input.recapsDue > 0 ? "Due" : undefined,
-    deltaAttention: input.recapsDue > 0,
-    to: "/recaps/missing",
-  });
+  if (input.showMissingRecaps !== false) {
+    tiles.push({
+      label: "Recaps due",
+      value: input.recapsDue.toLocaleString(),
+      count: input.recapsDue,
+      hint:
+        input.recapsDue > 0
+          ? `Review the ${input.recapsDue} recap${input.recapsDue === 1 ? "" : "s"} due`
+          : "Caught up",
+      tone: input.recapsDue > 0 ? "orange" : "default",
+      delta: input.recapsDue > 0 ? "Due" : undefined,
+      deltaAttention: input.recapsDue > 0,
+      to: "/recaps/missing",
+    });
+  }
   if (input.upcoming > 0) {
     tiles.push({
       label: "Upcoming · 14d",

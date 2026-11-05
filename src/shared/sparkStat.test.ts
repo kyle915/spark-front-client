@@ -333,6 +333,30 @@ describe("attentionSnapshotKpis", () => {
       "Recaps due",
       "Active requests",
     ]);
+  });
+
+  it("can hide the Recaps due tile for gated tenants", () => {
+    const tiles = attentionSnapshotKpis({
+      approvals: 0,
+      approvalsSlaBreach: 0,
+      recapsDue: 32,
+      upcoming: 0,
+      alertsUnread: 0,
+      tracker: 9,
+      showMissingRecaps: false,
+    });
+    expect(tiles.map((t) => t.label)).toEqual(["Active requests"]);
+  });
+
+  it("oranges SLA / due details", () => {
+    const tiles = attentionSnapshotKpis({
+      approvals: 2,
+      approvalsSlaBreach: 1,
+      recapsDue: 3,
+      upcoming: 0,
+      alertsUnread: 0,
+      tracker: 9,
+    });
     expect(tiles[0]).toMatchObject({
       count: 2,
       tone: "orange",

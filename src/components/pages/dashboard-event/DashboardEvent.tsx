@@ -9,6 +9,7 @@ import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
+import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
 import { useDashboardProgram } from "@/field/useDashboardProgram";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
@@ -33,7 +34,14 @@ import { useBrandView } from "@/components/brandGroup/useBrandView";
 const TodaysSnapshot: React.FC = () => {
   const navigate = useNavigate();
   const counts = useSidebarCounts();
-  const tiles = attentionSnapshotKpis(counts);
+  const { tenantSlug, tenantMeta } = useAuthStore();
+  const tiles = attentionSnapshotKpis({
+    ...counts,
+    showMissingRecaps: showsMissingRecaps(
+      tenantSlug,
+      tenantMeta?.requestUrlName,
+    ),
+  });
   if (tiles.length === 0) return null;
   return (
     <div className="spark-card spark-stat-band">

@@ -1,6 +1,7 @@
 import React, { Suspense, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
 import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
@@ -550,11 +551,18 @@ export const SparkSidebar: React.FC = () => {
   const { open, setOpen } = useMobileNav();
   // Filter sections + items by role.
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  const missingRecapsOn = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
   const visibleSections: NavSection[] = SECTIONS.filter(
     (s) => !s.adminOnly || !isClient,
   ).map((s) => {
     let items = s.items.filter((it) => !it.adminOnly || !isClient);
     if (s.title !== "Recaps") return { ...s, items };
+    if (!missingRecapsOn) {
+      items = items.filter((it) => it.to !== "/recaps/missing");
+    }
     if (!torch) return { ...s, items };
     // Torch: one Plans nav (field marketing). Hide Activation Plans.
     items = items.filter((it) => it.to !== "/plans");

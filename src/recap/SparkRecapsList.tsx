@@ -40,6 +40,7 @@ import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
 import PushToPlanSheet from "@/field/PushToPlanSheet";
+import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
@@ -1492,6 +1493,10 @@ const RecapsListFetched: React.FC<{
   const navigate = useNavigate();
   const { tenantSlug, tenantMeta } = useAuthStore();
   const plansOn = !isClient && isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  const missingRecapsOn = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
   const [planTarget, setPlanTarget] = useState<Recap | null>(null);
 
   const page1Legacy = useMemo(
@@ -3483,7 +3488,7 @@ export default function SparkRecapsList() {
                       ))}
                     </select>
                   )}
-                  {!isClient && (
+                  {!isClient && missingRecapsOn && (
                     <button
                       type="button"
                       onClick={() => {
@@ -3648,7 +3653,7 @@ export default function SparkRecapsList() {
                 ))}
               </select>
             )}
-            {!isClient && (
+            {!isClient && missingRecapsOn && (
               <button
                 type="button"
                 onClick={() => navigate("/recaps/missing")}
