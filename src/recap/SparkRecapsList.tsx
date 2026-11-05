@@ -1493,10 +1493,6 @@ const RecapsListFetched: React.FC<{
   const navigate = useNavigate();
   const { tenantSlug, tenantMeta } = useAuthStore();
   const plansOn = !isClient && isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
-  const missingRecapsOn = showsMissingRecaps(
-    tenantSlug,
-    tenantMeta?.requestUrlName,
-  );
   const [planTarget, setPlanTarget] = useState<Recap | null>(null);
 
   const page1Legacy = useMemo(
@@ -2105,8 +2101,12 @@ const RmmFilterDropdown: React.FC<{
 };
 
 export default function SparkRecapsList() {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
+  const missingRecapsOn = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
