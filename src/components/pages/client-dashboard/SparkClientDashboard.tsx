@@ -472,6 +472,7 @@ const WeekAheadPanel: React.FC<{
 };
 
 const ClientInner: React.FC = () => {
+  const navigate = useNavigate();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const { program, choose } = useDashboardProgram(torch);

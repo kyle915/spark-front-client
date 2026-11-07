@@ -250,7 +250,6 @@ const EditRetailer = lazyNamed(
 );
 
 // Recap (heaviest — pulls HEIC decoder via dynamic import)
-const RecapList = lazyDefault(() => import("@/recap/RecapsList"));
 const SparkRecapsList = lazyDefault(loadSparkRecapsList);
 const SparkRecapsMissing = lazyDefault(
   () => import("@/recap/SparkRecapsMissing"),

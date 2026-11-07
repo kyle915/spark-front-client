@@ -1205,7 +1205,6 @@ const RecapsListInner: React.FC<{
     [listFilters, needsStoreMap],
   );
   const unifiedPage1 = unifiedRecapsPageVariables(null);
-  const page1Vars = unifiedPage1.legacy;
   const environment = useRelayEnvironment();
 
   // Tenant-level EXISTS (warmed by idle prefetch) — skip unused kind
