@@ -69,6 +69,7 @@ import {
   recapsListPageVariables,
   RECAPS_DOM_WINDOW_SIZE,
 } from "./recapsListPagination";
+import { unifiedRecapsPageVariables } from "./unifiedRecapsFetch";
 import { partitionRecapsForBulkArchive } from "./recapBulkArchive";
 import {
   buildRecapListSearchParams,
@@ -1203,7 +1204,7 @@ const RecapsListInner: React.FC<{
         : null,
     [listFilters, needsStoreMap],
   );
-  const page1Vars = recapsListPageVariables(null);
+  const unifiedPage1 = unifiedRecapsPageVariables(null);
   const environment = useRelayEnvironment();
 
   // Tenant-level EXISTS (warmed by idle prefetch) — skip unused kind
@@ -1222,14 +1223,14 @@ const RecapsListInner: React.FC<{
     refreshKey === 0 ? "store-or-network" : "network-only";
 
   const legacyVars = {
-    first: page1Vars.first,
-    after: page1Vars.after,
+    first: unifiedPage1.legacy.first,
+    after: unifiedPage1.legacy.after,
     q: searchQ,
     filters: listFilters,
   };
   const customVars = {
-    first: page1Vars.first,
-    after: page1Vars.after,
+    first: unifiedPage1.custom.first,
+    after: unifiedPage1.custom.after,
     q: searchQ,
     filters: customListFilters,
   };

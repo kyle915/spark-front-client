@@ -472,6 +472,7 @@ const WeekAheadPanel: React.FC<{
 };
 
 const ClientInner: React.FC = () => {
+  const navigate = useNavigate();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const { program, choose } = useDashboardProgram(torch);
@@ -618,27 +619,67 @@ const ClientInner: React.FC = () => {
         <DashboardProgramSwitch program={program} onChange={choose} />
       ) : null}
 
-      {counts.approvals > 0 ? (
-        <button
-          type="button"
-          onClick={() => setApprovalsOpen(true)}
-          className="spark-card spark-stat-band w-full flex items-center justify-between text-left gap-3"
-        >
-          <span className="spark-kpi-lockup min-w-0">
-            <span className="spark-kpi-delta is-attention">Needs you</span>
-            <span className="flex items-baseline gap-2 mt-1 min-w-0">
-              <span className="spark-kpi-value spark-kpi-value-sm is-orange">
-                <CountReel value={counts.approvals} />
-              </span>
-              <span className="spark-kpi-label truncate">
-                approval{counts.approvals === 1 ? "" : "s"} waiting
-              </span>
-            </span>
-          </span>
-          <span className="spark-kpi-delta is-attention shrink-0">
-            Approvals →
-          </span>
-        </button>
+      {counts.approvals > 0 ||
+      counts.recapsDue > 0 ||
+      counts.alertsUnread > 0 ? (
+        <div className="spark-card spark-stat-band w-full flex flex-col gap-2">
+          <span className="spark-kpi-delta is-attention">Needs you</span>
+          <div className="flex flex-col sm:flex-row gap-2">
+            {counts.approvals > 0 ? (
+              <button
+                type="button"
+                onClick={() => setApprovalsOpen(true)}
+                className="flex-1 flex items-center justify-between text-left gap-3 rounded-xl px-3 py-2 hover:bg-base-300/40 transition"
+              >
+                <span className="flex items-baseline gap-2 min-w-0">
+                  <span className="spark-kpi-value spark-kpi-value-sm is-orange">
+                    <CountReel value={counts.approvals} />
+                  </span>
+                  <span className="spark-kpi-label truncate">
+                    approval{counts.approvals === 1 ? "" : "s"}
+                  </span>
+                </span>
+                <span className="spark-kpi-delta is-attention shrink-0 text-[11px]">
+                  Review →
+                </span>
+              </button>
+            ) : null}
+            {counts.recapsDue > 0 ? (
+              <button
+                type="button"
+                onClick={() => navigate("/recaps/list")}
+                className="flex-1 flex items-center justify-between text-left gap-3 rounded-xl px-3 py-2 hover:bg-base-300/40 transition"
+              >
+                <span className="flex items-baseline gap-2 min-w-0">
+                  <span className="spark-kpi-value spark-kpi-value-sm is-orange">
+                    <CountReel value={counts.recapsDue} />
+                  </span>
+                  <span className="spark-kpi-label truncate">recaps due</span>
+                </span>
+                <span className="spark-kpi-delta is-attention shrink-0 text-[11px]">
+                  Recaps →
+                </span>
+              </button>
+            ) : null}
+            {counts.alertsUnread > 0 ? (
+              <button
+                type="button"
+                onClick={() => navigate("/inbox")}
+                className="flex-1 flex items-center justify-between text-left gap-3 rounded-xl px-3 py-2 hover:bg-base-300/40 transition"
+              >
+                <span className="flex items-baseline gap-2 min-w-0">
+                  <span className="spark-kpi-value spark-kpi-value-sm is-orange">
+                    <CountReel value={counts.alertsUnread} />
+                  </span>
+                  <span className="spark-kpi-label truncate">unread</span>
+                </span>
+                <span className="spark-kpi-delta is-attention shrink-0 text-[11px]">
+                  Inbox →
+                </span>
+              </button>
+            ) : null}
+          </div>
+        </div>
       ) : null}
 
       {program === "field" ? null : (
