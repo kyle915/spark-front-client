@@ -400,7 +400,9 @@ const TrackerTable: React.FC<{
   // until everything is in the DOM. Filter/sort changes swap the `rows`
   // array identity, which resets the window. Everything BELOW the table
   // (counts, export) still reads the full `rows`.
-  const [visibleCount, setVisibleCount] = useState(120);
+  // DOM window — mount only the first N filtered rows; grow on scroll.
+  const TRACKER_DOM_WINDOW = 120;
+  const [visibleCount, setVisibleCount] = useState(TRACKER_DOM_WINDOW);
   useEffect(() => {
     setVisibleCount(120);
   }, [rows]);

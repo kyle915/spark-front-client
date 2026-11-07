@@ -45,6 +45,10 @@ import {
   todayISO,
   writeIdentity,
 } from "./checkinHelpers";
+import {
+  stalledUploadingCount,
+  uploadStallMessage,
+} from "./uploadStall";
 import type {
   CheckinResource,
   Clock,
@@ -3375,6 +3379,21 @@ function RecapForm({
   const uploadProgress = computeUploadProgress(photos);
   const failedCount = photos.filter((p) => p.state === "failed").length;
   const doneCount = photos.filter((p) => p.state === "done").length;
+  const [stallTick, setStallTick] = useState(0);
+  useEffect(() => {
+    if (uploadingCount <= 0) return;
+    const id = window.setInterval(() => setStallTick((n) => n + 1), 5_000);
+    return () => window.clearInterval(id);
+  }, [uploadingCount]);
+  const stalledCount = stalledUploadingCount(
+    photos.map((p) => ({
+      id: p.id,
+      state: p.state,
+      startedAt: p.uploadStartedAt ?? null,
+    })),
+  );
+  void stallTick;
+  const stallCopy = uploadStallMessage(stalledCount, failedCount);
   // Store Wi-Fi / one bar keeps navigator.onLine true while every request
   // stalls, so all-photos-timed-out counts as offline and queues the recap.
   const allFailedOffline =
@@ -3759,6 +3778,7 @@ function RecapForm({
       blobName: null,
       previewUrl: URL.createObjectURL(file),
       state: "uploading" as const,
+      uploadStartedAt: Date.now(),
       category,
     }));
     // Keep the ref ahead of re-render so a second library pick mid-upload
@@ -4522,6 +4542,12 @@ function RecapForm({
         <p style={{ color: "#44403c", textAlign: "center", fontSize: 13, opacity: 1 }} aria-live="polite">
           {formatUploadProgress(uploadProgress)}
         </p>
+      ) : null}
+
+      {stallCopy && stalledCount > 0 ? (
+        <div style={{ ...card, borderColor: "#EF5A2A" }} aria-live="polite">
+          <p style={{ fontSize: 13, margin: 0 }}>{stallCopy}</p>
+        </div>
       ) : null}
 
       {failedCount > 0 ? (

@@ -27,7 +27,7 @@ describe("peopleServerFilters", () => {
     ).toEqual(["a", "b", "c"]);
   });
 
-  it("sends name, email, and role so people past the page can be found", () => {
+  it("sends unified search so people past the page can be found", () => {
     expect(
       peopleServerFilters({
         tenantId: "t1",
@@ -36,7 +36,7 @@ describe("peopleServerFilters", () => {
       }),
     ).toEqual({
       tenantId: "t1",
-      name: "Christiansen",
+      search: "Kyle Christiansen",
       role: "AMBASSADOR",
     });
     expect(
@@ -47,7 +47,7 @@ describe("peopleServerFilters", () => {
       }),
     ).toEqual({
       tenantId: "t1",
-      email: "ada@igniteproductions.co",
+      search: "ada@igniteproductions.co",
     });
     expect(
       peopleServerFilters({
@@ -64,7 +64,7 @@ describe("peopleServerFilters", () => {
       search: "Brew",
       role: "client",
     });
-    expect(filters).toEqual({ name: "Brew", role: "CLIENT" });
+    expect(filters).toEqual({ search: "Brew", role: "CLIENT" });
     expect(filters).not.toHaveProperty("clientName");
   });
 

@@ -630,7 +630,7 @@ const RequestsLinks = {
     },
     {
       path: "/requests/legacy",
-      component: <RequestsList />,
+      component: <Navigate to="/requests/list" replace />,
       isPublic: false,
     },
     {
@@ -1185,7 +1185,11 @@ const RecapLinks = {
       component: <SparkClientDashboard />,
       isPublic: false,
     },
-    { path: "/recap/legacy", component: <RecapList />, isPublic: false },
+    {
+      path: "/recap/legacy",
+      component: <Navigate to="/recaps/list" replace />,
+      isPublic: false,
+    },
     {
       path: "/recaps/custom-list",
       component: <RecapCustomList />,

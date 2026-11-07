@@ -7,6 +7,8 @@ export type PeopleServerFilters = {
   tenantId?: string | null;
   name?: string;
   email?: string;
+  /** Free-text across first/last/email when API supports UserFiltersInput.search */
+  search?: string;
   role?: PeopleServerRole;
 };
 
@@ -45,9 +47,8 @@ const ROLE_TO_SERVER: Record<string, PeopleServerRole> = {
 };
 
 /**
- * Name and email are AND on the API, and `name` matches first or last name,
- * not the joined string. A multi-word query sends the longest token (usually
- * the last name). An address-looking query goes to email.
+ * Prefer a single `search` filter (name OR email OR first/last). Fall back
+ * to name/email split for older API builds that lack `search`.
  */
 export function peopleServerFilters(input: {
   tenantId?: string | null;
@@ -60,17 +61,8 @@ export function peopleServerFilters(input: {
   if (role) filters.role = role;
   const search = input.search.trim();
   if (!search) return filters;
-  const emailLike =
-    search.includes("@") || (!/\s/.test(search) && search.includes("."));
-  if (emailLike) {
-    filters.email = search;
-    return filters;
-  }
-  const tokens = search.split(/\s+/).filter(Boolean);
-  filters.name = tokens.reduce(
-    (longest, token) => (token.length > longest.length ? token : longest),
-    tokens[0] ?? search,
-  );
+  // Unified search — API ORs first_name / last_name / email.
+  filters.search = search;
   return filters;
 }
 

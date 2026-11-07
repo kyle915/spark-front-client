@@ -108,7 +108,7 @@ export const SparkTopbar: React.FC = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const crumb = useBreadcrumb();
-  const { role, isClient, setRole } = useSparkRole();
+  const { role, isClient, setRole, canToggleRole } = useSparkRole();
   const { toggle: toggleNav } = useMobileNav();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
@@ -206,14 +206,16 @@ export const SparkTopbar: React.FC = () => {
           </span>
         </button>
 
-        <PillGroup
-          value={role}
-          onChange={(v) => onRole(v as Role)}
-          options={[
-            { value: "admin", label: "Admin", icon: "⚒" },
-            { value: "client", label: "Client", icon: "◐" },
-          ]}
-        />
+        {canToggleRole ? (
+          <PillGroup
+            value={role}
+            onChange={(v) => onRole(v as Role)}
+            options={[
+              { value: "admin", label: "Admin", icon: "⚒" },
+              { value: "client", label: "Client", icon: "◐" },
+            ]}
+          />
+        ) : null}
 
         <NotificationBell />
 

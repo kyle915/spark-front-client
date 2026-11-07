@@ -221,6 +221,8 @@ export type Photo = {
   blobName: string | null;
   previewUrl: string;
   state: "uploading" | "done" | "failed";
+  /** Epoch ms when this photo entered `uploading` — stall detection. */
+  uploadStartedAt?: number;
   // Which labelled bucket this was dropped into, or null for the generic grid
   // (every brand without buckets). Sent per file on submit; the backend
   // validates it against that brand's own buckets and falls back to its
