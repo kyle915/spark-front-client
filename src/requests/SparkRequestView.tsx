@@ -1,5 +1,6 @@
-import { Fragment, Suspense, useMemo, useState } from "react";
+import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import AskAiButton from "@/components/ai/AskAiButton";
@@ -7,6 +8,7 @@ import LocationMap from "@shared/LocationMap";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import environment from "@/api/relay/environment";
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import { RequestFieldReportsQuery } from "@api/queries/RequestFieldReportsQuery";
@@ -136,22 +138,63 @@ const LinkedSheetChipForView: React.FC = () => {
   );
 };
 
+const MENTION_ROSTER_PAGE_SIZE = 100;
+
 const NotesLoader: React.FC<{
   requestUuid: string;
   requestLabel: string;
 }> = ({ requestUuid, requestLabel }) => {
   const { tenantId } = useAuthStore();
+  const filters = tenantId ? { tenantId } : null;
   const data = useLazyLoadQuery<UsersQueryType>(
     UsersQuery,
-    { filters: tenantId ? { tenantId } : null, first: 500 },
+    { filters, first: MENTION_ROSTER_PAGE_SIZE },
     { fetchPolicy: "store-or-network" },
   );
+  const [extraEdges, setExtraEdges] = useState<
+    NonNullable<UsersQueryType["response"]["users"]>["edges"]
+  >([]);
+
+  // Cursor-walk remaining pages so @-mention roster is not silently
+  // truncated at first:500 (People Load more pattern, auto-hydrate).
+  useEffect(() => {
+    let cancelled = false;
+    const walk = async () => {
+      let after = data?.users?.pageInfo?.endCursor ?? null;
+      let hasNext = Boolean(data?.users?.pageInfo?.hasNextPage && after);
+      const collected: NonNullable<
+        UsersQueryType["response"]["users"]
+      >["edges"] = [];
+      let pages = 0;
+      while (hasNext && after && pages < 20) {
+        pages += 1;
+        const next = await fetchQuery<UsersQueryType>(
+          environment,
+          UsersQuery,
+          { filters, first: MENTION_ROSTER_PAGE_SIZE, after },
+          { fetchPolicy: "network-only" },
+        ).toPromise();
+        if (cancelled) return;
+        collected.push(...(next?.users?.edges ?? []));
+        after = next?.users?.pageInfo?.endCursor ?? null;
+        hasNext = Boolean(next?.users?.pageInfo?.hasNextPage && after);
+      }
+      if (!cancelled) setExtraEdges(collected);
+    };
+    setExtraEdges([]);
+    void walk();
+    return () => {
+      cancelled = true;
+    };
+  }, [data, filters]);
+
   // Build mention roster from real admin users so @-handles resolve
   // to actual emails for the notifyNoteMention fanout.
   const mentionables: Mentionable[] = useMemo(() => {
-    const rows = (data?.users?.edges ?? [])
+    const rows = [...(data?.users?.edges ?? []), ...extraEdges]
       .map((e) => e?.node)
       .filter((n): n is NonNullable<typeof n> => Boolean(n));
+    const seen = new Set<string>();
     return rows
       .filter((u) => {
         const role = (u.role?.name ?? "").toLowerCase();
@@ -165,8 +208,12 @@ const NotesLoader: React.FC<{
           "Admin",
         email: u.email ?? "",
       }))
-      .filter((m) => m.email);
-  }, [data]);
+      .filter((m) => {
+        if (!m.email || seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+  }, [data, extraEdges]);
   return (
     <InternalNotesPanel
       requestUuid={requestUuid}

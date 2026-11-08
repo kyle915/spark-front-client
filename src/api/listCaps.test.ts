@@ -84,6 +84,16 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(src("./queries/TrackerListQuery.ts")).toContain("TrackerListQuery");
   });
 
+  it("Invite BA roster uses cursor Load more instead of silent first:500", () => {
+    const invite = src("../requests/InviteBAModal.tsx");
+    expect(invite).toContain("AMBASSADOR_ROSTER_PAGE_SIZE");
+    expect(invite).toContain("Load more");
+    expect(invite).not.toMatch(/first:\s*500/);
+    expect(src("../requests/inviteBaRoster.ts")).toContain(
+      "AMBASSADOR_ROSTER_PAGE_SIZE = 100",
+    );
+  });
+
   it("Reports charts do not pull fat RequestsQuery / classic-only RecapsQuery", () => {
     const reports = src("../components/pages/reports/SparkReports.tsx");
     expect(reports).not.toContain('from "@/api/queries/RequestsQuery"');

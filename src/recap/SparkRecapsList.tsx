@@ -66,10 +66,12 @@ import {
   appendUniqueByUuid,
   domWindowForIndex,
   expandDomWindow,
-  recapsListPageVariables,
   RECAPS_DOM_WINDOW_SIZE,
 } from "./recapsListPagination";
-import { unifiedRecapsPageVariables } from "./unifiedRecapsFetch";
+import {
+  planUnifiedRecapsLoadMore,
+  unifiedRecapsPageVariables,
+} from "./unifiedRecapsFetch";
 import { partitionRecapsForBulkArchive } from "./recapBulkArchive";
 import {
   buildRecapListSearchParams,
@@ -1574,27 +1576,33 @@ const RecapsListFetched: React.FC<{
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current) return;
-    if (!(enableLegacy && legacyHasMore) && !(enableCustom && customHasMore))
-      return;
+    const plan = planUnifiedRecapsLoadMore({
+      enableLegacy,
+      enableCustom,
+      legacyHasMore,
+      customHasMore,
+      legacyAfter,
+      customAfter,
+    });
+    if (!plan.hasMore) return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
     setLoadMoreError(null);
-    const next = recapsListPageVariables;
     try {
       const [legacyPage, customPage] = await Promise.all([
-        enableLegacy && legacyHasMore
+        plan.fetchLegacy && plan.legacyVars
           ? fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
-              ...next(legacyAfter),
+              ...plan.legacyVars,
               q: searchQ,
               filters: listFilters,
             }, { fetchPolicy: "network-only" }).toPromise()
           : Promise.resolve(null),
-        enableCustom && customHasMore
+        plan.fetchCustom && plan.customVars
           ? fetchQuery<CustomRecapsListQueryType>(
               environment,
               CustomRecapsListQuery,
               {
-                ...next(customAfter),
+                ...plan.customVars,
                 q: searchQ,
                 filters: customListFilters,
               },

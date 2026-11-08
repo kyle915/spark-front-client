@@ -1,5 +1,10 @@
-/** Tenants where Missing Recaps (sidebar + /recaps/missing) stays off. */
-const MISSING_RECAPS_OFF = new Set(["famus-energy"]);
+/** Tenants where Missing Recaps (sidebar + /recaps/missing) stays off.
+
+Empty after Famus Matching debt was parked (API accepted orphans +
+fuzzy folds). Re-add a slug only if false DUE shells return for that
+tenant.
+*/
+const MISSING_RECAPS_OFF = new Set<string>([]);
 
 export function showsMissingRecaps(
   slug: string | null | undefined,
