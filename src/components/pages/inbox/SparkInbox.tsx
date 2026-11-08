@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fetchQuery, useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -9,6 +9,12 @@ import { useAlertStore } from "@/store/alertStore";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
+import {
+  INBOX_PAGE_SIZE,
+  inboxEndCursor,
+  inboxHasMore,
+  mergeInboxByUuid,
+} from "./inboxListFilters";
 
 /**
  * Fire an approve or decline mutation against the request and return
@@ -119,13 +125,98 @@ const KIND_META: Record<
   },
 };
 
+type RequestNode = NonNullable<
+  NonNullable<
+    NonNullable<RequestsQueryType["response"]["requests"]>["edges"]
+  >[number]
+>["node"];
+
+const toActionItems = (
+  nodes: Array<NonNullable<RequestNode>>,
+  kinds: ReadonlyArray<"pending" | "declined">,
+): ActionItem[] => {
+  const cutoff72 = Date.now() - 72 * 60 * 60 * 1000;
+  const cutoff7d = Date.now() - 7 * 86_400_000;
+  const out: ActionItem[] = [];
+  const wantPending = kinds.includes("pending");
+  const wantDeclined = kinds.includes("declined");
+
+  for (const r of nodes) {
+    const slug = (r.status?.slug ?? r.status?.name ?? "")
+      .toString()
+      .toLowerCase();
+    const created = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+    const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : NaN;
+    const id = String(r.id);
+    const reqId = `REQ-${id.slice(-4).toUpperCase()}`;
+    const venue = r.retailer?.name ?? r.name ?? "—";
+    const market = r.market || "—";
+    const requester = r.client?.name ?? r.distributor?.name ?? "—";
+
+    if (wantPending && slug === "pending") {
+      const isBreach = Number.isFinite(created) && created <= cutoff72;
+      out.push({
+        uuid: String(r.uuid),
+        reqId,
+        venue,
+        market,
+        requester,
+        whenIso: r.createdAt ?? "",
+        kind: isBreach ? "sla" : "pending",
+      });
+    } else if (
+      wantDeclined &&
+      slug === "declined" &&
+      Number.isFinite(updated) &&
+      updated >= cutoff7d
+    ) {
+      out.push({
+        uuid: String(r.uuid),
+        reqId,
+        venue,
+        market,
+        requester,
+        whenIso: r.updatedAt ?? "",
+        kind: "declined",
+      });
+    }
+  }
+  return out;
+};
+
+const nodesFromQuery = (
+  data: RequestsQueryType["response"] | null | undefined,
+): Array<NonNullable<RequestNode>> =>
+  data?.requests?.edges
+    ?.map((e) => e?.node)
+    ?.filter((n): n is NonNullable<RequestNode> => Boolean(n)) ?? [];
+
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const environment = useRelayEnvironment();
   const showAlert = useAlertStore((s) => s.showAlert);
-  const data = useLazyLoadQuery<RequestsQueryType>(
+
+  // Server-filtered pages (not silent first:500). Pending + recent
+  // declined each get their own cursor window; Load more walks pending.
+  const pendingData = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 500, filters: tenantId ? { tenantId } : null },
+    {
+      first: INBOX_PAGE_SIZE,
+      filters: tenantId
+        ? { tenantId, statusSlugs: ["pending", "queue"] }
+        : null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  const declinedData = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    {
+      first: INBOX_PAGE_SIZE,
+      filters: tenantId
+        ? { tenantId, statusSlug: "declined", dateSort: "desc" }
+        : null,
+    },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -142,6 +233,12 @@ const Inner: React.FC = () => {
   const [optimisticallyResolved, setOptimisticallyResolved] = useState<
     Set<string>
   >(new Set());
+  const [extraPending, setExtraPending] = useState<ActionItem[]>([]);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const loadingMoreRef = useRef(false);
 
   // Track which items kyle has dismissed (per-user localStorage).
   // Lets him clear the inbox progressively without a backend.
@@ -166,64 +263,43 @@ const Inner: React.FC = () => {
     }
   };
 
+  const page1Pending = useMemo(
+    () => toActionItems(nodesFromQuery(pendingData), ["pending"]),
+    [pendingData],
+  );
+  const page1Declined = useMemo(
+    () => toActionItems(nodesFromQuery(declinedData), ["declined"]),
+    [declinedData],
+  );
+
+  const pendingRosterKey = [
+    tenantId ?? "",
+    inboxEndCursor(pendingData?.requests?.pageInfo) ?? "",
+    String(Boolean(pendingData?.requests?.pageInfo?.hasNextPage)),
+    String(page1Pending.length),
+  ].join("|");
+
+  useEffect(() => {
+    setExtraPending([]);
+    setEndCursor(inboxEndCursor(pendingData?.requests?.pageInfo));
+    setHasMore(inboxHasMore(pendingData?.requests?.pageInfo));
+    setLoadMoreError(null);
+    loadingMoreRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roster key
+  }, [pendingRosterKey]);
+
+  const pendingItems = useMemo(
+    () => mergeInboxByUuid(page1Pending, extraPending),
+    [page1Pending, extraPending],
+  );
+
   const items: ActionItem[] = useMemo(() => {
-    const rows =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-
-    const cutoff72 = Date.now() - 72 * 60 * 60 * 1000;
-    const cutoff7d = Date.now() - 7 * 86_400_000;
-    const out: ActionItem[] = [];
-
-    for (const r of rows) {
-      const slug = (r.status?.slug ?? r.status?.name ?? "")
-        .toString()
-        .toLowerCase();
-      const created = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
-      const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : NaN;
-      const id = String(r.id);
-      const reqId = `REQ-${id.slice(-4).toUpperCase()}`;
-      const venue = r.retailer?.name ?? r.name ?? "—";
-      const market = r.market || "—";
-      const requester = r.client?.name ?? r.distributor?.name ?? "—";
-
-      if (slug === "pending") {
-        const isBreach = Number.isFinite(created) && created <= cutoff72;
-        out.push({
-          uuid: String(r.uuid),
-          reqId,
-          venue,
-          market,
-          requester,
-          whenIso: r.createdAt ?? "",
-          kind: isBreach ? "sla" : "pending",
-        });
-      } else if (
-        slug === "declined" &&
-        Number.isFinite(updated) &&
-        updated >= cutoff7d
-      ) {
-        out.push({
-          uuid: String(r.uuid),
-          reqId,
-          venue,
-          market,
-          requester,
-          whenIso: r.updatedAt ?? "",
-          kind: "declined",
-        });
-      }
-    }
-
-    // Sort: SLA breach first, then by age (oldest pending first since
-    // it's been waiting longest), then declined by recency.
     const rank: Record<ActionItem["kind"], number> = {
       sla: 0,
       pending: 1,
       declined: 2,
     };
-    return out
+    return [...pendingItems, ...page1Declined]
       .filter(
         (i) =>
           !dismissed.has(i.uuid) &&
@@ -231,16 +307,44 @@ const Inner: React.FC = () => {
       )
       .sort((a, b) => {
         if (rank[a.kind] !== rank[b.kind]) return rank[a.kind] - rank[b.kind];
-        // Within sla/pending: oldest first (most urgent).
         if (a.kind !== "declined") {
           return (
             new Date(a.whenIso).getTime() - new Date(b.whenIso).getTime()
           );
         }
-        // Within declined: most recent first.
         return new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime();
       });
-  }, [data, dismissed, optimisticallyResolved]);
+  }, [pendingItems, page1Declined, dismissed, optimisticallyResolved]);
+
+  const loadMorePending = useCallback(async () => {
+    if (!tenantId || !endCursor || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+    try {
+      const next = await fetchQuery<RequestsQueryType>(
+        environment,
+        RequestsQuery,
+        {
+          first: INBOX_PAGE_SIZE,
+          after: endCursor,
+          filters: { tenantId, statusSlugs: ["pending", "queue"] },
+        },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const mapped = toActionItems(nodesFromQuery(next), ["pending"]);
+      setExtraPending((prev) => mergeInboxByUuid(prev, mapped));
+      setEndCursor(inboxEndCursor(next?.requests?.pageInfo));
+      setHasMore(inboxHasMore(next?.requests?.pageInfo));
+    } catch (e) {
+      setLoadMoreError(
+        e instanceof Error ? e.message : "Could not load more inbox items.",
+      );
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [tenantId, endCursor, hasMore, environment]);
 
   // Approve a request directly from the row. Optimistic — hides the
   // row immediately, then surfaces a success/error toast based on
@@ -651,6 +755,37 @@ const Inner: React.FC = () => {
               );
             })}
           </ul>
+          {(hasMore || loadMoreError) && (
+            <div
+              className="px-5 py-3 flex flex-wrap items-center gap-3"
+              style={{ borderTop: "1px solid var(--spark-border)" }}
+            >
+              <button
+                type="button"
+                disabled={loadingMore || !hasMore}
+                onClick={() => void loadMorePending()}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  opacity: loadingMore || !hasMore ? 0.55 : 1,
+                }}
+              >
+                {loadingMore
+                  ? "Loading…"
+                  : `Load more pending · ${pendingItems.length} shown`}
+              </button>
+              {loadMoreError ? (
+                <span
+                  className="text-xs"
+                  style={{ color: "var(--spark-orange)" }}
+                >
+                  {loadMoreError}
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
     </div>
