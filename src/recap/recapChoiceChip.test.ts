@@ -8,8 +8,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 describe("light-paper selected Sample format / SKU chips", () => {
   const css = readFileSync(join(root, "src/index.css"), "utf8");
   const view = readFileSync(join(root, "src/recap/RecapCustomView.tsx"), "utf8");
-  const checkin = readFileSync(
-    join(root, "src/components/pages/checkin/SparkCheckin.tsx"),
+  const recapForm = readFileSync(
+    join(root, "src/components/pages/checkin/RecapForm.tsx"),
     "utf8",
   );
   const fieldRows = readFileSync(
@@ -38,9 +38,9 @@ describe("light-paper selected Sample format / SKU chips", () => {
   });
 
   it("uses green selected classes on walk-up multiselect chips", () => {
-    expect(checkin).toContain("recap-option-chip");
-    expect(checkin).toContain("is-selected");
-    expect(checkin).not.toMatch(
+    expect(recapForm).toContain("recap-option-chip");
+    expect(recapForm).toContain("is-selected");
+    expect(recapForm).not.toMatch(
       /background:\s*on\s*\?\s*accent\s*:\s*"transparent"/,
     );
   });

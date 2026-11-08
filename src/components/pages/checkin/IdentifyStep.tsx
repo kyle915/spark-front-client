@@ -1,9 +1,8 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { useParams } from "react-router";
-import { isExpenseReceiptBucket } from "./photoBuckets";
-import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
-import { applyVoiceFills, type VoiceFill } from "./voiceDraft";
-import { VoiceRecapCard } from "./VoiceRecapCard";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
 import {
   decideStoreProximity,
@@ -14,138 +13,33 @@ import {
   proximityIdentifyFields,
   type LatLng,
 } from "./storeProximity";
-import { PHOTO_CAP } from "./photoCap";
 import {
-  AUTO_RETRY_DELAYS_MS,
   CHECKIN_MAX_FUTURE_DAYS,
   CHECKIN_MAX_PAST_DAYS,
-  FALLBACK_ACCENT,
-  UNREADABLE_PHOTO_MESSAGE,
   apiOrigin,
-  checkinResources,
-  choiceKind,
-  compressImage,
-  draftPhotoOf,
-  fetchWithTimeout,
-  fileIsReadable,
-  flushQueuedRecap,
   fmtDay,
   fmtTime,
-  isPhotoType,
   normalizePlace,
-  photoPrep,
-  photoUploads,
-  postCheckinClock,
-  postCheckinPayableMileage,
-  postCheckinRecap,
   readIdentity,
-  retryableUploadFailure,
   shiftedISO,
-  telHref,
   todayISO,
   writeIdentity,
 } from "./checkinHelpers";
-import {
-  stalledUploadingCount,
-  uploadStallMessage,
-} from "./uploadStall";
 import type {
-  CheckinResource,
-  Clock,
-  Context,
   EventTypeOption,
-  Photo,
-  PhotoBucket,
-  StoreIdentity,
   StoreOption,
-  Template,
-  TemplateField,
-  TemplateProduct,
   UnfiledShift,
 } from "./checkinTypes";
-import { card, errText, h2, input, label, primaryBtn, resourceCard, secondaryBtn, wrap } from "./checkinStyles";
-import { CorpoCardYesNo, PhotoBucketZone, PhotoFileInputs, PhotoGrid } from "./RecapPhotoStep";
 import {
-  engagementsFromSamplesGiven,
-  templateHasConsumersSampledField,
-} from "@/recap/engagementsFromSamples";
+  card,
+  errText,
+  h2,
+  input,
+  primaryBtn,
+  secondaryBtn,
+} from "./checkinStyles";
 import {
-  DropOffLocationsField,
-} from "@/recap/DropOffLocationsField";
-import {
-  isDropOffLocationsField,
-  parseDropOffLocations,
-  productSamplesFromDropOffs,
-  validateDropOffLocationsValue,
-} from "@/recap/dropOffLocations";
-import {
-  isProductsSampledMultiselect,
-  matchProductForSampleOption,
-  productSampleQtyHelper,
-  productSampleQtyUnit,
-  productSamplesFromSelections,
-} from "@/recap/productsSampledQty";
-import { SpendAmountInput } from "@/recap/SpendAmountInput";
-import {
-  isSpendAmountField,
-  spendAmountError,
-  spendAmountStored,
-} from "@/recap/spendAmount";
-import { makeThumbnail } from "@/utils/compressImageForUpload";
-import {
-  deleteDraftPhotoFiles,
-  loadDraftPhotos,
-  readOpenRecap,
-  saveDraftPhotoFile,
-  writeDraftPhotos,
-  writeOpenRecap,
-} from "./photoDraft";
-import {
-  asRecapDraft,
-  clearDraft,
-  draftHasAnswers,
-  draftSavedLabel,
-  hasRecapDraft,
-  pickRestoredDraft,
-  readDraft,
-  writeDraft,
-  type DraftScope,
-  type RecapDraft,
-  type StoreIdentityDraft,
-} from "./recapDraft";
-import { buildRecapDraftRequest } from "./recapServerDraft";
-import { buildCompletenessItems } from "./checkinCompleteness";
-import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
-import {
-  analyzePhotoFile,
-  classifyPhotoQuality,
-  qualityMessage,
-  quickPhotoHash,
-  type PhotoQualityWarning,
-} from "./photoQuality";
-import { browserPlayableContentType } from "@/utils/recapFileUrl";
-import {
-  computeUploadProgress,
-  formatUploadProgress,
-} from "./uploadProgress";
-import {
-  CLOCK_FETCH_TIMEOUT_MS,
-  clearCachedContext,
-  clearPendingClock,
-  clearPendingClockOut,
-  enqueueClockIn,
-  enqueueClockOut,
-  flushPendingClock,
-  flushPendingClockOut,
-  isOfflineClockFailure,
-  offlineClockBanner,
-  offlineClockOutBanner,
   readCachedContext,
-  readPendingClock,
-  readPendingClockOut,
-  writeCachedContext,
-  type PendingClockIn,
-  type PendingClockOut,
 } from "./offlineClock";
 import {
   IDENTIFY_OFFLINE_NO_CACHE,
@@ -154,59 +48,18 @@ import {
   writePendingIdentify,
 } from "./offlineIdentify";
 import {
-  clearPendingRecap,
-  enqueueRecap,
-  offlineRecapBanner,
-  putCheckinPhoto,
-  NO_SIGNAL_PHOTO_MESSAGE,
-  readPendingRecap,
-  type PendingRecap,
-} from "./offlineRecap";
-import {
-  clearPendingMileage,
-  enqueueMileage,
-  flushPendingMileage,
-  offlineMileageBanner,
-  provisionalClaimFromPending,
-  readPendingMileage,
-  type PendingMileage,
-} from "./offlineMileage";
-import {
-  CHECK_IN_ANOTHER_GIG_HINT,
-  CHECK_IN_SOMEWHERE_ELSE,
-  CLEAR_LEFTOVER_ERROR,
   clearChosenShiftDate,
   eventCalendarDate,
-  finishPriorRecapLabel,
-  isLeftoverCheckinSession,
-  isPastDayWalkupSession,
-  LEFTOVER_PRIMARY_BUSY,
-  newDayPrimaryLabel,
-  offerFinishPriorRecap,
-  PAST_DAY_NO_CLOCK,
   readChosenShiftDate,
   shiftDateForFindOrCreate,
-  showNewDayGate,
-  START_OVER_LINK,
   writeChosenShiftDate,
 } from "./leftoverCheckin";
 import {
-  canAttemptOpenPunchResume,
   hasLookupPhone,
   lookupShiftsByPhone,
   resumeOpenShift,
-  shouldDropSessionToken,
-  shouldKeepCachedSession,
   type OpenShift,
 } from "./checkinSession";
-import { ActionMorphButton } from "@/motion/ActionMorphButton";
-import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
-import { useCoBrandRecap, type CoBrandOptions } from "./coBrandRecap";
-import { CoBrandSections, CoBrandToggleCard } from "./CoBrandRecapCards";
-import { TenantLogo } from "@/layout/TenantLogo.tsx";
-import { shouldShowSamplingStopCard } from "./samplingStops";
-import { isFieldShown, withoutHiddenValues } from "./fieldConditions";
-import PayableMileageStep from "./PayableMileageStep";
 import PlanGigPicker from "./PlanGigPicker";
 import {
   PLAN_GIG_MISSING_ERROR,
@@ -217,20 +70,6 @@ import {
   planGigUnanswered,
   type PlanGig,
 } from "./planGigs";
-import {
-  formatPayableMiles,
-  isMileageCustomFieldName,
-  payableMileageComplete,
-  shouldCollectPayableMileage,
-  type PayableMileageClaim,
-  type PayableMileageState,
-} from "./payableMileage";
-import {
-  SECOND_SHIFT_HINT,
-  SECOND_SHIFT_LABEL,
-  SECOND_SHIFT_PROMPT,
-  supportsStandingSecondShift,
-} from "./secondShift";
 import {
   eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
@@ -245,7 +84,6 @@ import {
   prefersReducedMotion,
   programPickerPrompt,
   programRequiredHint,
-  recapOnlyIntro,
   revealProgramPicker,
 } from "./programPickerGate";
 
