@@ -1,9 +1,21 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
+import {
+  AMBASSADOR_ROSTER_PAGE_SIZE,
+  ambassadorHasMore,
+  ambassadorEndCursor,
+} from "./inviteBaRoster";
 import { AmbassadorsBookedOnDateQuery } from "@/api/queries/AmbassadorsBookedOnDateQuery";
 import type { AmbassadorsBookedOnDateQuery as AmbassadorsBookedOnDateQueryType } from "@api/queries/__generated__/AmbassadorsBookedOnDateQuery.graphql";
 import { StaffingSuggestionsQuery } from "@/api/queries/StaffingSuggestionsQuery";
@@ -412,11 +424,16 @@ const Inner: React.FC<{
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [optimisticDone, setOptimisticDone] = useState<Set<string>>(new Set());
 
+  const baFilters = useMemo(
+    () =>
+      tenantId ? { tenantId, isActive: true } : { isActive: true },
+    [tenantId],
+  );
   const data = useLazyLoadQuery<AmbassadorsListQueryType>(
     AmbassadorsListQuery,
     {
-      filters: tenantId ? { tenantId, isActive: true } : { isActive: true },
-      first: 500,
+      filters: baFilters,
+      first: AMBASSADOR_ROSTER_PAGE_SIZE,
     },
     { fetchPolicy: "store-or-network" },
   );
@@ -426,48 +443,112 @@ const Inner: React.FC<{
       InviteAmbassadorToShiftMutation,
     );
 
-  const rows: Row[] = useMemo(() => {
-    const list =
-      data?.ambassadors?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => {
-          const name =
-            [n.user?.firstName, n.user?.lastName].filter(Boolean).join(" ") ||
-            n.user?.email ||
-            "(unnamed)";
-          const id = String(n.id);
-          const baAddress = (n.address ?? "").toLowerCase();
-          // Crude locality: 2 pts for state code match, 1 pt for
-          // city substring match. Good enough until we have lat/lng
-          // on both sides (BA.address is a free-text field today).
-          let localityScore = 0;
-          if (localityTokens.stateCode && baAddress.includes(
-            `, ${localityTokens.stateCode} `,
-          )) {
-            localityScore = 2;
-          } else if (
-            localityTokens.city &&
-            baAddress.includes(localityTokens.city)
-          ) {
-            localityScore = 1;
-          }
-          // Favorite state comes straight off the tenant-scoped
-          // Ambassador.isFavorited field — no client-side store.
-          return {
-            id,
-            uuid: String(n.uuid),
-            name,
-            email: n.user?.email ?? "",
-            address: n.address ?? "",
-            alreadyInvited:
-              alreadyInvited.has(id) || optimisticDone.has(id),
-            isFavorited: Boolean(n.isFavorited),
-            hasConflict: conflictSet.has(id),
-            localityScore,
-          };
-        }) ?? [];
+  const mapNodesToRows = useCallback(
+    (
+      edges:
+        | AmbassadorsListQueryType["response"]["ambassadors"]["edges"]
+        | null
+        | undefined,
+    ): Omit<Row, "alreadyInvited" | "hasConflict">[] => {
+      return (
+        edges
+          ?.map((e) => e?.node)
+          ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+          ?.map((n) => {
+            const name =
+              [n.user?.firstName, n.user?.lastName]
+                .filter(Boolean)
+                .join(" ") ||
+              n.user?.email ||
+              "(unnamed)";
+            const id = String(n.id);
+            const baAddress = (n.address ?? "").toLowerCase();
+            let localityScore = 0;
+            if (
+              localityTokens.stateCode &&
+              baAddress.includes(`, ${localityTokens.stateCode} `)
+            ) {
+              localityScore = 2;
+            } else if (
+              localityTokens.city &&
+              baAddress.includes(localityTokens.city)
+            ) {
+              localityScore = 1;
+            }
+            return {
+              id,
+              uuid: String(n.uuid),
+              name,
+              email: n.user?.email ?? "",
+              address: n.address ?? "",
+              isFavorited: Boolean(n.isFavorited),
+              localityScore,
+            };
+          }) ?? []
+      );
+    },
+    [localityTokens],
+  );
 
+  const page1Rows = useMemo(
+    () => mapNodesToRows(data?.ambassadors?.edges),
+    [data, mapNodesToRows],
+  );
+  const [extraRows, setExtraRows] = useState<
+    Omit<Row, "alreadyInvited" | "hasConflict">[]
+  >([]);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const rosterKey = [
+    tenantId ?? "",
+    ambassadorEndCursor(data?.ambassadors?.pageInfo),
+    String(Boolean(data?.ambassadors?.pageInfo?.hasNextPage)),
+  ].join("|");
+
+  useEffect(() => {
+    setExtraRows([]);
+    setEndCursor(ambassadorEndCursor(data?.ambassadors?.pageInfo));
+    setHasMore(ambassadorHasMore(data?.ambassadors?.pageInfo));
+    loadingMoreRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rosterKey
+  }, [rosterKey]);
+
+  const loadMore = useCallback(async () => {
+    if (!endCursor || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const next = await fetchQuery<AmbassadorsListQueryType>(
+        environment,
+        AmbassadorsListQuery,
+        {
+          filters: baFilters,
+          first: AMBASSADOR_ROSTER_PAGE_SIZE,
+          after: endCursor,
+        },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const mapped = mapNodesToRows(next?.ambassadors?.edges);
+      setExtraRows((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...mapped.filter((r) => !seen.has(r.id))];
+      });
+      setEndCursor(ambassadorEndCursor(next?.ambassadors?.pageInfo));
+      setHasMore(ambassadorHasMore(next?.ambassadors?.pageInfo));
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [endCursor, hasMore, baFilters, mapNodesToRows]);
+
+  const rows: Row[] = useMemo(() => {
+    const list: Row[] = [...page1Rows, ...extraRows].map((r) => ({
+      ...r,
+      alreadyInvited: alreadyInvited.has(r.id) || optimisticDone.has(r.id),
+      hasConflict: conflictSet.has(r.id),
+    }));
     // Smart-rank order (highest priority first):
     //   1. Favorites (lime-tier — kyle's go-to BAs)
     //   2. Locality match (state > city > none)
@@ -488,12 +569,15 @@ const Inner: React.FC<{
       return a.name.localeCompare(b.name);
     });
   }, [
-    data,
+    page1Rows,
+    extraRows,
     alreadyInvited,
     optimisticDone,
     conflictSet,
-    localityTokens,
   ]);
+
+  const totalAmbassadors =
+    data?.ambassadors?.totalCount ?? rows.length;
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -879,6 +963,25 @@ const Inner: React.FC<{
               </div>
             );
           })}
+          {hasMore && (
+            <div className="p-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={{
+                  background: "rgba(242,243,238,0.08)",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                {loadingMore
+                  ? "Loading…"
+                  : `Load more · ${rows.length} of ${totalAmbassadors}`}
+              </button>
+            </div>
+          )}
         </div>
 
         <div

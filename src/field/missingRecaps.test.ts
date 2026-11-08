@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { showsMissingRecaps } from "./missingRecaps";
 
 describe("showsMissingRecaps", () => {
-  it("is off for Famus Energy", () => {
-    expect(showsMissingRecaps("famus-energy")).toBe(false);
-    expect(showsMissingRecaps(null, "famus-energy")).toBe(false);
-    expect(showsMissingRecaps("FAMUS-ENERGY")).toBe(false);
+  it("is on for Famus Energy after Matching gate lift", () => {
+    expect(showsMissingRecaps("famus-energy")).toBe(true);
+    expect(showsMissingRecaps(null, "famus-energy")).toBe(true);
+    expect(showsMissingRecaps("FAMUS-ENERGY")).toBe(true);
   });
 
   it("stays on for other tenants", () => {
