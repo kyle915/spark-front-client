@@ -270,40 +270,97 @@ const ADMIN_ROSTER_FALLBACK: Mentionable[] = [
   { id: "kyle", name: "Kyle Christiansen", email: "kyle@igniteproductions.co" },
 ];
 
+const RMM_ROSTER_PAGE_SIZE = 100;
+
+const adminsFromUsersPage = (
+  data: UsersQueryType["response"] | null | undefined,
+): Mentionable[] => {
+  const rows = (data?.users?.edges ?? [])
+    .map((e) => e?.node)
+    .filter((n): n is NonNullable<typeof n> => Boolean(n));
+  return rows
+    .filter((u) => {
+      const role = (u.role?.name ?? "").toLowerCase();
+      return role === "admin" || role === "spark-admin";
+    })
+    .map<Mentionable>((u) => ({
+      id: String(u.id),
+      name:
+        [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+        u.email ||
+        "Admin",
+      email: u.email ?? "",
+    }))
+    .filter((m) => m.email);
+};
+
 const AdminMentionablesLoader: React.FC<{
   tenantId: string;
   onLoaded: (admins: Mentionable[]) => void;
 }> = ({ tenantId, onLoaded }) => {
+  const environment = useRelayEnvironment();
+  // Server role=SPARK + page size 100 (People pattern) — no silent first:500.
   const data = useLazyLoadQuery<UsersQueryType>(
     UsersQuery,
-    { filters: tenantId ? { tenantId } : null, first: 500 },
+    {
+      filters: tenantId ? { tenantId, role: "SPARK" } : null,
+      first: RMM_ROSTER_PAGE_SIZE,
+    },
     { fetchPolicy: "store-or-network" },
   );
-  // Build the @-mention list from real admins (role.name = "admin"
-  // or "spark-admin") so notes can tag the actual humans in the
-  // workspace instead of the old hardcoded sample names.
-  const admins = useMemo(() => {
-    const rows = (data?.users?.edges ?? [])
-      .map((e) => e?.node)
-      .filter((n): n is NonNullable<typeof n> => Boolean(n));
-    return rows
-      .filter((u) => {
-        const role = (u.role?.name ?? "").toLowerCase();
-        return role === "admin" || role === "spark-admin";
-      })
-      .map<Mentionable>((u) => ({
-        id: String(u.id),
-        name:
-          [u.firstName, u.lastName].filter(Boolean).join(" ") ||
-          u.email ||
-          "Admin",
-        email: u.email ?? "",
-      }))
-      .filter((m) => m.email);
-  }, [data]);
+  const [extra, setExtra] = useState<Mentionable[]>([]);
+  const fetchedKey = useRef<string>("");
+
   useEffect(() => {
-    onLoaded(admins);
-  }, [admins, onLoaded]);
+    let cancelled = false;
+    const page1 = adminsFromUsersPage(data);
+    setExtra([]);
+    onLoaded(page1);
+
+    const walk = async () => {
+      let cursor =
+        typeof data?.users?.pageInfo?.endCursor === "string"
+          ? data.users.pageInfo.endCursor
+          : null;
+      let hasNext = Boolean(data?.users?.pageInfo?.hasNextPage) && Boolean(cursor);
+      const key = `${tenantId}|${cursor ?? ""}|${page1.length}`;
+      if (fetchedKey.current === key) return;
+      fetchedKey.current = key;
+      const collected: Mentionable[] = [];
+      while (hasNext && cursor && !cancelled) {
+        const next = await fetchQuery<UsersQueryType>(
+          environment,
+          UsersQuery,
+          {
+            filters: { tenantId, role: "SPARK" },
+            first: RMM_ROSTER_PAGE_SIZE,
+            after: cursor,
+          },
+          { fetchPolicy: "network-only" },
+        ).toPromise();
+        collected.push(...adminsFromUsersPage(next));
+        cursor =
+          typeof next?.users?.pageInfo?.endCursor === "string"
+            ? next.users.pageInfo.endCursor
+            : null;
+        hasNext = Boolean(next?.users?.pageInfo?.hasNextPage) && Boolean(cursor);
+        if (!cancelled && collected.length > 0) {
+          setExtra([...collected]);
+        }
+      }
+    };
+    void walk().catch(() => {
+      /* keep page-1 admins on cursor failure */
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [data, environment, onLoaded, tenantId]);
+
+  useEffect(() => {
+    onLoaded([...adminsFromUsersPage(data), ...extra]);
+  }, [data, extra, onLoaded]);
+
   return null;
 };
 

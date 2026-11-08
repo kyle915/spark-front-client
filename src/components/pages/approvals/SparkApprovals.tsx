@@ -148,7 +148,8 @@ const ApprovalRow: React.FC<{
       </span>
     );
   })();
-  const actionPad = focused ? "px-3 py-1.5 text-sm" : "px-2.5 py-1 text-xs";
+  const rowPad = "0.4rem 0.75rem";
+  const actionPad = "px-2.5 py-1 text-xs";
   return (
     <div
       onClick={onFocus}
@@ -169,7 +170,7 @@ const ApprovalRow: React.FC<{
             ? "2px solid var(--spark-sky)"
             : "none",
         outlineOffset: -1,
-        padding: focused ? "0.85rem 1rem" : "0.4rem 0.75rem",
+        padding: rowPad,
       }}
     >
       <div className="flex items-center gap-3 min-w-0 flex-wrap">
@@ -191,7 +192,7 @@ const ApprovalRow: React.FC<{
           {row.reqId}
         </span>
         <p
-          className={`font-semibold truncate min-w-0 ${focused ? "text-base" : "text-sm"}`}
+          className="font-semibold truncate min-w-0 text-sm"
           style={{ flex: "1 1 140px" }}
         >
           {row.venue}
@@ -427,7 +428,7 @@ const ApprovalsInner: React.FC = () => {
       };
     };
 
-    const pendingRows: Row[] = pendingNodes.slice(0, 200).map(toRow);
+    const pendingRows: Row[] = pendingNodes.map(toRow);
 
     decidedRecent.sort((a, b) => b.updated - a.updated);
     const recentlyDecided = decidedRecent.slice(0, 12).map((d) => ({
@@ -640,9 +641,8 @@ const ApprovalsInner: React.FC = () => {
     }
   };
 
-  const confirmApprove = async () => {
-    if (!approving) return;
-    const r = approving;
+  const approveRowNow = async (r: Row) => {
+    if (busyId === r.id) return;
     setBusyId(r.id);
     try {
       const result = await callApprovalMutation("approveRequest", {
@@ -656,12 +656,18 @@ const ApprovalsInner: React.FC = () => {
         return next;
       });
       refreshAfterDecision(environment, tenantId);
-      setApproving(null);
     } catch (e) {
       showAlert(`Couldn't approve: ${(e as Error).message}`, "error");
     } finally {
       setBusyId(null);
     }
+  };
+
+  const confirmApprove = async () => {
+    if (!approving) return;
+    const r = approving;
+    await approveRowNow(r);
+    setApproving(null);
   };
 
   const submitDecline = async () => {
@@ -770,14 +776,23 @@ const ApprovalsInner: React.FC = () => {
           setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
           break;
         case "a":
+        case "A":
           if (focused) {
             e.preventDefault();
-            setApproving(focused);
+            if (e.shiftKey) {
+              void approveRowNow(focused);
+            } else {
+              setApproving(focused);
+            }
           }
           break;
         case "d":
+        case "D":
           if (focused) {
             e.preventDefault();
+            if (e.shiftKey) {
+              setDeclineReason("");
+            }
             setDeclining(focused);
           }
           break;
@@ -1205,8 +1220,10 @@ const ApprovalsInner: React.FC = () => {
               {[
                 ["j / ↓", "Next request"],
                 ["k / ↑", "Previous request"],
-                ["a", "Approve focused"],
-                ["d", "Decline focused"],
+                ["a", "Approve focused (confirm)"],
+                ["shift + a", "Approve focused now"],
+                ["d", "Decline focused (confirm)"],
+                ["shift + d", "Decline focused (reason)"],
                 ["space / x", "Toggle bulk-select"],
                 ["enter", "Open full view"],
                 ["/", "Focus search"],
