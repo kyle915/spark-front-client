@@ -162,9 +162,10 @@ const NotesLoader: React.FC<{
     const walk = async () => {
       let after = data?.users?.pageInfo?.endCursor ?? null;
       let hasNext = Boolean(data?.users?.pageInfo?.hasNextPage && after);
-      const collected: NonNullable<
-        UsersQueryType["response"]["users"]
-      >["edges"] = [];
+      type Edge = NonNullable<
+        NonNullable<UsersQueryType["response"]["users"]>["edges"]
+      >[number];
+      const collected: Edge[] = [];
       let pages = 0;
       while (hasNext && after && pages < 20) {
         pages += 1;
@@ -175,7 +176,9 @@ const NotesLoader: React.FC<{
           { fetchPolicy: "network-only" },
         ).toPromise();
         if (cancelled) return;
-        collected.push(...(next?.users?.edges ?? []));
+        for (const edge of next?.users?.edges ?? []) {
+          collected.push(edge);
+        }
         after = next?.users?.pageInfo?.endCursor ?? null;
         hasNext = Boolean(next?.users?.pageInfo?.hasNextPage && after);
       }
