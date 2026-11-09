@@ -42,12 +42,15 @@ export function identifySubmitLabel(opts: {
   busy: boolean;
   recapOnly: boolean;
   needsProgram: boolean;
+  /** Forgotten past-day path — same verb as recap-only (no clock). */
+  pastRecap?: boolean;
 }): string {
   if (opts.busy) return "Starting…";
+  const toRecap = opts.recapOnly || Boolean(opts.pastRecap);
   if (opts.needsProgram) {
-    return opts.recapOnly ? "Select event type to continue" : "Select event type to start";
+    return toRecap ? "Select event type to continue" : "Select event type to start";
   }
-  return opts.recapOnly ? "Continue to recap" : "Start check-in";
+  return toRecap ? "Continue to recap" : "Start check-in";
 }
 
 /**

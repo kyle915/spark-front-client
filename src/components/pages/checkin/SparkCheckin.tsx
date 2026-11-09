@@ -87,6 +87,8 @@ import {
   clearChosenShiftDate,
   eventCalendarDate,
   finishPriorRecapLabel,
+  FORGOT_PAST_RECAP_CTA,
+  FORGOT_PAST_RECAP_HINT,
   isLeftoverCheckinSession,
   isPastDayWalkupSession,
   LEFTOVER_PRIMARY_BUSY,
@@ -96,6 +98,7 @@ import {
   readChosenShiftDate,
   showNewDayGate,
   START_OVER_LINK,
+  writePastRecapIntent,
 } from "./leftoverCheckin";
 import {
   canAttemptOpenPunchResume,
@@ -778,9 +781,11 @@ function CheckedInFlow({
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
   // Recap-only first landing must still go through payable mileage when enabled
   // — jumping straight to RecapForm used to 400 with needs_payable_mileage.
+  // Past-day sessions also skip the clock UI and open the recap directly.
   const bootRecapOnly = Boolean(ctx.recapOnly) && !hasRecap && !leftover;
+  const bootPastRecap = pastDay && !hasRecap && !leftover;
   const bootNeedMiles =
-    bootRecapOnly &&
+    (bootRecapOnly || bootPastRecap) &&
     shouldCollectPayableMileage({
       brand: ctx.brand,
       payableMileage: ctx.session?.payableMileage,
@@ -788,7 +793,7 @@ function CheckedInFlow({
     !payableMileageComplete(ctx.session?.payableMileage) &&
     !readPendingMileage(code);
   const [showRecap, setShowRecap] = useState(
-    () => bootRecapOnly && !bootNeedMiles,
+    () => (bootRecapOnly || bootPastRecap) && !bootNeedMiles,
   );
   const [showMileageStep, setShowMileageStep] = useState(() => bootNeedMiles);
   const [payableMileage, setPayableMileage] = useState<PayableMileageState | null>(
@@ -1532,6 +1537,39 @@ function CheckedInFlow({
             {finishLabel}
           </button>
         ) : null}
+        <p
+          style={{
+            color: "#44403c",
+            fontSize: 13,
+            opacity: 1,
+            margin: "16px 0 8px",
+            textAlign: "center",
+          }}
+        >
+          {FORGOT_PAST_RECAP_HINT}
+        </p>
+        <button
+          type="button"
+          style={{
+            ...secondaryBtn,
+            width: "100%",
+            flex: "none",
+            minHeight: 56,
+            padding: "14px 16px",
+            fontSize: 15,
+            fontWeight: 700,
+            lineHeight: 1.35,
+            background: "#fff",
+            whiteSpace: "normal",
+          }}
+          disabled={clearing || busy !== ""}
+          onClick={() => {
+            writePastRecapIntent(code);
+            void clearClockIn();
+          }}
+        >
+          {FORGOT_PAST_RECAP_CTA}
+        </button>
         {msg ? <p style={errText}>{msg}</p> : null}
       </div>
     );
@@ -1634,6 +1672,27 @@ function CheckedInFlow({
                 : secondShiftOk
                   ? "Different market? Start over"
                   : "Check in at a different store"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                writePastRecapIntent(code);
+                onStartAnother();
+              }}
+              style={{
+                ...secondaryBtn,
+                marginTop: 10,
+                width: "100%",
+                minHeight: 56,
+                padding: "14px 16px",
+                fontSize: 15,
+                fontWeight: 700,
+                lineHeight: 1.35,
+                background: "#fff",
+                whiteSpace: "normal",
+              }}
+            >
+              {FORGOT_PAST_RECAP_CTA}
             </button>
             {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
           </>

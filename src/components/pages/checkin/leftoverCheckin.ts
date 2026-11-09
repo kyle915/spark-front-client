@@ -44,6 +44,82 @@ export const CHECK_IN_ANOTHER_GIG_HINT = "Starting a different store or event?";
 export const CLEAR_LEFTOVER_ERROR =
   "Couldn't start today's shift. Check your connection and try again.";
 
+/**
+ * Discoverability CTA on standing walk-up landings. Past-day filing already
+ * works via the identify date picker + File recap (no clock); BAs often miss
+ * that and only see "Clock in for today".
+ */
+export const FORGOT_PAST_RECAP_CTA =
+  "Forgot to submit your recap for a day in the past? Click here";
+
+/** Helper under the CTA / above the date field once that path is chosen. */
+export const FORGOT_PAST_RECAP_HINT =
+  "No clock-in needed. Pick the day you worked, then file that recap — your lead adds the hours.";
+
+export const PAST_RECAP_INTENT_KEY = (code: string) =>
+  `@spark.checkin.pastRecapIntent/${code}`;
+
+const memoryPastIntent = new Set<string>();
+
+type IntentStorage = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
+function browserSessionStorage(): IntentStorage | null {
+  try {
+    if (typeof window !== "undefined" && window.sessionStorage) return window.sessionStorage;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** True when this visit chose the forgotten past-day recap path. */
+export function readPastRecapIntent(
+  code: string,
+  storage?: IntentStorage | null,
+): boolean {
+  if (!code) return false;
+  if (memoryPastIntent.has(code)) return true;
+  const store = storage === undefined ? browserSessionStorage() : storage;
+  if (!store) return false;
+  try {
+    return store.getItem(PAST_RECAP_INTENT_KEY(code)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writePastRecapIntent(
+  code: string,
+  storage?: IntentStorage | null,
+): void {
+  if (!code) return;
+  memoryPastIntent.add(code);
+  const store = storage === undefined ? browserSessionStorage() : storage;
+  try {
+    store?.setItem(PAST_RECAP_INTENT_KEY(code), "1");
+  } catch {
+    /* private mode — memory still holds this visit */
+  }
+}
+
+export function clearPastRecapIntent(
+  code: string,
+  storage?: IntentStorage | null,
+): void {
+  if (!code) return;
+  memoryPastIntent.delete(code);
+  const store = storage === undefined ? browserSessionStorage() : storage;
+  try {
+    store?.removeItem(PAST_RECAP_INTENT_KEY(code));
+  } catch {
+    /* private mode */
+  }
+}
+
 /** Civil YYYY-MM-DD from Event.date (noon-UTC ISO). Matches API event_calendar_date. */
 export function eventCalendarDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
