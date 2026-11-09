@@ -7,9 +7,11 @@ import type { Environment } from "relay-runtime";
 import { TrackerListQuery } from "@/api/queries/TrackerListQuery";
 import { RecapListKindsQuery } from "@/api/queries/RecapListKindsQuery";
 import type { RecapListKindsQuery as RecapListKindsQueryType } from "@/api/queries/__generated__/RecapListKindsQuery.graphql";
-import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
-import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import { ApprovalsListQuery } from "@/api/queries/ApprovalsListQuery";
+import {
+  fetchUnifiedRecapsPage,
+  unifiedRecapsPageVariables,
+} from "@/recap/unifiedRecapsFetch";
 
 let warmedForTenant: string | null = null;
 
@@ -32,20 +34,24 @@ export function prefetchHotRelayData(
         const kinds = data?.recapListKinds;
         const hasLegacy = Boolean(kinds?.hasLegacy);
         const hasCustom = Boolean(kinds?.hasCustom);
-        const page = { first: 50, after: null, q: null, filters };
-        if (hasCustom || (!hasLegacy && !hasCustom)) {
-          void fetchQuery(environment, CustomRecapsListQuery, {
-            ...page,
+        // Empty probe → warm both so first paint still hits the store.
+        const fetchLegacy = hasLegacy || (!hasLegacy && !hasCustom);
+        const fetchCustom = hasCustom || (!hasLegacy && !hasCustom);
+        const page = unifiedRecapsPageVariables(null);
+        void fetchUnifiedRecapsPage(environment, {
+          fetchLegacy,
+          fetchCustom,
+          legacyVariables: {
+            ...page.legacy,
+            q: null,
+            filters,
+          },
+          customVariables: {
+            ...page.custom,
+            q: null,
             filters: { ...filters, needsStoreMap: null },
-          })
-            .toPromise()
-            .catch(() => {});
-        }
-        if (hasLegacy) {
-          void fetchQuery(environment, RecapsListQuery, page)
-            .toPromise()
-            .catch(() => {});
-        }
+          },
+        }).catch(() => {});
       })
       .catch(() => {});
 

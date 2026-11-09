@@ -1,10 +1,37 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   applyUnifiedRecapsPageInfo,
+  fetchUnifiedRecapsFromPlan,
+  fetchUnifiedRecapsPage,
   planUnifiedRecapsLoadMore,
   RECAPS_PAGE_SIZE,
   unifiedRecapsPageVariables,
 } from "./unifiedRecapsFetch";
+
+vi.mock("relay-runtime", () => ({
+  fetchQuery: vi.fn((_env, _query, variables) => ({
+    toPromise: async () =>
+      variables && "last" in variables && variables.last
+        ? { recaps: { edges: [] }, customRecaps: { edges: [] } }
+        : {
+            recaps: {
+              pageInfo: { endCursor: "L1", hasNextPage: false },
+              edges: [],
+            },
+            customRecaps: {
+              pageInfo: { endCursor: "C1", hasNextPage: true },
+              edges: [],
+            },
+          },
+  })),
+}));
+
+vi.mock("@/api/queries/RecapsListQuery", () => ({
+  RecapsListQuery: Symbol("RecapsListQuery"),
+}));
+vi.mock("@/api/queries/CustomRecapsListQuery", () => ({
+  CustomRecapsListQuery: Symbol("CustomRecapsListQuery"),
+}));
 
 describe("unifiedRecapsPageVariables", () => {
   it("keeps legacy and custom on the same first/after window", () => {
@@ -84,5 +111,47 @@ describe("applyUnifiedRecapsPageInfo", () => {
     expect(next.legacyHasMore).toBe(false);
     expect(next.customAfter).toBe("C0");
     expect(next.customHasMore).toBe(true);
+  });
+});
+
+describe("fetchUnifiedRecapsPage", () => {
+  it("skips disabled pipelines and returns both when enabled", async () => {
+    const env = {} as never;
+    const both = await fetchUnifiedRecapsPage(env, {
+      fetchLegacy: true,
+      fetchCustom: true,
+      legacyVariables: { first: 50, after: null, filters: null },
+      customVariables: { first: 50, after: null, filters: null },
+      fetchPolicy: "network-only",
+    });
+    expect(both.legacy?.recaps?.pageInfo.endCursor).toBe("L1");
+    expect(both.custom?.customRecaps?.pageInfo.endCursor).toBe("C1");
+
+    const legacyOnly = await fetchUnifiedRecapsPage(env, {
+      fetchLegacy: true,
+      fetchCustom: false,
+      legacyVariables: { first: 50, after: null, filters: null },
+      customVariables: null,
+    });
+    expect(legacyOnly.legacy).not.toBeNull();
+    expect(legacyOnly.custom).toBeNull();
+  });
+
+  it("fetchUnifiedRecapsFromPlan wires plan vars + filters", async () => {
+    const plan = planUnifiedRecapsLoadMore({
+      enableLegacy: true,
+      enableCustom: true,
+      legacyHasMore: true,
+      customHasMore: true,
+      legacyAfter: null,
+      customAfter: null,
+    });
+    const page = await fetchUnifiedRecapsFromPlan({} as never, plan, {
+      q: "miami",
+      legacyFilters: { tenantId: "1" } as never,
+      customFilters: { tenantId: "1" } as never,
+    });
+    expect(page.legacy).not.toBeNull();
+    expect(page.custom).not.toBeNull();
   });
 });
