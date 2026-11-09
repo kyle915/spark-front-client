@@ -8,7 +8,7 @@
  */
 
 import { fetchQuery } from "relay-runtime";
-import type { Environment, FetchPolicy } from "relay-runtime";
+import type { Environment, FetchQueryFetchPolicy } from "relay-runtime";
 import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
 import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
@@ -125,7 +125,7 @@ export async function fetchUnifiedRecapsPage(
     fetchCustom?: boolean;
     legacyVariables?: RecapsListQueryType["variables"] | null;
     customVariables?: CustomRecapsListQueryType["variables"] | null;
-    fetchPolicy?: FetchPolicy;
+    fetchPolicy?: FetchQueryFetchPolicy;
   },
 ): Promise<UnifiedRecapsFetchResult> {
   const fetchLegacy = Boolean(opts.fetchLegacy && opts.legacyVariables);
@@ -163,7 +163,7 @@ export async function fetchUnifiedRecapsFromPlan(
     q?: string | null;
     legacyFilters?: RecapsListQueryType["variables"]["filters"];
     customFilters?: CustomRecapsListQueryType["variables"]["filters"];
-    fetchPolicy?: FetchPolicy;
+    fetchPolicy?: FetchQueryFetchPolicy;
   } = {},
 ): Promise<UnifiedRecapsFetchResult> {
   return fetchUnifiedRecapsPage(environment, {

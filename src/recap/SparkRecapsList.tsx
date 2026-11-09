@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
@@ -2453,9 +2454,20 @@ export default function SparkRecapsList() {
         approved: false,
         archived: false,
       };
+      const kindsData = await fetchQuery<RecapListKindsQueryType>(
+        environment,
+        RecapListKindsQuery,
+        { tenantId: String(tenantId) },
+        { fetchPolicy: "store-or-network" },
+      ).toPromise();
+      const hasLegacy = Boolean(kindsData?.recapListKinds?.hasLegacy);
+      const hasCustom = Boolean(kindsData?.recapListKinds?.hasCustom);
+      // Same fallback as idle prefetch: unknown/empty probe → fetch both.
+      const fetchLegacy = hasLegacy || (!hasLegacy && !hasCustom);
+      const fetchCustom = hasCustom || (!hasLegacy && !hasCustom);
       const { legacy, custom } = await fetchUnifiedRecapsPage(environment, {
-        fetchLegacy: enableLegacy,
-        fetchCustom: enableCustom,
+        fetchLegacy,
+        fetchCustom,
         legacyVariables: { last: 10, filters },
         customVariables: { last: 10, filters },
         fetchPolicy: "network-only",
@@ -2521,8 +2533,6 @@ export default function SparkRecapsList() {
     showAlert,
     statusFilter,
     tenantId,
-    enableLegacy,
-    enableCustom,
   ]);
 
   // Warm the first few Needs-review details so Review next / j-Enter feel instant.
