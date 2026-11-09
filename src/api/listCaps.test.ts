@@ -94,6 +94,34 @@ describe("list fetch caps (no silent truncation)", () => {
     );
   });
 
+  it("Inbox + Tracker admin roster + Favorites use cursor pages (not first:500)", () => {
+    const inbox = src("../components/pages/inbox/SparkInbox.tsx");
+    expect(inbox).toContain("INBOX_PAGE_SIZE");
+    expect(inbox).toContain("Load more pending");
+    // Comment may mention first:500; the live query must not.
+    expect(inbox).toMatch(/first:\s*INBOX_PAGE_SIZE/);
+    expect(inbox).not.toMatch(/first:\s*500\s*[,}]/);
+
+    const tracker = src("../requests/MasterTracker.tsx");
+    expect(tracker).toContain("RMM_ROSTER_PAGE_SIZE = 100");
+    expect(tracker).toContain("no silent first:500");
+    expect(tracker).not.toMatch(/first:\s*500\s*[,}]/);
+
+    const favorites = src("../components/pages/favorites/SparkFavorites.tsx");
+    expect(favorites).toContain("AMBASSADOR_ROSTER_PAGE_SIZE");
+    expect(favorites).toContain("Load more");
+    expect(favorites).not.toMatch(/first:\s*500\s*[,}]/);
+  });
+
+  it("defers SparkTeam / RecentSubmissions first:500 (low-ROI until rows go missing)", () => {
+    expect(src("../components/pages/team/SparkTeam.tsx")).toMatch(
+      /first:\s*500/,
+    );
+    expect(
+      src("../components/pages/recent/SparkRecentSubmissions.tsx"),
+    ).toMatch(/first:\s*500/);
+  });
+
   it("Reports charts do not pull fat RequestsQuery / classic-only RecapsQuery", () => {
     const reports = src("../components/pages/reports/SparkReports.tsx");
     expect(reports).not.toContain('from "@/api/queries/RequestsQuery"');
