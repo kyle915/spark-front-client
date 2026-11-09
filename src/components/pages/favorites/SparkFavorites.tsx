@@ -11,14 +11,23 @@
  * the add/remove mutations and refetches so both lists stay in sync.
  */
 
-import React, { Suspense, useMemo, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import environment from "@/api/relay/environment";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { FavoriteAmbassadorsQuery } from "@/api/queries/FavoriteAmbassadorsQuery";
@@ -27,6 +36,11 @@ import { AddFavoriteAmbassadorMutation } from "@/api/mutations/AddFavoriteAmbass
 import type { AddFavoriteAmbassadorMutation as AddFavoriteAmbassadorMutationType } from "@api/mutations/__generated__/AddFavoriteAmbassadorMutation.graphql";
 import { RemoveFavoriteAmbassadorMutation } from "@/api/mutations/RemoveFavoriteAmbassadorMutation";
 import type { RemoveFavoriteAmbassadorMutation as RemoveFavoriteAmbassadorMutationType } from "@api/mutations/__generated__/RemoveFavoriteAmbassadorMutation.graphql";
+import {
+  AMBASSADOR_ROSTER_PAGE_SIZE,
+  ambassadorEndCursor,
+  ambassadorHasMore,
+} from "@/requests/inviteBaRoster";
 
 type Row = NonNullable<
   NonNullable<
@@ -77,11 +91,18 @@ const Inner: React.FC = () => {
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
+  const baFilters = useMemo(
+    () =>
+      tenantId ? { tenantId, isActive: true } : { isActive: true },
+    [tenantId],
+  );
+
+  // Cursor pages (People / Invite BA pattern) — no silent first:500.
   const poolData = useLazyLoadQuery<AmbassadorsListQueryType>(
     AmbassadorsListQuery,
     {
-      filters: tenantId ? { tenantId, isActive: true } : { isActive: true },
-      first: 500,
+      filters: baFilters,
+      first: AMBASSADOR_ROSTER_PAGE_SIZE,
     },
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
@@ -93,11 +114,72 @@ const Inner: React.FC = () => {
     RemoveFavoriteAmbassadorMutation,
   );
 
-  const all = useMemo<Row[]>(() => {
+  const page1Rows = useMemo<Row[]>(() => {
     return (poolData?.ambassadors?.edges ?? [])
       .map((e) => e?.node)
       .filter((n): n is Row => Boolean(n));
   }, [poolData]);
+
+  const [extraRows, setExtraRows] = useState<Row[]>([]);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  const rosterKey = [
+    tenantId ?? "",
+    String(refreshKey),
+    ambassadorEndCursor(poolData?.ambassadors?.pageInfo),
+    String(Boolean(poolData?.ambassadors?.pageInfo?.hasNextPage)),
+  ].join("|");
+
+  useEffect(() => {
+    setExtraRows([]);
+    setEndCursor(ambassadorEndCursor(poolData?.ambassadors?.pageInfo));
+    setHasMore(ambassadorHasMore(poolData?.ambassadors?.pageInfo));
+    loadingMoreRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rosterKey
+  }, [rosterKey]);
+
+  const loadMore = useCallback(async () => {
+    if (!endCursor || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const next = await fetchQuery<AmbassadorsListQueryType>(
+        environment,
+        AmbassadorsListQuery,
+        {
+          filters: baFilters,
+          first: AMBASSADOR_ROSTER_PAGE_SIZE,
+          after: endCursor,
+        },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const mapped = (next?.ambassadors?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is Row => Boolean(n));
+      setExtraRows((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...mapped.filter((r) => !seen.has(r.id))];
+      });
+      setEndCursor(ambassadorEndCursor(next?.ambassadors?.pageInfo));
+      setHasMore(ambassadorHasMore(next?.ambassadors?.pageInfo));
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [endCursor, hasMore, baFilters]);
+
+  const all = useMemo<Row[]>(() => {
+    const seen = new Set(page1Rows.map((r) => r.id));
+    return [
+      ...page1Rows,
+      ...extraRows.filter((r) => !seen.has(r.id)),
+    ];
+  }, [page1Rows, extraRows]);
+
+  const totalPool = poolData?.ambassadors?.totalCount ?? all.length;
 
   const favs = useMemo<FavRow[]>(
     () => [...(favData?.favoriteAmbassadors ?? [])],
@@ -290,6 +372,25 @@ const Inner: React.FC = () => {
                 onClick={() => navigate(`/talent`)}
               />
             ))}
+          </div>
+        )}
+        {hasMore && (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+              style={{
+                background: "rgba(242,243,238,0.08)",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              {loadingMore
+                ? "Loading…"
+                : `Load more · ${all.length} of ${totalPool}`}
+            </button>
           </div>
         )}
       </div>
