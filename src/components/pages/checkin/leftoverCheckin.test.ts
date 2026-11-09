@@ -6,9 +6,12 @@ import {
   CHECK_IN_ANOTHER_GIG_HINT,
   CHECK_IN_SOMEWHERE_ELSE,
   clearChosenShiftDate,
+  clearPastRecapIntent,
   clockInForTodayLabel,
   eventCalendarDate,
   finishPriorRecapLabel,
+  FORGOT_PAST_RECAP_CTA,
+  FORGOT_PAST_RECAP_HINT,
   isLeftoverCheckinSession,
   isPastDayWalkupSession,
   isStaleWalkupSession,
@@ -16,12 +19,14 @@ import {
   offerFinishPriorRecap,
   PAST_DAY_NO_CLOCK,
   readChosenShiftDate,
+  readPastRecapIntent,
   shiftDateForFindOrCreate,
   showNewDayGate,
   START_OVER_LINK,
   walkupDayKind,
   walkupDayLabel,
   writeChosenShiftDate,
+  writePastRecapIntent,
 } from "@/components/pages/checkin/leftoverCheckin";
 import { supportsStandingSecondShift } from "@/components/pages/checkin/secondShift";
 
@@ -264,5 +269,46 @@ describe("isPastDayWalkupSession", () => {
 
   it("tells the BA to file the recap instead", () => {
     expect(PAST_DAY_NO_CLOCK).toMatch(/File its recap/);
+  });
+});
+
+describe("forgotten past-day recap CTA", () => {
+  const storage = () => {
+    const bag = new Map<string, string>();
+    return {
+      getItem: (key: string) => bag.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        bag.set(key, value);
+      },
+      removeItem: (key: string) => {
+        bag.delete(key);
+      },
+    };
+  };
+
+  it("names a large discoverability CTA that skips clock-in", () => {
+    expect(FORGOT_PAST_RECAP_CTA.toLowerCase()).toContain("past");
+    expect(FORGOT_PAST_RECAP_CTA.toLowerCase()).toContain("click here");
+    expect(FORGOT_PAST_RECAP_HINT.toLowerCase()).toContain("no clock");
+  });
+
+  it("remembers past-recap intent for this visit then clears it", () => {
+    const store = storage();
+    expect(readPastRecapIntent("FF-YMMK3Q", store)).toBe(false);
+    writePastRecapIntent("FF-YMMK3Q", store);
+    expect(readPastRecapIntent("FF-YMMK3Q", store)).toBe(true);
+    clearPastRecapIntent("FF-YMMK3Q", store);
+    expect(readPastRecapIntent("FF-YMMK3Q", store)).toBe(false);
+  });
+
+  it("wires the CTA on the new-day gate and identify landing", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const checkin = readFileSync(join(here, "SparkCheckin.tsx"), "utf8");
+    const identify = readFileSync(join(here, "IdentifyStep.tsx"), "utf8");
+    expect(checkin).toContain("FORGOT_PAST_RECAP_CTA");
+    expect(checkin).toContain("writePastRecapIntent(code)");
+    expect(identify).toContain("FORGOT_PAST_RECAP_CTA");
+    expect(identify).toContain("beginPastRecap");
+    expect(identify).toContain("pastRecap");
   });
 });

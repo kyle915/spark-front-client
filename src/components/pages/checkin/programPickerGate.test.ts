@@ -66,6 +66,15 @@ describe("identify submit label", () => {
       "Starting…",
     );
   });
+
+  it("uses Continue to recap on the forgotten past-day path", () => {
+    expect(
+      identifySubmitLabel({ busy: false, recapOnly: false, needsProgram: false, pastRecap: true }),
+    ).toBe("Continue to recap");
+    expect(
+      identifySubmitLabel({ busy: false, recapOnly: false, needsProgram: true, pastRecap: true }),
+    ).toBe("Select event type to continue");
+  });
 });
 
 describe("identify place step", () => {

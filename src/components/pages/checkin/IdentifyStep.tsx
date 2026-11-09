@@ -49,10 +49,15 @@ import {
 } from "./offlineIdentify";
 import {
   clearChosenShiftDate,
+  clearPastRecapIntent,
   eventCalendarDate,
+  FORGOT_PAST_RECAP_CTA,
+  FORGOT_PAST_RECAP_HINT,
   readChosenShiftDate,
+  readPastRecapIntent,
   shiftDateForFindOrCreate,
   writeChosenShiftDate,
+  writePastRecapIntent,
 } from "./leftoverCheckin";
 import {
   hasLookupPhone,
@@ -212,11 +217,14 @@ export default function IdentifyStep({
   const [storeName, setStoreName] = useState("");
   const [address, setAddress] = useState("");
   const [storeSuggestField, setStoreSuggestField] = useState<"address" | "name" | null>(null);
-  // Default to today — the overwhelmingly common case is a BA checking in for
-  // the shift they're standing in. A past day already picked on this visit
-  // (the form remounted) stays that day instead of snapping back to today.
+  // Forgotten past-day path: date starts empty so they must pick the day.
+  // Otherwise default to today — the common case is checking in for the shift
+  // they're standing in. A past day already picked on this visit stays that day.
+  const [pastRecap, setPastRecap] = useState(() => readPastRecapIntent(code));
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [eventDate, setEventDate] = useState(() => {
     const today = todayISO();
+    if (readPastRecapIntent(code)) return "";
     const chosen = readChosenShiftDate(code);
     if (chosen && chosen.chosenOn === today && chosen.date !== today) return chosen.date;
     return today;
@@ -497,10 +505,24 @@ export default function IdentifyStep({
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!recapOnly && !phone.trim()) return setErr("Enter a phone number.");
     const today = todayISO();
-    const date = shiftDateForFindOrCreate({
-      picked: overrides?.eventDate ?? eventDate,
-      today,
-    });
+    const pickedRaw = overrides?.eventDate ?? eventDate;
+    // Past-recap intent must not fall back to today — that would re-open the clock path.
+    const pickedCal = eventCalendarDate(pickedRaw);
+    if (pastRecap && !overrides) {
+      if (!pickedCal) {
+        dateInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        dateInputRef.current?.focus();
+        return setErr("Pick the past day for that recap.");
+      }
+      if (pickedCal >= today) {
+        dateInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        dateInputRef.current?.focus();
+        return setErr("Pick a day before today — this path skips clock-in.");
+      }
+    }
+    const date = pastRecap && pickedCal && !overrides
+      ? pickedCal
+      : shiftDateForFindOrCreate({ picked: pickedRaw, today });
     const addr = overrides?.address ?? address;
     const mkt = overrides?.market ?? market;
     // Unfiled-shift taps supply an address even when Product Seeding is selected.
@@ -533,8 +555,9 @@ export default function IdentifyStep({
         }
       }
       if (!date) return setErr("Pick the date you're working.");
-      if (eventCalendarDate(date) !== today) {
-        writeChosenShiftDate(code, { date, chosenOn: today });
+      const cal = eventCalendarDate(date);
+      if (cal && cal !== today) {
+        writeChosenShiftDate(code, { date: cal, chosenOn: today });
       } else {
         clearChosenShiftDate(code);
       }
@@ -643,6 +666,8 @@ export default function IdentifyStep({
           ? { lastEventTypeId: eventTypeId.trim() }
           : {}),
       });
+      // Intent did its job — past-day session opens File recap (no clock).
+      if (pastRecap) clearPastRecapIntent(code);
       onDone(json.sessionToken);
     } catch {
       if (readCachedContext(code)) {
@@ -653,6 +678,17 @@ export default function IdentifyStep({
       }
       setBusy(false);
     }
+  };
+
+  const beginPastRecap = () => {
+    writePastRecapIntent(code);
+    setPastRecap(true);
+    setEventDate("");
+    setErr(null);
+    window.setTimeout(() => {
+      dateInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      dateInputRef.current?.focus();
+    }, 50);
   };
 
   useEffect(() => {
@@ -684,11 +720,15 @@ export default function IdentifyStep({
 
   return (
     <div style={card}>
-      <h2 style={h2}>{recapOnly ? "Your name" : "Who's working?"}</h2>
+      <h2 style={h2}>
+        {pastRecap ? "File a past-day recap" : recapOnly ? "Your name" : "Who's working?"}
+      </h2>
       <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
-        {recapOnly
-          ? "Your name on this recap. Phone is optional."
-          : "Tell us who you are so your lead can confirm your hours. Already clocked in? Use the same phone number to pick up your shift."}
+        {pastRecap
+          ? FORGOT_PAST_RECAP_HINT
+          : recapOnly
+            ? "Your name on this recap. Phone is optional."
+            : "Tell us who you are so your lead can confirm your hours. Already clocked in? Use the same phone number to pick up your shift."}
       </p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -1079,19 +1119,26 @@ export default function IdentifyStep({
           ) : null}
 
           <label style={{ color: "#44403c", fontSize: 12, opacity: 1, display: "block", margin: "10px 0 4px" }}>
-            {recapOnly ? "Date of this recap" : "Date you're working"}
+            {pastRecap || recapOnly ? "Date of this recap" : "Date you're working"}
           </label>
           <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "0 0 6px" }}>
-            {recapOnly
-              ? "The day the sampling happened. You can pick any day in the last "
-              : "Working a past shift? Change this to the day you actually worked. You can pick any day in the last "}
-            {CHECKIN_MAX_PAST_DAYS} days.
+            {pastRecap
+              ? `The day you forgot to file. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days (not today).`
+              : recapOnly
+                ? `The day the sampling happened. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days.`
+                : `Working a past shift? Change this to the day you actually worked. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days.`}
           </p>
           <input
-            style={input}
+            ref={dateInputRef}
+            style={{
+              ...input,
+              ...(pastRecap
+                ? { border: "2px solid #1c1917", boxShadow: "0 0 0 3px rgba(28,25,23,0.08)" }
+                : {}),
+            }}
             type="date"
             min={shiftedISO(-CHECKIN_MAX_PAST_DAYS)}
-            max={shiftedISO(CHECKIN_MAX_FUTURE_DAYS)}
+            max={pastRecap ? shiftedISO(-1) : shiftedISO(CHECKIN_MAX_FUTURE_DAYS)}
             value={eventDate}
             onChange={(e) => {
               const next = e.target.value;
@@ -1112,9 +1159,35 @@ export default function IdentifyStep({
             busy,
             recapOnly,
             needsProgram: needsEventDetails && hasPrograms && !eventTypeId,
+            pastRecap,
           })}
         </button>
       )}
+      {/* Standing tenant links (date pickable): discoverable past-day path that
+          skips hours / clock-in after identify. Hidden once that path is on,
+          and on per-event codes that have no date picker. */}
+      {!pastRecap && !openShift && needsEventDetails ? (
+        <button
+          type="button"
+          style={{
+            ...secondaryBtn,
+            width: "100%",
+            flex: "none",
+            marginTop: 12,
+            minHeight: 56,
+            padding: "14px 16px",
+            fontSize: 15,
+            fontWeight: 700,
+            lineHeight: 1.35,
+            background: "#fff",
+            whiteSpace: "normal",
+          }}
+          disabled={busy}
+          onClick={beginPastRecap}
+        >
+          {FORGOT_PAST_RECAP_CTA}
+        </button>
+      ) : null}
     </div>
   );
 }
