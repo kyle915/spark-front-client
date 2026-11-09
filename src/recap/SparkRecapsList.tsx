@@ -69,6 +69,8 @@ import {
   RECAPS_DOM_WINDOW_SIZE,
 } from "./recapsListPagination";
 import {
+  fetchUnifiedRecapsFromPlan,
+  fetchUnifiedRecapsPage,
   planUnifiedRecapsLoadMore,
   unifiedRecapsPageVariables,
 } from "./unifiedRecapsFetch";
@@ -1589,27 +1591,13 @@ const RecapsListFetched: React.FC<{
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const [legacyPage, customPage] = await Promise.all([
-        plan.fetchLegacy && plan.legacyVars
-          ? fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
-              ...plan.legacyVars,
-              q: searchQ,
-              filters: listFilters,
-            }, { fetchPolicy: "network-only" }).toPromise()
-          : Promise.resolve(null),
-        plan.fetchCustom && plan.customVars
-          ? fetchQuery<CustomRecapsListQueryType>(
-              environment,
-              CustomRecapsListQuery,
-              {
-                ...plan.customVars,
-                q: searchQ,
-                filters: customListFilters,
-              },
-              { fetchPolicy: "network-only" },
-            ).toPromise()
-          : Promise.resolve(null),
-      ]);
+      const { legacy: legacyPage, custom: customPage } =
+        await fetchUnifiedRecapsFromPlan(environment, plan, {
+          q: searchQ,
+          legacyFilters: listFilters,
+          customFilters: customListFilters,
+          fetchPolicy: "network-only",
+        });
       if (legacyPage?.recaps) {
         setExtraLegacy((prev) =>
           appendUniqueByUuid(
@@ -2466,17 +2454,24 @@ export default function SparkRecapsList() {
         approved: false,
         archived: false,
       };
-      const [legacy, custom] = await Promise.all([
-        fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
-          last: 10,
-          filters,
-        }).toPromise(),
-        fetchQuery<CustomRecapsListQueryType>(
-          environment,
-          CustomRecapsListQuery,
-          { last: 10, filters },
-        ).toPromise(),
-      ]);
+      const kindsData = await fetchQuery<RecapListKindsQueryType>(
+        environment,
+        RecapListKindsQuery,
+        { tenantId: String(tenantId) },
+        { fetchPolicy: "store-or-network" },
+      ).toPromise();
+      const hasLegacy = Boolean(kindsData?.recapListKinds?.hasLegacy);
+      const hasCustom = Boolean(kindsData?.recapListKinds?.hasCustom);
+      // Same fallback as idle prefetch: unknown/empty probe → fetch both.
+      const fetchLegacy = hasLegacy || (!hasLegacy && !hasCustom);
+      const fetchCustom = hasCustom || (!hasLegacy && !hasCustom);
+      const { legacy, custom } = await fetchUnifiedRecapsPage(environment, {
+        fetchLegacy,
+        fetchCustom,
+        legacyVariables: { last: 10, filters },
+        customVariables: { last: 10, filters },
+        fetchPolicy: "network-only",
+      });
       const picks: { kind: "legacy" | "custom"; uuid: string; at: string }[] =
         [];
       for (const edge of legacy?.recaps?.edges ?? []) {

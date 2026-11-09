@@ -1,4 +1,10 @@
-import { Suspense, useCallback, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
@@ -9,6 +15,37 @@ import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__generated__/RecapsListQuery.graphql";
 import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
 import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
+import { RecapListKindsQuery } from "@/api/queries/RecapListKindsQuery";
+import type { RecapListKindsQuery as RecapListKindsQueryType } from "@api/queries/__generated__/RecapListKindsQuery.graphql";
+import { RECAPS_PAGE_SIZE } from "@/recap/unifiedRecapsFetch";
+
+const APPROVALS_FIRST = Math.max(200, RECAPS_PAGE_SIZE);
+
+const EMPTY_LEGACY_PAGE: RecapsListQueryType["response"] = {
+  recaps: {
+    totalCount: 0,
+    pageInfo: {
+      hasNextPage: false,
+      hasPreviousPage: false,
+      startCursor: null,
+      endCursor: null,
+    },
+    edges: [],
+  },
+};
+
+const EMPTY_CUSTOM_PAGE: CustomRecapsListQueryType["response"] = {
+  customRecaps: {
+    totalCount: 0,
+    pageInfo: {
+      hasNextPage: false,
+      hasPreviousPage: false,
+      startCursor: null,
+      endCursor: null,
+    },
+    edges: [],
+  },
+};
 import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
@@ -291,6 +328,54 @@ const ApprovalRow: React.FC<{
   );
 };
 
+/* ─────────────────── kind-gated dual fetch ─────────────────── */
+
+const ApprovalsLegacyLive: React.FC<{
+  variables: RecapsListQueryType["variables"];
+  children: (data: RecapsListQueryType["response"]) => ReactNode;
+}> = ({ variables, children }) => {
+  const data = useLazyLoadQuery<RecapsListQueryType>(
+    RecapsListQuery,
+    variables,
+    { fetchPolicy: "store-and-network" },
+  );
+  return <>{children(data)}</>;
+};
+
+const ApprovalsLegacyGate: React.FC<{
+  enabled: boolean;
+  variables: RecapsListQueryType["variables"];
+  children: (data: RecapsListQueryType["response"]) => ReactNode;
+}> = ({ enabled, variables, children }) => {
+  if (!enabled) return <>{children(EMPTY_LEGACY_PAGE)}</>;
+  return (
+    <ApprovalsLegacyLive variables={variables}>{children}</ApprovalsLegacyLive>
+  );
+};
+
+const ApprovalsCustomLive: React.FC<{
+  variables: CustomRecapsListQueryType["variables"];
+  children: (data: CustomRecapsListQueryType["response"]) => ReactNode;
+}> = ({ variables, children }) => {
+  const data = useLazyLoadQuery<CustomRecapsListQueryType>(
+    CustomRecapsListQuery,
+    variables,
+    { fetchPolicy: "store-and-network" },
+  );
+  return <>{children(data)}</>;
+};
+
+const ApprovalsCustomGate: React.FC<{
+  enabled: boolean;
+  variables: CustomRecapsListQueryType["variables"];
+  children: (data: CustomRecapsListQueryType["response"]) => ReactNode;
+}> = ({ enabled, variables, children }) => {
+  if (!enabled) return <>{children(EMPTY_CUSTOM_PAGE)}</>;
+  return (
+    <ApprovalsCustomLive variables={variables}>{children}</ApprovalsCustomLive>
+  );
+};
+
 /* ─────────────────── inner ─────────────────── */
 
 const ClientApprovalsInner: React.FC = () => {
@@ -310,30 +395,50 @@ const ClientApprovalsInner: React.FC = () => {
     });
   }, []);
 
-  // Pending legacy recaps — tenant-scoped (event__tenant_id) + approved=false.
-  // store-and-network so a recap that just got approved elsewhere drops off
-  // the list on the next paint without a manual reload.
-  const data = useLazyLoadQuery<RecapsListQueryType>(
-    RecapsListQuery,
-    {
-      first: 200,
-      filters: tenantId ? { tenantId, approved: false } : null,
-    },
-    { fetchPolicy: "store-and-network" },
+  // Kind gate (same as SparkRecapsList) — skip the unused GraphQL
+  // pipeline when the tenant only has legacy or only custom rows.
+  const kindsData = useLazyLoadQuery<RecapListKindsQueryType>(
+    RecapListKindsQuery,
+    { tenantId: tenantId ?? null },
+    { fetchPolicy: "store-or-network" },
   );
+  const hasLegacy = Boolean(kindsData.recapListKinds?.hasLegacy);
+  const hasCustom = Boolean(kindsData.recapListKinds?.hasCustom);
+  // Empty probe → still hit both so a brand mid-migration is not blank.
+  const enableLegacy = hasLegacy || (!hasLegacy && !hasCustom);
+  const enableCustom = hasCustom || (!hasLegacy && !hasCustom);
+  const listFilters = tenantId ? { tenantId, approved: false } : null;
 
-  // Pending custom-template recaps (Borjomi, Girl Beer, …). Same tenant
-  // scope + approved=false. Tenants typically use legacy XOR custom; a
-  // tenant on both just sees both lists merged below.
-  const customData = useLazyLoadQuery<CustomRecapsListQueryType>(
-    CustomRecapsListQuery,
-    {
-      first: 200,
-      filters: tenantId ? { tenantId, approved: false } : null,
-    },
-    { fetchPolicy: "store-and-network" },
+  return (
+    <ApprovalsLegacyGate
+      enabled={enableLegacy}
+      variables={{ first: APPROVALS_FIRST, filters: listFilters }}
+    >
+      {(data) => (
+        <ApprovalsCustomGate
+          enabled={enableCustom}
+          variables={{ first: APPROVALS_FIRST, filters: listFilters }}
+        >
+          {(customData) => (
+            <ClientApprovalsMerged
+              data={data}
+              customData={customData}
+              approvedKeys={approvedKeys}
+              onApproved={handleApproved}
+            />
+          )}
+        </ApprovalsCustomGate>
+      )}
+    </ApprovalsLegacyGate>
   );
+};
 
+const ClientApprovalsMerged: React.FC<{
+  data: RecapsListQueryType["response"];
+  customData: CustomRecapsListQueryType["response"];
+  approvedKeys: Set<string>;
+  onApproved: (key: string) => void;
+}> = ({ data, customData, approvedKeys, onApproved }) => {
   const rows: PendingRecap[] = useMemo(() => {
     const legacy: PendingRecap[] =
       data?.recaps?.edges
@@ -409,7 +514,7 @@ const ClientApprovalsInner: React.FC = () => {
         <ApprovalRow
           key={`${r.kind}:${r.id}`}
           row={r}
-          onApproved={handleApproved}
+          onApproved={onApproved}
         />
       ))}
     </ul>
