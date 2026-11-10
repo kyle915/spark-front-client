@@ -186,7 +186,6 @@ export const AccountUploader: React.FC<{
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(242,243,238,0.35)",
               opacity: busy ? 0.5 : 1,
             }}
           >

@@ -305,7 +305,6 @@ const PublicInvoice: React.FC = () => {
           style={{
             background: "var(--spark-lime, #f2f3ee)",
             color: "#0a0d09",
-            boxShadow: "0 0 24px rgba(242,243,238,0.35)",
             textDecoration: "none",
           }}
           title="Download this invoice as a PDF"

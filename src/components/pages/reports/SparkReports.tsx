@@ -637,6 +637,8 @@ export default function SparkReports() {
 
         {/* Date range */}
         <div className="flex items-center gap-2 flex-wrap print:hidden">
+          {/* Same segmented control as the Dashboard range picker. */}
+          <div className="pill-group">
           {(
             [
               ["30", "30 days"],
@@ -645,25 +647,18 @@ export default function SparkReports() {
               ["ytd", "Year to date"],
               ["custom", "Custom"],
             ] as [RangeKey, string][]
-          ).map(([key, label]) => {
-            const on = rangeKey === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setRangeKey(key)}
-                aria-pressed={on}
-                className="text-sm rounded-xl px-3 py-1.5 font-semibold"
-                style={{
-                  color: on ? "#0a0d09" : "var(--spark-text)",
-                  background: on ? "var(--spark-lime)" : "transparent",
-                  border: `1px solid ${on ? "var(--spark-lime)" : "var(--spark-border)"}`,
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setRangeKey(key)}
+              aria-pressed={rangeKey === key}
+              className={`pill-btn ${rangeKey === key ? "on" : ""}`}
+            >
+              {label}
+            </button>
+          ))}
+          </div>
           {rangeKey === "custom" && (
             <span className="inline-flex items-center gap-2 text-sm">
               <input
@@ -706,25 +701,25 @@ export default function SparkReports() {
 
         {/* KPI strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4">
+          <div className="spark-card p-4 min-w-0">
             <p className="label-mini">EVENTS</p>
             <p
-              className="tab-num text-3xl font-bold mt-1"
+              className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate"
               style={{ color: "var(--spark-lime)" }}
             >
               {fmtNum(m.totalEvents)}
             </p>
           </div>
-          <div className="spark-card p-4">
+          <div className="spark-card p-4 min-w-0">
             <p className="label-mini">CONSUMERS SAMPLED</p>
-            <p className="tab-num text-3xl font-bold mt-1">
+            <p className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate">
               {fmtNum(m.consumersSampled)}
             </p>
           </div>
-          <div className="spark-card p-4">
+          <div className="spark-card p-4 min-w-0">
             <p className="label-mini">BRAND AWARENESS</p>
             <p
-              className="tab-num text-3xl font-bold mt-1"
+              className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate"
               style={{ color: "var(--spark-lime)" }}
             >
               {typeof m.brandAwareness === "number"
@@ -732,10 +727,10 @@ export default function SparkReports() {
                 : "—"}
             </p>
           </div>
-          <div className="spark-card p-4">
+          <div className="spark-card p-4 min-w-0">
             <p className="label-mini">PURCHASE INTENT</p>
             <p
-              className="tab-num text-3xl font-bold mt-1"
+              className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate"
               style={{ color: "var(--spark-lime)" }}
             >
               {typeof m.purchaseIntent === "number"

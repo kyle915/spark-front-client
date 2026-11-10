@@ -36,7 +36,6 @@ import useBaLabel from "@/hooks/useBaLabel";
 import useSparkRole from "@/hooks/useSparkRole";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
-import SparkGhostButton from "@/shared/SparkGhostButton";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
@@ -325,7 +324,6 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
 };
 
 type LegacyRecapNode =
@@ -3268,14 +3266,6 @@ export default function SparkRecapsList() {
           action={
             !isClient ? (
               <div className="flex flex-wrap gap-2">
-                <SparkGhostButton
-                  disabled={reviewNextBusy}
-                  onClick={() => {
-                    void openNextReview();
-                  }}
-                >
-                  {reviewNextBusy ? "Opening…" : "Review next"}
-                </SparkGhostButton>
                 <SparkPrimaryButton
                   onClick={() => {
                     window.location.href = "/recap/create";
@@ -3315,7 +3305,7 @@ export default function SparkRecapsList() {
             />
             {!isClient && (
               <div
-                className="flex rounded-xl overflow-x-auto max-w-full"
+                className="flex rounded-xl overflow-x-auto max-w-full spark-scroll-fade"
                 style={{ border: "1px solid var(--spark-border)" }}
               >
                 {(
@@ -3373,18 +3363,6 @@ export default function SparkRecapsList() {
               active={activationFilter}
               onChange={setActivationFilter}
             />
-            {!isClient && (
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = "/recap/create";
-                }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0 hidden md:inline-flex"
-                style={limeBtn}
-              >
-                + New recap
-              </button>
-            )}
             {/* Phone: collapse density / Jump / Map / Select / Pin / dates / export */}
             {/* Menu anchors to the sticky card, not the button, so it never runs off a phone screen. */}
             <div className="md:hidden">
@@ -3861,7 +3839,7 @@ export default function SparkRecapsList() {
             </div>
           )}
           <div
-            className="flex items-center gap-2 overflow-x-auto pt-1"
+            className="flex items-center gap-2 overflow-x-auto pt-1 spark-scroll-fade"
             aria-label="Current recap filter context"
             style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
           >
@@ -4253,7 +4231,7 @@ export default function SparkRecapsList() {
                 : "Email the combined PDF straight to a client"
             }
           >
-            ✉ Email
+            Email
           </button>
           )}
           {!isClient && (
@@ -4269,7 +4247,6 @@ export default function SparkRecapsList() {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.4)",
             }}
             title={
               selectedIds.size > CAMPAIGN_REPORT_MAX
@@ -4279,7 +4256,7 @@ export default function SparkRecapsList() {
           >
             {isGeneratingReport
               ? `Generating ${selectedIds.size}…`
-              : `📄 Download (${selectedIds.size})`}
+              : `Download (${selectedIds.size})`}
           </button>
           )}
         </div>

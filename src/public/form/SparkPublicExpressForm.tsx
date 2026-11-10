@@ -1464,7 +1464,6 @@ function ExpressFormBody() {
             style={{
               background: "var(--spark-lime, #f2f3ee)",
               color: "#0a0d09",
-              boxShadow: "0 0 24px rgba(242,243,238,0.4)",
               opacity: canSubmit ? 1 : 0.5,
             }}
           >
@@ -1685,7 +1684,6 @@ function ExpressFormBody() {
                 style={{
                   background: "var(--spark-lime, #f2f3ee)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(242,243,238,0.4)",
                 }}
               >
                 Done — close this

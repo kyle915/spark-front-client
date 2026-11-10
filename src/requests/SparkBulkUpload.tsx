@@ -545,7 +545,6 @@ const Inner: React.FC = () => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(242,243,238,0.35)",
               opacity: busy !== "idle" ? 0.5 : 1,
             }}
           >
@@ -896,7 +895,6 @@ const Inner: React.FC = () => {
                   style={{
                     background: "var(--spark-lime)",
                     color: "#0a0d09",
-                    boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                     opacity:
                       busy !== "idle" || successCount === 0 ? 0.5 : 1,
                   }}
@@ -927,7 +925,6 @@ const Inner: React.FC = () => {
                 style={{
                   background: "var(--spark-sky)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 18px rgba(95,184,239,0.35)",
                 }}
               >
                 View tracker →

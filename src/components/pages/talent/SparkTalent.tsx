@@ -215,7 +215,6 @@ const TalentInner: React.FC = () => {
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: "0 0 16px rgba(242,243,238,0.30)",
           }}
         >
           + Invite BA

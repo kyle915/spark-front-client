@@ -148,7 +148,6 @@ const inputStyle: React.CSSProperties = {
 const limeButton: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 16px rgba(242,243,238,0.3)",
 };
 
 const ghostButton: React.CSSProperties = {
@@ -198,7 +197,7 @@ const ShareLink: React.FC<{ token: string }> = ({ token }) => {
       }}
       title={url}
     >
-      {copied ? "✓ LINK COPIED" : "🔗 COPY CLIENT LINK"}
+      {copied ? "✓ LINK COPIED" : "COPY CLIENT LINK"}
     </button>
   );
 };
@@ -745,7 +744,7 @@ const InvoiceRow: React.FC<{
           className="mono text-[11px] ml-auto"
           style={{ letterSpacing: "0.12em", color: "var(--spark-orange)" }}
         >
-          🗑 DELETE
+          DELETE
         </button>
       </div>
     </div>

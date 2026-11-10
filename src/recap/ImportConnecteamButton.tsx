@@ -48,7 +48,6 @@ export const ImportConnecteamButton: React.FC<Props> = ({
   const primaryStyle: React.CSSProperties = {
     background: "var(--spark-lime)",
     color: "#0a0d09",
-    boxShadow: "0 0 18px rgba(242,243,238,0.35)",
   };
   const ghostStyle: React.CSSProperties = {
     background: "transparent",

@@ -1274,7 +1274,6 @@ export default function SparkRecapCreate() {
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: "0 0 24px rgba(242,243,238,0.4)",
             opacity: submitting || !canSubmit ? 0.5 : 1,
           }}
         >

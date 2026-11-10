@@ -176,7 +176,7 @@ const JobsInner: React.FC = () => {
                     border: "1px solid var(--spark-border)",
                   }}
                 >
-                  🗑 Delete
+                  Delete
                 </button>
               )}
               <button
@@ -188,7 +188,6 @@ const JobsInner: React.FC = () => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                 }}
               >
                 Review
@@ -246,7 +245,7 @@ export default function SparkJobs() {
                 border: "1px solid var(--spark-border)",
               }}
             >
-              📋 Templates
+              Templates
             </button>
             <button
               onClick={() => navigate("/requests/create")}
@@ -254,7 +253,6 @@ export default function SparkJobs() {
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 24px rgba(242,243,238,0.35)",
               }}
             >
               + Post new job

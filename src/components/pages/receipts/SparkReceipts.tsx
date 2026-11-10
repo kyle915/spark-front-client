@@ -234,7 +234,6 @@ const inputStyle: React.CSSProperties = {
 const limeButton: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 16px rgba(242,243,238,0.3)",
 };
 
 const ghostButton: React.CSSProperties = {
@@ -294,7 +293,7 @@ const ShareLink: React.FC<{ slug: string }> = ({ slug }) => {
           }`,
         }}
       >
-        {copied ? "✓ Copied" : "📋 Copy"}
+        {copied ? "✓ Copied" : "Copy"}
       </button>
       <a
         href={url}
@@ -596,7 +595,7 @@ const CampaignCard: React.FC<{
             className="mono text-[11px] disabled:opacity-40"
             style={{ letterSpacing: "0.12em", color: "var(--spark-orange)" }}
           >
-            {deleting ? "…" : "🗑 DELETE"}
+            {deleting ? "…" : "DELETE"}
           </button>
         </div>
       </div>
@@ -1131,7 +1130,7 @@ const ReceiptCard: React.FC<{
                   <Spinner /> READING…
                 </>
               ) : (
-                <>🔍 {ocrRan ? "RE-RUN OCR" : "AUTO-READ (OCR)"}</>
+                <>{ocrRan ? "RE-RUN OCR" : "AUTO-READ (OCR)"}</>
               )}
             </button>
           </div>

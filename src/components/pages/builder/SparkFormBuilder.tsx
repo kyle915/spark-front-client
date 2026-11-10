@@ -531,7 +531,6 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 20px rgba(242,243,238,0.35)",
               opacity: busy ? 0.6 : 1,
             }}
           >
@@ -737,7 +736,6 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 14px rgba(242,243,238,0.25)",
                 opacity: busy ? 0.6 : 1,
               }}
             >

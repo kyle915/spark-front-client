@@ -921,7 +921,7 @@ const TrackerTable: React.FC<{
                           }}
                           title="Open this request's branded campaign report"
                         >
-                          📊 REPORT
+                          REPORT
                         </button>
                         {onClone && (
                           <button
@@ -968,7 +968,7 @@ const TrackerTable: React.FC<{
                             }}
                             title="Post this event's job to the public BA board — open to all eligible BAs"
                           >
-                            📣 POST TO BOARD
+                            POST TO BOARD
                           </button>
                         )}
                         {onDelete && (
@@ -984,7 +984,7 @@ const TrackerTable: React.FC<{
                             }}
                             title="Delete this gig — removes it from the tracker (recoverable)"
                           >
-                            🗑 DELETE
+                            DELETE
                           </button>
                         )}
                       </div>

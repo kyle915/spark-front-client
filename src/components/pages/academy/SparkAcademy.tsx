@@ -149,7 +149,6 @@ const AcademyInner: React.FC<{ tenantId: string; isAdmin: boolean }> = ({
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 20px rgba(242,243,238,0.35)",
             }}
           >
             Manage modules

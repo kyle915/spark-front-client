@@ -388,7 +388,6 @@ export default function SparkLoginCreative(_props: Props) {
                     height: "100%",
                     background: BONE,
                     transformOrigin: "left center",
-                    boxShadow: "0 0 10px rgba(242,243,238,0.35)",
                     animation: `spk-prog ${WORD_INTERVAL_MS}ms linear forwards`,
                   }}
                 />

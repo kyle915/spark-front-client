@@ -366,7 +366,7 @@ const ApplicantsCard: React.FC<{
                           opacity: dmBusy ? 0.5 : 1,
                         }}
                       >
-                        {dmBusy ? "OPENING…" : "💬 MESSAGE"}
+                        {dmBusy ? "OPENING…" : "MESSAGE"}
                       </button>
                     </div>
                   </div>
@@ -684,7 +684,6 @@ const BABriefingCard: React.FC<{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
                 opacity: inFlight || !dirty ? 0.5 : 1,
-                boxShadow: "0 0 24px rgba(242,243,238,0.35)",
               }}
             >
               {inFlight ? "Saving…" : "Save briefing"}
@@ -1379,7 +1378,7 @@ const PostJobModal: React.FC<{
               whiteSpace: "nowrap",
             }}
           >
-            {savingTemplate ? "Saving…" : "💾 Save as template"}
+            {savingTemplate ? "Saving…" : "Save as template"}
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -1405,7 +1404,7 @@ const PostJobModal: React.FC<{
                   valid && !posting ? "0 0 16px rgba(242,243,238,0.35)" : "none",
               }}
             >
-              {posting ? "Posting…" : "📣 Post job"}
+              {posting ? "Posting…" : "Post job"}
             </button>
           </div>
         </div>
@@ -1916,10 +1915,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
                 }}
               >
-                📣 Post job
+                Post job
               </button>
             )}
             {isLive && (
@@ -2012,7 +2010,6 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 24px rgba(242,243,238,0.35)",
               }}
             >
               ⤴ Share job link

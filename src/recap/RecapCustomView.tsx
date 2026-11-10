@@ -215,7 +215,6 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
 };
 const dangerBtn: React.CSSProperties = {
   background: "transparent",
