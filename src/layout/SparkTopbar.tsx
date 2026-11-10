@@ -183,7 +183,7 @@ export const SparkTopbar: React.FC = () => {
             page title sits right below and the sidebar (which names the
             client on desktop) is closed. */}
         <div
-          className={`min-w-0 ${!isClient && clientName ? "hidden md:block" : ""}`}
+          className={`min-w-0 ${isClient || clientName ? "hidden md:block" : ""}`}
         >
         <nav className="spark-crumb min-w-0" aria-label="Breadcrumb">
           <span className="spark-crumb-root hidden sm:inline">
