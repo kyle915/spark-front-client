@@ -179,6 +179,12 @@ export const SparkTopbar: React.FC = () => {
             image={tenantMeta?.logo}
           />
         ) : null}
+        {/* On phones staff see the client chip instead of the crumb: the
+            page title sits right below and the sidebar (which names the
+            client on desktop) is closed. */}
+        <div
+          className={`min-w-0 ${!isClient && clientName ? "hidden md:block" : ""}`}
+        >
         <nav className="spark-crumb min-w-0" aria-label="Breadcrumb">
           <span className="spark-crumb-root hidden sm:inline">
             {crumb.parent}
@@ -188,10 +194,11 @@ export const SparkTopbar: React.FC = () => {
           </span>
           <span className="spark-crumb-current">{crumb.current}</span>
         </nav>
+        </div>
 
         {!isClient && clientName ? (
           <span
-            className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium truncate max-w-[200px]"
+            className="inline-flex md:hidden items-center px-2.5 py-1 rounded-full text-xs font-medium truncate max-w-[130px]"
             style={{
               color: "var(--spark-text)",
               border: "1px solid var(--spark-border)",
