@@ -199,7 +199,7 @@ const ApprovalRow: React.FC<{
         </p>
         <span
           className="text-xs truncate hidden md:inline"
-          style={{ color: "rgba(255,255,255,0.55)", maxWidth: 220 }}
+          style={{ color: "var(--spark-text-meta)", maxWidth: 220 }}
         >
           {row.locationDate}
         </span>
@@ -254,7 +254,7 @@ const ApprovalRow: React.FC<{
           <div className="flex items-center gap-2 flex-wrap">
             {sourceChip}
           </div>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             {row.locationDate}
           </p>
           <p
@@ -1103,7 +1103,7 @@ const ApprovalsInner: React.FC = () => {
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.6)",
+          color: "var(--spark-text-secondary)",
         }}
       >
         {allVisibleSelected ? "DESELECT ALL VISIBLE" : "SELECT ALL VISIBLE"}
@@ -1233,7 +1233,7 @@ const ApprovalsInner: React.FC = () => {
                   className="flex items-center justify-between gap-3"
                 >
                   <span
-                    style={{ color: "rgba(255,255,255,0.7)" }}
+                    style={{ color: "var(--spark-text-secondary)" }}
                   >
                     {desc}
                   </span>
@@ -1301,7 +1301,7 @@ const ApprovalsInner: React.FC = () => {
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+              style={{ color: "var(--spark-text-secondary)", lineHeight: 1.55 }}
             >
               Each one creates an Event row and triggers the branded
               approval email to its requestor. Failures (if any) get
@@ -1313,7 +1313,7 @@ const ApprovalsInner: React.FC = () => {
               style={{
                 background: "rgba(242,243,238,0.06)",
                 border: "1px solid rgba(242,243,238,0.18)",
-                color: "rgba(255,255,255,0.75)",
+                color: "var(--spark-text-secondary)",
                 lineHeight: 1.5,
               }}
             >
@@ -1414,7 +1414,7 @@ const ApprovalsInner: React.FC = () => {
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               One reason for the whole batch. Each requestor gets their
               own branded email with this note.
@@ -1436,7 +1436,7 @@ const ApprovalsInner: React.FC = () => {
                     letterSpacing: "0.12em",
                     background: "rgba(239,90,42,0.08)",
                     border: "1px solid rgba(239,90,42,0.25)",
-                    color: "rgba(255,255,255,0.75)",
+                    color: "var(--spark-text-secondary)",
                   }}
                 >
                   {preset.split(" — ")[0].toUpperCase()}
@@ -1532,7 +1532,7 @@ const ApprovalsInner: React.FC = () => {
               style={{
                 background: "rgba(242,243,238,0.06)",
                 border: "1px solid rgba(242,243,238,0.18)",
-                color: "rgba(255,255,255,0.75)",
+                color: "var(--spark-text-secondary)",
                 lineHeight: 1.6,
               }}
             >
@@ -1600,7 +1600,7 @@ const ApprovalsInner: React.FC = () => {
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+              style={{ color: "var(--spark-text-secondary)", lineHeight: 1.55 }}
             >
               This goes to <strong>{declining.requester}</strong> in the
               decline email so they can revise and resubmit. Be specific —
@@ -1626,7 +1626,7 @@ const ApprovalsInner: React.FC = () => {
                     letterSpacing: "0.12em",
                     background: "rgba(239,90,42,0.08)",
                     border: "1px solid rgba(239,90,42,0.25)",
-                    color: "rgba(255,255,255,0.75)",
+                    color: "var(--spark-text-secondary)",
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background =
@@ -1894,7 +1894,7 @@ export const ApprovalsBody: React.FC = () => {
               <p className="font-bold">External request (no login)</p>
               <p
                 className="mt-1"
-                style={{ color: "rgba(255,255,255,0.65)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 → Email to mapped client user with one-click{" "}
                 <span style={{ color: "var(--spark-lime)" }}>[Approve]</span> /{" "}
@@ -1909,7 +1909,7 @@ export const ApprovalsBody: React.FC = () => {
               <p className="font-bold">Internal request (logged in)</p>
               <p
                 className="mt-1"
-                style={{ color: "rgba(255,255,255,0.65)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 → Auto-approved
                 <br />→ Email confirmation to admin team
@@ -1919,7 +1919,7 @@ export const ApprovalsBody: React.FC = () => {
               <p className="font-bold">Daily digest</p>
               <p
                 className="mt-1"
-                style={{ color: "rgba(255,255,255,0.65)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 → Cron sends end-of-day summary to admins
                 <br />→ Pending / approved / declined counts
@@ -2007,7 +2007,7 @@ class ApprovalsErrorBoundary extends Component<
         </h2>
         <p
           className="mt-2 text-sm"
-          style={{ color: "rgba(255,255,255,0.65)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           If you got here from an approval email, try clicking the button
           again — links sent after this fix lands open a no-login approval

@@ -120,7 +120,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
     return (
       <p
         className="p-10 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.5)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No worked shifts in this range.
       </p>
@@ -132,7 +132,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <span
           className="mono text-[11px]"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-text-secondary)" }}
         >
           {rows.length} BA{rows.length === 1 ? "" : "s"} · {sheet.totalHours}h
           {sheet.totalEstimatedPay != null
@@ -222,7 +222,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                   className="mono text-[10px] px-3 py-2"
                   style={{
                     letterSpacing: "0.12em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-text-meta)",
                     textAlign: i === 0 || i >= 4 ? "left" : "right",
                   }}
                 >
@@ -257,7 +257,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                     ) : null}
                   </p>
                   {r.email ? (
-                    <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <p className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
                       {r.email}
                     </p>
                   ) : null}
@@ -310,7 +310,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                         disabled={busy}
                         title="Undo approval"
                         className="text-xs disabled:opacity-50"
-                        style={{ color: "rgba(255,255,255,0.5)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         Undo
                       </button>
@@ -326,7 +326,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                     </button>
                   )}
                 </td>
-                <td className="px-3 py-2 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <td className="px-3 py-2 text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
                   {[
                     r.shiftsMissingRate > 0
                       ? `${r.shiftsMissingRate} no rate`
@@ -356,7 +356,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
         </table>
       </div>
 
-      <p className="text-[11px] mt-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+      <p className="text-[11px] mt-4" style={{ color: "var(--spark-text-meta)" }}>
         Hours are real clock in→out; a <span style={{ color: "var(--spark-gold)" }}>~</span> means a
         shift fell back to its scheduled length (no clock pair). Estimated pay is
         hours × booked rate — shifts with no booked rate contribute hours but no
@@ -377,7 +377,7 @@ const Body: React.FC<{ startDate: string; endDate: string }> = ({
     useTenantSelection();
   if (tenantOptions.length === 0) {
     return (
-      <p className="p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+      <p className="p-10 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
         No client available.
       </p>
     );
@@ -387,7 +387,7 @@ const Body: React.FC<{ startDate: string; endDate: string }> = ({
       {tenantOptions.length > 1 ? (
         <label
           className="flex flex-col gap-1 text-[11px] mb-4"
-          style={{ color: "rgba(255,255,255,0.5)", maxWidth: 280 }}
+          style={{ color: "var(--spark-text-meta)", maxWidth: 280 }}
         >
           CLIENT
           <select
@@ -444,24 +444,24 @@ export default function SparkPayroll() {
     <div className="p-5 md:p-8">
       <p
         className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
       >
         WORKSPACE
       </p>
       <div className="mb-5">
         <h1 className="display text-2xl font-bold">Payroll timesheet</h1>
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
           Worked hours + estimated pay per BA for a pay period. Export a CSV for
           Wingspan.
         </p>
       </div>
 
       <div className="flex items-end gap-3 flex-wrap mb-5">
-        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
           FROM
           <input type="date" value={start} max={end} onChange={(e) => setStart(e.target.value)} style={inputStyle} />
         </label>
-        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
           TO
           <input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} style={inputStyle} />
         </label>
@@ -482,7 +482,7 @@ export default function SparkPayroll() {
         fallback={
           <p
             className="p-10 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Computing hours…
           </p>

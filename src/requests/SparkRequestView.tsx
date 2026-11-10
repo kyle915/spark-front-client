@@ -368,14 +368,14 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
       className="mono text-[10px] mb-1"
       style={{
         letterSpacing: "0.18em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {label}
     </p>
     <div
       className="text-sm"
-      style={{ color: "rgba(255,255,255,0.85)" }}
+      style={{ color: "var(--spark-text)" }}
     >
       {children}
     </div>
@@ -388,11 +388,11 @@ const ContactLine: React.FC<{
   note?: string | null;
 }> = ({ name, detail, note }) => (
   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
-    <span className="font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+    <span className="font-medium" style={{ color: "var(--spark-text)" }}>
       {name}
     </span>
     {detail ? (
-      <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+      <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
         {detail}
       </span>
     ) : null}
@@ -401,7 +401,7 @@ const ContactLine: React.FC<{
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         {note}
@@ -450,7 +450,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     return (
       <div
         className="spark-card p-10 text-center max-w-3xl"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         Request not found.
       </div>
@@ -855,7 +855,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
               }}
             >
               {reqId}
@@ -887,7 +887,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           {(headerMeta || mapsHref) && (
             <p
               className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
-              style={{ color: "rgba(255,255,255,0.6)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {headerMeta ? <span>{headerMeta}</span> : null}
               {mapsHref ? (
@@ -918,7 +918,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             style={{
               letterSpacing: "0.18em",
               background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.7)",
+              color: "var(--spark-text-secondary)",
               border: "1px solid var(--spark-border)",
             }}
           >
@@ -949,7 +949,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             </p>
             <p
               className="text-sm italic"
-              style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.55 }}
+              style={{ color: "var(--spark-text)", lineHeight: 1.55 }}
             >
               "{request.declineReason}"
             </p>
@@ -958,7 +958,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 className="mono text-[10px] mt-2"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 — {approverName}
@@ -1257,7 +1257,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </p>
           <p
             className="text-sm whitespace-pre-wrap"
-            style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.6 }}
+            style={{ color: "var(--spark-text)", lineHeight: 1.6 }}
           >
             {notesText}
           </p>
@@ -1297,7 +1297,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                     className="w-full aspect-square grid place-items-center"
                     style={{
                       background: "rgba(255,255,255,0.04)",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     ◈
@@ -1312,7 +1312,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                       className="mono text-[9px] mt-0.5"
                       style={{
                         letterSpacing: "0.16em",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {p.productType.name.toUpperCase()}
@@ -1337,7 +1337,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             {request.coBrands.map((cb) => (
               <li key={cb.tenantPk} className="text-sm">
                 <span className="font-semibold">{cb.tenantName}</span>
-                <span style={{ color: "rgba(255,255,255,0.55)" }}>
+                <span style={{ color: "var(--spark-text-meta)" }}>
                   {" · "}
                   {cb.products.map((p) => p.name).filter(Boolean).join(", ") || "No SKUs"}
                 </span>
@@ -1352,7 +1352,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         fallback={
           <div
             className="spark-card p-5 text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading notes…
           </div>
@@ -1387,7 +1387,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         fallback={
           <div
             className="spark-card p-5 text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading field reports…
           </div>
@@ -1416,12 +1416,12 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               className="mono text-[10px] mb-1"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               CREATED
             </p>
-            <p style={{ color: "rgba(255,255,255,0.75)" }}>
+            <p style={{ color: "var(--spark-text-secondary)" }}>
               {fmtDate(request.createdAt)}
             </p>
           </div>
@@ -1436,7 +1436,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               >
                 APPROVED
               </p>
-              <p style={{ color: "rgba(255,255,255,0.75)" }}>
+              <p style={{ color: "var(--spark-text-secondary)" }}>
                 {fmtDate(request.updatedAt)} by {approverName}
               </p>
             </div>
@@ -1454,7 +1454,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               >
                 {slug === "declined" ? "DECLINED" : "CANCELLED"}
               </p>
-              <p style={{ color: "rgba(255,255,255,0.75)" }}>
+              <p style={{ color: "var(--spark-text-secondary)" }}>
                 {fmtDate(request.updatedAt)}
                 {approverName && !approverShownInContacts ? ` by ${approverName}` : ""}
               </p>
@@ -1465,12 +1465,12 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               className="mono text-[10px] mb-1"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               LAST UPDATED
             </p>
-            <p style={{ color: "rgba(255,255,255,0.75)" }}>
+            <p style={{ color: "var(--spark-text-secondary)" }}>
               {fmtDate(request.updatedAt)}
             </p>
           </div>
@@ -1509,7 +1509,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               <strong>{venue}</strong>
               {market ? ` · ${market}` : ""}
@@ -1521,7 +1521,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 CANCEL
@@ -1575,7 +1575,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               This goes to <strong>{requestorName}</strong> in the decline
               email so they can revise.
@@ -1613,7 +1613,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 CANCEL
@@ -1726,7 +1726,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
         >
           FIELD REPORTS · 0
         </p>
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
           No recap filed on this request yet.
         </p>
         {awaiting.length > 0 && (
@@ -1736,7 +1736,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-text-meta)",
               textDecoration: "none",
             }}
           >
@@ -1797,7 +1797,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
           </p>
           <h2
             className="text-lg font-semibold mt-1"
-            style={{ color: "rgba(255,255,255,0.92)" }}
+            style={{ color: "var(--spark-text)" }}
           >
             {`${rows.length} recap${rows.length === 1 ? "" : "s"} submitted`}
           </h2>
@@ -1899,7 +1899,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                   className="mono text-[10px] uppercase mt-1 truncate"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   {baName ? `BY ${baName} · ` : ""}
@@ -1949,7 +1949,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
               to={`/event/view/${ev.uuid}`}
               state={{ from: `/request/view/${request.uuid}` }}
               className="text-xs"
-              style={{ color: "rgba(255,255,255,0.65)", textDecoration: "none" }}
+              style={{ color: "var(--spark-text-secondary)", textDecoration: "none" }}
             >
               {ev.name}
               {ev.date ? ` (${fmt(ev.date)})` : ""} →
@@ -1971,7 +1971,7 @@ export default function SparkRequestView() {
       <Layout>
         <div
           className="spark-card p-10 text-center max-w-3xl"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Request not found.
         </div>
@@ -1984,7 +1984,7 @@ export default function SparkRequestView() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-3xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading request…
           </div>

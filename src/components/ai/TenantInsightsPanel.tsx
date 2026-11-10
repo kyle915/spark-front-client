@@ -110,7 +110,7 @@ const InsightTile: React.FC<{
           className="mono text-[9px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
             textTransform: "uppercase",
           }}
         >
@@ -132,7 +132,7 @@ const InsightTile: React.FC<{
       )}
       <p
         className="text-[13px] mt-1.5 leading-relaxed"
-        style={{ color: "rgba(255,255,255,0.65)" }}
+        style={{ color: "var(--spark-text-secondary)" }}
       >
         {detail}
       </p>
@@ -172,7 +172,7 @@ const TenantInsightsPanel: React.FC<{
         {updated && (
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             {insights.scopeLabel
               ? `${insights.scopeLabel.toUpperCase()} · `
@@ -185,7 +185,7 @@ const TenantInsightsPanel: React.FC<{
       {items.length === 0 ? (
         <p
           className="text-sm py-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No insights yet — they'll appear as activity builds.
         </p>

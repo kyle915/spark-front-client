@@ -32,7 +32,7 @@ function PlanPickerInner({
     return (
       <span
         className="text-xs"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No plans yet — create one under Plans.
       </span>
@@ -196,7 +196,7 @@ export default function TrackerPlanAttachBar({
           className="px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-40"
           style={{
             background: "transparent",
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--spark-text-secondary)",
             border: "1px solid var(--spark-border)",
           }}
         >
@@ -210,7 +210,7 @@ export default function TrackerPlanAttachBar({
         className="mono text-[10px] ml-auto"
         style={{
           letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
           background: "transparent",
           border: "none",
         }}

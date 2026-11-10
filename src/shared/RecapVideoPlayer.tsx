@@ -140,7 +140,7 @@ export function RecapVideoPlayer({
         {name ? (
           <p
             className="text-sm text-center"
-            style={{ color: "rgba(255,255,255,0.7)", maxWidth: 720 }}
+            style={{ color: "var(--spark-text-secondary)", maxWidth: 720 }}
           >
             {name}
           </p>

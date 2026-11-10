@@ -59,7 +59,7 @@ const Inner: React.FC<{ tenantId: string | null }> = ({ tenantId }) => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           PACE · LAST 7 DAYS
@@ -68,7 +68,7 @@ const Inner: React.FC<{ tenantId: string | null }> = ({ tenantId }) => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.4)",
+            color: "var(--spark-text-meta)",
           }}
           title={summary.periodLabel}
         >
@@ -148,7 +148,7 @@ const StatTile: React.FC<{
       className="mono text-[9px]"
       style={{
         letterSpacing: "0.14em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {label.toUpperCase()}
@@ -165,7 +165,7 @@ const StatTile: React.FC<{
     {chip && (
       <p
         className="text-[10px] mt-0.5 truncate"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
         title={chip}
       >
         {chip}
@@ -184,7 +184,7 @@ const RankedList: React.FC<{
       className="mono text-[9px] mb-1.5"
       style={{
         letterSpacing: "0.18em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {title}
@@ -197,7 +197,7 @@ const RankedList: React.FC<{
         >
           <p
             className="text-xs truncate"
-            style={{ color: "rgba(255,255,255,0.85)" }}
+            style={{ color: "var(--spark-text)" }}
             title={r.hint ? `${r.label} · ${r.hint}` : r.label}
           >
             {r.label}
@@ -206,7 +206,7 @@ const RankedList: React.FC<{
             className="mono text-[10px] shrink-0"
             style={{
               letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.65)",
+              color: "var(--spark-text-secondary)",
             }}
           >
             {r.value.toLocaleString()} {unit}

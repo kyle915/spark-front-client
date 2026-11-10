@@ -96,7 +96,7 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </h2>
         <p
           className="mono text-[10px]"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
         >
           {narration
             ? `WEEK OF ${formatWeek(narration.weekStart, narration.weekEnd).toUpperCase()}`
@@ -145,13 +145,13 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </div>
           <p
             className="mono text-[10px] mt-4"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             {narration.filedRecaps} FILED RECAPS · NUMBERS FROM INSIGHT BUCKETS
           </p>
         </>
       ) : (
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
           No weekly narration stored yet. It appears after the weekly job runs.
         </p>
       )}

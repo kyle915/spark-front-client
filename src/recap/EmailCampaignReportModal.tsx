@@ -105,7 +105,7 @@ export default function EmailCampaignReportModal({
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             EMAIL CAMPAIGN REPORT
@@ -122,7 +122,7 @@ export default function EmailCampaignReportModal({
                 className="mono text-[10px] block mb-1.5"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 RECIPIENTS *
@@ -177,7 +177,7 @@ export default function EmailCampaignReportModal({
                   className="mono text-[10px] block mb-1.5"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   TITLE (OPTIONAL)
@@ -201,7 +201,7 @@ export default function EmailCampaignReportModal({
                   className="mono text-[10px] block mb-1.5"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   SUBTITLE (OPTIONAL)
@@ -227,7 +227,7 @@ export default function EmailCampaignReportModal({
                 className="mono text-[10px] block mb-1.5"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 COVER MESSAGE (OPTIONAL)
@@ -260,7 +260,7 @@ export default function EmailCampaignReportModal({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.40)",
+              color: "var(--spark-text-meta)",
             }}
           >
             {recapIds.length} RECAP{recapIds.length === 1 ? "" : "S"} ATTACHED

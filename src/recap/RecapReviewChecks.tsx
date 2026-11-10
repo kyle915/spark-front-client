@@ -53,7 +53,7 @@ const Inner: React.FC<{
         </span>
         <span
           className="text-[12px]"
-          style={{ color: "rgba(255,255,255,0.6)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           {flagged > 0
             ? `${flagged} to look at · advisory only`
@@ -100,7 +100,7 @@ const Inner: React.FC<{
               <p
                 key={`${c.code}-detail`}
                 className="text-[11px]"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {c.detail}
               </p>

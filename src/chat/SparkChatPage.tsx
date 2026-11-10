@@ -94,7 +94,7 @@ const ThreadList: React.FC<{
   };
   if (threads.length === 0) {
     return (
-      <div className="p-6 text-center" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <div className="p-6 text-center" style={{ color: "var(--spark-text-meta)" }}>
         <p className="mono text-[10px] mb-2" style={{ letterSpacing: "0.18em" }}>
           CHAT · EMPTY
         </p>
@@ -141,14 +141,14 @@ const ThreadList: React.FC<{
                   </p>
                   <span
                     className="mono text-[9px]"
-                    style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                    style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
                   >
                     {fmtRelative(t.lastMessageAt)}
                   </span>
                 </div>
                 <p
                   className="text-xs truncate mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   {t.kind === "job" && t.jobName ? (
                     <span style={{ color: "var(--spark-sky, #5fb8ef)" }}>
@@ -254,14 +254,14 @@ const SparkChatPage: React.FC = () => {
           <div>
             <p
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
             >
               COMMS · CHAT
             </p>
             <h1 className="display text-3xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
               Chat
             </h1>
-            <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-sm mt-1" style={{ color: "var(--spark-text-meta)" }}>
               Two-way messaging with your BAs. General DMs and per-job threads in one
               place; mobile push notifies them on every reply.
             </p>
@@ -286,7 +286,7 @@ const SparkChatPage: React.FC = () => {
               fallback={
                 <div
                   className="p-6 mono text-[10px]"
-                  style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+                  style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
                 >
                   LOADING THREADS…
                 </div>
@@ -311,7 +311,7 @@ const SparkChatPage: React.FC = () => {
                 fallback={
                   <div
                     className="p-6 mono text-[10px]"
-                    style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+                    style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
                   >
                     LOADING THREAD…
                   </div>
@@ -320,7 +320,7 @@ const SparkChatPage: React.FC = () => {
                 <ChatConversation threadUuid={selectedUuid} onSent={onSent} />
               </Suspense>
             ) : (
-              <div className="p-10 text-center" style={{ color: "rgba(255,255,255,0.55)" }}>
+              <div className="p-10 text-center" style={{ color: "var(--spark-text-meta)" }}>
                 <p
                   className="mono text-[10px] mb-2"
                   style={{ letterSpacing: "0.18em" }}

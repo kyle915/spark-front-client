@@ -196,7 +196,7 @@ const FieldRow: React.FC<{
           className="w-7 h-7 rounded-md text-xs"
           style={{
             background: "transparent",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
             border: "1px solid var(--spark-border)",
           }}
         >
@@ -208,7 +208,7 @@ const FieldRow: React.FC<{
           className="w-7 h-7 rounded-md text-xs"
           style={{
             background: "transparent",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
             border: "1px solid var(--spark-border)",
           }}
         >
@@ -296,7 +296,7 @@ const FormDefCard: React.FC<{
     {def.description && (
       <p
         className="text-xs"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         {def.description}
       </p>
@@ -306,7 +306,7 @@ const FormDefCard: React.FC<{
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.16em",
-          color: "rgba(255,255,255,0.4)",
+          color: "var(--spark-text-meta)",
         }}
       >
         UPDATED · {new Date(def.updatedAt).toLocaleDateString()}
@@ -320,7 +320,7 @@ const FormDefCard: React.FC<{
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
           }}
         >
           DUPLICATE
@@ -506,7 +506,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             CUSTOM FORMS · {defs.length}
@@ -517,7 +517,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           >
             Form builder.
           </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             Design custom request forms per brand. Each form can be
             published to the internal admin queue, the public client
             link, or both.
@@ -544,7 +544,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           {defs.length === 0 ? (
             <div
               className="spark-card p-10 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               <p className="mb-4">
                 No custom forms yet. Build one to capture brand-specific
@@ -586,7 +586,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[11px] transition"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ← BACK TO FORMS
@@ -696,7 +696,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               className="w-full py-3 rounded-xl text-sm transition"
               style={{
                 background: "transparent",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
                 border: "1px dashed var(--spark-border)",
               }}
             >
@@ -723,7 +723,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             </p>
             <p
               className="mt-2 text-sm"
-              style={{ color: "rgba(255,255,255,0.75)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               Form definitions persist per brand to the Spark backend. Edits
               here stay local until you save; the internal + external request
@@ -757,7 +757,7 @@ export default function SparkFormBuilder() {
         fallback={
           <div
             className="grid place-items-center text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading forms…
           </div>
@@ -768,7 +768,7 @@ export default function SparkFormBuilder() {
         ) : (
           <div
             className="text-xs"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No tenant selected.
           </div>

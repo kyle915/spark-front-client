@@ -88,7 +88,7 @@ const Stat: React.FC<{ label: string; value: string; tone?: string }> = ({
   <div className="spark-card p-4">
     <p
       className="mono text-[10px]"
-      style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+      style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
     >
       {label}
     </p>
@@ -132,14 +132,14 @@ const Inner: React.FC = () => {
         <div>
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             SYSTEM
           </p>
           <h1 className="display text-4xl font-bold mt-2" style={{ letterSpacing: "-0.04em" }}>
             System health.
           </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             Backend errors, delivery failures, and the running build. Problems
             show here the moment they happen — no waiting on an alert email.
           </p>
@@ -154,7 +154,7 @@ const Inner: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="spark-card p-6 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <div className="spark-card p-6 text-sm" style={{ color: "var(--spark-text-meta)" }}>
           Loading system health…
         </div>
       ) : error ? (
@@ -162,7 +162,7 @@ const Inner: React.FC = () => {
           Couldn't load system health: {error}
         </div>
       ) : !health ? (
-        <div className="spark-card p-6 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <div className="spark-card p-6 text-sm" style={{ color: "var(--spark-text-meta)" }}>
           Not available for this account.
         </div>
       ) : (
@@ -179,10 +179,10 @@ const Inner: React.FC = () => {
           </div>
 
           <div className="spark-card p-4">
-            <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}>
+            <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}>
               RUNNING BUILD
             </p>
-            <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+            <p className="mt-1 text-sm" style={{ color: "var(--spark-text-secondary)" }}>
               <span className="mono">{health.gitSha}</span> · {health.revision} · as of {fmt(health.serverTime)}
             </p>
           </div>
@@ -192,14 +192,14 @@ const Inner: React.FC = () => {
               <h2 className="display text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
                 Automations
               </h2>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+              <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
                 Every internal cron stamps a heartbeat when it fires — this is
                 the thing that was invisible when the scheduler silently died.
               </span>
             </div>
             <div className="spark-card overflow-hidden" style={{ borderRadius: 20 }}>
               {health.cronRuns.length === 0 ? (
-                <div className="p-6 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <div className="p-6 text-sm" style={{ color: "var(--spark-text-meta)" }}>
                   No cron has fired yet. Heartbeats appear here the first time
                   each scheduled job runs.
                 </div>
@@ -207,7 +207,7 @@ const Inner: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm" style={{ minWidth: 640 }}>
                     <thead style={{ background: "var(--spark-surface-2)", borderBottom: "1px solid var(--spark-border)" }}>
-                      <tr className="text-left mono" style={{ fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+                      <tr className="text-left mono" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
                         <th className="px-4 py-3">AUTOMATION</th>
                         <th className="px-4 py-3">STATUS</th>
                         <th className="px-4 py-3">LAST RUN</th>
@@ -237,7 +237,7 @@ const Inner: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
                               {fmtAgo(c.hoursSince)}
-                              <span className="text-[10px] ml-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+                              <span className="text-[10px] ml-2" style={{ color: "var(--spark-text-meta)" }}>
                                 {c.lastRunAt ? fmt(c.lastRunAt) : ""}
                               </span>
                             </td>
@@ -258,7 +258,7 @@ const Inner: React.FC = () => {
               <h2 className="display text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
                 Recent errors
               </h2>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+              <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
                 Most recent 25 signatures · throttled to one alert email per signature per hour.
               </span>
             </div>
@@ -271,7 +271,7 @@ const Inner: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm" style={{ minWidth: 800 }}>
                     <thead style={{ background: "var(--spark-surface-2)", borderBottom: "1px solid var(--spark-border)" }}>
-                      <tr className="text-left mono" style={{ fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+                      <tr className="text-left mono" style={{ fontSize: 10, letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
                         <th className="px-4 py-3">SIGNATURE</th>
                         <th className="px-4 py-3">COUNT</th>
                         <th className="px-4 py-3">LAST SEEN</th>
@@ -283,7 +283,7 @@ const Inner: React.FC = () => {
                         <tr key={r.signature} style={{ borderBottom: "1px solid var(--spark-border)" }}>
                           <td className="px-4 py-3">
                             <div className="mono text-xs">{r.signature}</div>
-                            <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                            <div className="text-[10px] mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
                               {r.location}
                             </div>
                           </td>
@@ -292,7 +292,7 @@ const Inner: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">{fmt(r.lastSeen)}</td>
                           <td className="px-4 py-3">
-                            <div className="text-xs" style={{ color: "rgba(255,255,255,0.7)", maxWidth: 420 }}>
+                            <div className="text-xs" style={{ color: "var(--spark-text-secondary)", maxWidth: 420 }}>
                               {r.message}
                             </div>
                           </td>

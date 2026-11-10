@@ -534,7 +534,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
           style={{ borderColor: "var(--spark-border, #1f2418)" }}
         >
           <h2 className="text-lg font-semibold">Import Connecteam PDF</h2>
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="text-xs mt-1" style={{ color: "var(--spark-text-secondary)" }}>
             We'll parse the PDF, draft the recap, and open it so you can
             review, add any missing photos, and approve.
           </p>
@@ -586,7 +586,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                       style={{
                         background: "rgba(255,255,255,0.06)",
                         border: "1px solid rgba(255,255,255,0.18)",
-                        color: "rgba(255,255,255,0.8)",
+                        color: "var(--spark-text-secondary)",
                       }}
                     >
                       Change
@@ -606,7 +606,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     {events.length === 0 ? (
                       <div
                         className="text-xs px-3 py-2"
-                        style={{ color: "rgba(255,255,255,0.5)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         No matching events — create one below.
                       </div>
@@ -654,7 +654,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                                 <span
                                   className="block truncate mono text-[10px] mt-0.5"
                                   style={{
-                                    color: "rgba(255,255,255,0.5)",
+                                    color: "var(--spark-text-meta)",
                                     letterSpacing: "0.04em",
                                   }}
                                 >
@@ -720,7 +720,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                       {search.trim()
                         ? ` “${search.trim().slice(0, 32)}”`
                         : ""}{" "}
-                      <span style={{ color: "rgba(255,255,255,0.45)" }}>
+                      <span style={{ color: "var(--spark-text-meta)" }}>
                         — create it right here and import against it
                       </span>
                     </button>
@@ -889,7 +889,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             background: "transparent",
                             border: "1px solid rgba(255,255,255,0.18)",
-                            color: "rgba(255,255,255,0.8)",
+                            color: "var(--spark-text-secondary)",
                           }}
                           onClick={() => setShowCreate(false)}
                         >
@@ -1011,7 +1011,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
               <div>
                 <label className="label-mini block mb-1.5">
                   Recap title{" "}
-                  <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <span style={{ color: "var(--spark-text-meta)" }}>
                     · optional
                   </span>
                 </label>
@@ -1042,7 +1042,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
             style={{
               background: "transparent",
               border: "1px solid rgba(255,255,255,0.18)",
-              color: "rgba(255,255,255,0.8)",
+              color: "var(--spark-text-secondary)",
             }}
             onClick={onClose}
           >
@@ -1085,7 +1085,7 @@ const ImportConnecteamPdfModal: React.FC<Props> = (props) => (
         className="fixed inset-0 z-[60] flex items-center justify-center"
         style={{ background: "rgba(10,11,13,0.7)" }}
       >
-        <div className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+        <div className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
           Loading…
         </div>
       </div>

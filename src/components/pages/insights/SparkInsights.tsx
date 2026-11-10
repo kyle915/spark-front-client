@@ -130,7 +130,7 @@ const ActivationBreakdown: React.FC<{
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           CONFIRMED + COMPLETED · {rangeLabel.toUpperCase()}
@@ -371,7 +371,7 @@ function InsightsTimeline({
             className="mono text-[10px] transition"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ALL EVENTS →
@@ -382,7 +382,7 @@ function InsightsTimeline({
         className="mono text-[10px] mb-4"
         style={{
           letterSpacing: "0.16em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         SHOWING {rangeLabel.toUpperCase()}
@@ -392,7 +392,7 @@ function InsightsTimeline({
       {timelineRows.length === 0 ? (
         <p
           className="text-sm py-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {selectedState
             ? `No timeline rows for ${selectedState} in this range.`
@@ -443,7 +443,7 @@ function InsightsTimeline({
                     className="mono text-[10px] mt-0.5 truncate"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-text-meta)",
                       textTransform: "uppercase",
                     }}
                   >
@@ -453,7 +453,7 @@ function InsightsTimeline({
                 <div className="text-right shrink-0">
                   <p
                     className="text-sm"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
+                    style={{ color: "var(--spark-text)" }}
                   >
                     {dateStr || "—"}
                   </p>
@@ -596,7 +596,7 @@ export function InsightsBody({
         className="px-3 py-2 rounded-xl text-sm font-medium"
         style={{
           background: "transparent",
-          color: "rgba(255,255,255,0.7)",
+          color: "var(--spark-text-secondary)",
           border: "1px solid var(--spark-border)",
           opacity: !tenantId || copying ? 0.5 : 1,
         }}
@@ -610,7 +610,7 @@ export function InsightsBody({
         className="px-3 py-2 rounded-xl text-sm font-medium"
         style={{
           background: "transparent",
-          color: "rgba(255,255,255,0.7)",
+          color: "var(--spark-text-secondary)",
           border: "1px solid var(--spark-border)",
         }}
       >
@@ -627,7 +627,7 @@ export function InsightsBody({
         className="mono text-[10px] min-w-0 whitespace-normal"
         style={{
           letterSpacing: "0.16em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
@@ -743,7 +743,7 @@ export function InsightsBody({
                 className="mono block text-[10px]"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 MORE DETAIL
@@ -754,7 +754,7 @@ export function InsightsBody({
             </span>
             <span
               className="mono text-xs"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {showDetail ? "Hide" : "Show"}
             </span>
@@ -803,7 +803,7 @@ export function InsightsBody({
             fallback={
               <div
                 className="spark-card p-6 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Map loads as you scroll…
               </div>
@@ -832,7 +832,7 @@ export function InsightsBody({
             fallback={
               <div
                 className="spark-card p-6 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Loading timeline…
               </div>

@@ -79,7 +79,7 @@ const Inner: React.FC<{ eventUuid: string; refreshKey: number; bump: () => void 
     <div className="spark-card p-5">
       <p
         className="mono text-[10px] mb-3"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
       >
         ATTENDANCE · CLOCK LOG
       </p>
@@ -88,7 +88,7 @@ const Inner: React.FC<{ eventUuid: string; refreshKey: number; bump: () => void 
           <thead>
             <tr
               style={{
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
                 borderBottom: "1px solid rgba(255,255,255,0.1)",
               }}
             >

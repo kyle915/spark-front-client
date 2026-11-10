@@ -85,12 +85,12 @@ export function ThirdPartyStoreMap({
           <span className="chip chip-orange">Needs a match</span>
         )}
       </div>
-      <p className="text-sm mb-3" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <p className="text-sm mb-3" style={{ color: "var(--spark-text-secondary)" }}>
         They typed this. Confirm a maybe-match or pick the national / regional
         chain. The recap already landed.
       </p>
       <p className="text-sm font-semibold">{typedName || "—"}</p>
-      <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <p className="text-sm mb-4" style={{ color: "var(--spark-text-meta)" }}>
         {typedAddress || "—"}
       </p>
       {mapped && mappedRetailerName ? (
@@ -103,7 +103,7 @@ export function ThirdPartyStoreMap({
         <div className="space-y-2 mb-4">
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             MAYBE A MATCH
           </p>
@@ -127,7 +127,7 @@ export function ThirdPartyStoreMap({
               ) : (
                 <span className="chip chip-muted chip-sm ml-2">Store</span>
               )}
-              <span className="block text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <span className="block text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
                 {hit.reason}
                 {hit.address ? ` · ${hit.address}` : ""}
               </span>
@@ -167,7 +167,7 @@ export function ThirdPartyStoreMap({
                   {r.address ? (
                     <span
                       className="block text-xs mt-1"
-                      style={{ color: "rgba(255,255,255,0.5)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {r.address}
                     </span>

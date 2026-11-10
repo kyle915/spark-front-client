@@ -977,7 +977,7 @@ const SparkRequestInner: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           NEW REQUEST · QUICK FORM
@@ -990,7 +990,7 @@ const SparkRequestInner: React.FC = () => {
         </h1>
         <p
           className="mt-2"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           A few fields. We auto-route to your Ignite RMM for approval,
           staffing, and scheduling.
@@ -1020,7 +1020,7 @@ const SparkRequestInner: React.FC = () => {
         >
           <span
             className="text-sm"
-            style={{ color: "rgba(255,255,255,0.8)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             ↻ Picked up your unfinished draft.
           </span>
@@ -1115,7 +1115,7 @@ const SparkRequestInner: React.FC = () => {
                       {v.address && (
                         <p
                           className="text-xs truncate"
-                          style={{ color: "rgba(255,255,255,0.55)" }}
+                          style={{ color: "var(--spark-text-meta)" }}
                         >
                           {v.address}
                         </p>
@@ -1168,7 +1168,7 @@ const SparkRequestInner: React.FC = () => {
             />
             <p
               className="text-xs mt-1.5"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Full street, city, state, zip — used to route to the
               right territory manager and to set the venue timezone.
@@ -1258,7 +1258,7 @@ const SparkRequestInner: React.FC = () => {
               </select>
               <p
                 className="text-xs mt-1.5"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Auto-fills from the address — venue local time, not your
                 browser.
@@ -1460,7 +1460,7 @@ const SparkRequestInner: React.FC = () => {
                               }}
                               className="w-full text-left px-3 py-2 text-sm transition"
                               style={{
-                                color: "rgba(255,255,255,0.85)",
+                                color: "var(--spark-text)",
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
@@ -1569,7 +1569,7 @@ const SparkRequestInner: React.FC = () => {
               />
               <p
                 className="text-xs mt-1"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Optional — the retailer's store number helps the BA find
                 the right location.
@@ -1627,7 +1627,7 @@ const SparkRequestInner: React.FC = () => {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 Each becomes its own request (same venue · same staffing).
@@ -1724,7 +1724,7 @@ const SparkRequestInner: React.FC = () => {
                   className="mono text-[10px] transition"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   × CLEAR
@@ -1781,7 +1781,7 @@ const SparkRequestInner: React.FC = () => {
                           className="mono text-[10px]"
                           style={{
                             letterSpacing: "0.14em",
-                            color: "rgba(255,255,255,0.55)",
+                            color: "var(--spark-text-meta)",
                           }}
                         >
                           {p.name?.slice(0, 14)}
@@ -1889,7 +1889,7 @@ const SparkRequestInner: React.FC = () => {
             className="mono text-[10px] transition"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ⛁ DETAILED FORM →
@@ -1897,7 +1897,7 @@ const SparkRequestInner: React.FC = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <div
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
             >
               {listedVisits > 1 ? `${listedVisits} VISITS · ` : ""}
               {`${selectedProducts.size} PRODUCTS`}
@@ -1941,7 +1941,7 @@ export default function SparkRequestCreate() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-3xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading form…
           </div>

@@ -76,7 +76,7 @@ const Inner: React.FC = () => {
           style={{
             background: "rgba(255,200,60,0.08)",
             border: "1px solid rgba(255,200,60,0.25)",
-            color: "rgba(255,255,255,0.75)",
+            color: "var(--spark-text-secondary)",
           }}
           role="status"
         >
@@ -149,7 +149,7 @@ const Inner: React.FC = () => {
                   </p>
                   <p
                     className="text-xs truncate"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     {c.email ?? "—"}
                   </p>
@@ -181,7 +181,7 @@ export default function SparkClients() {
           <h1 className="display text-3xl font-bold">Admin only.</h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             The Clients page is a Spark Admin surface.
           </p>
@@ -195,7 +195,7 @@ export default function SparkClients() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading clients…
           </div>

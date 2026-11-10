@@ -168,14 +168,14 @@ export function MetricCard({
             </span>
             <span
               className="text-xs"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {comparisonLabel}
             </span>
             {subtitle ? (
               <span
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {subtitle}
               </span>
@@ -184,7 +184,7 @@ export function MetricCard({
           {note ? (
             <p
               className="text-[11px] mt-1.5 leading-snug"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {note}
             </p>

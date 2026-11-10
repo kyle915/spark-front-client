@@ -358,7 +358,7 @@ const QrPanel: React.FC<{ slug: string }> = ({ slug }) => {
       <div className="min-w-0">
         <p
           className="mono text-[10px] uppercase"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
         >
           Scan to open the public page
         </p>
@@ -424,7 +424,7 @@ const BudgetBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
         <p className="label-mini">BUDGET</p>
         <p
           className="mono text-[11px]"
-          style={{ color: "rgba(255,255,255,0.7)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           Paid {formatMoney(campaign.totalPaid)} of {formatMoney(campaign.budgetCap)}
         </p>
@@ -449,7 +449,7 @@ const BudgetBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
       {committed > 0 && (
         <p
           className="mono text-[10px] mt-1.5"
-          style={{ letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.08em", color: "var(--spark-text-meta)" }}
         >
           {formatMoney(campaign.totalCommitted)} awaiting payout
         </p>
@@ -457,7 +457,7 @@ const BudgetBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
       {reached && (
         <p
           className="mono text-[10px] mt-1.5"
-          style={{ letterSpacing: "0.08em", color: "rgba(255,255,255,0.4)" }}
+          style={{ letterSpacing: "0.08em", color: "var(--spark-text-meta)" }}
         >
           Budget reached
         </p>
@@ -504,7 +504,7 @@ const CampaignCard: React.FC<{
           </p>
           <p
             className="mono text-[10px] uppercase mt-1"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             {formatMoney(campaign.rewardAmount)} reward
             {campaign.product ? ` · ${campaign.product}` : ""}
@@ -520,7 +520,7 @@ const CampaignCard: React.FC<{
       </div>
 
       {campaign.headline && (
-        <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--spark-text-secondary)" }}>
           {campaign.headline}
         </p>
       )}
@@ -581,7 +581,7 @@ const CampaignCard: React.FC<{
               onEdit();
             }}
             className="mono text-[11px]"
-            style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}
+            style={{ letterSpacing: "0.12em", color: "var(--spark-text-secondary)" }}
           >
             ✎ EDIT
           </button>
@@ -775,7 +775,7 @@ const CampaignFormModal: React.FC<{
           <button
             onClick={onClose}
             className="mono text-[11px]"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             ✕ CLOSE
           </button>
@@ -863,7 +863,7 @@ const CampaignFormModal: React.FC<{
                 onPick={(f) => onPickImage(f, "hero")}
                 emptyLabel="Upload banner"
               />
-              <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <p className="text-[10px] mt-1" style={{ color: "var(--spark-text-meta)" }}>
                 Wide lifestyle/brand photo shown above the fold.
               </p>
             </Field>
@@ -874,7 +874,7 @@ const CampaignFormModal: React.FC<{
                 onPick={(f) => onPickImage(f, "product")}
                 emptyLabel="Upload product shot"
               />
-              <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <p className="text-[10px] mt-1" style={{ color: "var(--spark-text-meta)" }}>
                 Smaller decorative product/can photo.
               </p>
             </Field>
@@ -906,7 +906,7 @@ const CampaignFormModal: React.FC<{
             {slug.trim() && (
               <p
                 className="mono text-[10px] mt-1"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {campaignShareUrl(slug.trim())}
               </p>
@@ -1040,7 +1040,7 @@ const ReceiptCard: React.FC<{
             style={{
               fontSize: 9,
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.7)",
+              color: "var(--spark-text-secondary)",
               background: "rgba(0,0,0,0.45)",
               padding: "2px 6px",
               borderRadius: 999,
@@ -1059,7 +1059,7 @@ const ReceiptCard: React.FC<{
               </p>
               <p
                 className="text-xs truncate"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "var(--spark-text-meta)" }}
                 title={receipt.consumerEmail || receipt.consumerPhone || undefined}
               >
                 {receipt.consumerEmail || receipt.consumerPhone || "—"}
@@ -1095,7 +1095,7 @@ const ReceiptCard: React.FC<{
 
           <div
             className="mono text-[10px] uppercase mt-2"
-            style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
           >
             {receipt.storeName || "Unknown store"}
             {receipt.purchaseDate ? ` · ${formatDate(receipt.purchaseDate)}` : ""}
@@ -1108,7 +1108,7 @@ const ReceiptCard: React.FC<{
             {ocrLine && (
               <span
                 className="mono text-[10px]"
-                style={{ letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)" }}
+                style={{ letterSpacing: "0.06em", color: "var(--spark-text-meta)" }}
                 title={receipt.ocrText || undefined}
               >
                 {ocrLine}
@@ -1152,7 +1152,7 @@ const ReceiptCard: React.FC<{
             {reward && (
               <span
                 className="mono text-[11px]"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Reward {reward}
               </span>
@@ -1165,7 +1165,7 @@ const ReceiptCard: React.FC<{
               style={{
                 fontSize: 9,
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-text-meta)",
               }}
             >
               Submitted {formatDateTime(receipt.submittedAt)}
@@ -1214,7 +1214,7 @@ const ReceiptCard: React.FC<{
             <div className="mt-3 space-y-2">
               <p
                 className="text-[11px]"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Spark doesn't move money. Open PayPal to pay{" "}
                 {reward ? `${reward} ` : ""}to {handle || "the consumer"}, then
@@ -1702,12 +1702,12 @@ const ImagePickerField: React.FC<{
     ) : (
       <div
         className="h-10 w-16 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px]"
-        style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)" }}
+        style={{ background: "rgba(255,255,255,0.06)", color: "var(--spark-text-meta)" }}
       >
         none
       </div>
     )}
-    <span className="text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>
+    <span className="text-xs" style={{ color: "var(--spark-text-secondary)" }}>
       {uploading ? "Uploading…" : previewUrl ? "Replace" : emptyLabel}
     </span>
     <input
@@ -1774,7 +1774,7 @@ export default function SparkReceipts() {
           <div>
             <p
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
             >
               REBATE PROGRAM · {meta.total} CAMPAIGN{meta.total === 1 ? "" : "S"}
             </p>
@@ -1784,7 +1784,7 @@ export default function SparkReceipts() {
             >
               Receipt campaigns.
             </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
               Always-on rebates. Share a campaign link, consumers upload a
               receipt + their PayPal, you validate it and pay the reward.
             </p>
@@ -1804,7 +1804,7 @@ export default function SparkReceipts() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading campaigns…
             </div>
@@ -1842,7 +1842,7 @@ export default function SparkReceipts() {
                 className="mono text-[11px]"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 ✕ CLOSE QUEUE
@@ -1877,7 +1877,7 @@ export default function SparkReceipts() {
               fallback={
                 <div
                   className="spark-card p-8 text-center text-sm"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   Loading submissions…
                 </div>

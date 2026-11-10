@@ -471,7 +471,7 @@ const Inner: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             BULK UPLOAD
@@ -484,7 +484,7 @@ const Inner: React.FC = () => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Schedule dozens of activations at once. We validate every row
             before anything writes — so a typo on row 7 doesn't break
@@ -497,7 +497,7 @@ const Inner: React.FC = () => {
           style={{
             letterSpacing: "0.18em",
             background: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--spark-text-secondary)",
             border: "1px solid var(--spark-border)",
           }}
         >
@@ -531,7 +531,7 @@ const Inner: React.FC = () => {
             <p className="font-bold">Download the per-tenant XLSX</p>
             <p
               className="text-sm mt-1"
-              style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}
+              style={{ color: "var(--spark-text-secondary)", lineHeight: 1.5 }}
             >
               Pre-populated columns with dropdowns for activation type
               and tenant. Fill one row per activation, drop the file
@@ -575,7 +575,7 @@ const Inner: React.FC = () => {
           </span>
           <span
             className="text-sm font-semibold"
-            style={{ color: "rgba(255,255,255,0.8)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             What goes in each column
           </span>
@@ -583,7 +583,7 @@ const Inner: React.FC = () => {
             className="ml-auto mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.4)",
+              color: "var(--spark-text-meta)",
             }}
           >
             TAP TO EXPAND
@@ -605,7 +605,7 @@ const Inner: React.FC = () => {
                 style={{
                   fontSize: 10,
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 <th className="px-3 py-2">COLUMN</th>
@@ -673,7 +673,7 @@ const Inner: React.FC = () => {
                   </td>
                   <td
                     className="px-3 py-2"
-                    style={{ color: "rgba(255,255,255,0.7)" }}
+                    style={{ color: "var(--spark-text-secondary)" }}
                   >
                     {desc}
                   </td>
@@ -681,7 +681,7 @@ const Inner: React.FC = () => {
                     className="px-3 py-2 mono text-[11px]"
                     style={{
                       letterSpacing: "0.04em",
-                      color: "rgba(255,255,255,0.55)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {example}
@@ -693,7 +693,7 @@ const Inner: React.FC = () => {
         </div>
         <p
           className="text-xs mt-3"
-          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+          style={{ color: "var(--spark-text-meta)", lineHeight: 1.5 }}
         >
           The downloaded template has companion sheets (TimeZones,
           RequestTypes, EventTypes, BillingEntities, Cities, Products)
@@ -729,7 +729,7 @@ const Inner: React.FC = () => {
             <p className="font-bold">Drop your filled file</p>
             <p
               className="text-sm mt-1"
-              style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}
+              style={{ color: "var(--spark-text-secondary)", lineHeight: 1.5 }}
             >
               We run a dry-run first — no rows are written until you
               confirm in step 3.
@@ -785,7 +785,7 @@ const Inner: React.FC = () => {
                 className="mono text-[10px] mt-1"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.5)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 {(file.size / 1024).toFixed(1)} KB · CLICK TO REPLACE
@@ -803,7 +803,7 @@ const Inner: React.FC = () => {
                 className="mono text-[10px] mt-2"
                 style={{
                   letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 OR CLICK TO PICK · .xlsx, .xls, .csv
@@ -874,7 +874,7 @@ const Inner: React.FC = () => {
               </p>
               <p
                 className="text-sm mt-1"
-                style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}
+                style={{ color: "var(--spark-text-secondary)", lineHeight: 1.5 }}
               >
                 {committed
                   ? "Successful rows are now real requests in the queue. Failed rows weren't written."
@@ -911,7 +911,7 @@ const Inner: React.FC = () => {
                   className="mono text-[10px] px-3 py-1.5"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   START OVER
@@ -986,7 +986,7 @@ const Inner: React.FC = () => {
                     >
                       ROW {r.rowNumber}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.75)" }}>
+                    <span style={{ color: "var(--spark-text-secondary)" }}>
                       {r.message ?? "Unspecified error"}
                     </span>
                   </li>
@@ -994,7 +994,7 @@ const Inner: React.FC = () => {
                 {failedRows.length > 50 && (
                   <li
                     className="px-4 py-2 text-xs"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     …and {failedRows.length - 50} more — fix in spreadsheet, then re-upload.
                   </li>
@@ -1057,7 +1057,7 @@ const Inner: React.FC = () => {
                     >
                       ROW {r.rowNumber}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.75)" }}>
+                    <span style={{ color: "var(--spark-text-secondary)" }}>
                       {r.requestId
                         ? `REQ-${r.requestId.slice(-4).toUpperCase()}`
                         : "Imported"}
@@ -1081,7 +1081,7 @@ const Inner: React.FC = () => {
                 {successRows.length > 30 && (
                   <li
                     className="px-4 py-2 text-xs"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     …and {successRows.length - 30} more.
                   </li>
@@ -1102,7 +1102,7 @@ export default function SparkBulkUpload() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-4xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading bulk upload…
           </div>

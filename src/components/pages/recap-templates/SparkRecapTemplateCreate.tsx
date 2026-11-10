@@ -286,7 +286,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           ADMIN · RECAP TEMPLATE
@@ -299,7 +299,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </h1>
         <p
           className="mt-2"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           BAs see this form when they submit a recap for the chosen
           event type. Fields are grouped by section in the order you
@@ -312,7 +312,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <label className="block">
           <span
             className="label-mini block mb-1"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Template name
           </span>
@@ -334,7 +334,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           <label className="block">
             <span
               className="label-mini block mb-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Event type
             </span>
@@ -373,7 +373,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           <div className="space-y-2">
             <span
               className="label-mini block mb-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Bookkeeping
             </span>
@@ -405,14 +405,14 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           className="mono text-[10px] mb-2"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           SECTIONS · {sections.length}
         </p>
         <p
           className="text-[12px] mb-3"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Sections group fields visually on the recap form (e.g.
           &ldquo;Sampling&rdquo;, &ldquo;Sales&rdquo;, &ldquo;Photos&rdquo;).
@@ -423,7 +423,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           {sections.length === 0 ? (
             <span
               className="text-[12px]"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No sections yet — add one to get started.
             </span>
@@ -482,14 +482,14 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               FIELDS · {fields.length}
             </p>
             <p
               className="text-[12px] mt-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Order top-to-bottom is the order BAs see them.
             </p>
@@ -527,7 +527,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   className="mono text-[10px] grid place-items-center"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "var(--spark-text-meta)",
                     width: 24,
                     minHeight: 36,
                   }}
@@ -590,7 +590,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   className="px-2 rounded-lg text-sm self-center disabled:opacity-30"
                   style={{
                     background: "transparent",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                     border: "1px solid var(--spark-border)",
                     minHeight: 32,
                   }}
@@ -618,7 +618,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                     />
                     <div
                       className="text-[11px] mt-1"
-                      style={{ color: "rgba(255,255,255,0.4)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       One choice per line — BAs pick from these when filling the recap.
                     </div>
@@ -673,7 +673,7 @@ export default function SparkRecapTemplateCreate() {
       <Layout>
         <div className="max-w-2xl space-y-3">
           <h1 className="display text-3xl font-bold">Admin only.</h1>
-          <p style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p style={{ color: "var(--spark-text-meta)" }}>
             Recap templates are a Spark Admin feature.{" "}
             <button
               onClick={() => navigate("/recaps")}
@@ -693,7 +693,7 @@ export default function SparkRecapTemplateCreate() {
         fallback={
           <div
             className="grid place-items-center text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading reference data…
           </div>
@@ -704,7 +704,7 @@ export default function SparkRecapTemplateCreate() {
         ) : (
           <div
             className="text-xs"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No tenant selected.
           </div>

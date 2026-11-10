@@ -136,7 +136,7 @@ export default function BulkCloneModal({
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             CLONE REQUEST
@@ -144,7 +144,7 @@ export default function BulkCloneModal({
           <h2 className="display text-xl font-bold">Clone to new dates</h2>
           <p
             className="text-xs mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Source:{" "}
             <span style={{ color: "var(--spark-text)" }}>{sourceLabel}</span>
@@ -158,7 +158,7 @@ export default function BulkCloneModal({
                 className="mono text-[10px] block mb-1.5"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 DATES *
@@ -190,7 +190,7 @@ export default function BulkCloneModal({
                     {ok.length} VALID
                   </span>
                 ) : (
-                  <span style={{ color: "rgba(255,255,255,0.40)" }}>
+                  <span style={{ color: "var(--spark-text-meta)" }}>
                     ONE PER LINE · YYYY-MM-DD OR MM/DD/YYYY
                   </span>
                 )}
@@ -213,7 +213,7 @@ export default function BulkCloneModal({
               style={{
                 background: "rgba(242,243,238,0.06)",
                 border: "1px solid rgba(242,243,238,0.20)",
-                color: "rgba(255,255,255,0.65)",
+                color: "var(--spark-text-secondary)",
               }}
             >
               Each clone keeps the source's venue, activation type,

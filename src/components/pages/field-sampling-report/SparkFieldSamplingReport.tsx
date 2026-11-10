@@ -85,12 +85,12 @@ const inputStyle: React.CSSProperties = {
 
 const eyebrow: React.CSSProperties = {
   letterSpacing: "0.18em",
-  color: "rgba(255,255,255,0.55)",
+  color: "var(--spark-text-meta)",
   textTransform: "uppercase",
 };
 
-const dim: React.CSSProperties = { color: "rgba(255,255,255,0.55)" };
-const dimmer: React.CSSProperties = { color: "rgba(255,255,255,0.4)" };
+const dim: React.CSSProperties = { color: "var(--spark-text-meta)" };
+const dimmer: React.CSSProperties = { color: "var(--spark-text-meta)" };
 
 const modeLabel = (mode: string): string =>
   mode === "quantity" ? "UNITS" : mode === "sessions" ? "SESSIONS (approx.)" : "NO DATA";
@@ -140,7 +140,7 @@ const SkuBreakdownCard: React.FC<{
                   key={item.product}
                   style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
                 >
-                  <td className="py-1.5 pr-3" style={{ color: "rgba(255,255,255,0.85)" }}>
+                  <td className="py-1.5 pr-3" style={{ color: "var(--spark-text)" }}>
                     {item.product}
                   </td>
                   <td className="py-1.5 text-right tabular-nums font-semibold">
@@ -271,7 +271,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             type="button"
             onClick={() => applyPreset(p.weeks)}
             className="text-xs px-2.5 py-1 rounded-full transition hover:bg-white/5"
-            style={{ border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.75)" }}
+            style={{ border: "1px solid rgba(255,255,255,0.14)", color: "var(--spark-text-secondary)" }}
           >
             {p.label}
           </button>
@@ -404,11 +404,11 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               <tbody>
                 {report.locationsHit.map((loc, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <td className="py-1.5 pr-3" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    <td className="py-1.5 pr-3" style={{ color: "var(--spark-text-secondary)" }}>
                       {shortDate(loc.date)}
                     </td>
                     <td className="py-1.5 pr-3 font-semibold">{loc.market ?? "—"}</td>
-                    <td className="py-1.5 pr-3" style={{ color: "rgba(255,255,255,0.85)" }}>
+                    <td className="py-1.5 pr-3" style={{ color: "var(--spark-text)" }}>
                       {loc.corridor ?? "—"}
                     </td>
                     <td className="py-1.5" style={dim}>
@@ -500,7 +500,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             style={{
               background: "rgba(242,243,238,0.06)",
               border: "1px solid rgba(242,243,238,0.25)",
-              color: "rgba(255,255,255,0.9)",
+              color: "var(--spark-text)",
             }}
           >
             <p className="mono text-[9px] mb-2" style={{ color: "var(--spark-lime, #f2f3ee)", letterSpacing: "0.1em" }}>
@@ -522,7 +522,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   {[c.market, c.corridor].filter(Boolean).join(" · ") || "UNKNOWN LOCATION"}
                   {c.date ? ` · ${shortDate(c.date).toUpperCase()}` : ""}
                 </p>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.85)" }}>
+                <p className="text-xs" style={{ color: "var(--spark-text)" }}>
                   {c.text}
                 </p>
               </li>

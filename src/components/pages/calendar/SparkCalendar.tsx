@@ -222,7 +222,7 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                 style={{
                   fontSize: 10,
                   letterSpacing: "0.04em",
-                  color: "rgba(255,255,255,0.28)",
+                  color: "var(--spark-text-meta)",
                   position: "relative",
                   top: -7,
                 }}
@@ -369,7 +369,7 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                       <p
                         style={{
                           fontSize: 10,
-                          color: "rgba(255,255,255,0.55)",
+                          color: "var(--spark-text-meta)",
                           marginTop: 2,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -479,7 +479,7 @@ export default function SparkCalendar() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               SHIFTS BOARD · {monthLabel(anchor)}
@@ -550,7 +550,7 @@ export default function SparkCalendar() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading shifts…
             </div>

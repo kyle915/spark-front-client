@@ -130,18 +130,18 @@ const Inner: React.FC = () => {
     return (
       <div
         className="spark-card p-10 text-center"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         <p
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           PENDING · 0
         </p>
-        <p className="display text-2xl mt-2" style={{ color: "rgba(255,255,255,0.85)" }}>
+        <p className="display text-2xl mt-2" style={{ color: "var(--spark-text)" }}>
           Nobody waiting.
         </p>
         <p className="mt-2 text-sm">
@@ -218,12 +218,12 @@ const Inner: React.FC = () => {
                       )}
                     </div>
                     <div>
-                      <p style={{ color: "rgba(255,255,255,0.92)" }}>{name}</p>
+                      <p style={{ color: "var(--spark-text)" }}>{name}</p>
                       <p
                         className="mono text-[10px] mt-0.5"
                         style={{
                           letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.45)",
+                          color: "var(--spark-text-meta)",
                         }}
                       >
                         A-{String(row.uuid).slice(-4).toUpperCase()}
@@ -232,13 +232,13 @@ const Inner: React.FC = () => {
                   </div>
                 </td>
                 <td className="p-4">
-                  <p style={{ color: "rgba(255,255,255,0.85)" }}>
+                  <p style={{ color: "var(--spark-text)" }}>
                     {u?.email ?? "—"}
                   </p>
                   {row.phone && (
                     <p
                       className="mono text-[11px] mt-0.5"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {row.phone}
                     </p>
@@ -248,7 +248,7 @@ const Inner: React.FC = () => {
                   className="p-4 mono text-xs"
                   style={{
                     letterSpacing: "0.06em",
-                    color: "rgba(255,255,255,0.65)",
+                    color: "var(--spark-text-secondary)",
                   }}
                 >
                   {fmtDate(row.createdAt)}
@@ -303,7 +303,7 @@ export default function SparkPendingAmbassadors() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               <Link to="/people" style={{ color: "var(--spark-lime)" }}>
@@ -317,7 +317,7 @@ export default function SparkPendingAmbassadors() {
             >
               Waiting on you.
             </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
               Brand ambassadors who created an account but haven't been
               approved for shifts yet. Approve to unlock — disable if the
               signup looks bogus.
@@ -329,7 +329,7 @@ export default function SparkPendingAmbassadors() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading queue…
             </div>

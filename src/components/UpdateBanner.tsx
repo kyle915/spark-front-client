@@ -35,7 +35,7 @@ export const UpdateBanner: React.FC = () => {
         background: "rgba(18,20,16,0.96)",
         border: "1px solid var(--spark-lime, #f2f3ee)",
         boxShadow: "0 8px 30px rgba(0,0,0,0.45)",
-        color: "rgba(255,255,255,0.92)",
+        color: "var(--spark-text)",
         fontSize: 14,
         maxWidth: "calc(100vw - 32px)",
       }}
@@ -68,7 +68,7 @@ export const UpdateBanner: React.FC = () => {
         style={{
           background: "none",
           border: "none",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-text-meta)",
           cursor: "pointer",
           fontSize: 18,
           lineHeight: 1,

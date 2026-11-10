@@ -109,7 +109,7 @@ const LinkedSheetRow: React.FC = () => {
           <p className="text-sm font-medium">Linked Google Sheet</p>
           <p
             className="text-xs truncate"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {url
               ? "Brand-specific tracker mirror — visible to every teammate on every device."
@@ -271,7 +271,7 @@ export default function SparkSettings() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             SETTINGS
@@ -390,7 +390,7 @@ export default function SparkSettings() {
               <p className="text-sm font-medium">Google Calendar</p>
               <p
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Sync scheduled events into Google Calendar.
               </p>

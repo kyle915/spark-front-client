@@ -269,12 +269,12 @@ const EventsPerWeekChart: React.FC = () => {
     },
     scales: {
       x: {
-        ticks: { color: "rgba(255,255,255,0.55)", maxRotation: 0 },
+        ticks: { color: "var(--spark-text-meta)", maxRotation: 0 },
         grid: { display: false },
       },
       y: {
         beginAtZero: true,
-        ticks: { color: "rgba(255,255,255,0.55)", precision: 0 },
+        ticks: { color: "var(--spark-text-meta)", precision: 0 },
         grid: { color: "rgba(255,255,255,0.06)" },
       },
     },
@@ -283,7 +283,7 @@ const EventsPerWeekChart: React.FC = () => {
     return (
       <div
         className="grid place-items-center h-full text-xs"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No requests created in this window.
       </div>
@@ -332,7 +332,7 @@ const ActivationMixChart: React.FC = () => {
       legend: {
         position: "right",
         labels: {
-          color: "rgba(255,255,255,0.75)",
+          color: "var(--spark-text-secondary)",
           font: { size: 12 },
           padding: 12,
           boxWidth: 12,
@@ -346,7 +346,7 @@ const ActivationMixChart: React.FC = () => {
   return values.length === 0 ? (
     <div
       className="grid place-items-center h-full text-xs"
-      style={{ color: "rgba(255,255,255,0.45)" }}
+      style={{ color: "var(--spark-text-meta)" }}
     >
       No requests in this date range.
     </div>
@@ -388,7 +388,7 @@ const ConsumersSampledChart: React.FC = () => {
     return (
       <div
         className="grid place-items-center h-full text-xs"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No consumer engagements recorded yet.
       </div>
@@ -421,12 +421,12 @@ const ConsumersSampledChart: React.FC = () => {
     },
     scales: {
       x: {
-        ticks: { color: "rgba(255,255,255,0.55)", maxRotation: 0 },
+        ticks: { color: "var(--spark-text-meta)", maxRotation: 0 },
         grid: { display: false },
       },
       y: {
         beginAtZero: true,
-        ticks: { color: "rgba(255,255,255,0.55)", precision: 0 },
+        ticks: { color: "var(--spark-text-meta)", precision: 0 },
         grid: { color: "rgba(255,255,255,0.06)" },
       },
     },
@@ -435,7 +435,7 @@ const ConsumersSampledChart: React.FC = () => {
     return (
       <div
         className="grid place-items-center h-full text-xs"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No consumers sampled in this window.
       </div>
@@ -472,7 +472,7 @@ const TopRetailersChart: React.FC = () => {
     return (
       <div
         className="grid place-items-center h-full text-xs"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No retailer activity in this date range.
       </div>
@@ -507,11 +507,11 @@ const TopRetailersChart: React.FC = () => {
     scales: {
       x: {
         beginAtZero: true,
-        ticks: { color: "rgba(255,255,255,0.55)", precision: 0 },
+        ticks: { color: "var(--spark-text-meta)", precision: 0 },
         grid: { color: "rgba(255,255,255,0.06)" },
       },
       y: {
-        ticks: { color: "rgba(255,255,255,0.75)" },
+        ticks: { color: "var(--spark-text-secondary)" },
         grid: { display: false },
       },
     },
@@ -520,7 +520,7 @@ const TopRetailersChart: React.FC = () => {
     return (
       <div
         className="grid place-items-center h-full text-xs"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         No retailer sampling volume yet.
       </div>
@@ -558,7 +558,7 @@ const ChartCard: React.FC<{
     </h3>
     <p
       className="text-xs mb-3"
-      style={{ color: "rgba(255,255,255,0.55)" }}
+      style={{ color: "var(--spark-text-meta)" }}
     >
       {subtitle}
     </p>
@@ -578,7 +578,7 @@ const ChartCard: React.FC<{
           fallback={
             <div
               className="grid place-items-center h-full text-xs"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading…
             </div>
@@ -675,7 +675,7 @@ export default function SparkReports() {
                   colorScheme: "dark",
                 }}
               />
-              <span style={{ color: "rgba(255,255,255,0.5)" }}>to</span>
+              <span style={{ color: "var(--spark-text-meta)" }}>to</span>
               <input
                 type="date"
                 value={customTo}
@@ -691,7 +691,7 @@ export default function SparkReports() {
                 }}
               />
               {customIncomplete && (
-                <span style={{ color: "rgba(255,255,255,0.55)" }}>
+                <span style={{ color: "var(--spark-text-meta)" }}>
                   Pick both dates — showing the last 90 days until then.
                 </span>
               )}

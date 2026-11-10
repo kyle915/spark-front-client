@@ -144,7 +144,7 @@ const QuoteBlock: React.FC<{ text: string; tone: string }> = ({
     >
       <p
         className="text-[14px] italic leading-relaxed"
-        style={{ color: "rgba(255,255,255,0.82)" }}
+        style={{ color: "var(--spark-text)" }}
       >
         <span aria-hidden="true" style={{ color: pal.text }}>
           &ldquo;
@@ -189,7 +189,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </h2>
           <p
             className="text-[13px] mt-1"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             based on {sentiment.sampleSize.toLocaleString()} piece
             {sentiment.sampleSize === 1 ? "" : "s"} of consumer feedback
@@ -198,7 +198,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         {updated && (
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             UPDATED {updated.toUpperCase()}
           </p>
@@ -223,7 +223,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[11px]"
             style={{
               letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-text-meta)",
               textTransform: "uppercase",
             }}
           >
@@ -249,7 +249,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       {/* Summary — readable body text. */}
       <p
         className="text-[15px] leading-relaxed"
-        style={{ color: "rgba(255,255,255,0.78)" }}
+        style={{ color: "var(--spark-text-secondary)" }}
       >
         {sentiment.summary}
       </p>
@@ -259,7 +259,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <div className="mt-5">
           <p
             className="mono text-[10px] mb-2.5"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             THEMES
           </p>
@@ -276,7 +276,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <div className="mt-5">
           <p
             className="mono text-[10px] mb-2.5"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             IN THEIR WORDS
           </p>

@@ -283,7 +283,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
     return (
       <div className="max-w-2xl space-y-3">
         <h1 className="display text-3xl font-bold">Template not found.</h1>
-        <p style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p style={{ color: "var(--spark-text-meta)" }}>
           It may belong to a different client.{" "}
           <button
             onClick={() => navigate("/recap-templates")}
@@ -304,7 +304,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
       <div>
         <p
           className="mono text-[10px]"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
         >
           ADMIN · EDIT RECAP TEMPLATE
         </p>
@@ -328,7 +328,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         <label className="block">
           <span
             className="label-mini block mb-1"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Template name
           </span>
@@ -347,7 +347,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         <label className="block">
           <span
             className="label-mini block mb-1"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Event type
           </span>
@@ -373,7 +373,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         <div className="space-y-2">
           <span
             className="label-mini block mb-1"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Bookkeeping
           </span>
@@ -402,7 +402,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
       <div className="spark-card p-5">
         <p
           className="mono text-[10px] mb-2"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
         >
           SECTIONS · {sections.length}
         </p>
@@ -442,13 +442,13 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
           <div>
             <p
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
             >
               FIELDS · {fields.length}
             </p>
             <p
               className="text-[12px] mt-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Use ↑/↓ to reorder. Order top-to-bottom (within a section) is
               the order BAs see them.
@@ -492,7 +492,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
                     onClick={() => moveField(idx, -1)}
                     disabled={idx === 0}
                     className="text-xs leading-none disabled:opacity-25"
-                    style={{ color: "rgba(255,255,255,0.6)", padding: "1px 0" }}
+                    style={{ color: "var(--spark-text-secondary)", padding: "1px 0" }}
                     title="Move up"
                     aria-label="Move field up"
                   >
@@ -502,7 +502,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
                     onClick={() => moveField(idx, 1)}
                     disabled={idx === fields.length - 1}
                     className="text-xs leading-none disabled:opacity-25"
-                    style={{ color: "rgba(255,255,255,0.6)", padding: "1px 0" }}
+                    style={{ color: "var(--spark-text-secondary)", padding: "1px 0" }}
                     title="Move down"
                     aria-label="Move field down"
                   >
@@ -562,7 +562,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
                   className="px-2 rounded-lg text-sm self-center"
                   style={{
                     background: "transparent",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                     border: "1px solid var(--spark-border)",
                     minHeight: 32,
                   }}
@@ -590,7 +590,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
                     />
                     <div
                       className="text-[11px] mt-1"
-                      style={{ color: "rgba(255,255,255,0.4)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       One choice per line — BAs pick from these when filling the recap.
                     </div>
@@ -644,7 +644,7 @@ export default function SparkRecapTemplateEdit() {
       <Layout>
         <div className="max-w-2xl space-y-3">
           <h1 className="display text-3xl font-bold">Admin only.</h1>
-          <p style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p style={{ color: "var(--spark-text-meta)" }}>
             Recap templates are a Spark Admin feature.{" "}
             <button onClick={() => navigate("/recaps")} className="underline">
               Back to recaps
@@ -661,7 +661,7 @@ export default function SparkRecapTemplateEdit() {
         fallback={
           <div
             className="grid place-items-center text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading template…
           </div>
@@ -672,7 +672,7 @@ export default function SparkRecapTemplateEdit() {
         ) : (
           <div
             className="text-xs"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No tenant selected.
           </div>

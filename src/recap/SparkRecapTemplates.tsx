@@ -195,7 +195,7 @@ const Inner: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             RECAP TEMPLATES · {templates.length} ACTIVE
@@ -206,7 +206,7 @@ const Inner: React.FC = () => {
           >
             Build the recap.
           </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             Custom recap shapes per brand — what BAs see when they file
             from the field.
           </p>
@@ -227,7 +227,7 @@ const Inner: React.FC = () => {
       {templates.length === 0 ? (
         <div
           className="spark-card p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No templates yet. Build one to start collecting custom recap
           fields per brand.
@@ -263,7 +263,7 @@ const Inner: React.FC = () => {
                     className="mono text-[10px] uppercase mt-1"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     Last used · {fmtDate(t.lastUsed)}
@@ -672,7 +672,7 @@ const ManageFieldsModal: React.FC<{
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               MANAGE FIELDS
@@ -731,7 +731,7 @@ const ManageFieldsModal: React.FC<{
           </span>
         </div>
 
-        <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <p className="text-xs" style={{ color: "var(--spark-text-secondary)" }}>
           Removing a field also deletes any submitted values for it
           across every recap that used this template. Use this when a
           field was a mistake — don't use it as a value-correction tool.
@@ -741,7 +741,7 @@ const ManageFieldsModal: React.FC<{
           {fields.length === 0 ? (
             <p
               className="text-sm py-6 text-center"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No fields on this template.
             </p>
@@ -761,7 +761,7 @@ const ManageFieldsModal: React.FC<{
                     className="mono text-[10px] uppercase"
                     style={{
                       letterSpacing: "0.12em",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {f.required ? "Required · " : ""}
@@ -862,7 +862,7 @@ const ManageFieldsModal: React.FC<{
             </p>
             <p
               className="text-[11px]"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Sections are shared across this client's templates —
               deleting one removes it everywhere.
@@ -885,7 +885,7 @@ const ManageFieldsModal: React.FC<{
                       className="mono text-[10px] uppercase"
                       style={{
                         letterSpacing: "0.12em",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {hasFields
@@ -1039,7 +1039,7 @@ const ManageFieldsModal: React.FC<{
               />
               <p
                 className="text-[10px] mt-1"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 One option per line · BAs will{" "}
                 {newTypeName === "multiselect"
@@ -1052,7 +1052,7 @@ const ManageFieldsModal: React.FC<{
           <div className="flex items-center justify-between gap-3">
             <label
               className="flex items-center gap-1.5 text-[11px] cursor-pointer"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
               title="Required: BAs can't submit a recap if this is blank."
             >
               <input
@@ -1083,7 +1083,7 @@ const ManageFieldsModal: React.FC<{
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-text-meta)",
               }}
             >
               SECTION · {sections[0].name.toUpperCase()}
@@ -1102,7 +1102,7 @@ export default function SparkRecapTemplates() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-7xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading templates…
           </div>

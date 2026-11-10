@@ -161,7 +161,7 @@ export default function ShareRecapsBulkModal({
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             SHARE RECAPS
@@ -177,7 +177,7 @@ export default function ShareRecapsBulkModal({
               <p
                 key={r.id}
                 className="text-xs truncate"
-                style={{ color: "rgba(255,255,255,0.65)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 <span
                   className="mono mr-2"
@@ -229,7 +229,7 @@ export default function ShareRecapsBulkModal({
             </button>
             <p
               className="text-[11px] mt-2"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Anyone with a link can view that recap — no login needed.
             </p>
@@ -280,7 +280,7 @@ export default function ShareRecapsBulkModal({
                 />
                 <p
                   className="text-[11px]"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   Each recipient gets one email listing all{" "}
                   {shareable.length} recap

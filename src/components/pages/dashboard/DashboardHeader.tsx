@@ -16,7 +16,7 @@ const DashboardHeader = ({ quarterLabel, title }: DashboardHeaderProps) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             RETAIL PERFORMANCE
@@ -29,7 +29,7 @@ const DashboardHeader = ({ quarterLabel, title }: DashboardHeaderProps) => {
           </h1>
           <p
             className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {readableRange}
           </p>

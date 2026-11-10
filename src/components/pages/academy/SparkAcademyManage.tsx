@@ -232,7 +232,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ACADEMY · MANAGE
@@ -245,7 +245,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </h1>
           <p
             className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Published modules appear in the Academy tab of the Spark Mobile
             app for your Brand Ambassadors.
@@ -375,7 +375,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   TITLE
@@ -399,7 +399,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.16em",
-                      color: "rgba(255,255,255,0.55)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     KIND
@@ -426,7 +426,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.16em",
-                      color: "rgba(255,255,255,0.55)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     ORDER (LOWER = HIGHER)
@@ -451,7 +451,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   BODY (MARKDOWN)
@@ -522,7 +522,7 @@ export default function SparkAcademyManage() {
       <Layout>
         <div className="max-w-2xl space-y-3">
           <h1 className="display text-3xl font-bold">Admin only.</h1>
-          <p style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p style={{ color: "var(--spark-text-meta)" }}>
             Manage Academy is a Spark Admin feature.{" "}
             <button
               onClick={() => navigate("/academy")}
@@ -542,7 +542,7 @@ export default function SparkAcademyManage() {
         fallback={
           <div
             className="grid place-items-center text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading Academy library…
           </div>
@@ -553,7 +553,7 @@ export default function SparkAcademyManage() {
         ) : (
           <div
             className="text-xs"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No tenant selected.
           </div>

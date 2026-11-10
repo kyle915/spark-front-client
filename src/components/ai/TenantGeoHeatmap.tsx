@@ -238,7 +238,7 @@ const Tooltip: React.FC<{ tip: NonNullable<TooltipState> }> = ({ tip }) => {
               className="mono text-[9px]"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
                 textTransform: "uppercase",
               }}
             >
@@ -341,7 +341,7 @@ const TenantGeoHeatmap: React.FC<{
         </div>
         <p
           className="text-sm py-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No geographic data yet — states light up here as placed activity comes
           in.
@@ -362,7 +362,7 @@ const TenantGeoHeatmap: React.FC<{
         <div className="flex items-center gap-3 flex-wrap">
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             {ranked.length} {ranked.length === 1 ? "STATE" : "STATES"}
             {rangeLabel ? ` · ${rangeLabel.toUpperCase()}` : " · ALL TIME"}
@@ -475,7 +475,7 @@ const TenantGeoHeatmap: React.FC<{
               className="mono text-[9px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
                 textTransform: "uppercase",
               }}
             >
@@ -484,7 +484,7 @@ const TenantGeoHeatmap: React.FC<{
             <div className="flex items-center gap-2">
               <span
                 className="mono text-[9px]"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Low
               </span>
@@ -500,7 +500,7 @@ const TenantGeoHeatmap: React.FC<{
               />
               <span
                 className="mono text-[9px]"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 High{maxValue > 0 ? ` · ${fmt(maxValue)}` : ""}
               </span>
@@ -516,7 +516,7 @@ const TenantGeoHeatmap: React.FC<{
             className="mono text-[10px] mb-3"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             TOP STATES
@@ -524,7 +524,7 @@ const TenantGeoHeatmap: React.FC<{
           {ranked.length === 0 ? (
             <p
               className="text-[13px]"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No states with {metric.label.toLowerCase()} yet.
             </p>
@@ -566,7 +566,7 @@ const TenantGeoHeatmap: React.FC<{
                       <span className="flex items-center gap-2 min-w-0">
                         <span
                           className="mono text-[10px] shrink-0"
-                          style={{ color: "rgba(255,255,255,0.4)" }}
+                          style={{ color: "var(--spark-text-meta)" }}
                         >
                           {String(i + 1).padStart(2, "0")}
                         </span>

@@ -201,7 +201,7 @@ const Inner: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             {unread} UNREAD · LAST 48H
@@ -220,7 +220,7 @@ const Inner: React.FC = () => {
             style={{
               letterSpacing: "0.18em",
               background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.7)",
+              color: "var(--spark-text-secondary)",
               border: "1px solid var(--spark-border)",
             }}
           >
@@ -290,7 +290,7 @@ const Inner: React.FC = () => {
                           className="mono text-[10px]"
                           style={{
                             letterSpacing: "0.14em",
-                            color: "rgba(255,255,255,0.4)",
+                            color: "var(--spark-text-meta)",
                           }}
                         >
                           · {timeAgo(r.whenIso).toUpperCase()}
@@ -298,7 +298,7 @@ const Inner: React.FC = () => {
                       </div>
                       <p
                         className="text-xs mt-0.5"
-                        style={{ color: "rgba(255,255,255,0.55)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         {r.body}
                       </p>
@@ -332,7 +332,7 @@ export default function SparkAlerts() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-4xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading alerts…
           </div>

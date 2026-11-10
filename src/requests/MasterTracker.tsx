@@ -521,12 +521,12 @@ const TrackerTable: React.FC<{
                     onClick={() => openRow(r)}
                   >
                     <span className="flex items-start justify-between gap-3">
-                      <span className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
+                      <span className="text-sm" style={{ color: "var(--spark-text)" }}>
                         {r.dateLabel}
                         {r.timeLabel ? (
                           <span
                             className="mono block text-[10px] mt-0.5 tracking-[0.08em]"
-                            style={{ color: "rgba(255,255,255,0.55)" }}
+                            style={{ color: "var(--spark-text-meta)" }}
                           >
                             Requested {r.timeLabel}
                           </span>
@@ -537,7 +537,7 @@ const TrackerTable: React.FC<{
                     <span className="block text-sm font-semibold mt-1">{r.venue}</span>
                     <span
                       className="block text-xs mt-0.5"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {r.market}
                       {r.assignedBa > 0
@@ -2528,7 +2528,7 @@ export default function MasterTracker() {
             >
               <span
                 className="mono text-[11px]"
-                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.6)" }}
+                style={{ letterSpacing: "0.16em", color: "var(--spark-text-secondary)" }}
               >
                 LOADING BAs…
               </span>
@@ -2606,7 +2606,7 @@ export default function MasterTracker() {
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+              style={{ color: "var(--spark-text-secondary)", lineHeight: 1.55 }}
             >
               Paste the full Google Sheets URL for this brand's
               tracker. The whole team will see the deep-link in the

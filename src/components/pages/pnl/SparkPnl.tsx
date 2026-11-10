@@ -124,7 +124,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
               className="mono text-[9px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
                 textTransform: "uppercase",
               }}
             >
@@ -168,7 +168,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
               className="mono text-[10px]"
               style={{
                 background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
                 letterSpacing: "0.12em",
               }}
             >
@@ -187,7 +187,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
                 <td
                   colSpan={7}
                   className="px-3 py-6 text-center text-xs"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   No staffed or cost-bearing events in this range.
                 </td>
@@ -202,7 +202,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
                 >
                   <td
                     className="px-3 py-2 mono text-xs"
-                    style={{ color: "rgba(255,255,255,0.6)" }}
+                    style={{ color: "var(--spark-text-secondary)" }}
                   >
                     {r.date ?? "—"}
                   </td>
@@ -264,7 +264,7 @@ const SparkPnl: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.22em",
-            color: "rgba(255,255,255,0.5)",
+            color: "var(--spark-text-meta)",
           }}
         >
           OUTPUTS · COST LENS
@@ -272,7 +272,7 @@ const SparkPnl: React.FC = () => {
         <h1 className="text-2xl font-bold mt-1 mb-1">P&L</h1>
         <p
           className="text-xs mb-4"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Labor (clock-in → clock-out × booked rate) plus expense-receipt
           spend, per event. Ignite-internal.
@@ -284,7 +284,7 @@ const SparkPnl: React.FC = () => {
             onChange={(e) => setStart(e.target.value)}
             style={inputStyle}
           />
-          <span style={{ color: "rgba(255,255,255,0.4)" }}>→</span>
+          <span style={{ color: "var(--spark-text-meta)" }}>→</span>
           <input
             type="date"
             value={end}
@@ -297,7 +297,7 @@ const SparkPnl: React.FC = () => {
             fallback={
               <div
                 className="text-sm py-8"
-                style={{ color: "rgba(255,255,255,0.6)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 Crunching costs…
               </div>
@@ -306,7 +306,7 @@ const SparkPnl: React.FC = () => {
             <Table tenantId={tenantId} start={start} end={end} />
           </Suspense>
         ) : (
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             Pick a tenant first (top-left switcher).
           </p>
         )}

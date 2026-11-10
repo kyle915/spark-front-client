@@ -197,7 +197,7 @@ const TrendChart: React.FC<{
           className="mono text-[10px] mt-2"
           style={{
             letterSpacing: "0.12em",
-            color: "rgba(255,255,255,0.4)",
+            color: "var(--spark-text-meta)",
           }}
         >
           {sparseCount} early / light month{sparseCount === 1 ? "" : "s"} marked
@@ -209,7 +209,7 @@ const TrendChart: React.FC<{
           className="mono text-[10px] mt-2"
           style={{
             letterSpacing: "0.12em",
-            color: "rgba(255,255,255,0.4)",
+            color: "var(--spark-text-meta)",
           }}
         >
           {note}
@@ -454,7 +454,7 @@ const TenantKpiCharts: React.FC<{
         <div className="flex items-center gap-3 flex-wrap">
           <p
             className="display text-[12px]"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {scopeNote
               ? scopeNote
@@ -489,7 +489,7 @@ const TenantKpiCharts: React.FC<{
       {!hasActivity ? (
         <p
           className="text-sm py-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No activity yet. KPIs show up here as events and recaps come in.
         </p>
@@ -538,7 +538,7 @@ const TenantKpiCharts: React.FC<{
               <>
                 <p
                   className="display text-[13px] mb-3"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   Monthly trend · Recaps (right) / {seriesTitle.join(" + ")}{" "}
                   (left)
@@ -553,7 +553,7 @@ const TenantKpiCharts: React.FC<{
               <div>
                 <p
                   className="display text-[13px] mb-3"
-                  style={{ color: "rgba(255,255,255,0.5)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   Monthly trend · Recaps / {seriesTitle.join(" / ")}
                 </p>

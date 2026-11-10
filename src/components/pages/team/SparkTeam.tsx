@@ -92,7 +92,7 @@ const Inner: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             TEAM · {allUsers.length} TOTAL
@@ -105,7 +105,7 @@ const Inner: React.FC = () => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Admins, clients, and other users in this workspace.
             Brand Ambassadors live on the People page.
@@ -164,7 +164,7 @@ const Section: React.FC<{
         </h2>
         <p
           className="text-xs"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {subtitle}
         </p>
@@ -398,7 +398,7 @@ const MemberCard: React.FC<{
           {!editing && (
             <p
               className="text-xs truncate"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {user.email ?? "—"}
             </p>
@@ -528,7 +528,7 @@ const MemberCard: React.FC<{
             </h3>
             <p
               className="text-sm mt-1"
-              style={{ color: "rgba(255,255,255,0.6)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {user.email ?? "—"} · {(user.role?.name ?? "—").toUpperCase()}
             </p>
@@ -538,7 +538,7 @@ const MemberCard: React.FC<{
                 background: "var(--spark-bg)",
                 border: "1px solid var(--spark-border)",
                 borderRadius: 12,
-                color: "rgba(255,255,255,0.7)",
+                color: "var(--spark-text-secondary)",
               }}
             >
               They lose access immediately. Their past recaps, requests, and
@@ -592,7 +592,7 @@ export default function SparkTeam() {
           <h1 className="display text-3xl font-bold">Admin only.</h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             The Team page is a Spark Admin surface.
           </p>
@@ -606,7 +606,7 @@ export default function SparkTeam() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading team…
           </div>

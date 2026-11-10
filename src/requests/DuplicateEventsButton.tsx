@@ -106,7 +106,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
   return (
     <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: "62vh" }}>
       {clusters.length === 0 ? (
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
           No duplicate clusters found for this brand — the tracker is
           clean.
         </p>
@@ -122,7 +122,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.5)",
+                  color: "var(--spark-text-meta)",
                   textTransform: "uppercase",
                 }}
               >
@@ -160,7 +160,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
                   {e.name}
                   <span
                     className="mono text-[10px] ml-2"
-                    style={{ color: "rgba(255,255,255,0.5)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     {[e.date, e.address].filter(Boolean).join(" · ")}
                   </span>
@@ -191,7 +191,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
           style={{
             background: "transparent",
             border: "1px solid rgba(255,255,255,0.18)",
-            color: "rgba(255,255,255,0.8)",
+            color: "var(--spark-text-secondary)",
           }}
         >
           Done
@@ -242,7 +242,7 @@ const DuplicateEventsButton: React.FC = () => {
               <h2 className="text-lg font-semibold">Duplicate events</h2>
               <p
                 className="text-xs mt-1"
-                style={{ color: "rgba(255,255,255,0.6)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 Same name, same/adjacent dates. Pick the keeper (the one
                 with the recaps usually) and merge — everything repoints,
@@ -253,7 +253,7 @@ const DuplicateEventsButton: React.FC = () => {
               fallback={
                 <div
                   className="p-6 text-sm"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   Scanning for duplicates…
                 </div>

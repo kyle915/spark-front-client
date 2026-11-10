@@ -137,7 +137,7 @@ export default function PostToBoardModal({
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             POST TO JOB BOARD
@@ -146,7 +146,7 @@ export default function PostToBoardModal({
           {eventName && (
             <p
               className="text-sm mt-1 truncate"
-              style={{ color: "rgba(255,255,255,0.6)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {eventName}
             </p>
@@ -171,7 +171,7 @@ export default function PostToBoardModal({
               >
                 ✓ POSTED
               </p>
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
+              <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
                 Posted to the board — eligible BAs can now apply.
               </p>
             </div>
@@ -182,7 +182,7 @@ export default function PostToBoardModal({
                   className="mono text-[10px] block mb-1.5"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   HOURLY RATE ($) *
@@ -212,7 +212,7 @@ export default function PostToBoardModal({
                   className="mono text-[10px] block mb-1.5"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   TOTAL HOURS *
@@ -241,7 +241,7 @@ export default function PostToBoardModal({
                   className="mono text-[10px] block mb-1.5"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   UNIFORM / NOTES

@@ -138,7 +138,7 @@ const BaActivationPanel: React.FC = () => {
           >
             BA activation
           </h2>
-          <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
             Booked ambassadors and whether they've actually signed in.
           </span>
         </div>
@@ -153,7 +153,7 @@ const BaActivationPanel: React.FC = () => {
         {rows === null ? (
           <div
             className="p-6 text-sm"
-            style={{ color: "rgba(255,255,255,0.5)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading activation status…
           </div>
@@ -175,7 +175,7 @@ const BaActivationPanel: React.FC = () => {
                   style={{
                     fontSize: 10,
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   <th className="px-4 py-3">AMBASSADOR</th>
@@ -196,7 +196,7 @@ const BaActivationPanel: React.FC = () => {
                       <div className="font-semibold">{r.name}</div>
                       <div
                         className="text-xs mt-0.5"
-                        style={{ color: "rgba(255,255,255,0.5)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         {r.email}
                         {r.phone ? ` · ${r.phone}` : ""}
@@ -217,7 +217,7 @@ const BaActivationPanel: React.FC = () => {
                         <span className="inline-flex items-center gap-2">
                           <span
                             className="text-xs"
-                            style={{ color: "rgba(255,255,255,0.55)" }}
+                            style={{ color: "var(--spark-text-meta)" }}
                           >
                             New temp password + welcome email.
                           </span>
@@ -236,7 +236,7 @@ const BaActivationPanel: React.FC = () => {
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{
                               background: "transparent",
-                              color: "rgba(255,255,255,0.6)",
+                              color: "var(--spark-text-secondary)",
                               border: "1px solid var(--spark-border)",
                             }}
                           >

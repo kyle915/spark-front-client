@@ -138,7 +138,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <div>
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             ANNOUNCEMENTS
           </p>
@@ -148,7 +148,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           >
             Broadcast to BAs.
           </h1>
-          <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--spark-text-meta)" }}>
             Posts to the Announcements feed in the Spark Mobile app and pushes
             a notification to every Brand Ambassador in this tenant.
           </p>
@@ -177,14 +177,14 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 {r.body ? (
                   <p
                     className="text-sm mt-1"
-                    style={{ color: "rgba(255,255,255,0.65)", whiteSpace: "pre-wrap" }}
+                    style={{ color: "var(--spark-text-secondary)", whiteSpace: "pre-wrap" }}
                   >
                     {r.body}
                   </p>
                 ) : null}
                 <p
                   className="mono text-[10px] mt-2"
-                  style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.4)" }}
+                  style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
                 >
                   {fmtWhen(r.publishedAt).toUpperCase()} · {r.createdByName}
                 </p>
@@ -221,7 +221,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             </h2>
             <div className="space-y-3">
               <label className="block">
-                <span className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}>
+                <span className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}>
                   TITLE
                 </span>
                 <input
@@ -234,7 +234,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 />
               </label>
               <label className="block">
-                <span className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}>
+                <span className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}>
                   MESSAGE
                 </span>
                 <textarea
@@ -246,7 +246,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 />
               </label>
               <label className="block">
-                <span className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}>
+                <span className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}>
                   AUDIENCE
                 </span>
                 <select
@@ -294,7 +294,7 @@ export default function SparkAnnouncements() {
       <Layout>
         <div className="max-w-2xl space-y-3">
           <h1 className="display text-3xl font-bold">Admin only.</h1>
-          <p style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p style={{ color: "var(--spark-text-meta)" }}>
             Announcements is a Spark Admin feature.{" "}
             <button onClick={() => navigate("/")} className="underline">
               Back to Dashboard
@@ -309,7 +309,7 @@ export default function SparkAnnouncements() {
     <Layout>
       <Suspense
         fallback={
-          <div className="grid place-items-center text-xs py-12" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <div className="grid place-items-center text-xs py-12" style={{ color: "var(--spark-text-meta)" }}>
             Loading announcements…
           </div>
         }
@@ -317,7 +317,7 @@ export default function SparkAnnouncements() {
         {tenantId ? (
           <Inner tenantId={tenantId} />
         ) : (
-          <div className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <div className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
             No tenant selected.
           </div>
         )}

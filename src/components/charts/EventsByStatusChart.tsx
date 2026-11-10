@@ -39,11 +39,11 @@ function EventsByStatusChart({
     plugins: { legend: { display: false } },
     scales: {
       x: {
-        ticks: { color: "rgba(255,255,255,0.55)" },
+        ticks: { color: "var(--spark-text-meta)" },
         grid: { color: "rgba(255,255,255,0.08)" },
       },
       y: {
-        ticks: { color: "rgba(255,255,255,0.75)" },
+        ticks: { color: "var(--spark-text-secondary)" },
         grid: { color: "rgba(255,255,255,0.08)" },
       },
     },

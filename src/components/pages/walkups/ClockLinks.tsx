@@ -71,7 +71,7 @@ const duration = (minutes: number | null | undefined): string =>
 
 function Kicker({ children }: { children: ReactNode }) {
   return (
-    <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
+    <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
       {children}
     </p>
   );
@@ -273,7 +273,7 @@ function SessionsTable({ linkId, refreshKey, onChanged }: { linkId: string; refr
     <div className="overflow-x-auto mt-3">
       <table className="w-full text-[12px]" style={{ borderCollapse: "collapse", minWidth: 900 }}>
         <thead>
-          <tr className="mono text-[9px]" style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.12em" }}>
+          <tr className="mono text-[9px]" style={{ color: "var(--spark-text-meta)", letterSpacing: "0.12em" }}>
             {["NAME", "MARKET · ADDRESS", "IN", "OUT", "HRS", "GPS IN", "GPS OUT", "SHEET", ""].map((h) => (
               <th key={h} className="text-left font-normal py-2 pr-3">
                 {h}
@@ -402,10 +402,10 @@ function LinkCard({ link, serviceAccountEmail, bump, refreshKey }: { link: Link;
             {link.isActive ? <Pill tone="lime">ACTIVE</Pill> : <Pill tone="orange">OFF</Pill>}
             {link.openCount > 0 ? <Pill tone="lime">{link.openCount} ON THE CLOCK</Pill> : null}
           </div>
-          <p className="mono text-[11px] mt-1 break-all" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="mono text-[11px] mt-1 break-all" style={{ color: "var(--spark-text-secondary)" }}>
             {link.url}
           </p>
-          <p className="mono text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.06em" }}>
+          <p className="mono text-[10px] mt-1" style={{ color: "var(--spark-text-meta)", letterSpacing: "0.06em" }}>
             {link.sessionCount} punch{link.sessionCount === 1 ? "" : "es"} · last {fmt(link.lastClockAt)}
           </p>
         </div>
@@ -547,7 +547,7 @@ export default function ClockLinks() {
   return (
     <Suspense
       fallback={
-        <p className="p-8 text-center text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+        <p className="p-8 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
           Loading clock links…
         </p>
       }

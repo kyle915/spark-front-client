@@ -63,7 +63,7 @@ function PlanFilterSelectInner({
         <Link
           to="/plans"
           className="mono text-[9px]"
-          style={{ letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)" }}
+          style={{ letterSpacing: "0.1em", color: "var(--spark-text-meta)" }}
         >
           ALL
         </Link>

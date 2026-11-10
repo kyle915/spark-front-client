@@ -146,7 +146,7 @@ const AiChartView: React.FC<{ chart: AiChart }> = ({ chart }) => {
           style={{
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           {chart.title}

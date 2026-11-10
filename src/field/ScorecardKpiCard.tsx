@@ -88,7 +88,7 @@ export default function ScorecardKpiCard({
           </div>
           <p
             className="mt-1.5 mono text-[9px]"
-            style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.4)" }}
+            style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
           >
             ACTUAL {pct}% OF TARGET
           </p>
@@ -97,7 +97,7 @@ export default function ScorecardKpiCard({
       {kpi.note ? (
         <p
           className="mt-2 text-[11px] leading-snug"
-          style={{ color: "rgba(255,255,255,0.6)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           {kpi.note}
         </p>

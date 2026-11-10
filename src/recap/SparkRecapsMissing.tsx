@@ -50,7 +50,7 @@ const overdueChipStyle = (
   if (hoursOverdue == null) {
     return {
       background: "rgba(255,255,255,0.05)",
-      color: "rgba(255,255,255,0.55)",
+      color: "var(--spark-text-meta)",
       border: "1px solid rgba(255,255,255,0.15)",
       label: "OVERDUE",
     };
@@ -301,7 +301,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
           className="mono flex items-center gap-3"
           style={{
             letterSpacing: "0.16em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           <label className="flex items-center gap-1.5 cursor-pointer">
@@ -362,7 +362,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
             onClick={() => setSelectedEvents(new Set())}
             disabled={isBulkNudging}
             className="mono text-[10px] disabled:opacity-50"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             ✕ CLEAR
           </button>
@@ -405,7 +405,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                       className="mono text-[10px]"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.55)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {row.stateCode}
@@ -417,7 +417,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                 </p>
                 <p
                   className="text-xs mt-0.5 truncate"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   {fmtDate(row.date ?? row.endTime ?? null)}
                   {row.address ? ` · ${row.address}` : ""}
@@ -431,7 +431,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.55)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     → REQUEST
@@ -446,7 +446,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                 style={{
                   background: "rgba(255,200,60,0.08)",
                   border: "1px solid rgba(255,200,60,0.25)",
-                  color: "rgba(255,255,255,0.65)",
+                  color: "var(--spark-text-secondary)",
                 }}
               >
                 No BA assigned — file the recap manually or assign someone to the
@@ -512,7 +512,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                             className="mono text-[10px] truncate"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "rgba(255,255,255,0.40)",
+                              color: "var(--spark-text-meta)",
                             }}
                           >
                             {isWalkupPlaceholderEmail(ba.email)
@@ -583,7 +583,7 @@ export default function SparkRecapsMissing() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               RECAPS · MISSING
@@ -591,7 +591,7 @@ export default function SparkRecapsMissing() {
             <h1 className="display text-2xl font-bold">Shifts still owing a recap</h1>
             <p
               className="text-sm mt-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Events that already wrapped but don't have a recap on file. Nudge the
               BA via push, or file the recap on their behalf.
@@ -603,7 +603,7 @@ export default function SparkRecapsMissing() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               LOOKBACK
@@ -631,7 +631,7 @@ export default function SparkRecapsMissing() {
           fallback={
             <div
               className="spark-card p-8 text-center"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading missing recaps…
             </div>

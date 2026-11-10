@@ -127,7 +127,7 @@ const ResourceLink: React.FC<{
     <p className="font-bold text-sm">{title}</p>
     <p
       className="text-xs mt-1"
-      style={{ color: "rgba(255,255,255,0.55)" }}
+      style={{ color: "var(--spark-text-meta)" }}
     >
       {body}
     </p>
@@ -142,7 +142,7 @@ const inputStyle: React.CSSProperties = {
 
 const captionStyle: React.CSSProperties = {
   letterSpacing: "0.16em",
-  color: "rgba(255,255,255,0.55)",
+  color: "var(--spark-text-meta)",
 };
 
 const SupportTicketForm: React.FC = () => {
@@ -270,7 +270,7 @@ export default function SparkHelp() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             HELP · SUPPORT
@@ -283,7 +283,7 @@ export default function SparkHelp() {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Send the Ignite team a support request, browse the FAQs, or
             reach us directly.
@@ -303,7 +303,7 @@ export default function SparkHelp() {
           </h2>
           <p
             className="text-sm mb-3"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             For active shifts and time-sensitive issues, skip the ticket
             and reach us directly.
@@ -353,7 +353,7 @@ export default function SparkHelp() {
                 </summary>
                 <div
                   className="text-sm mt-3 leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.75)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   {f.a}
                 </div>
@@ -390,7 +390,7 @@ export default function SparkHelp() {
             className="mono text-[10px] mt-2"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             Hit a bug? Email{" "}

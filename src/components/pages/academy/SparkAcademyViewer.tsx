@@ -28,7 +28,7 @@ const ViewerInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     return (
       <div
         className="spark-card p-10 text-center text-sm max-w-3xl"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         Module not found.
       </div>
@@ -44,7 +44,7 @@ const ViewerInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         className="mono text-[11px] transition"
         style={{
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         ← BACK TO ACADEMY
@@ -75,7 +75,7 @@ const ViewerInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             fontFamily: "Space Grotesk, sans-serif",
             fontSize: 15,
             lineHeight: 1.7,
-            color: "rgba(255,255,255,0.85)",
+            color: "var(--spark-text)",
           }}
         >
           {m.body.split("\n").map((line, i) => {
@@ -149,7 +149,7 @@ export default function SparkAcademyViewer() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading module…
           </div>
@@ -160,7 +160,7 @@ export default function SparkAcademyViewer() {
         ) : (
           <div
             className="spark-card p-10 text-center text-sm max-w-3xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Module not found.
           </div>

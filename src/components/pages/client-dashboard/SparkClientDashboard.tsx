@@ -358,7 +358,7 @@ const WeekAheadPanel: React.FC<{
                     className="mono text-[9px]"
                     style={{
                       letterSpacing: "0.12em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {b.label.toUpperCase()}
@@ -393,7 +393,7 @@ const WeekAheadPanel: React.FC<{
                     className="text-sm truncate min-w-0"
                     style={
                       row.quiet
-                        ? { color: "rgba(255,255,255,0.45)" }
+                        ? { color: "var(--spark-text-meta)" }
                         : undefined
                     }
                   >
@@ -594,7 +594,7 @@ const ClientInner: React.FC = () => {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Approvals couldn&rsquo;t load — the rest of your dashboard
               still works.

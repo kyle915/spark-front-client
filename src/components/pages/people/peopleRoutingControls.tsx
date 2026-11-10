@@ -126,7 +126,7 @@ export const PeopleTabsSwitcher: React.FC<{
         style={{
           background: "var(--spark-surface)",
           border: "1px solid var(--spark-border)",
-          color: "rgba(255,255,255,0.75)",
+          color: "var(--spark-text-secondary)",
         }}
         title="Open Notifications & Routing settings"
       >
@@ -233,7 +233,7 @@ export const DefaultRmmSelector: React.FC<{
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             SAVING…
@@ -285,7 +285,7 @@ export const DefaultRmmSelector: React.FC<{
         {filteredRows.length === 0 ? (
           <p
             className="px-3.5 py-4 text-xs text-center"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No matching people found.
           </p>
@@ -314,7 +314,7 @@ export const DefaultRmmSelector: React.FC<{
                   {p.email && (
                     <span
                       className="mono ml-2"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {p.email}
                     </span>

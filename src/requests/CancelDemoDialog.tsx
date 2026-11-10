@@ -230,7 +230,7 @@ export default function CancelDemoDialog({
           <label className="block mt-4">
             <span
               className="spark-overlay-kicker"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Request
             </span>
@@ -259,7 +259,7 @@ export default function CancelDemoDialog({
               }}
               className="mt-2 text-xs"
               style={{
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
                 background: "transparent",
                 border: "none",
                 padding: 0,
@@ -294,7 +294,7 @@ export default function CancelDemoDialog({
                     <span className="block text-sm">{storeOf(hit)}</span>
                     <span
                       className="block text-xs"
-                      style={{ color: "rgba(255,255,255,0.45)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {reqCodeOf(hit.id)}
                       {hit.date ? ` · ${hit.date.slice(0, 10)}` : ""}
@@ -307,7 +307,7 @@ export default function CancelDemoDialog({
           {!selected && searching ? (
             <p
               className="mt-2 text-xs"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Searching…
             </p>
@@ -317,7 +317,7 @@ export default function CancelDemoDialog({
       <label className="block mt-4">
         <span
           className="spark-overlay-kicker"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Cancellation reason / comments (sent in confirmation email)
         </span>

@@ -70,7 +70,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ROSTER · {eventLabel.toUpperCase()}
@@ -78,7 +78,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
         </div>
         <p
           className="text-xs"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No BAs invited to this shift yet. Use the ✦ INVITE BA button
           above to send a push.
@@ -123,7 +123,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
             {row.ambassador?.address ? (
               <p
                 className="text-xs truncate"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {row.ambassador.address}
               </p>
@@ -151,7 +151,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-text-meta)",
               }}
             >
               RATE
@@ -175,7 +175,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           ROSTER · {eventLabel.toUpperCase()}
@@ -241,7 +241,7 @@ const EventRosterPanel: React.FC<{
       fallback={
         <div
           className="spark-card p-5 text-xs"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Loading roster…
         </div>

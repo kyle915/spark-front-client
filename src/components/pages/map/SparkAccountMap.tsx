@@ -522,7 +522,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       {counts.all > 0 ? (
         <div className="spark-card px-4 py-3 space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.72)" }}>
+            <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
               Coverage scan ·{" "}
               <span style={{ color: "var(--spark-orange)", fontWeight: 600 }}>
                 {counts.neverVisited.toLocaleString()} never visited
@@ -681,7 +681,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             className="mono text-[10px] px-3 py-1.5 rounded-xl"
             style={{
               letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-text-meta)",
               border: "1px solid var(--spark-border)",
               background: "transparent",
             }}
@@ -724,7 +724,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 </h3>
                 <p
                   className="text-sm mb-4"
-                  style={{ color: "rgba(255,255,255,0.65)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   Set{" "}
                   <span
@@ -764,7 +764,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 LOADING MAP
@@ -1010,7 +1010,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               Accounts{" "}
               <span
                 className="mono text-xs ml-1"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {filtered.length}
               </span>
@@ -1020,7 +1020,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             {filtered.length === 0 && (
               <li
                 className="p-6 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {filter === "never_visited"
                   ? "No never-visited accounts in this view — coverage looks complete here."
@@ -1060,7 +1060,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       className="mono text-[10px] uppercase truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {a.market}

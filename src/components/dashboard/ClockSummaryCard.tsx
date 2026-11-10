@@ -57,7 +57,7 @@ const label: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: "0.14em",
   textTransform: "uppercase",
-  color: "rgba(255,255,255,0.45)",
+  color: "var(--spark-text-meta)",
 };
 const muted = "rgba(255,255,255,0.55)";
 
@@ -154,7 +154,7 @@ const TodayView: React.FC<{
 
   return (
     <ClockFrame tab="today" setTab={setTab} weekLabel={weekLabel}>
-      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.88)", margin: "14px 0 0" }}>
+      <p style={{ fontSize: 14, color: "var(--spark-text)", margin: "14px 0 0" }}>
         {onClock.length} on the clock · {fmtHours(totalToday)} logged · {notIn.length}{" "}
         not clocked in
       </p>
@@ -208,7 +208,7 @@ const WeekView: React.FC<{
 
   return (
     <ClockFrame tab="week" setTab={setTab} weekLabel={weekLabel}>
-      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.88)", margin: "14px 0 0" }}>
+      <p style={{ fontSize: 14, color: "var(--spark-text)", margin: "14px 0 0" }}>
         {fmtHours(sheet?.totalHours)} total · {rows.length}{" "}
         {rows.length === 1 ? "BA" : "BAs"}
         {needsReview ? ` · ${needsReview} need review` : ""}

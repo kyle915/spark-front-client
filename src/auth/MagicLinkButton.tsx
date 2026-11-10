@@ -69,7 +69,7 @@ export default function MagicLinkButton({
         >
           CHECK YOUR INBOX
         </p>
-        <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.8)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--spark-text-secondary)" }}>
           If an account exists for {email.trim()}, we just emailed you a
           one-click sign-in link. It expires in 30 minutes.
         </p>
@@ -130,7 +130,7 @@ export default function MagicLinkButton({
           style={{
             background: "transparent",
             border: "1px solid var(--spark-border)",
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--spark-text-secondary)",
           }}
         >
           Cancel

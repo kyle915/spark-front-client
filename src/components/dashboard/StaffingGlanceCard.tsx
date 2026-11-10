@@ -63,7 +63,7 @@ export const StaffingGlanceCard: React.FC = () => {
       <div className="grid grid-cols-2 gap-4">
         {tiles.map((t) => (
           <div key={t.label} className="min-w-0">
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+            <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
               {t.label}
             </p>
             <p
@@ -72,7 +72,7 @@ export const StaffingGlanceCard: React.FC = () => {
             >
               {t.value.toLocaleString()}
             </p>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
               {t.hint}
             </p>
           </div>

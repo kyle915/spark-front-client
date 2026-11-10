@@ -53,7 +53,7 @@ const Card: React.FC<{
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           ~{readMins} MIN READ
@@ -122,7 +122,7 @@ const AcademyInner: React.FC<{ tenantId: string; isAdmin: boolean }> = ({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             SPARK ACADEMY · {filtered.length} MODULE
@@ -136,7 +136,7 @@ const AcademyInner: React.FC<{ tenantId: string; isAdmin: boolean }> = ({
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Brand 101, product deep-dives, activation playbooks,
             compliance. Published modules sync to the Spark Mobile app.
@@ -241,7 +241,7 @@ export default function SparkAcademy() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading academy…
           </div>
@@ -252,7 +252,7 @@ export default function SparkAcademy() {
         ) : (
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No tenant selected.
           </div>

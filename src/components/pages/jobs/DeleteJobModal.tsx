@@ -116,7 +116,7 @@ export default function DeleteJobModal({
           {label && (
             <p
               className="text-sm mt-1 truncate"
-              style={{ color: "rgba(255,255,255,0.6)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {label}
             </p>
@@ -124,7 +124,7 @@ export default function DeleteJobModal({
         </div>
 
         <div className="p-5 space-y-3">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             It'll be removed from the Jobs board (and the BA app). This is
             recoverable, and the event stays on the Master Tracker — delete it
             there too if you want the whole gig gone.

@@ -38,7 +38,7 @@ const labelMini: React.CSSProperties = {
   fontSize: 10,
   letterSpacing: "0.16em",
   textTransform: "uppercase",
-  color: "rgba(255,255,255,0.45)",
+  color: "var(--spark-text-meta)",
 };
 
 const field: React.CSSProperties = {
@@ -123,7 +123,7 @@ const Field: React.FC<{
     {hint ? (
       <span
         className="block mt-1 text-[11px]"
-        style={{ color: "rgba(255,255,255,0.4)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         {hint}
       </span>
@@ -172,7 +172,7 @@ const ProductPicker: React.FC<{
               type="button"
               onClick={() => onChange([])}
               className="text-[11px] underline"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               clear
             </button>
@@ -195,7 +195,7 @@ const ProductPicker: React.FC<{
         }}
       >
         {groups.length === 0 ? (
-          <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <p className="text-[12px]" style={{ color: "var(--spark-text-meta)" }}>
             Nothing matches “{search}”.
           </p>
         ) : (
@@ -250,7 +250,7 @@ const ConfirmationStatusChip: React.FC<{
         : {
             background: "rgba(255,255,255,0.05)",
             border: "1px solid var(--spark-border)",
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--spark-text-secondary)",
           };
   return (
     <span
@@ -338,12 +338,12 @@ const HistoryRow: React.FC<{
             {row.baName}{" "}
             <span
               className="font-normal"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {row.baEmail}
             </span>
           </p>
-          <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-[12px]" style={{ color: "var(--spark-text-meta)" }}>
             {[row.storeName, row.dateLabel, row.timeLabel]
               .filter(Boolean)
               .join(" | ")}
@@ -351,7 +351,7 @@ const HistoryRow: React.FC<{
           {sheetBits.length > 0 ? (
             <p
               className="text-[11px] mt-0.5"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {sheetBits.join(" · ")}
             </p>
@@ -359,7 +359,7 @@ const HistoryRow: React.FC<{
           {row.products.length > 0 ? (
             <p
               className="text-[11px] mt-0.5"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {row.products.length} SKU{row.products.length === 1 ? "" : "s"}
             </p>
@@ -380,7 +380,7 @@ const HistoryRow: React.FC<{
                   : {
                       background: "rgba(255,255,255,0.05)",
                       border: "1px solid var(--spark-border)",
-                      color: "rgba(255,255,255,0.75)",
+                      color: "var(--spark-text-secondary)",
                     }
               }
             >
@@ -411,14 +411,14 @@ const HistoryRow: React.FC<{
               disabled={busy}
               onClick={() => onCancel(row.uuid)}
               className="text-[11px] underline"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               stop reminders
             </button>
           ) : (
             <span
               className="text-[11px]"
-              style={{ color: "rgba(255,255,255,0.35)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               reminders off
             </span>
@@ -622,7 +622,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
           style={{
             background: "rgba(255,255,255,0.04)",
             border: "1px solid var(--spark-border)",
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--spark-text-secondary)",
           }}
         >
           <p className="mb-1" style={{ color: "var(--spark-text)" }}>
@@ -785,7 +785,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
           style={{
             background: "rgba(255,255,255,0.03)",
             border: "1px solid var(--spark-border)",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
           }}
         >
           <p className="mb-1">
@@ -840,7 +840,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
           {missing.length > 0 ? (
             <span
               className="text-[12px]"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Still need {missing.join(", ")}.
             </span>
@@ -850,14 +850,14 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
 
       <div style={panel} className="p-5">
         <h2 className="display text-lg font-bold mb-1">Sent confirmations</h2>
-        <p className="text-[12px] mb-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <p className="text-[12px] mb-2" style={{ color: "var(--spark-text-meta)" }}>
           A tick means that stage has gone out. The 24h and 3h re-sends fire on
           their own. Sheet rows show workbook provenance and the last stamp.
         </p>
         {data.eventConfirmations.length === 0 ? (
           <p
             className="py-6 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.4)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Nothing sent yet.
           </p>
@@ -884,14 +884,14 @@ export default function SparkEventConfirmation() {
     <div className="p-5 md:p-8">
       <p
         className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
       >
         WORKSPACE
       </p>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
         <div>
           <h1 className="display text-2xl font-bold">Send event confirmation</h1>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
             Email a BA their event details, then again 24 hours and 3 hours
             before the shift.
           </p>
@@ -912,7 +912,7 @@ export default function SparkEventConfirmation() {
       {!tenantId ? (
         <p
           className="p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.5)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Pick a client to send a confirmation.
         </p>
@@ -921,7 +921,7 @@ export default function SparkEventConfirmation() {
           fallback={
             <p
               className="p-10 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading…
             </p>

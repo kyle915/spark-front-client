@@ -124,7 +124,7 @@ export default function ShareRecapModal({
               minHeight: 44,
               background: "var(--spark-bg)",
               border: "1px solid var(--spark-border)",
-              color: "rgba(255,255,255,0.75)",
+              color: "var(--spark-text-secondary)",
               outline: "none",
             }}
           />
@@ -146,7 +146,7 @@ export default function ShareRecapModal({
         </div>
         <p
           className="text-[11px] mt-2"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Anyone with the link can view the recap — no login needed.
         </p>
@@ -289,7 +289,7 @@ export default function ShareRecapModal({
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             SHARE RECAP

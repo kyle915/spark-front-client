@@ -114,7 +114,7 @@ const JobsInner: React.FC = () => {
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {j.code}
@@ -135,7 +135,7 @@ const JobsInner: React.FC = () => {
                 <h3 className="font-bold truncate">{j.venue}</h3>
                 <p
                   className="text-xs mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   {j.when}
                 </p>
@@ -224,7 +224,7 @@ export default function SparkJobs() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               JOB BOARD
@@ -303,7 +303,7 @@ export default function SparkJobs() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading jobs…
             </div>

@@ -43,7 +43,7 @@ export const WingspanNotConnected: React.FC<{ message: string }> = ({
         </h2>
         <p
           className="mt-2 text-sm leading-relaxed"
-          style={{ color: "rgba(255,255,255,0.75)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           Pay cycles and payments show here once Wingspan is connected for
           this workspace. Until then, approve hours and mark pay periods
@@ -52,13 +52,13 @@ export const WingspanNotConnected: React.FC<{ message: string }> = ({
         <details className="mt-3">
           <summary
             className="text-xs cursor-pointer"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Setup details for your developer
           </summary>
           <p
             className="mt-2 text-xs leading-relaxed"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {message}
           </p>

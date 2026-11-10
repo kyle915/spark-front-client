@@ -138,7 +138,7 @@ export const BaNameFilter: React.FC<{
             setOpen(false);
           }}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-xs"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           ×
         </button>

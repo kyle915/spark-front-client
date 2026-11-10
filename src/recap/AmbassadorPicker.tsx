@@ -127,7 +127,7 @@ export const AmbassadorPicker: React.FC<{
           <p
             className="mono text-[10px] mt-0.5"
             style={{
-              color: "rgba(255,255,255,0.5)",
+              color: "var(--spark-text-meta)",
               letterSpacing: "0.12em",
             }}
           >
@@ -166,7 +166,7 @@ export const AmbassadorPicker: React.FC<{
                 className="mono text-[10px] py-1"
                 style={{
                   letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 NO MATCHES
@@ -184,7 +184,7 @@ export const AmbassadorPicker: React.FC<{
                 <p
                   className="mono text-[10px] mt-0.5"
                   style={{
-                    color: "rgba(255,255,255,0.5)",
+                    color: "var(--spark-text-meta)",
                     letterSpacing: "0.12em",
                   }}
                 >
@@ -256,7 +256,7 @@ export const AmbassadorPicker: React.FC<{
                   <p
                     className="mono text-[10px] mt-0.5"
                     style={{
-                      color: "rgba(255,255,255,0.5)",
+                      color: "var(--spark-text-meta)",
                       letterSpacing: "0.12em",
                     }}
                   >
@@ -270,7 +270,7 @@ export const AmbassadorPicker: React.FC<{
               className="mono text-[10px] py-2"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               START TYPING TO SEARCH
@@ -297,7 +297,7 @@ export const AmbassadorPicker: React.FC<{
                     <p
                       className="mono text-[10px] mt-0.5"
                       style={{
-                        color: "rgba(255,255,255,0.5)",
+                        color: "var(--spark-text-meta)",
                         letterSpacing: "0.12em",
                       }}
                     >
@@ -321,7 +321,7 @@ export const AmbassadorPicker: React.FC<{
                 <p
                   className="mono text-[10px] mt-0.5"
                   style={{
-                    color: "rgba(255,255,255,0.5)",
+                    color: "var(--spark-text-meta)",
                     letterSpacing: "0.12em",
                   }}
                 >

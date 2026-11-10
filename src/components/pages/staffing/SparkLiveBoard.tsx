@@ -103,7 +103,7 @@ const BARow: React.FC<{
       {times && (
         <span
           className="mono text-[11px] whitespace-nowrap tabular-nums"
-          style={{ color: "rgba(255,255,255,0.75)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           {times}
         </span>
@@ -112,7 +112,7 @@ const BARow: React.FC<{
       {ba.workedHours != null && (
         <span
           className="mono text-[11px] whitespace-nowrap tabular-nums"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {ba.workedHours}h
         </span>
@@ -137,7 +137,7 @@ const BARow: React.FC<{
       ) : (
         <span
           className="mono text-[11px] whitespace-nowrap"
-          style={{ color: "rgba(255,255,255,0.3)" }}
+          style={{ color: "var(--spark-text-meta)" }}
           title="No GPS fix — the BA declined location or the browser never got one"
         >
           no GPS
@@ -249,7 +249,7 @@ const Inner: React.FC<{
 
       {shifts.length === 0 ? (
         <div className="p-10 text-center">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             No staffed shifts today.
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -287,7 +287,7 @@ const Inner: React.FC<{
                   </p>
                   <p
                     className="mono text-[10px]"
-                    style={{ letterSpacing: "0.1em", color: "rgba(255,255,255,0.45)" }}
+                    style={{ letterSpacing: "0.1em", color: "var(--spark-text-meta)" }}
                   >
                     {s.brandName}
                     {s.startTime ? ` · ${fmtTime(s.startTime)}` : ""}
@@ -337,14 +337,14 @@ export default function SparkLiveBoard() {
     <div className="p-5 md:p-8">
       <p
         className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
       >
         WORKSPACE
       </p>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
         <div>
           <h1 className="display text-2xl font-bold">On the clock</h1>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
             Who's working right now — {today}. Live, refreshes on its own.
           </p>
         </div>
@@ -364,7 +364,7 @@ export default function SparkLiveBoard() {
       {!tenantId ? (
         <p
           className="p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.5)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Pick a client to see who's on the clock.
         </p>
@@ -373,7 +373,7 @@ export default function SparkLiveBoard() {
           fallback={
             <p
               className="p-10 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading today…
             </p>

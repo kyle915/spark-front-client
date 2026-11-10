@@ -43,7 +43,7 @@ const Inner: React.FC<{
         <div>
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             PROGRAM HEALTH · {rangeLabel.toUpperCase()}
           </p>
@@ -132,7 +132,7 @@ const Step: React.FC<{
     <div className="rounded-xl p-3" style={{ background: bg, border: `1px solid ${border}` }}>
       <p
         className="mono text-[9px]"
-        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
       >
         {label.toUpperCase()}
       </p>
@@ -142,7 +142,7 @@ const Step: React.FC<{
       {(sub || hint) && (
         <p
           className="text-[10px] mt-0.5 truncate"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {[sub, hint].filter(Boolean).join(" · ")}
         </p>

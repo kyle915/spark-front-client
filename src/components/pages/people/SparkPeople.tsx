@@ -708,7 +708,7 @@ const Inner: React.FC<{
           {searching && (
             <p
               className="text-xs px-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
               role="status"
             >
               Searching the full roster…
@@ -718,7 +718,7 @@ const Inner: React.FC<{
           {(hasMore || rows.length < totalPeople) && (
             <p
               className="text-xs px-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
               role="status"
             >
               Showing {rows.length} of {totalPeople}{" "}
@@ -785,7 +785,7 @@ const Inner: React.FC<{
                       </td>
                       <td
                         className="px-4 py-2 mono text-xs"
-                        style={{ color: "rgba(255,255,255,0.7)" }}
+                        style={{ color: "var(--spark-text-secondary)" }}
                       >
                         {isWalkupPlaceholderEmail(p.email)
                           ? `Walk-up · ${walkupPhoneFromEmail(p.email) || "no phone on file"}`
@@ -898,7 +898,7 @@ const Inner: React.FC<{
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <p
                     className="text-xs"
-                    style={{ color: "rgba(255,255,255,0.7)" }}
+                    style={{ color: "var(--spark-text-secondary)" }}
                     role="alert"
                   >
                     Couldn’t load more. The {rows.length} already on screen are
@@ -1278,7 +1278,7 @@ const Inner: React.FC<{
             </h2>
             <p
               className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+              style={{ color: "var(--spark-text-secondary)", lineHeight: 1.55 }}
             >
               {removing.email}{" "}
               <span
@@ -1293,7 +1293,7 @@ const Inner: React.FC<{
               style={{
                 background: "rgba(239,90,42,0.06)",
                 border: "1px solid rgba(239,90,42,0.18)",
-                color: "rgba(255,255,255,0.75)",
+                color: "var(--spark-text-secondary)",
                 lineHeight: 1.6,
               }}
             >

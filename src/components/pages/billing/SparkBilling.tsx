@@ -265,7 +265,7 @@ const LineItemEditor: React.FC<{
         style={{
           gridTemplateColumns: "1fr 80px 110px 110px 28px",
           letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.4)",
+          color: "var(--spark-text-meta)",
         }}
       >
         <span>Description</span>
@@ -316,7 +316,7 @@ const LineItemEditor: React.FC<{
             />
             <span
               className="mono text-sm text-right tabular-nums px-1"
-              style={{ color: "rgba(255,255,255,0.8)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {formatMoney(lineAmount(l), currency)}
             </span>
@@ -336,7 +336,7 @@ const LineItemEditor: React.FC<{
           <p
             className="text-xs py-3 text-center rounded-xl"
             style={{
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
               border: "1px dashed var(--spark-border)",
             }}
           >
@@ -527,7 +527,7 @@ const InvoiceFormModal: React.FC<{
           <button
             onClick={onClose}
             className="mono text-[11px]"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             ✕ CLOSE
           </button>
@@ -640,13 +640,13 @@ const InvoiceRow: React.FC<{
           </div>
           <p
             className="mono text-[11px] uppercase mt-1"
-            style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.55)" }}
+            style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
           >
             {invoice.clientName}
           </p>
           <p
             className="mono text-[10px] mt-1.5"
-            style={{ letterSpacing: "0.08em", color: "rgba(255,255,255,0.4)" }}
+            style={{ letterSpacing: "0.08em", color: "var(--spark-text-meta)" }}
           >
             Issued {formatDate(invoice.issueDate)} · Due {formatDate(invoice.dueDate)}
             {status === "paid" && invoice.paidAt
@@ -665,7 +665,7 @@ const InvoiceRow: React.FC<{
           </p>
           <p
             className="mono text-[10px] mt-0.5"
-            style={{ letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)" }}
+            style={{ letterSpacing: "0.1em", color: "var(--spark-text-meta)" }}
           >
             {invoice.lineItems.length} ITEM
             {invoice.lineItems.length === 1 ? "" : "S"}
@@ -682,7 +682,7 @@ const InvoiceRow: React.FC<{
           type="button"
           onClick={onEdit}
           className="mono text-[11px]"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-text-secondary)" }}
         >
           ✎ EDIT
         </button>
@@ -733,7 +733,7 @@ const InvoiceRow: React.FC<{
           target="_blank"
           rel="noreferrer"
           className="mono text-[11px]"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-text-secondary)" }}
         >
           ⬇ PDF
         </a>
@@ -957,7 +957,7 @@ export default function SparkBilling() {
           <div>
             <p
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
             >
               BILLING · {meta.total} INVOICE{meta.total === 1 ? "" : "S"}
               {meta.outstanding ? ` · ${meta.outstanding} OUTSTANDING` : ""}
@@ -968,7 +968,7 @@ export default function SparkBilling() {
             >
               Invoices.
             </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
               Bill clients for campaigns &amp; activations. Build an invoice
               with line items, send a share link, and track it through to
               paid. Vendor payouts to BAs live in{" "}
@@ -1017,7 +1017,7 @@ export default function SparkBilling() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading invoices…
             </div>
