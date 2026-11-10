@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bulkTargets } from "./TrackerBulkBar";
+import { bulkTargets } from "./trackerBulkTargets";
 
 describe("bulkTargets", () => {
   const rows = [

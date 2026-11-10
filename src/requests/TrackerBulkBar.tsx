@@ -4,22 +4,7 @@ import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassad
 import type { BulkAssignAmbassadorMutation as BulkAssignType } from "@api/mutations/__generated__/BulkAssignAmbassadorMutation.graphql";
 import { BulkBaPicker } from "@/components/pages/staffing/SparkStaffingBoard";
 import { useAlertStore } from "@/store/alertStore";
-
-export type BulkRow = {
-  id: string;
-  statusSlug: string;
-  eventId: string | null;
-};
-
-const APPROVABLE = new Set(["pending", "queue"]);
-
-/** Which of the selected rows each bulk action applies to. */
-export function bulkTargets(rows: readonly BulkRow[]) {
-  return {
-    approvable: rows.filter((r) => APPROVABLE.has(r.statusSlug.toLowerCase())),
-    assignable: rows.filter((r) => Boolean(r.eventId)),
-  };
-}
+import { bulkTargets, type BulkRow } from "./trackerBulkTargets";
 
 const APPROVE_MUTATION =
   "mutation Approve($input: ApproveRequestInput!) { approveRequest(input: $input) { success message } }";
