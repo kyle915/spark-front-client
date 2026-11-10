@@ -21,7 +21,7 @@ import NotificationBell from "./NotificationBell";
 import useSparkRole from "@/hooks/useSparkRole";
 import { looksLikeRouteId, usePageCrumb } from "./pageCrumb";
 import { dispatchOpenJump } from "@/motion/opsMotion";
-import { PublicFormPill } from "./PublicFormPill";
+import { PublicFormPill, publicFormCtaLabel } from "./PublicFormPill";
 import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 import { useMobileNav } from "./MobileNavContext";
 import { TenantLogo } from "./TenantLogo.tsx";
@@ -71,6 +71,37 @@ function PublicFormPillSlot({ className = "" }: { className?: string }) {
       kind={publicForm?.kind}
       className={className}
     />
+  );
+}
+
+/**
+ * Account-menu twin of the top-bar link pill, so the public request /
+ * check-in link is one click away on screens too narrow for the pill.
+ */
+function PublicLinkMenuItem({ onDone }: { onDone: () => void }) {
+  const publicForm = usePublicFormLink();
+  const [copied, setCopied] = useState(false);
+  if (!publicForm?.url) return null;
+  const label = publicFormCtaLabel(publicForm.kind);
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(publicForm.url ?? "");
+          setCopied(true);
+          window.setTimeout(onDone, 900);
+        } catch {
+          window.open(publicForm.url ?? "", "_blank", "noopener,noreferrer");
+          onDone();
+        }
+      }}
+      className="mt-2 w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm"
+      style={{ border: "1px solid var(--spark-border)" }}
+    >
+      <span>{copied ? "Link copied" : `Copy ${label.toLowerCase()}`}</span>
+    </button>
   );
 }
 
@@ -228,7 +259,9 @@ export const SparkTopbar: React.FC = () => {
           </span>
         ) : null}
 
-        <div className="hidden lg:block">
+        {/* Wide screens only: on a 13" laptop this pill pushed the bar onto
+            two rows. */}
+        <div className="hidden 2xl:block">
           <Suspense fallback={null}>
             <PublicFormPillSlot className="ml-2" />
           </Suspense>
@@ -383,6 +416,9 @@ export const SparkTopbar: React.FC = () => {
               >
                 Keyboard shortcuts
               </button>
+              <Suspense fallback={null}>
+                <PublicLinkMenuItem onDone={() => setMenuOpen(false)} />
+              </Suspense>
               <a
                 role="menuitem"
                 href={feedbackMailto({
