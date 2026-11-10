@@ -103,6 +103,16 @@ const ENTRIES: CommandEntry[] = [
   { id: "alerts", label: "Alerts", hint: "Notifications feed", to: "/alerts", Icon: Bell, keywords: "notifications" },
   { id: "settings", label: "Settings", hint: "Workspace + integrations", to: "/settings", Icon: Settings, keywords: "preferences workspace" },
   { id: "cal-sync", label: "Calendar Sync", hint: "Google Calendar integration", to: "/settings/calendar", Icon: CalendarClock, keywords: "google sync" },
+  { id: "upcoming", label: "Upcoming", hint: "Next 7 days of events", to: "/upcoming", Icon: Calendar, keywords: "upcoming next week schedule events" },
+  { id: "staffing", label: "Staffing Board", hint: "Who's on which shift this week", to: "/schedule", Icon: Users, keywords: "staffing board schedule assign shifts unstaffed", adminOnly: true },
+  { id: "timesheet", label: "Timesheet", hint: "Approve hours · mark paid", to: "/timesheet", Icon: Clock, keywords: "timesheet payroll hours approve pay period", adminOnly: true },
+  { id: "payroll", label: "Payroll · Hours", hint: "Wingspan pay cycles", to: "/payroll", Icon: Clock, keywords: "payroll wingspan pay cycles", adminOnly: true },
+  { id: "receipts", label: "Receipts", hint: "Product spend + receipts", to: "/receipts", Icon: FileText, keywords: "receipts spend expenses reimbursements", adminOnly: true },
+  { id: "walkups", label: "Walk-ups", hint: "Walk-up clock-ins to confirm", to: "/walkups", Icon: CheckCircle2, keywords: "walk-ups walkups check-in links confirm", adminOnly: true },
+  { id: "people", label: "People", hint: "Admins, clients, ambassadors", to: "/people", Icon: Users, keywords: "people team users invite", adminOnly: true },
+  { id: "chat", label: "Chat", hint: "Team chat", to: "/chat", Icon: Mail, keywords: "chat messages", adminOnly: true },
+  { id: "clients", label: "Clients", hint: "Brand workspaces", to: "/clients", Icon: Building2, keywords: "clients brands tenants workspaces", adminOnly: true },
+  { id: "plans", label: "Plans", hint: "Program plans", to: "/plans", Icon: ListChecks, keywords: "plans programs" },
   { id: "create", label: "Create Request", hint: "Submit a new request for the current tenant", to: "/requests/create", Icon: Plus, keywords: "new request submit" },
 ];
 

@@ -1,3 +1,4 @@
+import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate } from "react-router";
@@ -514,7 +515,9 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                               color: "rgba(255,255,255,0.40)",
                             }}
                           >
-                            {ba.email}
+                            {isWalkupPlaceholderEmail(ba.email)
+                          ? `Walk-up · ${walkupPhoneFromEmail(ba.email) || "no phone on file"}`
+                          : ba.email}
                           </p>
                         )}
                       </div>

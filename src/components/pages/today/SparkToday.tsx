@@ -1,3 +1,4 @@
+import { clientSafeBaName } from "@/utils/clientSafeBaName";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
@@ -166,6 +167,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     { fetchPolicy: "network-only", fetchKey: pingTick },
   );
   const pings: Ping[] = useMemo(() => {
+    // Brand users never get ambassador GPS — pins and live names are
+    // an Ignite-ops tool.
+    if (isClient) return [];
     const rows = pingData?.recentLocationPings ?? [];
     return rows.map((p) => ({
       uuid: String(p.uuid),
@@ -178,7 +182,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       recordedAt: p.recordedAt,
       freshnessMin: minutesSince(p.recordedAt),
     }));
-  }, [pingData]);
+  }, [pingData, isClient]);
   const [openPing, setOpenPing] = useState<string | null>(null);
 
   const shiftData = useLazyLoadQuery<LiveShiftBoardQueryType>(
@@ -602,7 +606,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                               color: clockTone(ba.status),
                             }}
                           >
-                            {ba.name} · {clockStateLabel(ba.status)}
+                            {isClient ? clientSafeBaName(ba.name) : ba.name} ·{" "}
+                            {clockStateLabel(ba.status)}
                           </p>
                         ))
                       : liveBaNames.length > 0 && (

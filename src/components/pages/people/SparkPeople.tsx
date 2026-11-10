@@ -1,3 +1,4 @@
+import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
@@ -786,7 +787,9 @@ const Inner: React.FC<{
                         className="px-4 py-2 mono text-xs"
                         style={{ color: "rgba(255,255,255,0.7)" }}
                       >
-                        {p.email}
+                        {isWalkupPlaceholderEmail(p.email)
+                          ? `Walk-up · ${walkupPhoneFromEmail(p.email) || "no phone on file"}`
+                          : p.email}
                       </td>
                       <td className="px-4 py-2">
                         <span

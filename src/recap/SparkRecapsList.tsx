@@ -32,6 +32,7 @@ import { MarkRecapsSharedMutation } from "@/api/mutations/MarkRecapsSharedMutati
 import type { MarkRecapsSharedMutation as MarkRecapsSharedMutationType } from "@api/mutations/__generated__/MarkRecapsSharedMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import useBaLabel from "@/hooks/useBaLabel";
 import useSparkRole from "@/hooks/useSparkRole";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
@@ -477,6 +478,7 @@ const RecapCard: React.FC<{
   onOpenRecap?: ((recap: Recap) => void) | null;
   reviewFlags?: readonly ReviewFlagSummary[] | null;
 }> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap, reviewFlags }) => {
+  const baLabel = useBaLabel();
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -656,7 +658,7 @@ const RecapCard: React.FC<{
             recap, and on a walk-in event there's no retailer, so the line
             used to open with a bare em-dash. Retailer is kept but only when
             it's real. */}
-        {recap.baName || "Unattributed"}
+        {baLabel(recap.baName) || "Unattributed"}
         {recap.retailerName && recap.retailerName !== "—"
           ? ` · ${recap.retailerName}`
           : ""}
@@ -830,6 +832,7 @@ const RecapCompactRow: React.FC<{
   onOpenRecap?: ((recap: Recap) => void) | null;
   reviewFlags?: readonly ReviewFlagSummary[] | null;
 }> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap, reviewFlags }) => {
+  const baLabel = useBaLabel();
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -900,7 +903,7 @@ const RecapCompactRow: React.FC<{
         )}
       </div>
       <div className="min-w-0 flex-1 relative z-10">
-        <p className="text-[13px] font-semibold leading-tight truncate">{recap.baName || "Unattributed"}</p>
+        <p className="text-[13px] font-semibold leading-tight truncate">{baLabel(recap.baName) || "Unattributed"}</p>
         {recap.isThirdParty ? (
           <div className="mt-1 flex items-center gap-1 flex-wrap">
             <ThirdPartyRecapBadge compact notInTotals={recap.excludeFromAggregates} />
@@ -2097,6 +2100,10 @@ const RmmFilterDropdown: React.FC<{
   );
 };
 
+// Index of the "BA Name" column in the CSV / copy-for-Sheets exports.
+// Brand users get the export without it.
+const BA_NAME_COL = 6;
+
 export default function SparkRecapsList() {
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
@@ -2991,7 +2998,7 @@ export default function SparkRecapsList() {
   // state / RMM / search filters). Filename includes today's date.
   const exportCsv = () => {
     if (visibleRecaps.length === 0) {
-      window.alert("Nothing to export — no recaps match the current filters.");
+      showAlert("Nothing to export — no recaps match the current filters.", "info");
       return;
     }
     const esc = (raw: string | number | null | undefined) => {
@@ -3022,7 +3029,9 @@ export default function SparkRecapsList() {
       "Files",
       "UUID",
     ];
-    const lines = [header.join(",")];
+    const lines = [
+      header.filter((_, i) => !isClient || i !== BA_NAME_COL).join(","),
+    ];
     for (const r of visibleRecaps) {
       const conv = conversionStr(r, "");
       lines.push(
@@ -3046,6 +3055,7 @@ export default function SparkRecapsList() {
           r.fileCount,
           r.uuid,
         ]
+          .filter((_, i) => !isClient || i !== BA_NAME_COL)
           .map(esc)
           .join(","),
       );
@@ -3094,7 +3104,9 @@ export default function SparkRecapsList() {
     ];
     const sanitize = (raw: string | number | null | undefined) =>
       (raw ?? "").toString().replace(/\t/g, " ").replace(/\r?\n/g, " ");
-    const rows = [headers.join("\t")];
+    const rows = [
+      headers.filter((_, i) => !isClient || i !== BA_NAME_COL).join("\t"),
+    ];
     for (const r of visibleRecaps) {
       const conv = conversionStr(r, "");
       rows.push(
@@ -3118,6 +3130,7 @@ export default function SparkRecapsList() {
           r.fileCount,
           r.uuid,
         ]
+          .filter((_, i) => !isClient || i !== BA_NAME_COL)
           .map(sanitize)
           .join("\t"),
       );

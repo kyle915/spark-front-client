@@ -1,3 +1,4 @@
+import SparkNotFound from "@/layout/SparkNotFound";
 import { Suspense, useEffect } from "react";
 import {
   BrowserRouter,
@@ -114,6 +115,9 @@ const AppRouter = () => {
               element={props.component}
             />
           ))}
+          {/* Signed-in catch-all — unknown URLs get a real page, not a
+              blank shell. */}
+          <Route path="*" element={<SparkNotFound />} />
         </Route>
       </Routes>
     </Suspense>

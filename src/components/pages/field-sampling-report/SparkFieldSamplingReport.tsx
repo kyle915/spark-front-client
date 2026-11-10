@@ -246,8 +246,8 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         setSummaryWindowKey(windowKey);
         if (!summary) {
           showAlert(
-            "No AI summary available for this window (Gemini unavailable, or nothing to summarize).",
-            "error",
+            "No summary is available for this window yet. Try a wider date range, or try again in a minute.",
+            "info",
           );
         }
       },

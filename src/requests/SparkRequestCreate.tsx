@@ -931,8 +931,8 @@ const SparkRequestInner: React.FC = () => {
       clearDraft();
       showAlert(
         successes > 1
-          ? `Submitted ${successes} requests · auto-routed to your RMM.`
-          : "Request submitted · auto-routed to your RMM.",
+          ? `Submitted ${successes} requests · sent to your Ignite team.`
+          : "Request submitted · sent to your Ignite team.",
         "success",
       );
       navigate(
@@ -980,7 +980,7 @@ const SparkRequestInner: React.FC = () => {
             color: "rgba(255,255,255,0.45)",
           }}
         >
-          NEW REQUEST · EXPRESS MODE
+          NEW REQUEST · QUICK FORM
         </p>
         <h1
           className="display text-4xl font-bold mt-2"
@@ -1924,7 +1924,7 @@ const SparkRequestInner: React.FC = () => {
               {isCommitting
                 ? "Submitting…"
                 : isClient
-                  ? "Submit & route to RMM →"
+                  ? "Submit request →"
                   : "Create internal request →"}
             </button>
           </div>

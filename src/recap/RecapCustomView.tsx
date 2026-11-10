@@ -1011,7 +1011,13 @@ const RecapCustomViewInner = ({
           showAlert(payload?.message ?? "PDF generation failed.", "error");
         }
       },
-      onError: (err) => showAlert(`PDF failed: ${err.message}`, "error"),
+      onError: (err) => {
+        console.error("Recap PDF failed", err);
+        showAlert(
+          "We couldn't build the PDF. Please try again in a moment.",
+          "error",
+        );
+      },
     });
   }, [recap?.id, existingPdfUrl, commitGeneratePdf, showAlert]);
 

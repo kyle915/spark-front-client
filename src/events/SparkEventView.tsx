@@ -16,6 +16,7 @@
  *   - Back link respects history state, falls back to the Master Tracker.
  */
 
+import { clientSafeBaName } from "@/utils/clientSafeBaName";
 import React, { Suspense, useState } from "react";
 import { displayBaCount } from "@/public/form/eventActivationSchedule";
 import { useLazyLoadQuery } from "react-relay/hooks";
@@ -1089,11 +1090,17 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                     flexShrink: 0,
                   }}
                 >
-                  {initials(a.name || a.email)}
+                  {initials(
+                    role.isClient
+                      ? clientSafeBaName(a.name) || "Ambassador"
+                      : a.name || a.email,
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">
-                    {a.name || a.email || "Unnamed BA"}
+                    {role.isClient
+                      ? clientSafeBaName(a.name) || "Ambassador"
+                      : a.name || a.email || "Unnamed BA"}
                   </p>
                   {role.isAdmin && a.email && (
                     <p

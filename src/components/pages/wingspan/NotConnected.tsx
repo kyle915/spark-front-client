@@ -45,25 +45,24 @@ export const WingspanNotConnected: React.FC<{ message: string }> = ({
           className="mt-2 text-sm leading-relaxed"
           style={{ color: "rgba(255,255,255,0.75)" }}
         >
-          {message}
+          Pay cycles and payments show here once Wingspan is connected for
+          this workspace. Until then, approve hours and mark pay periods
+          paid on the Timesheet.
         </p>
-        <p
-          className="mt-3 text-xs leading-relaxed"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          On Cloud Run, set the{" "}
-          <code
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              padding: "1px 6px",
-              borderRadius: 4,
-            }}
+        <details className="mt-3">
+          <summary
+            className="text-xs cursor-pointer"
+            style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            WINGSPAN_API_KEY
-          </code>{" "}
-          environment variable. The app picks it up on the next deploy
-          — no UI changes needed.
-        </p>
+            Setup details for your developer
+          </summary>
+          <p
+            className="mt-2 text-xs leading-relaxed"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            {message}
+          </p>
+        </details>
       </div>
     </div>
   </div>

@@ -246,7 +246,9 @@ const SECTIONS: NavSection[] = [
     items: [
       // Chat moved to the WORKSPACE group above (keeps its /chat route,
       // unread badge, and MessageCircle icon).
-      { label: "Announcements", Icon: Megaphone, to: "/announcements" },
+      // Admin-only: the page itself is an Ignite broadcast tool and shows
+      // "Admin only." to brand users, so don't offer it in their nav.
+      { label: "Announcements", Icon: Megaphone, to: "/announcements", adminOnly: true },
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
     ],
