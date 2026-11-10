@@ -5836,6 +5836,24 @@ type PayrollTimesheet {
   flaggedRows: Int!
 }
 
+type PayrollShiftRow {
+  eventUuid: String!
+  eventName: String!
+  date: String
+  tenantName: String
+  address: String
+  clockInAt: String
+  clockOutAt: String
+  clockInAttendanceUuid: String
+  clockOutAttendanceUuid: String
+  onTheClock: Boolean!
+  scheduledHours: Float
+  hours: Float
+  estimated: Boolean!
+  rate: Float
+  pay: Float
+}
+
 type PayrollTimesheetRow {
   ambassadorUuid: String!
   name: String!
@@ -6127,6 +6145,7 @@ type Query {
   upcomingShiftsForConfirmation(tenantId: ID!): [ConfirmationShiftOption!]!
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
+  payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
   activationPlan(id: ID = null, uuid: String = null): ActivationPlanType

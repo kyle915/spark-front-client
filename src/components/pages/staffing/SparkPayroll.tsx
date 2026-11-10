@@ -1,5 +1,6 @@
 import StatusChip from "@/shared/StatusChip";
-import { Suspense, useState } from "react";
+import { Fragment, Suspense, useState } from "react";
+import TimesheetShiftRows from "./TimesheetShiftRows";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { PayrollTimesheetQuery } from "@/api/queries/PayrollTimesheetQuery";
 import type { PayrollTimesheetQuery as PayrollTimesheetQueryType } from "@api/queries/__generated__/PayrollTimesheetQuery.graphql";
@@ -88,6 +89,8 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
   const [reviewOnly, setReviewOnly] = useState(false);
   // "Approve all" is two-step: the first click arms it, the second commits.
   const [confirmApproveAll, setConfirmApproveAll] = useState(false);
+  // Which ambassador's shifts are expanded under their row (one at a time).
+  const [openUuid, setOpenUuid] = useState<string | null>(null);
   const shown = reviewOnly ? rows.filter((r) => r.needsReview) : rows;
 
   const [commitApprove, approving] = useMutation<ApproveType>(ApprovePayrollHoursMutation);
@@ -234,13 +237,29 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
           </thead>
           <tbody>
             {shown.map((r) => (
+              <Fragment key={r.ambassadorUuid}>
               <tr
-                key={r.ambassadorUuid}
                 style={{ borderBottom: "1px solid var(--spark-border)" }}
               >
                 <td className="px-3 py-2">
                   <p className="font-medium">
-                    {r.name}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenUuid((cur) =>
+                          cur === r.ambassadorUuid ? null : r.ambassadorUuid,
+                        )
+                      }
+                      aria-expanded={openUuid === r.ambassadorUuid}
+                      title="Show the shifts behind this total"
+                      className="inline-flex items-center gap-1.5 text-left underline-offset-2 hover:underline"
+                      style={{ background: "transparent", border: "none", padding: 0, color: "inherit", font: "inherit", cursor: "pointer" }}
+                    >
+                      <span aria-hidden style={{ color: "var(--spark-text-meta)" }}>
+                        {openUuid === r.ambassadorUuid ? "▾" : "▸"}
+                      </span>
+                      {r.name}
+                    </button>
                     {r.needsReview ? (
                       <span className="ml-2">
                         <StatusChip status="review" small>
@@ -322,6 +341,20 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                     .join(" · ")}
                 </td>
               </tr>
+              {openUuid === r.ambassadorUuid ? (
+                <tr>
+                  <td colSpan={6} className="px-3 pb-3">
+                    <TimesheetShiftRows
+                      startDate={startDate}
+                      endDate={endDate}
+                      tenantId={tenantId}
+                      ambassadorUuid={r.ambassadorUuid}
+                      onChanged={() => setRefreshKey((k) => k + 1)}
+                    />
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             ))}
             <tr>
               <td className="px-3 py-2 font-bold">Total</td>
