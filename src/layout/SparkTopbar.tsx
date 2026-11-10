@@ -244,7 +244,7 @@ export const SparkTopbar: React.FC = () => {
           </span>
           <span
             className="spark-crumb-current truncate"
-            style={{ maxWidth: "min(38vw, 420px)" }}
+            style={{ maxWidth: "min(26vw, 280px)" }}
             title={crumb.current}
           >
             {crumb.current}
