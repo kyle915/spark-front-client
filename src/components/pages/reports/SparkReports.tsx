@@ -1,4 +1,5 @@
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
+import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
@@ -728,6 +729,10 @@ export default function SparkReports() {
             </>
           }
         />
+
+        <div className="print:hidden">
+          <ReportSubscriptionToggle tenantId={tenantId || null} />
+        </div>
 
         {/* Date range */}
         <div className="flex items-center gap-2 flex-wrap print:hidden">
