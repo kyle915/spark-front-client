@@ -77,6 +77,14 @@ import { isRecapDue } from "../lib/recapDue";
  * (the demo/event window the client asked for) — not BA shift clock times.
  */
 
+// The STAFFING select carries two kinds of value: the request's own
+// scheduling status, and whether its event has an ambassador on it.
+const STAFFING_UNSTAFFED = "__unstaffed";
+const STAFFING_STAFFED = "__staffed";
+const isSchedulingStatus = (v: string) => v !== "all" && !v.startsWith("__");
+const staffingFlag = (v: string): boolean | null =>
+  v === STAFFING_UNSTAFFED ? true : v === STAFFING_STAFFED ? false : null;
+
 const STATUS_CHIP: Record<string, string> = {
   done: "chip chip-lime",
   scheduled: "chip chip-sky",
@@ -1070,7 +1078,10 @@ const TrackerStatusCountsLoader: React.FC<{
       // server-side too, but don't send a chip filter that could confuse
       // future schema changes.
       schedulingStatus:
-        reqNeedle || schedulingFilter === "all" ? null : schedulingFilter,
+        reqNeedle || !isSchedulingStatus(schedulingFilter)
+          ? null
+          : schedulingFilter,
+      unstaffed: reqNeedle ? null : staffingFlag(schedulingFilter),
       stateCode: reqNeedle || marketFilter === "all" ? null : marketFilter,
       activationPlanId: reqNeedle || !planId ? null : planId,
     };
@@ -1209,7 +1220,10 @@ const MasterTrackerInner: React.FC<{
       ...statusBounds,
       ...sortBounds,
       schedulingStatus:
-        reqNeedle || schedulingFilter === "all" ? null : schedulingFilter,
+        reqNeedle || !isSchedulingStatus(schedulingFilter)
+          ? null
+          : schedulingFilter,
+      unstaffed: reqNeedle ? null : staffingFlag(schedulingFilter),
       stateCode: reqNeedle || marketFilter === "all" ? null : marketFilter,
       activationPlanId: reqNeedle || !planId ? null : planId,
     };
@@ -2189,13 +2203,15 @@ export default function MasterTracker() {
             onChange={setPlanFilter}
           />
           <FilterSelect
-            label="SCHEDULING"
+            label="STAFFING"
             value={schedulingFilter}
             onChange={setSchedulingFilter}
             options={[
               { value: "all", label: "All scheduling" },
               { value: "already_scheduled", label: "Already scheduled" },
               { value: "needs_scheduling", label: "Needs scheduling" },
+              { value: STAFFING_UNSTAFFED, label: "No ambassador assigned" },
+              { value: STAFFING_STAFFED, label: "Ambassador assigned" },
             ]}
           />
           <FilterSelect
