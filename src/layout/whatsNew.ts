@@ -62,3 +62,33 @@ export const SHORTCUTS: { scope: string; keys: [string, string][] }[] = [
     ],
   },
 ];
+
+/** Where "Send feedback" goes (product owners). */
+export const FEEDBACK_RECIPIENTS = [
+  "kyle@igniteproductions.co",
+  "nevena@igniteproductions.co",
+];
+
+/**
+ * mailto: link for product feedback, pre-filled with the page the person was
+ * on so a report is actionable without a back-and-forth.
+ */
+export function feedbackMailto(opts: {
+  pageTitle: string;
+  pageUrl: string;
+  clientName?: string;
+}): string {
+  const subject = `Spark feedback — ${opts.pageTitle || "Spark"}`;
+  const body = [
+    "What happened, or what would make this better?",
+    "",
+    "",
+    "—",
+    `Page: ${opts.pageTitle}`,
+    `Link: ${opts.pageUrl}`,
+    opts.clientName ? `Client: ${opts.clientName}` : "",
+  ]
+    .filter((line, i) => i < 4 || line)
+    .join("\n");
+  return `mailto:${FEEDBACK_RECIPIENTS.join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}

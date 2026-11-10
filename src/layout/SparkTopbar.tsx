@@ -6,6 +6,7 @@ import SparkOverlay from "@/shared/SparkOverlay";
 import {
   SHORTCUTS,
   WHATS_NEW,
+  feedbackMailto,
   hasUnseenWhatsNew,
   markWhatsNewSeen,
 } from "./whatsNew";
@@ -382,6 +383,20 @@ export const SparkTopbar: React.FC = () => {
               >
                 Keyboard shortcuts
               </button>
+              <a
+                role="menuitem"
+                href={feedbackMailto({
+                  pageTitle: crumb.current,
+                  // Path only — query strings can carry filter values.
+                  pageUrl: `${window.location.origin}${pathname}`,
+                  clientName,
+                })}
+                onClick={() => setMenuOpen(false)}
+                className="mt-2 w-full flex items-center px-3 py-2 rounded-xl text-sm"
+                style={{ border: "1px solid var(--spark-border)", textDecoration: "none", color: "inherit" }}
+              >
+                Send feedback
+              </a>
               <button
                 type="button"
                 role="menuitem"
