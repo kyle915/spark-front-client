@@ -2261,6 +2261,12 @@ export default function SparkRecapsList() {
   const [opsOpen, setOpsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const activeFilterCount =
+    Number(retailerFilter !== "all") +
+    Number(stateFilter !== "all") +
+    Number(rmmFilter !== "all") +
+    Number(Boolean(baName.trim())) +
+    Number(dateFrom !== DAYS_30_ISO || dateTo !== TODAY_ISO);
   const [reviewNextBusy, setReviewNextBusy] = useState(false);
   const environment = useRelayEnvironment();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -3916,7 +3922,7 @@ export default function SparkRecapsList() {
         <div className="spark-card p-3 flex flex-wrap gap-2 items-center">
           <button
             type="button"
-            className="md:hidden rounded-xl text-xs px-3 py-2 font-semibold"
+            className="rounded-xl text-sm px-3 py-2 font-semibold"
             style={
               moreFiltersOpen ||
               retailerFilter !== "all" ||
@@ -3931,12 +3937,17 @@ export default function SparkRecapsList() {
             aria-expanded={moreFiltersOpen}
             onClick={() => setMoreFiltersOpen((v) => !v)}
           >
-            More
+            {/* One Filters button on every screen size: retailer, state,
+                dates (and the staff-only filters) stay out of the way until
+                asked for. The count shows how many are narrowing the list. */}
+            Filters
+            {activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
+            <span aria-hidden> {moreFiltersOpen ? "▴" : "▾"}</span>
           </button>
           <div
             className={`${
               moreFiltersOpen ? "flex" : "hidden"
-            } md:flex flex-wrap gap-2 items-center w-full md:w-auto`}
+            } flex-wrap gap-2 items-center w-full`}
           >
           <select
             value={retailerFilter}

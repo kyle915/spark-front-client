@@ -1800,15 +1800,28 @@ const RecapCustomViewInner = ({
               className="grid gap-2"
               data-no-print=""
               style={{
+                // 1 photo: full width. 2: side by side. 3: one large + two
+                // stacked. 4+: one large + a 2×2 block (the 4th spans the
+                // bottom row when there are exactly four).
                 gridTemplateColumns:
-                  flatImages.length === 1 ? "1fr" : "repeat(4, minmax(0, 1fr))",
-                gridAutoRows: flatImages.length === 1 ? "minmax(220px, 46vh)" : "minmax(110px, 19vh)",
+                  flatImages.length === 1
+                    ? "1fr"
+                    : flatImages.length === 2
+                      ? "repeat(2, minmax(0, 1fr))"
+                      : flatImages.length === 3
+                        ? "repeat(3, minmax(0, 1fr))"
+                        : "repeat(4, minmax(0, 1fr))",
+                gridAutoRows:
+                  flatImages.length <= 2
+                    ? "minmax(220px, 42vh)"
+                    : "minmax(110px, 19vh)",
               }}
             >
               {flatImages.slice(0, 5).map((file, i) => {
                 const src = displaySrc(file);
                 const more = i === 4 ? flatImages.length - 5 : 0;
-                const lead = i === 0 && flatImages.length > 1;
+                const lead = i === 0 && flatImages.length > 2;
+                const wide = flatImages.length === 4 && i === 3;
                 return (
                   <button
                     key={file.id}
@@ -1823,7 +1836,7 @@ const RecapCustomViewInner = ({
                     }
                     className="relative overflow-hidden rounded-xl"
                     style={{
-                      gridColumn: lead ? "span 2" : undefined,
+                      gridColumn: lead || wide ? "span 2" : undefined,
                       gridRow: lead ? "span 2" : undefined,
                       background: "rgba(20, 22, 15, 0.06)",
                       padding: 0,
