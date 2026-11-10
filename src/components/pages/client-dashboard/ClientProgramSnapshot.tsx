@@ -1,3 +1,4 @@
+import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
@@ -56,11 +57,14 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
     () =>
       (photoData?.customRecaps?.edges ?? [])
         .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n?.heroImageUrl))
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((n) => ({ n, src: pickFieldPhoto(n.customRecapFiles) }))
+        // Never a receipt or product-spend photo; such recaps are skipped.
+        .filter((x): x is { n: typeof x.n; src: string } => Boolean(x.src))
         .slice(0, 6)
-        .map((n) => ({
+        .map(({ n, src }) => ({
           uuid: String(n.uuid),
-          url: thumbUrl(String(n.heroImageUrl), 800),
+          url: thumbUrl(src, 800) || src,
           label: [n.eventRetailer, n.eventState].filter(Boolean).join(", "),
         })),
     [photoData],
