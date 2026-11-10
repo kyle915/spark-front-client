@@ -2680,7 +2680,7 @@ const SparkRecapInner: React.FC<{
               }}
               title="Delete this recap and free the event for a new one"
             >
-              {isDeleting ? "Deleting…" : "🗑 Delete"}
+              {isDeleting ? "Deleting…" : "Delete"}
             </button>
           )}
           {isAdmin &&
@@ -2718,7 +2718,6 @@ const SparkRecapInner: React.FC<{
                       : {
                           background: "var(--spark-lime)",
                           color: "#0a0d09",
-                          boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                           opacity: isApproving ? 0.5 : 1,
                         }
                   }
@@ -2741,7 +2740,6 @@ const SparkRecapInner: React.FC<{
                     style={{
                       background: "var(--spark-lime)",
                       color: "#0a0d09",
-                      boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                       opacity: isApproving ? 0.5 : 1,
                     }}
                     title="Approve this recap and advance to the next unapproved recap in the queue (a)"

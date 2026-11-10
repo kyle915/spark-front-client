@@ -151,7 +151,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
               border: "1px solid rgba(239,90,42,0.4)",
             }}
           >
-            ⚑ {sheet.flaggedRows} NEED{sheet.flaggedRows === 1 ? "S" : ""} REVIEW
+            {sheet.flaggedRows} NEED{sheet.flaggedRows === 1 ? "S" : ""} REVIEW
             {reviewOnly ? " ✓" : ""}
           </button>
         ) : null}
@@ -252,7 +252,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                           padding: "1px 6px",
                         }}
                       >
-                        ⚑ REVIEW
+                        REVIEW
                       </span>
                     ) : null}
                   </p>

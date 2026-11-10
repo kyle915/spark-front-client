@@ -309,7 +309,7 @@ export default function PostToBoardModal({
             >
               {submitting
                 ? "Posting…"
-                : "📣 Post to board — open to all"}
+                : "Post to board — open to all"}
             </button>
           )}
         </div>

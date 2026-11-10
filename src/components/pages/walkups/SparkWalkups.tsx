@@ -164,7 +164,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
         style={{ color: "rgba(255,255,255,0.5)" }}
       >
         {filter === "pending"
-          ? "No walk-ups waiting on review. 🎉"
+          ? "No walk-ups waiting on review."
           : "No walk-ups yet."}
       </p>
     );

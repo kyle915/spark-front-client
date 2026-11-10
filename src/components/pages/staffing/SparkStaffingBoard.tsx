@@ -819,6 +819,7 @@ export default function SparkStaffingBoard() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => shift(-1)}
+            aria-label="Previous week"
             className="px-3 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "transparent",
@@ -826,16 +827,18 @@ export default function SparkStaffingBoard() {
               border: "1px solid var(--spark-border)",
             }}
           >
-            ← Prev
+            <span aria-hidden>‹</span>
+            <span className="hidden sm:inline"> Prev</span>
           </button>
           <span
-            className="mono text-[12px] px-2"
+            className="mono text-[12px] px-2 whitespace-nowrap"
             style={{ letterSpacing: "0.06em", color: "var(--spark-text)" }}
           >
             {rangeLabel}
           </span>
           <button
             onClick={() => shift(1)}
+            aria-label="Next week"
             className="px-3 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "transparent",
@@ -843,7 +846,8 @@ export default function SparkStaffingBoard() {
               border: "1px solid var(--spark-border)",
             }}
           >
-            Next →
+            <span className="hidden sm:inline">Next </span>
+            <span aria-hidden>›</span>
           </button>
         </div>
       </div>

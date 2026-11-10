@@ -51,7 +51,6 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
 };
 
 type AiAnswerResult = {
@@ -299,7 +298,7 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
             }
             title="Copy the no-login public report link"
           >
-            {copied ? "✓ Copied public link" : "🔗 Copy public link"}
+            {copied ? "✓ Copied public link" : "Copy public link"}
           </button>
           <a
             href={pdfUrl}

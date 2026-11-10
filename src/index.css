@@ -339,10 +339,10 @@ h1, h2, h3, h4, h5, h6, .display {
    Quieter so ALL-CAPS mono stays secondary, not the page hero. */
 .label-mini {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
 }
 
@@ -2365,4 +2365,23 @@ main:not(.recap-doc-body)::-webkit-scrollbar-thumb,
   .pill-btn.on {
     box-shadow: none;
   }
+}
+
+/* Horizontally scrolling chip / tab rows: fade the trailing edge so it's
+   clear there is more to the right (phones clip these rows). */
+.spark-scroll-fade {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  padding-right: 20px;
+  scrollbar-width: none;
+}
+.spark-scroll-fade::-webkit-scrollbar {
+  display: none;
+}
+
+/* Readability floor: the 9–10px mono caption sizes used across the app
+   render at 11px. Layout classes are untouched; only the glyph size moves. */
+.text-\[9px\],
+.text-\[10px\] {
+  font-size: 11px;
 }

@@ -128,7 +128,7 @@ const BARow: React.FC<{
             ba.locationSource ? ` · ${ba.locationSource}` : ""
           }`}
         >
-          📍 Map
+          Map
           {ba.locationAt ? (
             <span style={{ opacity: 0.65 }}> · {fmtAgo(ba.locationAt)}</span>
           ) : null}

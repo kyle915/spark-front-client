@@ -282,7 +282,6 @@ const ApprovalRow: React.FC<{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
                 border: "none",
-                boxShadow: "0 0 14px rgba(242,243,238,0.25)",
                 opacity: inFlight ? 0.6 : 1,
                 cursor: inFlight ? "default" : "pointer",
               }}
@@ -835,7 +834,6 @@ const RequestApprovalRow: React.FC<{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
                   border: "none",
-                  boxShadow: "0 0 14px rgba(242,243,238,0.25)",
                 }}
               >
                 ✓ Approve

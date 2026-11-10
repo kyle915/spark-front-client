@@ -1086,7 +1086,6 @@ const ApprovalsInner: React.FC = () => {
         background: "rgba(17,20,14,0.92)",
         backdropFilter: "blur(10px)",
         border: "1px solid rgba(242,243,238,0.35)",
-        boxShadow: "0 0 24px rgba(242,243,238,0.18)",
       }}
     >
       <span
@@ -1143,7 +1142,6 @@ const ApprovalsInner: React.FC = () => {
         style={{
           background: "var(--spark-lime)",
           color: "#0a0d09",
-          boxShadow: "0 0 18px rgba(242,243,238,0.35)",
           opacity: bulkBusy ? 0.5 : 1,
         }}
       >
@@ -1369,7 +1367,6 @@ const ApprovalsInner: React.FC = () => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
                   opacity: bulkBusy ? 0.5 : 1,
                 }}
               >
@@ -1793,7 +1790,7 @@ const ApprovalsCopyQueueButtonInner: React.FC = () => {
       }}
       title="Copy the pending queue as a Slack-friendly text block"
     >
-      {copying ? "Copying…" : "📋 Copy queue for Slack"}
+      {copying ? "Copying…" : "Copy queue for Slack"}
     </button>
   );
 };
@@ -1834,7 +1831,7 @@ const LinkedSheetChip: React.FC = () => {
       }}
       title="Open the brand's linked Google Sheet"
     >
-      📊 Sheet ↗
+      Sheet ↗
     </a>
   );
 };

@@ -291,7 +291,7 @@ const ProfileInner: React.FC<{
           >
             {openingThread
               ? "Opening…"
-              : `💬 DM ${firstName}`}
+              : `DM ${firstName}`}
           </button>
         ) : (
           <div
@@ -357,7 +357,7 @@ const ProfileInner: React.FC<{
             className="inline-flex items-center gap-2 text-sm"
             style={{ color: "var(--spark-sky)", textDecoration: "none" }}
           >
-            📄 Download résumé
+            Download résumé
           </a>
         </div>
       )}

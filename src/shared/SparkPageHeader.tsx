@@ -26,7 +26,10 @@ export function SparkPageHeader({
       <div className="min-w-0">
         {eyebrow ? <p className="label-mini">{eyebrow}</p> : null}
         <h1 className={`spark-title ${titleClassName}`.trim()}>{title}</h1>
-        {support ? <p className="spark-support">{support}</p> : null}
+        {/* The one-line explanation is helpful on a desk, noise on a phone. */}
+        {support ? (
+          <p className="spark-support hidden sm:block">{support}</p>
+        ) : null}
       </div>
       {action ? (
         <div className="flex flex-wrap items-center gap-2 shrink-0">{action}</div>

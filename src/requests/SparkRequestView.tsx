@@ -133,7 +133,7 @@ const LinkedSheetChipForView: React.FC = () => {
       }}
       title="Open the brand's linked Google Sheet"
     >
-      📊 Sheet ↗
+      Sheet ↗
     </a>
   );
 };
@@ -995,7 +995,6 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(242,243,238,0.35)",
               opacity: busy ? 0.5 : 1,
             }}
           >
@@ -1120,7 +1119,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           }}
           title="Open this request's branded campaign report — KPIs, gallery, map, BA roster"
         >
-          📊 Report
+          Report
         </button>
         <button
           onClick={() => window.print()}
@@ -1132,7 +1131,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           }}
           title="Print or save-as-PDF a clean brief sheet for the BA to take to the venue"
         >
-          🖨 Print brief
+          Print brief
         </button>
         {role.isAdmin && eventForInvite && (
           <button
@@ -1141,7 +1140,6 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 16px rgba(242,243,238,0.35)",
             }}
             title="Invite a brand ambassador to this shift — they'll get a push on their phone"
           >
@@ -1535,7 +1533,6 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
                   opacity: busy ? 0.5 : 1,
                 }}
               >

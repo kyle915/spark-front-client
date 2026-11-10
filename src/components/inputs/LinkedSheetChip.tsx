@@ -23,7 +23,7 @@ type Props = {
 
 const Inner: React.FC<Props> = ({
   size = "default",
-  label = "📊 Sheet ↗",
+  label = "Sheet ↗",
   title = "Open the brand's linked Google Sheet",
 }) => {
   const { url } = useLinkedSheetUrl();

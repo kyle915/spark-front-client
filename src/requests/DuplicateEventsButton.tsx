@@ -108,7 +108,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
       {clusters.length === 0 ? (
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
           No duplicate clusters found for this brand — the tracker is
-          clean. 🎉
+          clean.
         </p>
       ) : (
         clusters.map((c, idx) => (

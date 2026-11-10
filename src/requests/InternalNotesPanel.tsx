@@ -347,7 +347,7 @@ export const InternalNotesPanel: React.FC<{
               : "rgba(255,255,255,0.55)",
           }}
         >
-          {shipmentMode ? "× CANCEL SHIPMENT" : "📦 SHIP ASSET →"}
+          {shipmentMode ? "× CANCEL SHIPMENT" : "SHIP ASSET →"}
         </button>
       </div>
 
@@ -491,7 +491,7 @@ export const InternalNotesPanel: React.FC<{
                     {fmtAgo(n.createdAt)}
                   </span>
                   {n.shipment && (
-                    <span className="chip chip-lime">📦 SHIPMENT</span>
+                    <span className="chip chip-lime">SHIPMENT</span>
                   )}
                 </div>
                 {n.shipment && (

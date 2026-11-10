@@ -7,6 +7,7 @@ import AttentionEngine from "./AttentionEngine";
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
+import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { showsMissingRecaps } from "@/field/missingRecaps";
@@ -152,6 +153,12 @@ function DashboardInner() {
           <Suspense fallback={null}>
             <TodaysSnapshot />
           </Suspense>
+
+          {!isClient && (
+            <Suspense fallback={null}>
+              <StaffingGlanceCard />
+            </Suspense>
+          )}
 
           {!isClient && (
             <Suspense fallback={null}>

@@ -355,7 +355,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                 : "Push 'Don't forget your recap' to every assigned BA on the selected events"
             }
           >
-            {isBulkNudging ? "Nudging…" : "🔔 Nudge selected"}
+            {isBulkNudging ? "Nudging…" : "Nudge selected"}
           </button>
           <button
             type="button"
@@ -535,7 +535,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                         }}
                         title="Push 'Don't forget your recap' to this BA"
                       >
-                        {busy ? "Sending…" : "🔔 Nudge"}
+                        {busy ? "Sending…" : "Nudge"}
                       </button>
                       <button
                         type="button"
