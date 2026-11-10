@@ -1783,6 +1783,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // Duplicate this gig: clone the underlying request to a new date the admin
   // picks. The copy lands as a fresh request/event/job the admin can tweak.
   const sourceRequestId = node.event?.request?.id ?? null;
+  // Duplicate-to-date picker (replaces a typed YYYY-MM-DD browser prompt).
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupDate, setDupDate] = useState("");
   const duplicate = () => {
     if (cloning) return;
     if (!sourceRequestId) {
@@ -1793,17 +1796,17 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
       return;
     }
     const sourceDate = (node.startDate ?? "").slice(0, 10);
-    const fallback = sourceDate || new Date().toISOString().slice(0, 10);
-    const picked = window.prompt(
-      "Duplicate this gig to which date? (YYYY-MM-DD)",
-      fallback,
-    );
-    if (picked == null) return; // cancelled
-    const dateIso = picked.trim();
+    setDupDate(sourceDate || new Date().toISOString().slice(0, 10));
+    setDupOpen(true);
+  };
+  const confirmDuplicate = () => {
+    if (cloning || !sourceRequestId) return;
+    const dateIso = dupDate.trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
-      showAlert("Enter the date as YYYY-MM-DD (e.g. 2026-07-15).", "warning");
+      showAlert("Pick a date for the copy.", "warning");
       return;
     }
+    setDupOpen(false);
     commitClone({
       variables: {
         input: {
@@ -1826,7 +1829,10 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           );
         }
       },
-      onError: (e) => showAlert(`Duplicate failed: ${e.message}`, "error"),
+      onError: (e) => {
+        console.error("Duplicate gig failed", e);
+        showAlert("Couldn't duplicate the gig. Please try again.", "error");
+      },
     });
   };
 
@@ -1958,6 +1964,47 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               {cloning ? "Duplicating…" : "⎘ Duplicate"}
             </button>
+            {dupOpen && (
+              <span
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl"
+                style={{ border: "1px solid var(--spark-border)" }}
+              >
+                <label className="text-sm" htmlFor="job-dup-date">
+                  Copy to
+                </label>
+                <input
+                  id="job-dup-date"
+                  type="date"
+                  value={dupDate}
+                  onChange={(e) => setDupDate(e.target.value)}
+                  autoFocus
+                  className="text-sm rounded-lg px-2 py-1"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-text)",
+                    border: "1px solid var(--spark-border)",
+                    colorScheme: "dark",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={confirmDuplicate}
+                  disabled={cloning || !dupDate}
+                  className="px-3 py-1 rounded-lg text-sm font-semibold disabled:opacity-50"
+                  style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                >
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDupOpen(false)}
+                  className="text-sm underline"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                >
+                  Cancel
+                </button>
+              </span>
+            )}
             <button
               onClick={shareJobLink}
               title="Copy a link to this job"

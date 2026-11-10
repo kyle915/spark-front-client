@@ -1875,7 +1875,7 @@ export const ApprovalsBody: React.FC = () => {
         />
 
         {/* How it works */}
-        <div
+        <details
           className="spark-card p-5"
           style={{
             borderColor: "rgba(242,243,238,0.25)",
@@ -1883,15 +1883,15 @@ export const ApprovalsBody: React.FC = () => {
               "linear-gradient(180deg, rgba(242,243,238,0.06), transparent)",
           }}
         >
-          <p
-            className="mono text-[10px]"
+          <summary
+            className="mono text-[10px] cursor-pointer"
             style={{
               letterSpacing: "0.16em",
               color: "var(--spark-lime)",
             }}
           >
             APPROVAL ROUTING — HOW IT WORKS
-          </p>
+          </summary>
           <div className="grid md:grid-cols-3 gap-4 mt-4 text-sm">
             <div>
               <p className="font-bold">External request (no login)</p>
@@ -1929,7 +1929,7 @@ export const ApprovalsBody: React.FC = () => {
               </p>
             </div>
           </div>
-        </div>
+        </details>
 
         {/* Queue (stats live inside ApprovalsInner so they share the data fetch).
             ApprovalsErrorBoundary catches the case where ApprovalsInner's

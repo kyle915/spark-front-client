@@ -199,6 +199,25 @@ const BulkBaPicker: React.FC<{
   );
 };
 
+/**
+ * Row title for a shift. Prefer the store; otherwise use the event name
+ * with its leading "11/10/2026 - " date stripped (the day is already the
+ * column) and any trailing " · Retail Sampling" type suffix removed.
+ */
+function venueLabel(
+  store: string | null | undefined,
+  eventName: string | null | undefined,
+): string {
+  const st = (store ?? "").trim();
+  if (st) return st;
+  const cleaned = (eventName ?? "")
+    .trim()
+    .replace(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]\s*/, "")
+    .replace(/\s+·\s+[^·]+$/, "")
+    .trim();
+  return cleaned || (eventName ?? "").trim() || "(shift)";
+}
+
 const Inner: React.FC<{
   weekStart: Date;
   refreshKey: number;
@@ -221,7 +240,42 @@ const Inner: React.FC<{
     { startDate, endDate },
     { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
   );
-  const shifts: Shift[] = (data?.staffingBoard ?? []).filter(Boolean) as Shift[];
+  const allShifts: Shift[] = useMemo(
+    () => (data?.staffingBoard ?? []).filter(Boolean) as Shift[],
+    [data],
+  );
+
+  // Board filters — client, unstaffed-only, and a venue search. The board
+  // loads every client's shifts for the week, so the client picker is what
+  // makes the scope visible ("All clients" by default).
+  const [brandFilter, setBrandFilter] = useState("");
+  const [unstaffedOnly, setUnstaffedOnly] = useState(false);
+  const [venueQuery, setVenueQuery] = useState("");
+  const brands = useMemo(
+    () =>
+      [...new Set(allShifts.map((s) => s.brandName).filter(Boolean))].sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [allShifts],
+  );
+  const shifts: Shift[] = useMemo(() => {
+    const q = venueQuery.trim().toLowerCase();
+    return allShifts.filter((s) => {
+      if (brandFilter && s.brandName !== brandFilter) return false;
+      if (unstaffedOnly && s.isStaffed) return false;
+      if (q) {
+        const hay = `${s.store ?? ""} ${s.eventName ?? ""} ${s.address ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [allShifts, brandFilter, unstaffedOnly, venueQuery]);
+  const filtersActive = Boolean(brandFilter || unstaffedOnly || venueQuery.trim());
+  const clearFilters = () => {
+    setBrandFilter("");
+    setUnstaffedOnly(false);
+    setVenueQuery("");
+  };
 
   const [assign, setAssign] = useState<AssignTarget | null>(null);
 
@@ -306,7 +360,7 @@ const Inner: React.FC<{
     const cell = new Map<string, Shift[]>(); // `${rowKey}|${dayKey}` → shifts
     let unstaffedCount = 0;
     for (const s of shifts) {
-      const label = s.store || s.eventName || "(shift)";
+      const label = venueLabel(s.store, s.eventName);
       const rowKey = `${s.brandName}::${label}`;
       if (!rowMap.has(rowKey))
         rowMap.set(rowKey, { key: rowKey, label, brand: s.brandName });
@@ -356,7 +410,8 @@ const Inner: React.FC<{
           className="mono text-[11px]"
           style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em" }}
         >
-          {shifts.length} SHIFT{shifts.length === 1 ? "" : "S"} THIS WEEK
+          {shifts.length} SHIFT{shifts.length === 1 ? "" : "S"}{" "}
+          {filtersActive ? `SHOWN · ${allShifts.length} THIS WEEK` : "THIS WEEK"}
         </span>
         <button
           onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
@@ -371,6 +426,63 @@ const Inner: React.FC<{
         >
           {bulkMode ? "✕ EXIT BULK" : "⊕ BULK ASSIGN"}
         </button>
+      </div>
+
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <select
+          value={brandFilter}
+          onChange={(e) => setBrandFilter(e.target.value)}
+          aria-label="Filter by client"
+          className="text-sm rounded-xl px-3 py-2"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          <option value="">All clients ({brands.length})</option>
+          {brands.map((b) => (
+            <option key={b} value={b}>
+              {b}
+            </option>
+          ))}
+        </select>
+        <input
+          value={venueQuery}
+          onChange={(e) => setVenueQuery(e.target.value)}
+          placeholder="Search store or address"
+          aria-label="Search store or address"
+          className="text-sm rounded-xl px-3 py-2"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+            minWidth: 220,
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setUnstaffedOnly((v) => !v)}
+          aria-pressed={unstaffedOnly}
+          className="text-sm rounded-xl px-3 py-2 font-semibold"
+          style={{
+            color: unstaffedOnly ? "#0a0d09" : "var(--spark-text)",
+            background: unstaffedOnly ? "var(--spark-orange)" : "transparent",
+            border: `1px solid ${unstaffedOnly ? "var(--spark-orange)" : "var(--spark-border)"}`,
+          }}
+        >
+          Unstaffed only
+        </button>
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-sm px-2 py-2 underline"
+            style={{ color: "rgba(255,255,255,0.6)" }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {banner && (
@@ -400,7 +512,9 @@ const Inner: React.FC<{
           className="p-10 text-center text-sm"
           style={{ color: "rgba(255,255,255,0.5)" }}
         >
-          No shifts scheduled this week.
+          {filtersActive
+            ? "No shifts match these filters."
+            : "No shifts scheduled this week."}
         </p>
       ) : (
         <div className="overflow-x-auto">

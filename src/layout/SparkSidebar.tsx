@@ -353,7 +353,30 @@ const CollapsibleNavSection: React.FC<{
   onStub: (label: string) => void;
   isClient?: boolean;
 }> = ({ section, pathname, defaultOpen, onStub, isClient }) => {
-  const [open, setOpen] = useState(defaultOpen);
+  // Remember each section's open/closed state across reloads. The section
+  // holding the current page still opens by default the first time.
+  const storageKey = `@spark.nav.open.${section.title}`;
+  const [open, setOpenState] = useState<boolean>(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved === "1") return true;
+      if (saved === "0") return false;
+    } catch {
+      /* storage unavailable — fall through */
+    }
+    return defaultOpen;
+  });
+  const setOpen = (next: boolean | ((prev: boolean) => boolean)) => {
+    setOpenState((prev) => {
+      const value = typeof next === "function" ? next(prev) : next;
+      try {
+        window.localStorage.setItem(storageKey, value ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return value;
+    });
+  };
   const title =
     isClient && section.clientTitle ? section.clientTitle : section.title;
 
