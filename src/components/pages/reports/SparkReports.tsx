@@ -11,7 +11,10 @@ import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { Suspense, createContext, useContext, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
+import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
+import { useAlertStore } from "@/store/alertStore";
 import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQuery";
 import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
 import { ReportsEngagementsChartQuery } from "@/api/queries/ReportsEngagementsChartQuery";
@@ -670,6 +673,29 @@ export default function SparkReports() {
     [startYmd, endYmd],
   );
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
+  const showAlert = useAlertStore((st) => st.showAlert);
+  // Sends ONLY to the signed-in person (server-enforced) — a self-serve copy
+  // of the monthly report without waiting for the scheduled email.
+  const [commitEmail, emailing] = useMutation<SendTestClientReportMutationType>(
+    SendTestClientReportMutation,
+  );
+  const emailLastMonth = () => {
+    if (emailing || !tenantId) return;
+    commitEmail({
+      variables: { input: { tenantId } },
+      onCompleted: (res) => {
+        const r = res.sendTestClientReport;
+        showAlert(
+          r?.success
+            ? "Sent. Check your inbox for last month's report."
+            : r?.message || "Couldn't send the report. Please try again.",
+          r?.success ? "success" : "error",
+        );
+      },
+      onError: () =>
+        showAlert("Couldn't send the report. Please try again.", "error"),
+    });
+  };
   const m = dashboard.metrics;
 
   return (
@@ -681,12 +707,21 @@ export default function SparkReports() {
           title="Program report."
           support="Numbers, photos and consumer feedback for the dates you pick. Consumers counted are sampled — not reach or samples handed out."
           action={
+            <>
+            <SparkGhostButton
+              onClick={emailLastMonth}
+              disabled={emailing || !tenantId}
+              title="Email the monthly performance PDF for last month to your own address only"
+            >
+              {emailing ? "Sending…" : "Email me last month's PDF"}
+            </SparkGhostButton>
             <SparkGhostButton
               onClick={() => window.print()}
               title="Save the current view as PDF via the browser print dialog"
             >
               Export PDF
             </SparkGhostButton>
+            </>
           }
         />
 
