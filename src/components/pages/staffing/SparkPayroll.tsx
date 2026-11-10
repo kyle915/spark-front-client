@@ -1,3 +1,4 @@
+import StatusChip from "@/shared/StatusChip";
 import { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { PayrollTimesheetQuery } from "@/api/queries/PayrollTimesheetQuery";
@@ -241,18 +242,10 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                   <p className="font-medium">
                     {r.name}
                     {r.needsReview ? (
-                      <span
-                        className="mono text-[9px] ml-2"
-                        style={{
-                          letterSpacing: "0.06em",
-                          color: "var(--spark-orange)",
-                          background: "rgba(239,90,42,0.12)",
-                          border: "1px solid rgba(239,90,42,0.35)",
-                          borderRadius: 999,
-                          padding: "1px 6px",
-                        }}
-                      >
-                        REVIEW
+                      <span className="ml-2">
+                        <StatusChip status="review" small>
+                          Review
+                        </StatusChip>
                       </span>
                     ) : null}
                   </p>
@@ -284,17 +277,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                 </td>
                 <td className="px-3 py-2">
                   {r.paidAt ? (
-                    <span
-                      className="mono text-[10px]"
-                      style={{
-                        letterSpacing: "0.08em", color: "var(--spark-lime)",
-                        background: "rgba(242,243,238,0.1)",
-                        border: "1px solid rgba(242,243,238,0.3)",
-                        borderRadius: 999, padding: "2px 8px",
-                      }}
-                    >
-                      ✓ PAID
-                    </span>
+                    <StatusChip status="paid">Paid</StatusChip>
                   ) : r.approved ? (
                     <div className="flex items-center gap-2">
                       <button
