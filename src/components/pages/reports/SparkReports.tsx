@@ -1,3 +1,9 @@
+import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
+import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
+import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
+import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
+import { PanelSkeleton } from "@/layout/PageSkeletons";
+import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkGhostButton from "@/shared/SparkGhostButton";
@@ -542,6 +548,55 @@ const fmtNum = (v: number | null | undefined) =>
   typeof v === "number" ? v.toLocaleString() : "—";
 
 
+/**
+ * "From the field" — up to 24 recent approved recap photos in the range,
+ * with a lightbox. Renders nothing when there are none.
+ */
+const FieldPhotos: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const range = useReportsRange();
+  const data = useLazyLoadQuery<ReportsFieldPhotosQueryType>(
+    ReportsFieldPhotosQuery,
+    {
+      first: 60,
+      filters: {
+        tenantId: tenantId || null,
+        startDate: ymdLocal(range.start),
+        endDate: ymdLocal(range.end),
+        approved: true,
+      },
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  const photos = useMemo(
+    () =>
+      (data?.customRecaps?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n?.heroImageUrl))
+        .slice(0, 24)
+        .map((n) => {
+          const day = n.eventDate
+            ? new Date(`${String(n.eventDate).slice(0, 10)}T12:00:00`).toLocaleDateString(
+                undefined,
+                { month: "short", day: "numeric" },
+              )
+            : "";
+          const where = [n.eventRetailer, n.eventState].filter(Boolean).join(", ");
+          return {
+            url: thumbUrl(String(n.heroImageUrl), 800),
+            caption: [where, day].filter(Boolean).join(" · "),
+          };
+        }),
+    [data],
+  );
+  if (photos.length === 0) return null;
+  return (
+    <div className="spark-card p-5">
+      <CampaignPhotoHighlights photos={photos} />
+    </div>
+  );
+};
+
 const ChartCard: React.FC<{
   title: string;
   subtitle: string;
@@ -623,8 +678,8 @@ export default function SparkReports() {
       <div className="space-y-6 max-w-7xl spark-fade-in">
         <SparkPageHeader
           eyebrow={`REPORTS · ${range.label.toUpperCase()}`}
-          title="The numbers."
-          support="Live from the analytics warehouse. Consumers counted are sampled — not reach or samples handed out."
+          title="Program report."
+          support="Numbers, photos and consumer feedback for the dates you pick. Consumers counted are sampled — not reach or samples handed out."
           action={
             <SparkGhostButton
               onClick={() => window.print()}
@@ -774,6 +829,25 @@ export default function SparkReports() {
             <TopRetailersChart />
           </ChartCard>
         </div>
+
+        {/* Program recap: what it looked like and what people said. */}
+        <Suspense fallback={<PanelSkeleton label="Loading photos" />}>
+          <FieldPhotos />
+        </Suspense>
+        {tenantId ? (
+          <div>
+            <h3 className="display font-bold mb-1" style={{ letterSpacing: "-0.02em" }}>
+              What consumers said
+            </h3>
+            <p className="text-sm mb-3" style={{ color: "var(--spark-text-meta)" }}>
+              Themes and quotes from recap comments across the program (not limited
+              to the date range above).
+            </p>
+            <Suspense fallback={<PanelSkeleton label="Loading consumer feedback" />}>
+              <TenantSentimentCard tenantId={tenantId} />
+            </Suspense>
+          </div>
+        ) : null}
       </div>
       </ReportsRangeContext.Provider>
     </Layout>
