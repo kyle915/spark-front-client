@@ -294,7 +294,7 @@ export default function SparkUpcomingEvents() {
             </h1>
             <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
               Approved events + pending approvals in the next 7 days,
-              grouped by day. Click a row to open the Spark v2 detail.
+              grouped by day. Click a row to open the event.
             </p>
           </div>
           <LinkedSheetChip />

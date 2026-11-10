@@ -1128,7 +1128,13 @@ const SparkRecapInner: React.FC<{
                     }
                   },
                   onError: (err) =>
-                    showAlert(`PDF failed: ${err.message}`, "error"),
+                    {
+                    console.error("Recap PDF failed", err);
+                    showAlert(
+                      "We couldn't build the PDF. Please try again in a moment.",
+                      "error",
+                    );
+                  },
                 });
               }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"

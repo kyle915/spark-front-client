@@ -85,6 +85,8 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
   const sheet = data?.payrollTimesheet;
   const rows: Row[] = (sheet?.rows ?? []) as Row[];
   const [reviewOnly, setReviewOnly] = useState(false);
+  // "Approve all" is two-step: the first click arms it, the second commits.
+  const [confirmApproveAll, setConfirmApproveAll] = useState(false);
   const shown = reviewOnly ? rows.filter((r) => r.needsReview) : rows;
 
   const [commitApprove, approving] = useMutation<ApproveType>(ApprovePayrollHoursMutation);
@@ -155,14 +157,41 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
         ) : null}
         <div className="ml-auto flex items-center gap-2">
           {unapprovedUuids.length > 0 ? (
-            <button
-              onClick={() => runPayroll("approve", unapprovedUuids)}
-              disabled={busy}
-              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-              style={{ background: "transparent", color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
-            >
-              Approve all ({unapprovedUuids.length})
-            </button>
+            confirmApproveAll ? (
+              <>
+                <span className="text-sm" style={{ color: "var(--spark-text)" }}>
+                  Approve hours for all {unapprovedUuids.length}?
+                </span>
+                <button
+                  onClick={() => setConfirmApproveAll(false)}
+                  disabled={busy}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                  style={{ background: "transparent", color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmApproveAll(false);
+                    runPayroll("approve", unapprovedUuids);
+                  }}
+                  disabled={busy}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                  style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                >
+                  Yes, approve all
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setConfirmApproveAll(true)}
+                disabled={busy}
+                className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+                style={{ background: "transparent", color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
+              >
+                Approve all ({unapprovedUuids.length})
+              </button>
+            )
           ) : approvedUnpaidUuids.length > 0 ? (
             <button
               onClick={() => runPayroll("paid", approvedUnpaidUuids)}
