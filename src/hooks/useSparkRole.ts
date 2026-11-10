@@ -63,16 +63,20 @@ export function useSparkRole(): {
   });
 
   useEffect(() => {
+    // Only force Client chrome once we KNOW who is signed in. On a cold
+    // load `user` is briefly null; forcing (and persisting) "client" in
+    // that window flipped Ignite staff into Client view and left them
+    // there. The forced value is never written to storage, so a staff
+    // member's saved preference survives.
+    if (!user) return;
     if (!canToggleRole && role !== "client") {
-      localStorage.setItem(KEY, "client");
       setRoleState("client");
-      window.dispatchEvent(new Event("spark:role-changed"));
     }
-  }, [canToggleRole, role]);
+  }, [user, canToggleRole, role]);
 
   useEffect(() => {
     const sync = () => {
-      if (!canToggleRole) {
+      if (user && !canToggleRole) {
         setRoleState("client");
         return;
       }
@@ -85,7 +89,7 @@ export function useSparkRole(): {
     return () => {
       window.removeEventListener("spark:role-changed", sync);
     };
-  }, [canToggleRole]);
+  }, [user, canToggleRole]);
 
   const setRole = (r: SparkRole) => {
     if (!canToggleRole && r !== "client") return;

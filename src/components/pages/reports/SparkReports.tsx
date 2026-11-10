@@ -638,7 +638,7 @@ export default function SparkReports() {
         {/* Date range */}
         <div className="flex items-center gap-2 flex-wrap print:hidden">
           {/* Same segmented control as the Dashboard range picker. */}
-          <div className="pill-group">
+          <div className="pill-group max-w-full overflow-x-auto spark-scroll-fade">
           {(
             [
               ["30", "30 days"],
@@ -653,7 +653,7 @@ export default function SparkReports() {
               type="button"
               onClick={() => setRangeKey(key)}
               aria-pressed={rangeKey === key}
-              className={`pill-btn ${rangeKey === key ? "on" : ""}`}
+              className={`pill-btn whitespace-nowrap shrink-0 ${rangeKey === key ? "on" : ""}`}
             >
               {label}
             </button>
