@@ -1,3 +1,5 @@
+import CheckinStepBar from "./CheckinStepBar";
+import { checkinSteps } from "./checkinSteps";
 import MyShiftsCard from "./MyShiftsCard";
 import {
   useCallback,
@@ -642,6 +644,17 @@ export default function SparkCheckin() {
             button leads; guides sit under it. */}
         {hidePriorEvent ? null : (
           <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
+        )}
+        {hidePriorEvent ? null : (
+          <CheckinStepBar
+            accent={accent}
+            steps={checkinSteps({
+              identified,
+              clockState: ctx.session?.clock.state,
+              hasRecap,
+              recapOnly: Boolean(ctx.recapOnly),
+            })}
+          />
         )}
         {!identified ? (
           <IdentifyStep
