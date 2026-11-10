@@ -238,7 +238,7 @@ const ApplicantsCard: React.FC<{
       >
         <h3 className="font-bold">
           Applicants{" "}
-          <span className="mono text-xs ml-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <span className="mono text-xs ml-1" style={{ color: "var(--spark-text-meta)" }}>
             {apps.length}
           </span>
         </h3>
@@ -251,7 +251,7 @@ const ApplicantsCard: React.FC<{
       </div>
 
       {apps.length === 0 ? (
-        <div className="p-6 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <div className="p-6 text-sm" style={{ color: "var(--spark-text-meta)" }}>
           No applications yet. BAs who apply from the mobile app will show up here.
         </div>
       ) : (
@@ -331,13 +331,13 @@ const ApplicantsCard: React.FC<{
                     </div>
                     <p
                       className="mono text-[10px] uppercase mt-0.5 truncate"
-                      style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                      style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
                     >
                       {contact}
                       {a.appliedAt ? ` · applied ${fmtApplied(a.appliedAt)}` : ""}
                     </p>
                     {a.note ? (
-                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      <p className="text-xs mt-1" style={{ color: "var(--spark-text-secondary)" }}>
                         “{a.note}”
                       </p>
                     ) : null}
@@ -428,7 +428,7 @@ const BriefingTemplatePicker: React.FC<{
     return (
       <span
         className="mono text-[10px]"
-        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+        style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
       >
         NO SAVED TEMPLATES YET
       </span>
@@ -613,7 +613,7 @@ const BABriefingCard: React.FC<{
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.4)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   LOADING TEMPLATES…
@@ -711,7 +711,7 @@ const BABriefingCard: React.FC<{
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 UNSAVED CHANGES
@@ -727,14 +727,14 @@ const BABriefingCard: React.FC<{
           {initialBody ? (
             <p
               className="text-sm leading-relaxed whitespace-pre-wrap"
-              style={{ color: "rgba(255,255,255,0.85)" }}
+              style={{ color: "var(--spark-text)" }}
             >
               {initialBody}
             </p>
           ) : (
             <p
               className="text-xs italic"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {isAdmin
                 ? "No briefing yet — click EDIT BRIEFING to write the pre-shift instructions BAs see in the app."
@@ -795,7 +795,7 @@ const GigTemplatePicker: React.FC<{
     return (
       <span
         className="mono text-[10px]"
-        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+        style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
       >
         NO SAVED TEMPLATES YET
       </span>
@@ -979,7 +979,7 @@ const GigTemplateRow: React.FC<{
           onChange={(e) => setOpenToAll(e.target.checked)}
           style={{ width: 16, height: 16, accentColor: "var(--spark-lime)" }}
         />
-        <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.8)" }}>
+        <span className="text-[12px]" style={{ color: "var(--spark-text-secondary)" }}>
           Open to all BAs by default
         </span>
       </label>
@@ -1038,7 +1038,7 @@ const GigTemplateManager: React.FC<{
 
   if (templates.length === 0) {
     return (
-      <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+      <p className="text-[12px]" style={{ color: "var(--spark-text-meta)" }}>
         No templates yet. Fill the fields above and hit “Save as template”.
       </p>
     );
@@ -1200,7 +1200,7 @@ const PostJobModal: React.FC<{
           <h2 className="display text-xl font-bold">Send this job live to BAs.</h2>
           <p
             className="text-[12px] mt-1.5"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {node.jobTitle?.name ?? "Brand Ambassador"} ·{" "}
             {node.event?.name ?? node.name}. BAs see it on the job board once
@@ -1228,7 +1228,7 @@ const PostJobModal: React.FC<{
                       className="mono text-[10px]"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       LOADING TEMPLATES…
@@ -1264,7 +1264,7 @@ const PostJobModal: React.FC<{
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     LOADING…
@@ -1348,7 +1348,7 @@ const PostJobModal: React.FC<{
               </span>
               <span
                 className="text-[11px]"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Off = favorites get first look before it opens up.
               </span>
@@ -1528,7 +1528,7 @@ const EditJobModal: React.FC<{
         >
           <p
             className="mono text-[10px] mb-1"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             EDIT JOB
           </p>
@@ -1749,7 +1749,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     return (
       <div
         className="spark-card p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         Job not found.
       </div>
@@ -1855,7 +1855,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         className="mono text-[11px] transition"
         style={{
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         ← BACK TO JOBS
@@ -1899,7 +1899,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </h1>
               <p
                 className="mt-1"
-                style={{ color: "rgba(255,255,255,0.65)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 {node.event?.name ?? node.name ?? "—"}
                 {node.address ? ` · ${node.address}` : ""}
@@ -1932,7 +1932,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               >
                 <span style={{ fontSize: "0.7rem" }}>●</span> Live to BAs
                 {node.postedAt ? (
-                  <span style={{ color: "rgba(255,255,255,0.5)" }}>
+                  <span style={{ color: "var(--spark-text-meta)" }}>
                     · {fmtDate(node.postedAt)}
                   </span>
                 ) : null}
@@ -1997,7 +1997,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   type="button"
                   onClick={() => setDupOpen(false)}
                   className="text-sm underline"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   Cancel
                 </button>
@@ -2191,14 +2191,14 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 {value ? (
                   <p
                     className="text-sm leading-relaxed whitespace-pre-wrap"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
+                    style={{ color: "var(--spark-text)" }}
                   >
                     {value}
                   </p>
                 ) : (
                   <p
                     className="text-xs italic"
-                    style={{ color: "rgba(255,255,255,0.4)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     {isAdmin
                       ? "Empty — click EDIT BRIEF to fill in."
@@ -2248,7 +2248,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         {linkedModules.length === 0 ? (
           <p
             className="text-xs"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             No academy modules linked yet.
             {isAdmin
@@ -2283,7 +2283,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       className="mono text-[10px] truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       ~{readMinutes(m.body)} MIN READ
@@ -2333,7 +2333,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           <h3 className="font-bold mb-3">Role overview</h3>
           <p
             className="text-sm leading-relaxed"
-            style={{ color: "rgba(255,255,255,0.75)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             {node.description ??
               "High-energy, sales-focused Brand Ambassador. Pour 6oz samples, photo upload hourly, log every cooler-stock pull."}
@@ -2341,7 +2341,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           <h4 className="font-semibold text-sm mt-5 mb-2">Requirements</h4>
           <ul
             className="text-sm space-y-1.5 list-disc list-inside"
-            style={{ color: "rgba(255,255,255,0.75)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             <li>21+ TABC certified</li>
             <li>Own black uniform tee + pants</li>
@@ -2354,7 +2354,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           fallback={
             <div
               className="spark-card p-6 text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading applicants…
             </div>
@@ -2401,7 +2401,7 @@ export default function SparkJobDetail() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-7xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading job…
           </div>

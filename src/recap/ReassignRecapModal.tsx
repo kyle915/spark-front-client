@@ -112,7 +112,7 @@ const Inner: React.FC<Props> = ({
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             REASSIGN RECAP
@@ -121,7 +121,7 @@ const Inner: React.FC<Props> = ({
           {currentEventName && (
             <p
               className="text-xs mt-2"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Currently linked to:{" "}
               <span style={{ color: "var(--spark-text)" }}>
@@ -149,7 +149,7 @@ const Inner: React.FC<Props> = ({
           {events.length === 0 && (
             <p
               className="p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {search
                 ? "No events match that search."
@@ -201,7 +201,7 @@ const Inner: React.FC<Props> = ({
                       className="mono text-[10px] truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {ev.address}
@@ -257,7 +257,7 @@ export default function ReassignRecapModal(props: Props) {
         >
           <div
             className="spark-card p-6"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading events…
           </div>

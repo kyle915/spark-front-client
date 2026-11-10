@@ -34,7 +34,7 @@ export const AdminOnly: React.FC<{ children: ReactNode }> = ({
         </h1>
         <p
           className="mt-3 text-sm"
-          style={{ color: "rgba(255,255,255,0.65)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           Toggle <span className="mono">Admin</span> in the topbar to access
           internal tools.

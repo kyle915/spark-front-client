@@ -429,7 +429,7 @@ export const InternalNotesPanel: React.FC<{
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     @{m.email.split("@")[0]}
@@ -485,7 +485,7 @@ export const InternalNotesPanel: React.FC<{
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {fmtAgo(n.createdAt)}
@@ -507,7 +507,7 @@ export const InternalNotesPanel: React.FC<{
                       className="mono text-[10px] mt-0.5"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.55)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       → {n.shipment.recipient.toUpperCase()}
@@ -517,7 +517,7 @@ export const InternalNotesPanel: React.FC<{
                 {n.body && (
                   <p
                     className="text-sm mt-1 leading-relaxed"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
+                    style={{ color: "var(--spark-text)" }}
                     dangerouslySetInnerHTML={{
                       __html: formatNoteBodyHtml(n.body),
                     }}
@@ -528,7 +528,7 @@ export const InternalNotesPanel: React.FC<{
                     className="mono text-[10px] mt-2"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     NOTIFIED · @{n.mentions.join(", @")}
@@ -538,7 +538,7 @@ export const InternalNotesPanel: React.FC<{
               <button
                 onClick={() => removeNote(n.id)}
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "var(--spark-text-meta)" }}
                 title="Delete"
               >
                 ×

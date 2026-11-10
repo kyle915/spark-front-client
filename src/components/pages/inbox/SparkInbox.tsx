@@ -511,7 +511,7 @@ const Inner: React.FC = () => {
       {items.length === 0 ? (
         <div
           className="spark-card p-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           <p
             className="mono text-[10px] mb-2"
@@ -586,7 +586,7 @@ const Inner: React.FC = () => {
                           className="mono text-[10px]"
                           style={{
                             letterSpacing: "0.14em",
-                            color: "rgba(255,255,255,0.4)",
+                            color: "var(--spark-text-meta)",
                           }}
                         >
                           · {it.reqId} · {fmtAgo(it.whenIso).toUpperCase()}
@@ -600,7 +600,7 @@ const Inner: React.FC = () => {
                       </p>
                       <p
                         className="text-xs mt-0.5"
-                        style={{ color: "rgba(255,255,255,0.55)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         {it.market} · {it.requester}
                       </p>
@@ -663,7 +663,7 @@ const Inner: React.FC = () => {
                             className="mono text-[10px]"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "rgba(255,255,255,0.55)",
+                              color: "var(--spark-text-meta)",
                             }}
                             title="Open the full request view"
                           >
@@ -691,7 +691,7 @@ const Inner: React.FC = () => {
                         title="Hide this item from your inbox (doesn't affect the request)"
                         style={{
                           letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.4)",
+                          color: "var(--spark-text-meta)",
                         }}
                       >
                         × DISMISS
@@ -744,7 +744,7 @@ const Inner: React.FC = () => {
                         className="mono text-[10px]"
                         style={{
                           letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.55)",
+                          color: "var(--spark-text-meta)",
                         }}
                       >
                         CANCEL
@@ -799,7 +799,7 @@ export default function SparkInbox() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-4xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading inbox…
           </div>

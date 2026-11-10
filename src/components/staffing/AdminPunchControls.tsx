@@ -46,7 +46,7 @@ const btnStyle: React.CSSProperties = {
   borderRadius: 6,
   border: "1px solid var(--spark-border)",
   background: "transparent",
-  color: "rgba(255,255,255,0.75)",
+  color: "var(--spark-text-secondary)",
   cursor: "pointer",
   whiteSpace: "nowrap",
 };
@@ -195,7 +195,7 @@ const AdminPunchControls: React.FC<Props> = ({
       >
         <span
           className="mono text-[10px]"
-          style={{ letterSpacing: "0.1em", color: "rgba(255,255,255,0.55)" }}
+          style={{ letterSpacing: "0.1em", color: "var(--spark-text-meta)" }}
         >
           {title.toUpperCase()}
         </span>

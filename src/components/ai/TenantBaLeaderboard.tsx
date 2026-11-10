@@ -27,7 +27,7 @@ const RatingCell: React.FC<{
     return (
       <span
         className="text-[13px]"
-        style={{ color: "rgba(255,255,255,0.4)" }}
+        style={{ color: "var(--spark-text-meta)" }}
         title="Unrated"
       >
         —
@@ -59,7 +59,7 @@ const RatingCell: React.FC<{
       </span>
       <span
         className="mono tab-num text-[11px]"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         ({ratingsCount})
       </span>
@@ -95,7 +95,7 @@ const LeaderboardRow: React.FC<{
   >
     <span
       className="mono tab-num text-[12px] shrink-0 text-right"
-      style={{ width: "1.6rem", color: "rgba(255,255,255,0.45)" }}
+      style={{ width: "1.6rem", color: "var(--spark-text-meta)" }}
     >
       {rank}
     </span>
@@ -109,7 +109,7 @@ const LeaderboardRow: React.FC<{
       </p>
       <p
         className="mono text-[11px] mt-0.5"
-        style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "0.02em" }}
+        style={{ color: "var(--spark-text-meta)", letterSpacing: "0.02em" }}
       >
         <span className="tab-num">{entry.shiftsWorked}</span>
         {entry.shiftsWorked === 1 ? " shift" : " shifts"}
@@ -205,7 +205,7 @@ const TenantBaLeaderboard: React.FC<{
         {items.length > 0 && (
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             BA LEADERBOARD
             {rangeLabel ? ` · ${rangeLabel.toUpperCase()}` : ""}
@@ -217,7 +217,7 @@ const TenantBaLeaderboard: React.FC<{
       {items.length === 0 ? (
         <p
           className="text-sm py-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No BA performance data yet.
         </p>
@@ -243,7 +243,7 @@ const TenantBaLeaderboard: React.FC<{
           {overflow > 0 && (
             <p
               className="mono text-[11px] mt-3 text-center"
-              style={{ letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)" }}
+              style={{ letterSpacing: "0.06em", color: "var(--spark-text-meta)" }}
             >
               +{overflow} more
             </p>

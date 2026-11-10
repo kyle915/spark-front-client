@@ -216,7 +216,7 @@ const ApprovalRow: React.FC<{
             letterSpacing: "0.08em",
             background: "rgba(255,255,255,0.04)",
             border: "1px dashed rgba(255,255,255,0.18)",
-            color: "rgba(255,255,255,0.4)",
+            color: "var(--spark-text-meta)",
           }}
         >
           {row.fileCount > 0 ? `${row.fileCount} PHOTOS` : "NO PHOTOS"}
@@ -231,7 +231,7 @@ const ApprovalRow: React.FC<{
               className="mono text-[10px] px-2 py-0.5 rounded-full"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.6)",
+                color: "var(--spark-text-secondary)",
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
@@ -240,7 +240,7 @@ const ApprovalRow: React.FC<{
             </span>
           )}
         </div>
-        <p className="text-[13px] mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-[13px] mt-1" style={{ color: "var(--spark-text-meta)" }}>
           {row.where}
           <span style={{ opacity: 0.5 }}> · </span>
           {fmtDate(row.date)}
@@ -296,7 +296,7 @@ const ApprovalRow: React.FC<{
               className="px-3 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
-                color: "rgba(255,255,255,0.6)",
+                color: "var(--spark-text-secondary)",
                 border: "1px solid rgba(255,255,255,0.14)",
                 cursor: inFlight ? "default" : "pointer",
               }}
@@ -626,7 +626,7 @@ const ClientApprovalsMerged: React.FC<{
                 type="button"
                 onClick={() => setBulkConfirming(false)}
                 className="underline"
-                style={{ color: "rgba(255,255,255,0.6)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 Cancel
               </button>
@@ -779,7 +779,7 @@ const RequestApprovalRow: React.FC<{
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}
+              style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
             >
               {row.reqLabel}
             </span>
@@ -803,12 +803,12 @@ const RequestApprovalRow: React.FC<{
             )}
           </div>
           <p className="text-sm font-semibold mt-1 truncate">{row.venue}</p>
-          <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-[13px]" style={{ color: "var(--spark-text-meta)" }}>
             {[row.where, row.date].filter(Boolean).join(" · ") || "—"}
           </p>
           <p
             className="text-[12px] mt-0.5"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {[row.typeLabel, row.requester].filter(Boolean).join(" · ")}
           </p>
@@ -888,7 +888,7 @@ const RequestApprovalRow: React.FC<{
                 className="px-3 py-2 rounded-xl text-sm"
                 style={{
                   background: "transparent",
-                  color: "rgba(255,255,255,0.6)",
+                  color: "var(--spark-text-secondary)",
                   border: "1px solid rgba(255,255,255,0.14)",
                 }}
               >
@@ -932,7 +932,7 @@ const RequestApprovalRow: React.FC<{
                 className="px-3 py-2 rounded-xl text-sm"
                 style={{
                   background: "transparent",
-                  color: "rgba(255,255,255,0.6)",
+                  color: "var(--spark-text-secondary)",
                   border: "1px solid rgba(255,255,255,0.14)",
                 }}
               >
@@ -1040,7 +1040,7 @@ export const ClientApprovalsBody: React.FC = () => {
       <div>
         <p
           className="mono text-[10px]"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
         >
           YOUR APPROVALS
         </p>
@@ -1050,7 +1050,7 @@ export const ClientApprovalsBody: React.FC = () => {
         >
           Awaiting your approval.
         </h1>
-        <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
           {tab === "requests"
             ? "New activation requests submitted for your brand. Approve to move one into scheduling, or decline with a note."
             : "Recaps from your events that are waiting on your sign-off. Open one to review the details and approve it."}

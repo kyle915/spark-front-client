@@ -68,14 +68,14 @@ class ErrorBoundary extends Component<Props, State> {
             ? "You don't have access to this section."
             : "This section couldn't load."}
         </h1>
-        <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <p className="mt-3 text-sm" style={{ color: "var(--spark-text-secondary)" }}>
           {isPermission
             ? "If you think this is a mistake, ping the Ignite team — the rest of the app still works."
             : "The rest of the app is still up. Try again, or reload the page."}
         </p>
         <p
           className="mono text-[11px] mt-4 break-words"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {message.slice(0, 300)}
         </p>

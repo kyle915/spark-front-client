@@ -600,7 +600,7 @@ const RecapCard: React.FC<{
             ? {
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.18)",
-                color: "rgba(255,255,255,0.62)",
+                color: "var(--spark-text-secondary)",
               }
             : approved
               ? {
@@ -731,7 +731,7 @@ const RecapCard: React.FC<{
               letterSpacing: "0.14em",
               background: "rgba(255,255,255,0.06)",
               border: "1px solid var(--spark-border)",
-              color: "rgba(255,255,255,0.75)",
+              color: "var(--spark-text-secondary)",
             }}
             title="Share the public /r/:token link"
           >
@@ -751,7 +751,7 @@ const RecapCard: React.FC<{
               letterSpacing: "0.14em",
               background: "rgba(255,255,255,0.06)",
               border: "1px solid var(--spark-border)",
-              color: "rgba(255,255,255,0.75)",
+              color: "var(--spark-text-secondary)",
             }}
             title="Push this recap's metrics to a field marketing plan"
           >
@@ -938,7 +938,7 @@ const RecapCompactRow: React.FC<{
             ? {
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.18)",
-                color: "rgba(255,255,255,0.62)",
+                color: "var(--spark-text-secondary)",
               }
             : undefined
         }
@@ -3347,9 +3347,10 @@ export default function SparkRecapsList() {
                 }}
                 className="rounded-xl px-3 py-2 text-xs font-bold shrink-0"
                 style={{
-                  color: "#fff",
-                  background: "#ef5a2a",
-                  border: "1px solid #ef5a2a",
+                  // Primary action colour. Orange is reserved for warnings.
+                  color: "#0a0d09",
+                  background: "var(--spark-lime)",
+                  border: "1px solid var(--spark-lime)",
                   opacity: reviewNextBusy ? 0.6 : 1,
                 }}
               >
@@ -3854,7 +3855,7 @@ export default function SparkRecapsList() {
             </span>
             <span
               className="mono text-[9px] shrink-0"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {meta.filteredTotal} MATCHING
             </span>
@@ -3878,7 +3879,7 @@ export default function SparkRecapsList() {
                 onClick={clearAllFilters}
                 className="mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap shrink-0"
                 style={{
-                  color: "rgba(255,255,255,0.68)",
+                  color: "var(--spark-text-secondary)",
                   background: "transparent",
                   border: "1px solid rgba(255,255,255,0.14)",
                 }}
@@ -4169,7 +4170,7 @@ export default function SparkRecapsList() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.75)",
+              color: "var(--spark-text-secondary)",
             }}
             title="Select / unselect every recap currently on screen"
           >

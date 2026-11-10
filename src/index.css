@@ -305,8 +305,15 @@ h1, h2, h3, h4, h5, h6, .display {
 }
 
 /* Mono for labels, mono numbers, and small tracking-widest meta text */
-.mono, code, kbd, samp, pre {
+/* Monospace is for real code and identifiers only. The .mono class is used
+   on hundreds of UI captions; those read better in the interface typeface,
+   with tabular digits so counts and times still line up. */
+code, kbd, samp, pre, .mono-code {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.mono {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Tabular numbers for any column showing $/counts — keeps things aligned */
@@ -338,7 +345,7 @@ h1, h2, h3, h4, h5, h6, .display {
 /* Mono micro-label used on metric cards: "RECAPS · 90D", etc.
    Quieter so ALL-CAPS mono stays secondary, not the page hero. */
 .label-mini {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -363,7 +370,7 @@ h1, h2, h3, h4, h5, h6, .display {
   gap: 0.3rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
   font-size: 0.65rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -421,9 +428,9 @@ h1, h2, h3, h4, h5, h6, .display {
   --spark-surface-2: #1a1a1d;
   --spark-border: #2a2a2e;
   --spark-text: #f2f3ee;
-  --spark-text-secondary: rgba(255, 255, 255, 0.62);
-  --spark-text-meta: rgba(255, 255, 255, 0.48);
-  --spark-faint: rgba(255, 255, 255, 0.38);
+  --spark-text-secondary: rgba(255, 255, 255, 0.76);
+  --spark-text-meta: rgba(255, 255, 255, 0.64);
+  --spark-faint: rgba(255, 255, 255, 0.52);
   --spark-hairline: rgba(255, 255, 255, 0.08);
   --spark-radius-control: 8px;
   --spark-radius-card: 14px;
@@ -564,8 +571,8 @@ body:has(.spark-login-page) {
 /* === Shared page chrome (promoted from Plans Apple UX) === */
 .spark-page {
   --spark-page-gap: 1.75rem;
-  --spark-muted: rgba(255, 255, 255, 0.5);
-  --spark-faint: rgba(255, 255, 255, 0.38);
+  --spark-muted: rgba(255, 255, 255, 0.66);
+  --spark-faint: rgba(255, 255, 255, 0.52);
   max-width: 68rem;
   margin-inline: auto;
   display: flex;
@@ -855,7 +862,7 @@ thead .spark-table-sticky-date {
 
 /* iOS Settings-style grouped inset — Recaps compact + Jump groups */
 .spark-inset-label {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1759,7 +1766,7 @@ body { background: var(--spark-bg); }
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.48);
-  font-family: "JetBrains Mono", monospace;
+  font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
 }
 .recap-kpi-value {
   margin-top: 0.25rem;
@@ -1985,7 +1992,7 @@ body { background: var(--spark-bg); }
   align-items: center;
   gap: 0.4rem;
   min-width: 0;
-  font-family: "JetBrains Mono", monospace;
+  font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -2039,9 +2046,9 @@ body { background: var(--spark-bg); }
   /* Selected rows / chips on quiet near-black surfaces. */
   --spark-selected-row: rgba(239, 90, 42, 0.18);
   --spark-selected-row-hover: rgba(239, 90, 42, 0.26);
-  --spark-text-secondary: rgba(255, 255, 255, 0.62);
-  --spark-text-meta: rgba(255, 255, 255, 0.48);
-  --spark-faint: rgba(255, 255, 255, 0.38);
+  --spark-text-secondary: rgba(255, 255, 255, 0.76);
+  --spark-text-meta: rgba(255, 255, 255, 0.64);
+  --spark-faint: rgba(255, 255, 255, 0.52);
   --spark-radius-control: 8px;
   --spark-radius-panel: 18px;
   --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);

@@ -81,7 +81,7 @@ export function PublicFormPill({
       }}
       title={PUBLIC_PILL_HINT}
     >
-      <span className="font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>
+      <span className="font-medium" style={{ color: "var(--spark-text-secondary)" }}>
         {label}
       </span>
       <span

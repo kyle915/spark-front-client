@@ -189,7 +189,7 @@ const TalentInner: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ROSTER · {filtered.length} of {all.length} BAs
@@ -202,7 +202,7 @@ const TalentInner: React.FC = () => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Live from the BA roster. Filter by city, college, or in-college
             status, then open a card for the full profile, gig history, and
@@ -299,7 +299,7 @@ const TalentInner: React.FC = () => {
       {filtered.length === 0 ? (
         <div
           className="spark-card p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No BAs match these filters.
         </div>
@@ -352,7 +352,7 @@ const TalentInner: React.FC = () => {
                         className="mono text-[9px]"
                         style={{
                           letterSpacing: "0.16em",
-                          color: "rgba(255,255,255,0.45)",
+                          color: "var(--spark-text-meta)",
                         }}
                       >
                         INACTIVE
@@ -364,7 +364,7 @@ const TalentInner: React.FC = () => {
                       className="mono text-[10px] uppercase mt-0.5 truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {b.location || b.email}
@@ -385,7 +385,7 @@ const TalentInner: React.FC = () => {
               {b.college && (
                 <p
                   className="text-[11px] mt-3 truncate"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   🎓 {b.college}
                 </p>
@@ -436,7 +436,7 @@ export default function SparkTalent() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-7xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading roster…
           </div>

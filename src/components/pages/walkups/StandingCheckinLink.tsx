@@ -70,14 +70,14 @@ const StandingCheckinLink: React.FC = () => {
             <div className="min-w-0">
               <p
                 className="mono text-[10px] mb-1"
-                style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+                style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
               >
                 SHARE WITH YOUR BAs
               </p>
               <p className="text-sm font-semibold mb-1">
                 {active?.name ? `${active.name} check-in link` : "Check-in link"}
               </p>
-              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+              <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
                 One link, every event. BAs clock in, add their store and date, and
                 file the recap from their phone — no event code, no app install.
               </p>
@@ -114,7 +114,7 @@ const StandingCheckinLink: React.FC = () => {
             <CheckinQr url={activeUrl} downloadName={`${activeCode}-checkin-qr.png`} />
             <p
               className="mono text-xs mt-3 break-all"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {activeUrl}
             </p>
@@ -125,7 +125,7 @@ const StandingCheckinLink: React.FC = () => {
       <div className="spark-card p-4">
         <p
           className="mono text-[10px] mb-3"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
         >
           STANDING CODES
         </p>
@@ -164,16 +164,16 @@ const StandingCheckinLink: React.FC = () => {
                         </span>
                       ) : null}
                     </p>
-                    <p className="mono text-xs mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    <p className="mono text-xs mt-1" style={{ color: "var(--spark-text-secondary)" }}>
                       {code}
                     </p>
-                    <p className="text-xs mt-1 break-all" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    <p className="text-xs mt-1 break-all" style={{ color: "var(--spark-text-meta)" }}>
                       {url}
                     </p>
-                    <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.62)" }}>
+                    <p className="text-xs mt-2" style={{ color: "var(--spark-text-secondary)" }}>
                       {programs.length ? programs.join(" · ") : "No programs listed"}
                     </p>
-                    <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
                       {buckets.length ? buckets.join(" · ") : "No photo buckets"}
                     </p>
                   </div>
@@ -204,13 +204,13 @@ const StandingCheckinLink: React.FC = () => {
                         {tenant.checkinTeamTitle?.trim() ||
                           `${tenant.name} · Client team recaps (no clock)`}
                       </p>
-                      <p className="mono text-xs mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+                      <p className="mono text-xs mt-1" style={{ color: "var(--spark-text-secondary)" }}>
                         {teamCode}
                       </p>
-                      <p className="text-xs mt-1 break-all" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      <p className="text-xs mt-1 break-all" style={{ color: "var(--spark-text-meta)" }}>
                         {teamUrl}
                       </p>
-                      <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.62)" }}>
+                      <p className="text-xs mt-2" style={{ color: "var(--spark-text-secondary)" }}>
                         Name, event type, recap — no clock. Counts in totals.
                       </p>
                     </div>

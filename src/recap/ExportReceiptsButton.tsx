@@ -115,7 +115,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
       : {
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(255,255,255,0.14)",
-          color: "rgba(255,255,255,0.85)",
+          color: "var(--spark-text)",
         };
 
   return (
@@ -153,7 +153,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
               </h2>
               <p
                 className="text-xs mt-1"
-                style={{ color: "rgba(255,255,255,0.6)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 Bookkeeping CSV (every BA spend with links + total) and a
                 PDF bundle of the receipt photos, captioned per shift.
@@ -184,7 +184,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
               </div>
               <p
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Defaults to the last full month. Scoped to the active
                 tenant; dates follow the event's date.
@@ -200,7 +200,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
                 style={{
                   background: "transparent",
                   border: "1px solid rgba(255,255,255,0.18)",
-                  color: "rgba(255,255,255,0.8)",
+                  color: "var(--spark-text-secondary)",
                 }}
                 onClick={() => setOpen(false)}
               >

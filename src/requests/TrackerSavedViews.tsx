@@ -103,7 +103,7 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
           {views.length === 0 ? (
             <p
               className="text-xs px-2 py-1.5"
-              style={{ color: "rgba(255,255,255,0.5)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No saved views yet — set your filters, then save them below.
             </p>
@@ -128,7 +128,7 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
                 <button
                   type="button"
                   className="text-xs px-1.5"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                   title="Delete view"
                   onClick={() =>
                     persist(views.filter((x) => x.name !== w.name))

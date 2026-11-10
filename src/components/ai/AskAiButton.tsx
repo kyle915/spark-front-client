@@ -211,7 +211,7 @@ const AskAiModal: React.FC<{
             className="mono text-[11px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-text-meta)",
             }}
             title="Close"
           >
@@ -279,7 +279,7 @@ const AskAiModal: React.FC<{
             ) : (
               <p
                 className="text-sm"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {result.reason ||
                   "Couldn't answer that from this client's data."}
@@ -339,7 +339,7 @@ const AskAiButton: React.FC<{
           variant === "text"
             ? {
                 background: "transparent",
-                color: "rgba(255,255,255,0.62)",
+                color: "var(--spark-text-secondary)",
                 border: "none",
                 padding: 0,
               }

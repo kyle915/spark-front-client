@@ -280,11 +280,11 @@ export default function NotificationBell() {
                     <p className="text-sm font-semibold">
                       ⏱ {p.baName} · +{p.minutesRequested} min
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-secondary)" }}>
                       {p.venue} · {ago(p.createdAt)}
                     </p>
                     {p.reason ? (
-                      <p className="text-xs mt-1 italic" style={{ color: "rgba(255,255,255,0.7)" }}>
+                      <p className="text-xs mt-1 italic" style={{ color: "var(--spark-text-secondary)" }}>
                         “{p.reason}”
                       </p>
                     ) : null}
@@ -336,7 +336,7 @@ export default function NotificationBell() {
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{
                               background: "transparent",
-                              color: "rgba(255,255,255,0.6)",
+                              color: "var(--spark-text-secondary)",
                               border: "1px solid var(--spark-border)",
                             }}
                           >
@@ -399,7 +399,7 @@ export default function NotificationBell() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold truncate">{n.title}</p>
                       {n.body ? (
-                        <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-secondary)" }}>
                           {n.body}
                         </p>
                       ) : null}

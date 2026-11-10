@@ -652,7 +652,7 @@ export const CommandPalette: React.FC = () => {
           {filtered.length === 0 && (
             <p
               className="px-4 py-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No matches.
             </p>
@@ -752,7 +752,7 @@ export const CommandPalette: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ↑↓ NAVIGATE · ↵ OPEN · ESC CLOSE
@@ -761,7 +761,7 @@ export const CommandPalette: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ⌘K

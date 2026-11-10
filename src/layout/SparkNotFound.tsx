@@ -25,7 +25,7 @@ export const SparkNotFound: React.FC = () => {
         </h1>
         <p
           className="mt-3 text-sm break-all"
-          style={{ color: "rgba(255,255,255,0.65)" }}
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           <span className="mono">{pathname}</span> doesn't match anything in
           Spark. The link may be mistyped or out of date.

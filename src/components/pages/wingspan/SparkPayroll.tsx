@@ -80,7 +80,7 @@ const Inner: React.FC = () => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             PAYROLL · HOURS
@@ -93,7 +93,7 @@ const Inner: React.FC = () => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             BA payouts run through Wingspan. Spark reflects the most
             recent pay cycles — drill into Payments to see individual
@@ -153,7 +153,7 @@ const Inner: React.FC = () => {
               className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_1fr] gap-3 px-4 py-3 mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
                 borderBottom: "1px solid var(--spark-border)",
               }}
             >
@@ -166,7 +166,7 @@ const Inner: React.FC = () => {
             {periods.length === 0 ? (
               <div
                 className="p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 No pay cycles returned from Wingspan yet.
               </div>
@@ -193,7 +193,7 @@ const Inner: React.FC = () => {
                       {p.label}
                     </span>
                     <span
-                      style={{ color: "rgba(255,255,255,0.75)" }}
+                      style={{ color: "var(--spark-text-secondary)" }}
                     >
                       {fmtDate(p.payDate)}
                     </span>
@@ -204,7 +204,7 @@ const Inner: React.FC = () => {
                     </span>
                     <span
                       className="tab-num"
-                      style={{ color: "rgba(255,255,255,0.75)" }}
+                      style={{ color: "var(--spark-text-secondary)" }}
                     >
                       {p.contractorCount ?? "—"}
                     </span>
@@ -235,7 +235,7 @@ const Kpi: React.FC<{
       className="mono text-[10px]"
       style={{
         letterSpacing: "0.18em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {label}
@@ -258,7 +258,7 @@ export default function SparkPayroll() {
           <h1 className="display text-3xl font-bold">Admin only.</h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Payroll is a Spark Admin surface.
           </p>
@@ -272,7 +272,7 @@ export default function SparkPayroll() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading payroll…
           </div>

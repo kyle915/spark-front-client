@@ -275,7 +275,7 @@ const ChatConversation: React.FC<{
 
   if (!thread) {
     return (
-      <div className="p-6" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <div className="p-6" style={{ color: "var(--spark-text-meta)" }}>
         Thread not found.
       </div>
     );
@@ -380,7 +380,7 @@ const ChatConversation: React.FC<{
         >
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
           >
             {thread.kind === "job" ? "JOB THREAD" : "DIRECT MESSAGE"}
           </p>
@@ -388,7 +388,7 @@ const ChatConversation: React.FC<{
             {thread.ambassadorName}
           </h3>
           {thread.kind === "job" && thread.jobName ? (
-            <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
               {thread.jobName}
             </p>
           ) : null}
@@ -404,14 +404,14 @@ const ChatConversation: React.FC<{
               onClick={() => void loadOlder()}
               disabled={olderBusy}
               className="text-xs underline"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {olderBusy ? "Loading…" : "Load earlier messages"}
             </button>
           </div>
         ) : null}
         {messages.length === 0 ? (
-          <p className="text-sm text-center" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="text-sm text-center" style={{ color: "var(--spark-text-meta)" }}>
             No messages yet. Send the first one 👋
           </p>
         ) : (
@@ -488,13 +488,13 @@ const ChatConversation: React.FC<{
                   {a.originalFilename}
                 </span>
                 {a.byteSize ? (
-                  <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                  <span style={{ color: "var(--spark-text-meta)" }}>
                     {humanSize(a.byteSize)}
                   </span>
                 ) : null}
                 <button
                   onClick={() => removeAttachment(a.localId)}
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                   aria-label="Remove attachment"
                 >
                   ✕

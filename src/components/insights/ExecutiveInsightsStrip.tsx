@@ -74,7 +74,7 @@ const Tile: React.FC<{
     </p>
     <p
       className="spark-kpi-label mt-0.5"
-      style={{ color: "rgba(255,255,255,0.62)" }}
+      style={{ color: "var(--spark-text-secondary)" }}
     >
       {label}
     </p>
@@ -372,7 +372,7 @@ const PulseCard: React.FC<{
         <div className="min-w-0">
           <p
             className="display text-[12px]"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Executive · {rangeLabel}
           </p>
@@ -417,7 +417,7 @@ const PulseCard: React.FC<{
           className="px-3 py-1.5 rounded-xl text-xs font-semibold"
           style={{
             background: "transparent",
-            color: "rgba(255,255,255,0.7)",
+            color: "var(--spark-text-secondary)",
             border: "1px solid var(--spark-border)",
             opacity: copying ? 0.5 : 1,
           }}
@@ -429,7 +429,7 @@ const PulseCard: React.FC<{
 
       <p
         className="text-sm mb-4"
-        style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.45 }}
+        style={{ color: "var(--spark-text-secondary)", lineHeight: 1.45 }}
       >
         {oneLiner}
       </p>
@@ -500,14 +500,14 @@ const PulseCard: React.FC<{
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
             <p
               className="display text-[12px]"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Top SKUs sampled · approved · structured
             </p>
             {sold > 0 && (
               <p
                 className="text-[11px]"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Products purchased (Retail + On-Prem aggregate): {fmt(sold)}
               </p>

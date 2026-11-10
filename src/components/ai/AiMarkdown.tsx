@@ -117,7 +117,7 @@ const components: Components = {
       className="my-2 pl-3 text-sm italic"
       style={{
         borderLeft: "2px solid var(--spark-border)",
-        color: "rgba(255,255,255,0.7)",
+        color: "var(--spark-text-secondary)",
       }}
     >
       {children}

@@ -135,7 +135,7 @@ const AttentionRow: React.FC<{ item: AttentionItem }> = ({ item }) => {
         <span className="spark-kpi-value spark-kpi-value-sm is-orange shrink-0">
           <CountReel value={item.count} />
         </span>
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text)" }}>
           {item.fact}
         </p>
       </div>

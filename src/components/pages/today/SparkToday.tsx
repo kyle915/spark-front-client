@@ -259,7 +259,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           >
             <p
               className="text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Map disabled — VITE_GOOGLE_MAPS_API_KEY not set.
             </p>
@@ -441,7 +441,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </span>
           <span
             className="inline-flex items-center gap-2 text-[11px]"
-            style={{ color: "rgba(255,255,255,0.68)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             <span className="inline-flex items-center gap-1">
               <span
@@ -496,14 +496,14 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               Today
               <span
                 className="mono text-xs ml-2"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {shifts.length} EVENT{shifts.length === 1 ? "" : "S"}
               </span>
             </h3>
             <p
               className="mono text-[10px] mt-1"
-              style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.55)" }}
+              style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
             >
               {clockSummary.clockedIn} CLOCKED IN · {clockSummary.clockedOut} OUT ·{" "}
               <span
@@ -533,7 +533,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           {shifts.length === 0 && (
             <li
               className="p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No events on the books today.{" "}
               <a href="/upcoming" className="underline">
@@ -585,7 +585,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       className="mono text-[10px] uppercase mt-0.5 truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.55)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {s.retailer}
@@ -594,7 +594,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                     {s.address && (
                       <p
                         className="text-xs mt-1 truncate"
-                        style={{ color: "rgba(255,255,255,0.55)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         {s.address}
                       </p>

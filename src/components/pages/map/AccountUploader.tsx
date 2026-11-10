@@ -154,7 +154,7 @@ export const AccountUploader: React.FC<{
           </p>
           <p
             className="text-sm mt-1"
-            style={{ color: "rgba(255,255,255,0.75)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             Drag a CSV or XLSX, or click to browse. Columns auto-detected:
             <span

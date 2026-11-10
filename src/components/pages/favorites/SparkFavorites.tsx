@@ -270,7 +270,7 @@ const Inner: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           FAVORITES · {favs.length} BAs
@@ -283,7 +283,7 @@ const Inner: React.FC = () => {
         </h1>
         <p
           className="mt-2"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           BAs you've starred — Spark surfaces them first on every
           applicant pool. Saved to your workspace, so the roster
@@ -408,7 +408,7 @@ const Kpi: React.FC<{
       className="mono text-[10px]"
       style={{
         letterSpacing: "0.18em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {label}
@@ -484,7 +484,7 @@ const FavCard: React.FC<{
           <p className="text-sm font-semibold truncate">{name}</p>
           <p
             className="text-xs truncate"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {row.email || "—"}
           </p>
@@ -495,7 +495,7 @@ const FavCard: React.FC<{
         <p
           className="text-xs mt-3"
           style={{
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
             borderTop: "1px solid rgba(255,255,255,0.05)",
             paddingTop: "0.6rem",
           }}
@@ -551,7 +551,7 @@ const BaCard: React.FC<{
           </p>
           <p
             className="text-xs truncate"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {row.address ?? row.user?.email ?? "—"}
           </p>
@@ -575,7 +575,7 @@ const BaCard: React.FC<{
           className="mono text-[10px] mt-2"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-text-meta)",
           }}
         >
           {row.isActive ? "ACTIVE" : "INACTIVE"}
@@ -594,7 +594,7 @@ export default function SparkFavorites() {
           <h1 className="display text-3xl font-bold">Admin only.</h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Favorites is a Spark Admin surface.
           </p>
@@ -608,7 +608,7 @@ export default function SparkFavorites() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading favorites…
           </div>

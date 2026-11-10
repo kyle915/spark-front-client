@@ -90,7 +90,7 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             PAYMENTS · WINGSPAN
@@ -103,7 +103,7 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Every disbursement we've pulled from Wingspan. To run a
             payout, head to the Wingspan dashboard.
@@ -162,7 +162,7 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
               className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr] gap-3 px-4 py-3 mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
                 borderBottom: "1px solid var(--spark-border)",
               }}
             >
@@ -175,7 +175,7 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
             {filtered.length === 0 ? (
               <div
                 className="p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {allPayments.length === 0
                   ? "No payments returned from Wingspan yet."
@@ -200,11 +200,11 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
                     </span>
                     <span
                       className="truncate text-xs"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {p.contractorEmail ?? "—"}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.75)" }}>
+                    <span style={{ color: "var(--spark-text-secondary)" }}>
                       {fmtDate(p.payDate)}
                     </span>
                     <span>
@@ -239,7 +239,7 @@ const Kpi: React.FC<{
       className="mono text-[10px]"
       style={{
         letterSpacing: "0.18em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {label}
@@ -264,7 +264,7 @@ export default function SparkPayments() {
           <h1 className="display text-3xl font-bold">Admin only.</h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Payments is a Spark Admin surface.
           </p>
@@ -278,7 +278,7 @@ export default function SparkPayments() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading payments…
           </div>

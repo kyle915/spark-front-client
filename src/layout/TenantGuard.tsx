@@ -105,7 +105,7 @@ export default function TenantRoute({ component }: TenantRouteProps) {
       >
         <p
           className="text-lg"
-          style={{ color: "rgba(255,255,255,0.85)" }}
+          style={{ color: "var(--spark-text)" }}
         >
           No companies associated with this account.
         </p>

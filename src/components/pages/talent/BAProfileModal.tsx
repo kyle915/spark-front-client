@@ -55,7 +55,7 @@ const labelMini: React.CSSProperties = {
   fontFamily: "var(--font-mono, monospace)",
   fontSize: 9,
   letterSpacing: "0.16em",
-  color: "rgba(255,255,255,0.45)",
+  color: "var(--spark-text-meta)",
   textTransform: "uppercase",
 };
 
@@ -102,7 +102,7 @@ const ProfileInner: React.FC<{
             CLOSE
           </button>
         </div>
-        <p style={{ color: "rgba(255,255,255,0.55)" }} className="text-sm">
+        <p style={{ color: "var(--spark-text-meta)" }} className="text-sm">
           This BA isn't reachable in your current workspace, or no longer
           exists.
         </p>
@@ -340,7 +340,7 @@ const ProfileInner: React.FC<{
           </p>
           <p
             className="text-sm"
-            style={{ color: "rgba(255,255,255,0.78)", whiteSpace: "pre-wrap" }}
+            style={{ color: "var(--spark-text-secondary)", whiteSpace: "pre-wrap" }}
           >
             {p.bio}
           </p>
@@ -401,7 +401,7 @@ const ProfileInner: React.FC<{
           GIG HISTORY · {p.gigHistory.length}
         </p>
         {p.gigHistory.length === 0 ? (
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
             No gigs in this workspace yet.
           </p>
         ) : (
@@ -425,7 +425,7 @@ const ProfileInner: React.FC<{
                   {g.date && (
                     <p
                       className="text-[11px]"
-                      style={{ color: "rgba(255,255,255,0.5)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {new Date(g.date).toLocaleDateString()}
                     </p>
@@ -465,7 +465,7 @@ export default function BAProfileModal({
             </div>
             <p
               className="text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading profile…
             </p>

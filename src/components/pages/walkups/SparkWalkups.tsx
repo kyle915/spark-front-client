@@ -161,7 +161,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
     return (
       <p
         className="p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.5)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         {filter === "pending"
           ? "No walk-ups waiting on review."
@@ -183,7 +183,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
             style={{ color: "var(--spark-text)" }}
           >
             {allSelected ? "☑ Deselect all" : "☐ Select all pending"}
-            <span style={{ color: "rgba(255,255,255,0.45)" }}>
+            <span style={{ color: "var(--spark-text-meta)" }}>
               {" "}
               ({pendingUuids.length})
             </span>
@@ -192,7 +192,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
             <div className="flex items-center gap-2">
               <span
                 className="mono text-[11px]"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {selectedList.length} selected
               </span>
@@ -279,14 +279,14 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
               </div>
               <p
                 className="mono text-[11px] mt-1"
-                style={{ letterSpacing: "0.06em", color: "rgba(255,255,255,0.5)" }}
+                style={{ letterSpacing: "0.06em", color: "var(--spark-text-meta)" }}
               >
                 {r.brandName} · {r.eventName}
               </p>
               {r.ambassadorEmail ? (
                 <p
                   className="mono text-[10px] mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   {r.ambassadorEmail}
                   {r.ambassadorPhone ? ` · ${r.ambassadorPhone}` : ""}
@@ -294,7 +294,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
               ) : null}
               <div
                 className="flex items-center gap-3 mt-2 flex-wrap mono text-[10px]"
-                style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "0.06em" }}
+                style={{ color: "var(--spark-text-meta)", letterSpacing: "0.06em" }}
               >
                 <span>IN {fmt(r.clockInAt)}</span>
                 <span>OUT {fmt(r.clockOutAt)}</span>
@@ -457,7 +457,7 @@ export default function SparkWalkups() {
             fallback={
               <p
                 className="p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.45)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Loading walk-ups…
               </p>

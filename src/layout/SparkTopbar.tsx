@@ -1,6 +1,14 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
 import { documentTitleFor, humanizeSegment, routeTitleFor } from "./routeTitles";
+import { createPortal } from "react-dom";
+import SparkOverlay from "@/shared/SparkOverlay";
+import {
+  SHORTCUTS,
+  WHATS_NEW,
+  hasUnseenWhatsNew,
+  markWhatsNewSeen,
+} from "./whatsNew";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
@@ -141,6 +149,16 @@ export const SparkTopbar: React.FC = () => {
     };
   }, [menuOpen]);
   const clientName = tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug);
+  const [panel, setPanel] = useState<null | "whatsNew" | "shortcuts">(null);
+  const [unseenNews, setUnseenNews] = useState(() => hasUnseenWhatsNew());
+  const openPanel = (which: "whatsNew" | "shortcuts") => {
+    setMenuOpen(false);
+    setPanel(which);
+    if (which === "whatsNew") {
+      markWhatsNewSeen();
+      setUnseenNews(false);
+    }
+  };
 
   const onLogout = () => {
     logout();
@@ -173,7 +191,7 @@ export const SparkTopbar: React.FC = () => {
           <TenantLogo
             variant="header"
             tone="dark"
-            name={tenantMeta?.requestUrlName}
+            name={clientName || tenantMeta?.requestUrlName}
             requestUrlName={tenantMeta?.requestUrlName}
             tenantSlug={tenantSlug}
             image={tenantMeta?.logo}
@@ -273,9 +291,19 @@ export const SparkTopbar: React.FC = () => {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-label="Account menu"
-            className="spark-focus-ring w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center"
+            className="spark-focus-ring relative w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center"
           >
             {initial}
+            {unseenNews ? (
+              <span
+                aria-hidden
+                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full"
+                style={{
+                  background: "var(--spark-sky)",
+                  border: "2px solid var(--spark-bg)",
+                }}
+              />
+            ) : null}
           </button>
           {menuOpen ? (
             <div
@@ -294,7 +322,7 @@ export const SparkTopbar: React.FC = () => {
               {user?.email ? (
                 <p
                   className="text-xs truncate"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
                   {user.email}
                 </p>
@@ -302,7 +330,7 @@ export const SparkTopbar: React.FC = () => {
               {!isClient && clientName ? (
                 <p
                   className="text-xs mt-2 truncate"
-                  style={{ color: "rgba(255,255,255,0.7)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   Client: {clientName}
                 </p>
@@ -311,7 +339,7 @@ export const SparkTopbar: React.FC = () => {
                 <div className="mt-3 md:hidden">
                   <p
                     className="text-xs mb-1.5"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     View as
                   </p>
@@ -331,8 +359,34 @@ export const SparkTopbar: React.FC = () => {
               <button
                 type="button"
                 role="menuitem"
+                onClick={() => openPanel("whatsNew")}
+                className="mt-3 w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-sm"
+                style={{ border: "1px solid var(--spark-border)" }}
+              >
+                <span>What's new</span>
+                {unseenNews ? (
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "var(--spark-sky)", color: "#0a0d09" }}
+                  >
+                    New
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => openPanel("shortcuts")}
+                className="mt-2 w-full flex items-center px-3 py-2 rounded-xl text-sm"
+                style={{ border: "1px solid var(--spark-border)" }}
+              >
+                Keyboard shortcuts
+              </button>
+              <button
+                type="button"
+                role="menuitem"
                 onClick={onLogout}
-                className="mt-3 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:text-error"
+                className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:text-error"
                 style={{ border: "1px solid var(--spark-border)" }}
               >
                 <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
@@ -342,6 +396,72 @@ export const SparkTopbar: React.FC = () => {
           ) : null}
         </div>
       </div>
+
+      {/* Portal: the header's backdrop blur would otherwise trap a fixed overlay. */}
+      {createPortal(
+      <SparkOverlay
+        open={panel !== null}
+        onClose={() => setPanel(null)}
+        size="md"
+        label={panel === "shortcuts" ? "Keyboard shortcuts" : "What's new"}
+      >
+        <div className="p-6 max-h-[75vh] overflow-y-auto">
+          {panel === "whatsNew" ? (
+            <>
+              <h2 className="text-xl font-semibold">What's new in Spark</h2>
+              {WHATS_NEW.map((entry) => (
+                <section key={entry.id} className="mt-4">
+                  <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                    {entry.date}
+                  </p>
+                  <p className="text-base font-semibold mt-0.5">{entry.title}</p>
+                  <ul className="mt-2 space-y-1.5 list-disc pl-5 text-sm">
+                    {entry.items.map((item) => (
+                      <li key={item} style={{ color: "var(--spark-text-secondary)" }}>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </>
+          ) : panel === "shortcuts" ? (
+            <>
+              <h2 className="text-xl font-semibold">Keyboard shortcuts</h2>
+              {SHORTCUTS.map((group) => (
+                <section key={group.scope} className="mt-4">
+                  <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                    {group.scope}
+                  </p>
+                  <div className="mt-1.5 space-y-1.5">
+                    {group.keys.map(([key, what]) => (
+                      <div key={key} className="flex items-center justify-between gap-4 text-sm">
+                        <span style={{ color: "var(--spark-text-secondary)" }}>{what}</span>
+                        <kbd
+                          className="text-xs px-2 py-1 rounded-md shrink-0"
+                          style={{ border: "1px solid var(--spark-border)" }}
+                        >
+                          {key}
+                        </kbd>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setPanel(null)}
+            className="mt-6 px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+          >
+            Close
+          </button>
+        </div>
+      </SparkOverlay>,
+      document.body,
+      )}
     </header>
   );
 };

@@ -212,7 +212,7 @@ const Inner: React.FC = () => {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 {items.length} ITEM{items.length === 1 ? "" : "S"}
@@ -257,7 +257,7 @@ const Inner: React.FC = () => {
                         className="mono text-[10px] uppercase mt-0.5 truncate"
                         style={{
                           letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.55)",
+                          color: "var(--spark-text-meta)",
                         }}
                       >
                         {r.retailer}
@@ -303,7 +303,7 @@ export default function SparkUpcomingEvents() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               NEXT 7 DAYS · APPROVED + PENDING
@@ -314,7 +314,7 @@ export default function SparkUpcomingEvents() {
             >
               {isClient ? "Your upcoming activations." : "Upcoming events."}
             </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
               Approved events + pending approvals in the next 7 days,
               grouped by day. Click a row to open the event.
             </p>
@@ -325,7 +325,7 @@ export default function SparkUpcomingEvents() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading…
             </div>

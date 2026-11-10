@@ -54,7 +54,7 @@ type ClientDetailState = {
 const CardFallback: React.FC<{ label: string }> = ({ label }) => (
   <div
     className="spark-card p-6 text-center text-sm"
-    style={{ color: "rgba(255,255,255,0.55)" }}
+    style={{ color: "var(--spark-text-meta)" }}
   >
     {label}
   </div>
@@ -75,7 +75,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         className="mono text-[10px] inline-flex items-center gap-1"
         style={{
           letterSpacing: "0.16em",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-text-meta)",
         }}
       >
         ← ALL CLIENTS
@@ -89,7 +89,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             CLIENT
@@ -102,7 +102,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {clientEmail
               ? `${clientEmail} · program performance, insights & field team.`
@@ -173,7 +173,7 @@ export default function SparkClientDetail() {
       <Layout>
         <div className="max-w-2xl">
           <h1 className="display text-3xl font-bold">Admin only.</h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             The client detail page is a Spark Admin surface.
           </p>
         </div>
@@ -186,7 +186,7 @@ export default function SparkClientDetail() {
       <Layout>
         <div className="max-w-2xl space-y-3">
           <h1 className="display text-3xl font-bold">Client not found.</h1>
-          <p style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p style={{ color: "var(--spark-text-meta)" }}>
             This link is missing a client reference.
           </p>
           <Link

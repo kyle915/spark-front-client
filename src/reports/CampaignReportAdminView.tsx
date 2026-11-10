@@ -128,12 +128,12 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
           style={{
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "rgba(255,255,255,0.4)",
+            color: "var(--spark-text-meta)",
           }}
         >
           Ask about this campaign
         </p>
-        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
           Ask a question about this campaign&apos;s data and get an answer on
           demand.
         </p>
@@ -188,7 +188,7 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
               {result.chart ? <AiChartView chart={result.chart} /> : null}
             </>
           ) : (
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
               {result.reason || "Couldn't answer that from this campaign's data."}
             </p>
           )}
@@ -251,7 +251,7 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
     return (
       <div
         className="spark-card p-10 text-center"
-        style={{ color: "rgba(255,255,255,0.6)" }}
+        style={{ color: "var(--spark-text-secondary)" }}
       >
         <p className="display text-2xl font-bold">No report available.</p>
         <p className="text-sm mt-2">
@@ -278,7 +278,7 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
           type="button"
           onClick={() => navigate(-1)}
           className="mono text-[11px]"
-          style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+          style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
         >
           ← BACK
         </button>
@@ -334,7 +334,7 @@ export default function CampaignReportAdminView() {
             fallback={
               <div
                 className="spark-card p-10 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 Loading report…
               </div>
@@ -345,7 +345,7 @@ export default function CampaignReportAdminView() {
         ) : (
           <div
             className="spark-card p-10 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Missing request id.
           </div>

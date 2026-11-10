@@ -101,7 +101,7 @@ export default function MagicLinkExchange() {
         </h1>
         {error ? (
           <>
-            <p className="text-sm mt-3" style={{ color: "rgba(255,255,255,0.7)" }}>
+            <p className="text-sm mt-3" style={{ color: "var(--spark-text-secondary)" }}>
               {error}
             </p>
             <button
@@ -116,7 +116,7 @@ export default function MagicLinkExchange() {
             </button>
           </>
         ) : (
-          <p className="text-sm mt-3" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm mt-3" style={{ color: "var(--spark-text-meta)" }}>
             We're verifying your link and signing you in.
           </p>
         )}

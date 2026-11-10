@@ -79,7 +79,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
     <div className="spark-card p-5">
       <p
         className="mono text-[10px] mb-3"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
       >
         MILEAGE REIMBURSEMENT
       </p>
@@ -104,7 +104,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
         </button>
 
         <div className="flex items-center gap-1.5">
-          <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 12 }}>$</span>
+          <span style={{ color: "var(--spark-text-meta)", fontSize: 12 }}>$</span>
           <input
             type="number"
             inputMode="decimal"
@@ -119,7 +119,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               color: "#fff",
             }}
           />
-          <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 12 }}>
+          <span style={{ color: "var(--spark-text-meta)", fontSize: 12 }}>
             / mile
           </span>
           {enabled && (
@@ -140,7 +140,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
           )}
         </div>
       </div>
-      <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>
+      <p style={{ color: "var(--spark-text-meta)", fontSize: 11 }}>
         {enabled
           ? "Assigned BAs see a Start/Stop mileage control on the mobile shift screen."
           : "Turn on to let BAs track reimbursable mileage for this gig."}
@@ -156,7 +156,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
             <thead>
               <tr
                 style={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "var(--spark-text-meta)",
                   borderBottom: "1px solid rgba(255,255,255,0.1)",
                 }}
               >
@@ -177,7 +177,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
                   </td>
                   <td
                     className="py-2 pr-3"
-                    style={{ color: "rgba(255,255,255,0.6)" }}
+                    style={{ color: "var(--spark-text-secondary)" }}
                   >
                     {s.status === "active" ? "In progress" : "Completed"}
                   </td>
@@ -196,7 +196,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
                 <td
                   className="py-2 pr-3 font-semibold"
                   colSpan={2}
-                  style={{ color: "rgba(255,255,255,0.7)" }}
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   Total · {summary.sessionCount} trip
                   {summary.sessionCount === 1 ? "" : "s"}
@@ -219,7 +219,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
       {enabled && sessions.length === 0 && (
         <p
           className="mt-4"
-          style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}
+          style={{ color: "var(--spark-text-meta)", fontSize: 12 }}
         >
           No trips logged yet.
         </p>

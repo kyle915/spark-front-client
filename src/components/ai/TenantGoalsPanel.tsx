@@ -92,7 +92,7 @@ type Tone = {
 // is a muted track with no fill (the row shows "Set a target" instead of a %).
 const toneFor = (target: number, pacePct: number): Tone => {
   if (target <= 0) {
-    return { color: "rgba(255,255,255,0.35)", track: "rgba(255,255,255,0.06)" };
+    return { color: "var(--spark-text-meta)", track: "rgba(255,255,255,0.06)" };
   }
   if (pacePct >= 100) {
     return { color: "var(--spark-lime)", track: "rgba(242,243,238,0.10)" };
@@ -126,7 +126,7 @@ const PaceRow: React.FC<{ item: GoalItem }> = ({ item }) => {
         {hasTarget ? (
           <p
             className="mono tab-num text-[12px] shrink-0"
-            style={{ color: "rgba(255,255,255,0.7)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             <span style={{ color: "var(--spark-text)", fontWeight: 700 }}>
               {fmt(item.current)}
@@ -136,7 +136,7 @@ const PaceRow: React.FC<{ item: GoalItem }> = ({ item }) => {
         ) : (
           <p
             className="mono text-[11px] shrink-0"
-            style={{ letterSpacing: "0.06em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.06em", color: "var(--spark-text-meta)" }}
           >
             Set a target
           </p>
@@ -292,7 +292,7 @@ const EditGoalsModal: React.FC<{
         </h2>
         <p
           className="text-sm mt-2 mb-4"
-          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+          style={{ color: "var(--spark-text-meta)", lineHeight: 1.5 }}
         >
           Set this year's targets for the program. Leave a field blank to clear
           its target.
@@ -327,7 +327,7 @@ const EditGoalsModal: React.FC<{
               if (!isSaving) onClose();
             }}
             className="mono text-[11px]"
-            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
             CANCEL
           </button>
@@ -335,7 +335,7 @@ const EditGoalsModal: React.FC<{
             {isSaving && (
               <span
                 className="mono text-[10px]"
-                style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
               >
                 SAVING…
               </span>
@@ -428,7 +428,7 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             </h2>
             <p
               className="text-sm mt-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No targets set for {year}.
             </p>
@@ -469,7 +469,7 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <div className="flex items-center gap-3 flex-wrap">
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             PACE TO TARGET · {year}
           </p>

@@ -100,7 +100,7 @@ const RecipientPicker: React.FC<{
           <div>
             <p
               className="mono text-[9px] px-3 pt-2 pb-1"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+              style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
             >
               GROUPS
             </p>
@@ -121,7 +121,7 @@ const RecipientPicker: React.FC<{
                   <span className="flex-1">👥 {g.name}</span>
                   <span
                     className="mono text-[9px]"
-                    style={{ color: "rgba(255,255,255,0.4)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     {count} {count === 1 ? "BA" : "BAs"}
                   </span>
@@ -132,12 +132,12 @@ const RecipientPicker: React.FC<{
         ) : null}
         <p
           className="mono text-[9px] px-3 pt-2 pb-1"
-          style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+          style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
         >
           AMBASSADORS
         </p>
         {filteredBAs.length === 0 ? (
-          <p className="px-3 py-3 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <p className="px-3 py-3 text-sm" style={{ color: "var(--spark-text-meta)" }}>
             No ambassadors found.
           </p>
         ) : (
@@ -256,7 +256,7 @@ const BroadcastComposer: React.FC<{
           <div>
             <p
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
             >
               COMMS · NEW MESSAGE
             </p>
@@ -265,14 +265,14 @@ const BroadcastComposer: React.FC<{
           <button
             onClick={onClose}
             className="text-sm px-2 py-1 rounded-lg"
-            style={{ color: "rgba(255,255,255,0.6)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             ✕
           </button>
         </div>
 
         {!tenantId ? (
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             Select a tenant first — broadcasts are scoped to the brand you're
             acting in.
           </p>
@@ -280,7 +280,7 @@ const BroadcastComposer: React.FC<{
           <>
             <p
               className="mono text-[9px] mb-1.5"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
             >
               RECIPIENTS {totalRecipients > 0 ? `· ${totalRecipients} SELECTED` : ""}
             </p>
@@ -288,7 +288,7 @@ const BroadcastComposer: React.FC<{
               fallback={
                 <div
                   className="p-4 mono text-[10px]"
-                  style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+                  style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
                 >
                   LOADING RECIPIENTS…
                 </div>
@@ -342,13 +342,13 @@ const BroadcastComposer: React.FC<{
                       {a.originalFilename}
                     </span>
                     {a.byteSize ? (
-                      <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                      <span style={{ color: "var(--spark-text-meta)" }}>
                         {humanSize(a.byteSize)}
                       </span>
                     ) : null}
                     <button
                       onClick={() => removeAttachment(a.localId)}
-                      style={{ color: "rgba(255,255,255,0.6)" }}
+                      style={{ color: "var(--spark-text-secondary)" }}
                       aria-label="Remove attachment"
                     >
                       ✕

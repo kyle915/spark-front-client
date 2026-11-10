@@ -113,7 +113,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
           WALK-UP ACCESS
         </p>
       </div>
-      <p className="text-sm mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <p className="text-sm mb-3" style={{ color: "var(--spark-text-meta)" }}>
         Give this to anyone working the event so they can clock in + file a recap
         without being assigned. They can enter the code in the app under “Clock in
         with a code,” or open the check-in link below to do it all in a browser —
@@ -140,7 +140,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
           {expiresAt ? (
             <p
               className="mono text-[10px] mb-3 text-center"
-              style={{ color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em" }}
+              style={{ color: "var(--spark-text-meta)", letterSpacing: "0.08em" }}
             >
               Valid through {new Date(expiresAt).toLocaleDateString()}
             </p>
@@ -165,7 +165,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
               </p>
               <p
                 className="text-xs break-all"
-                style={{ color: "rgba(255,255,255,0.6)" }}
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 {checkinHref}
               </p>

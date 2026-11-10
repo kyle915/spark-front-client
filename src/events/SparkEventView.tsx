@@ -207,14 +207,14 @@ const Field: React.FC<{
       className="mono text-[10px] mb-1"
       style={{
         letterSpacing: "0.18em",
-        color: "rgba(255,255,255,0.45)",
+        color: "var(--spark-text-meta)",
       }}
     >
       {label}
     </p>
     <div
       className="text-sm"
-      style={{ color: "rgba(255,255,255,0.85)" }}
+      style={{ color: "var(--spark-text)" }}
     >
       {children}
     </div>
@@ -227,11 +227,11 @@ const ContactLine: React.FC<{
   note?: string | null;
 }> = ({ name, detail, note }) => (
   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
-    <span className="font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+    <span className="font-medium" style={{ color: "var(--spark-text)" }}>
       {name}
     </span>
     {detail ? (
-      <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+      <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
         {detail}
       </span>
     ) : null}
@@ -240,7 +240,7 @@ const ContactLine: React.FC<{
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.12em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         {note}
@@ -275,7 +275,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     return (
       <div
         className="spark-card p-10 text-center max-w-3xl"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         Event not found.
       </div>
@@ -657,7 +657,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         className="mono text-[11px] inline-flex items-center gap-2 transition"
         style={{
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-text-meta)",
           textDecoration: "none",
         }}
       >
@@ -672,7 +672,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               EVENT
@@ -790,7 +790,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         {headerMeta ? (
           <p
             className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.6)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             {headerMeta}
           </p>
@@ -818,7 +818,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           </p>
           <p
             className="text-sm italic"
-            style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.55 }}
+            style={{ color: "var(--spark-text)", lineHeight: 1.55 }}
           >
             "{req.declineReason}"
           </p>
@@ -900,7 +900,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 {cb.products.length > 0 && (
                   <p
                     className="text-xs mt-1"
-                    style={{ color: "rgba(255,255,255,0.65)" }}
+                    style={{ color: "var(--spark-text-secondary)" }}
                   >
                     {cb.products.map((p) => p.name).join(", ")}
                   </p>
@@ -925,7 +925,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           </p>
           <p
             className="text-sm leading-relaxed whitespace-pre-wrap"
-            style={{ color: "rgba(255,255,255,0.85)" }}
+            style={{ color: "var(--spark-text)" }}
           >
             {notesText}
           </p>
@@ -991,7 +991,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                     {p.productType?.name && (
                       <p
                         className="text-xs truncate"
-                        style={{ color: "rgba(255,255,255,0.45)" }}
+                        style={{ color: "var(--spark-text-meta)" }}
                       >
                         {p.productType.name}
                       </p>
@@ -1016,7 +1016,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           >
             ROSTER · 0
           </p>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
             No brand ambassadors assigned yet.
           </p>
           {role.isAdmin && (
@@ -1052,7 +1052,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               {confirmedCount} CONFIRMED · {ambassadors.length - confirmedCount}{" "}
@@ -1105,7 +1105,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                   {role.isAdmin && a.email && (
                     <p
                       className="text-xs truncate"
-                      style={{ color: "rgba(255,255,255,0.45)" }}
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
                       {a.email}
                     </p>
@@ -1140,7 +1140,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           >
             RECAPS · 0
           </p>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
             No recap filed on this event yet.
           </p>
           {recapLivesOnSibling && siblingEventUuid ? (
@@ -1170,7 +1170,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
                 background: "transparent",
                 border: "none",
                 padding: 0,
@@ -1264,7 +1264,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                       className="mono text-[10px] uppercase mt-1 truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-text-meta)",
                       }}
                     >
                       {baName ? `BY ${baName} · ` : ""}
@@ -1315,14 +1315,14 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               className="mono text-[10px] mb-1"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               EVENT UUID
             </p>
             <p
               className="mono text-xs"
-              style={{ color: "rgba(255,255,255,0.65)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {event.uuid}
             </p>
@@ -1333,7 +1333,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 className="mono text-[10px] mb-1"
                 style={{
                   letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 COORDINATES
@@ -1397,7 +1397,7 @@ export default function SparkEventView() {
       <Layout>
         <div
           className="spark-card p-10 text-center max-w-3xl"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Event not found.
         </div>
@@ -1411,7 +1411,7 @@ export default function SparkEventView() {
         fallback={
           <div
             className="text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading event…
           </div>

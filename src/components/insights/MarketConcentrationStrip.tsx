@@ -63,7 +63,7 @@ const Inner: React.FC<{
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             WHERE THE PROGRAM LIVES · {rangeLabel.toUpperCase()}
@@ -77,7 +77,7 @@ const Inner: React.FC<{
         </div>
         <p
           className="mono text-[10px]"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
         >
           BY APPROVED REACH
         </p>
@@ -100,7 +100,7 @@ const Inner: React.FC<{
           >
             <span
               className="mono text-[11px] w-6"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {String(r.rank).padStart(2, "0")}
             </span>
@@ -113,7 +113,7 @@ const Inner: React.FC<{
             </span>
             <span
               className="mono text-[10px] w-12 text-right"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {r.pct}%
             </span>

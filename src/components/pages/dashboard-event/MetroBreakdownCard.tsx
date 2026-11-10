@@ -175,7 +175,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
           <h3 className="font-bold text-sm">Metro Market Breakdown</h3>
           <p
             className="mono text-[10px] mt-1"
-            style={{ letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.08em", color: "var(--spark-text-meta)" }}
           >
             WEEK-BY-WEEK · {metros.length} MARKET{metros.length === 1 ? "" : "S"}
           </p>
@@ -209,7 +209,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
             className="text-xs px-2.5 py-1 rounded-full transition hover:bg-white/5"
             style={{
               border: "1px solid rgba(255,255,255,0.14)",
-              color: "rgba(255,255,255,0.75)",
+              color: "var(--spark-text-secondary)",
               background: "transparent",
             }}
           >
@@ -218,7 +218,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
         ))}
         <span
           className="mono text-[10px] mx-1"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           OR
         </span>
@@ -237,7 +237,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
             colorScheme: "dark",
           }}
         />
-        <span style={{ color: "rgba(255,255,255,0.35)" }}>–</span>
+        <span style={{ color: "var(--spark-text-meta)" }}>–</span>
         <input
           type="date"
           value={endDate}
@@ -279,7 +279,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
       {weeks.length === 0 ? (
         <div
           className="text-xs py-6 text-center"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No activity in this date range.
         </div>
@@ -290,7 +290,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
               <tr style={{ borderBottom: "1px solid var(--spark-border, #1f2418)" }}>
                 <th
                   className="text-left py-2 pr-3 font-normal mono"
-                  style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "0.06em" }}
+                  style={{ color: "var(--spark-text-meta)", letterSpacing: "0.06em" }}
                 >
                   WEEK OF
                 </th>
@@ -298,7 +298,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
                   <th
                     key={metro}
                     className="text-right py-2 px-3 font-semibold"
-                    style={{ color: "rgba(255,255,255,0.85)" }}
+                    style={{ color: "var(--spark-text)" }}
                   >
                     {metro}
                   </th>
@@ -322,7 +322,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
                     key={`${week.isoYear}-${week.isoWeek}`}
                     style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
                   >
-                    <td className="py-2 pr-3" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    <td className="py-2 pr-3" style={{ color: "var(--spark-text-secondary)" }}>
                       {shortDate(week.weekStart)}
                     </td>
                     {metros.map((metro) => {

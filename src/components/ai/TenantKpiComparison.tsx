@@ -147,7 +147,7 @@ const DeltaNote: React.FC<{ delta: PeriodDelta }> = ({ delta }) => {
   return (
     <p
       className="text-[11px] mt-1.5 leading-snug"
-      style={{ color: "rgba(255,255,255,0.45)" }}
+      style={{ color: "var(--spark-text-meta)" }}
     >
       {note}
     </p>
@@ -185,7 +185,7 @@ const ComparisonTile: React.FC<{
         className="mono text-[9px]"
         style={{
           letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-text-meta)",
           textTransform: "uppercase",
         }}
       >
@@ -207,7 +207,7 @@ const ComparisonTile: React.FC<{
       </div>
       <p
         className="tab-num text-[12px] mt-1"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         was {fmt(previous)}
       </p>
@@ -251,7 +251,7 @@ const ConversionTile: React.FC<{
         className="mono text-[9px]"
         style={{
           letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-text-meta)",
           textTransform: "uppercase",
         }}
       >
@@ -284,7 +284,7 @@ const ConversionTile: React.FC<{
       </div>
       <p
         className="tab-num text-[12px] mt-1"
-        style={{ color: "rgba(255,255,255,0.45)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         was {previous == null ? "—" : `${previous.toFixed(1)}%`}
       </p>
@@ -316,7 +316,7 @@ const SecondaryRow: React.FC<{
           className="mono text-[9px]"
           style={{
             letterSpacing: "0.16em",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
             textTransform: "uppercase",
           }}
         >
@@ -338,7 +338,7 @@ const SecondaryRow: React.FC<{
         </p>
         <span
           className="tab-num text-[11px]"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           was {fmt(previous)}
         </span>
@@ -474,7 +474,7 @@ const TenantKpiComparison: React.FC<{
           </h2>
           <p
             className="text-[13px] mt-1"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             {comparison.currentLabel} vs {comparison.previousLabel}
             {scopeNote ? ` · ${scopeNote}` : ""}
@@ -484,7 +484,7 @@ const TenantKpiComparison: React.FC<{
               className="mono text-[10px] mt-1.5"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               {comparison.sparseNote}
@@ -495,7 +495,7 @@ const TenantKpiComparison: React.FC<{
               className="mono text-[10px] mt-1.5"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               {audienceGap} recaps didn't all ask first-time / brand-aware

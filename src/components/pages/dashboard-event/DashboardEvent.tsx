@@ -132,7 +132,7 @@ function DashboardInner() {
                 className="px-3 py-2 rounded-xl text-sm font-medium"
                 style={{
                   background: "transparent",
-                  color: "rgba(255,255,255,0.7)",
+                  color: "var(--spark-text-secondary)",
                   border: "1px solid var(--spark-border)",
                   textDecoration: "none",
                 }}

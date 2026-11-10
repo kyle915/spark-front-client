@@ -7,7 +7,7 @@ import {
   type RecapMetricEdit,
 } from "@/recap/recapEditHistory";
 
-const muted = { color: "rgba(255,255,255,0.6)" };
+const muted = { color: "var(--spark-text-secondary)" };
 
 export function RecapEditHistorySheet({
   open,
@@ -50,7 +50,7 @@ export function RecapEditHistorySheet({
               </span>
             </header>
             {batch.reason ? (
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
+              <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
                 Reason: {batch.reason}
               </p>
             ) : null}
@@ -61,7 +61,7 @@ export function RecapEditHistorySheet({
                   <li key={change.id} className="text-sm">
                     <div style={muted}>{change.fieldLabel}</div>
                     <div className="mono">
-                      <span style={{ color: "rgba(255,255,255,0.55)" }}>
+                      <span style={{ color: "var(--spark-text-meta)" }}>
                         {change.oldValue ?? "—"}
                       </span>
                       {" → "}

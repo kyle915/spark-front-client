@@ -72,7 +72,7 @@ export default function ActivationPlanPipelineStrip({
               className="truncate"
               style={{
                 fontSize: compact ? 10 : 11,
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta)",
               }}
             >
               {stage.label}

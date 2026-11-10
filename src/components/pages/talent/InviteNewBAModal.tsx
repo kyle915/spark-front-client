@@ -87,7 +87,7 @@ export default function InviteNewBAModal({ onClose, onInvited }: Props) {
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             INVITE A BRAND AMBASSADOR
@@ -97,7 +97,7 @@ export default function InviteNewBAModal({ onClose, onInvited }: Props) {
           </h2>
           <p
             className="text-[12px] mt-1.5"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             We&rsquo;ll email a magic-link sign-up. They finish account
             setup themselves (name, password, address).
@@ -108,7 +108,7 @@ export default function InviteNewBAModal({ onClose, onInvited }: Props) {
           <div>
             <label
               className="label-mini block mb-1.5"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Email
             </label>

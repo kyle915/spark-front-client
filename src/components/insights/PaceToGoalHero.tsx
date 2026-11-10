@@ -157,7 +157,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
         <div>
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
           >
             PACE TO GOAL · {year}
           </p>
@@ -176,7 +176,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
               className="mono text-[10px] px-3 py-1.5 rounded-lg"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
                 border: "1px solid var(--spark-border)",
               }}
             >
@@ -190,7 +190,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
               className="mono text-[10px] px-3 py-1.5 rounded-lg"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.7)",
+                color: "var(--spark-text-secondary)",
                 border: "1px solid var(--spark-border)",
                 background: "transparent",
               }}
@@ -277,7 +277,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
           <label className="flex-1 min-w-[160px]">
             <span
               className="mono text-[10px] block mb-1"
-              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
             >
               {primary.label.toUpperCase()} TARGET
             </span>
@@ -307,7 +307,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
             type="button"
             onClick={() => setEditing(false)}
             className="px-4 py-2 rounded-xl text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Cancel
           </button>
@@ -344,7 +344,7 @@ const Tile: React.FC<{
   >
     <p
       className="mono text-[9px]"
-      style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+      style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
     >
       {label.toUpperCase()}
     </p>
@@ -358,7 +358,7 @@ const Tile: React.FC<{
     {hint && (
       <p
         className="text-[10px] mt-0.5 truncate"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
         title={hint}
       >
         {hint}

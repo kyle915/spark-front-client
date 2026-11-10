@@ -159,14 +159,14 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             SHIFT REPLAY
           </p>
           <h2
             className="text-lg font-semibold mt-1"
-            style={{ color: "rgba(255,255,255,0.92)" }}
+            style={{ color: "var(--spark-text)" }}
           >
             {points.length} ping{points.length === 1 ? "" : "s"} on the ground
           </h2>

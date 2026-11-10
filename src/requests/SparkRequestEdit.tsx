@@ -147,7 +147,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     return (
       <div
         className="spark-card p-10 text-center max-w-3xl"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-text-meta)" }}
       >
         Request not found.
       </div>
@@ -251,7 +251,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             EDIT REQUEST · {reqId}
@@ -264,7 +264,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </h1>
           <p
             className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Edit the common fields here. For products, store managers,
             and other details use the full form.
@@ -278,7 +278,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             style={{
               letterSpacing: "0.18em",
               background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.7)",
+              color: "var(--spark-text-secondary)",
               border: "1px solid var(--spark-border)",
             }}
           >
@@ -304,7 +304,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px] block mb-1"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
               }}
             >
               DATE *
@@ -327,7 +327,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px] block mb-1"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
               }}
             >
               START TIME *
@@ -348,7 +348,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px] block mb-1"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
               }}
             >
               END TIME *
@@ -374,7 +374,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             className="mono text-[10px] block mb-1"
             style={{
               letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.5)",
+              color: "var(--spark-text-meta)",
             }}
           >
             TIME ZONE *
@@ -400,7 +400,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             className="mono text-[10px] mt-1.5"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ⏱ VENUE LOCAL TIME, NOT YOUR BROWSER — CHANGE TO FIX A MIS-SET
@@ -425,7 +425,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             className="mono text-[10px] block mb-1"
             style={{
               letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.5)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ADDRESS *
@@ -449,7 +449,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px] block mb-1"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--spark-text-meta)",
               }}
             >
               ROUTED TO (RMM)
@@ -510,7 +510,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-text-meta)",
               }}
             >
               PRODUCTS · {request.products.length} (READ-ONLY HERE)
@@ -540,7 +540,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       letterSpacing: "0.12em",
                       background: "rgba(255,255,255,0.04)",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      color: "rgba(255,255,255,0.75)",
+                      color: "var(--spark-text-secondary)",
                     }}
                   >
                     {p.name?.toUpperCase()}
@@ -566,7 +566,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-text-meta)",
           }}
         >
           ↗ FULL FORM
@@ -595,7 +595,7 @@ export default function SparkRequestEdit() {
       <Layout>
         <div
           className="spark-card p-10 text-center max-w-3xl"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Request not found.
         </div>
@@ -608,7 +608,7 @@ export default function SparkRequestEdit() {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm max-w-3xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading…
           </div>

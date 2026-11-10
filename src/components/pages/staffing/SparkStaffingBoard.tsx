@@ -118,7 +118,7 @@ const BulkBaPicker: React.FC<{
           style={{ borderBottom: "1px solid var(--spark-border)" }}
         >
           <h3 className="text-base font-bold">Assign a BA</h3>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
             Books this BA onto the {count} selected shift
             {count === 1 ? "" : "s"}.
           </p>
@@ -142,7 +142,7 @@ const BulkBaPicker: React.FC<{
           {people.length === 0 ? (
             <p
               className="p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.5)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No active BAs match.
             </p>
@@ -408,7 +408,7 @@ const Inner: React.FC<{
         </span>
         <span
           className="mono text-[11px]"
-          style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em" }}
+          style={{ color: "var(--spark-text-meta)", letterSpacing: "0.1em" }}
         >
           {shifts.length} SHIFT{shifts.length === 1 ? "" : "S"}{" "}
           {filtersActive ? `SHOWN · ${allShifts.length} THIS WEEK` : "THIS WEEK"}
@@ -478,7 +478,7 @@ const Inner: React.FC<{
             type="button"
             onClick={clearFilters}
             className="text-sm px-2 py-2 underline"
-            style={{ color: "rgba(255,255,255,0.6)" }}
+            style={{ color: "var(--spark-text-secondary)" }}
           >
             Clear filters
           </button>
@@ -501,7 +501,7 @@ const Inner: React.FC<{
       )}
 
       {bulkMode && (
-        <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-xs mb-3" style={{ color: "var(--spark-text-meta)" }}>
           Tap the shifts you want to fill, then choose one BA to book onto all
           of them.
         </p>
@@ -510,7 +510,7 @@ const Inner: React.FC<{
       {rows.length === 0 ? (
         <p
           className="p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.5)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {filtersActive
             ? "No shifts match these filters."
@@ -529,7 +529,7 @@ const Inner: React.FC<{
             >
               <div
                 className="mono text-[10px] px-3 py-2"
-                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+                style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
               >
                 VENUE
               </div>
@@ -539,13 +539,13 @@ const Inner: React.FC<{
                   className="mono text-[10px] px-2 py-2 text-center"
                   style={{
                     letterSpacing: "0.1em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                     borderLeft: "1px solid var(--spark-border)",
                   }}
                 >
                   {d.toLocaleDateString(undefined, { weekday: "short" })}
                   <br />
-                  <span style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span style={{ color: "var(--spark-text-meta)" }}>
                     {d.toLocaleDateString(undefined, {
                       month: "numeric",
                       day: "numeric",
@@ -571,7 +571,7 @@ const Inner: React.FC<{
                     className="mono text-[9px] truncate"
                     style={{
                       letterSpacing: "0.1em",
-                      color: "rgba(255,255,255,0.4)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {row.brand}
@@ -609,7 +609,7 @@ const Inner: React.FC<{
                             {s.startTime ? (
                               <p
                                 className="mono text-[9px] mb-1"
-                                style={{ color: "rgba(255,255,255,0.5)" }}
+                                style={{ color: "var(--spark-text-meta)" }}
                               >
                                 {fmtTime(s.startTime)}
                                 {s.endTime ? `–${fmtTime(s.endTime)}` : ""}
@@ -688,7 +688,7 @@ const Inner: React.FC<{
                                 style={{
                                   letterSpacing: "0.06em",
                                   padding: "3px 0",
-                                  color: "rgba(255,255,255,0.6)",
+                                  color: "var(--spark-text-secondary)",
                                   background: "transparent",
                                   border: "1px solid var(--spark-border)",
                                   opacity: isRebooking && rebookingId === s.eventId ? 0.5 : 1,
@@ -726,7 +726,7 @@ const Inner: React.FC<{
             <button
               onClick={() => setSelected(new Set())}
               className="mono text-[11px]"
-              style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em" }}
+              style={{ color: "var(--spark-text-meta)", letterSpacing: "0.08em" }}
             >
               CLEAR
             </button>
@@ -805,14 +805,14 @@ export default function SparkStaffingBoard() {
     <div className="p-5 md:p-8">
       <p
         className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
       >
         WORKSPACE
       </p>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
         <div>
           <h1 className="display text-2xl font-bold">Staffing Board</h1>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
             Who's on which shift this week. Tap a slot to assign.
           </p>
         </div>
@@ -856,7 +856,7 @@ export default function SparkStaffingBoard() {
         fallback={
           <p
             className="p-10 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--spark-text-meta)" }}
           >
             Loading the week…
           </p>

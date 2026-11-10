@@ -168,7 +168,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.6)",
+              color: "var(--spark-text-secondary)",
             }}
           >
             ASSIGNED {assigned} · CONFIRMED {confirmed}
@@ -197,7 +197,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
       {suggestions.length === 0 ? (
         <p
           className="text-xs"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           No BA suggestions for this shift right now.
         </p>
@@ -265,7 +265,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                         className="mono text-[10px]"
                         style={{
                           letterSpacing: "0.12em",
-                          color: "rgba(255,255,255,0.5)",
+                          color: "var(--spark-text-meta)",
                         }}
                       >
                         {s.distanceMiles.toFixed(1)} mi
@@ -354,7 +354,7 @@ const SmartStaffingPanel: React.FC<{
       fallback={
         <div
           className="spark-card p-5 text-xs"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "var(--spark-text-meta)" }}
         >
           Loading smart staffing…
         </div>

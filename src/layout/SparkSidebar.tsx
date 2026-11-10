@@ -709,7 +709,7 @@ export const SparkSidebar: React.FC = () => {
               </span>
               <span
                 className="text-sm truncate flex-1"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-text-meta)" }}
               >
                 {tenantDisplay}
               </span>
@@ -750,7 +750,7 @@ export const SparkSidebar: React.FC = () => {
           </p>
           <p
             className="mono text-[10px] truncate"
-            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+            style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
           >
             {isClient ? "CLIENT VIEW" : "IGNITE PRODUCTIONS"}
           </p>

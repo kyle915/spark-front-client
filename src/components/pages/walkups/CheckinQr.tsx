@@ -56,7 +56,7 @@ export default function CheckinQr({
       <div className="min-w-0">
         <p
           className="mono text-[10px] uppercase"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
         >
           Scan to open check-in
         </p>

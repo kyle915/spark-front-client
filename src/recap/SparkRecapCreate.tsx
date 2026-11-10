@@ -719,7 +719,7 @@ export default function SparkRecapCreate() {
         <h1 className="display text-3xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
           Tell us how it went.
         </h1>
-        <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--spark-text-secondary)" }}>
           {isAdmin
             ? "Filling on behalf of a BA? Toggle that below."
             : "We'll auto-link this recap to your assigned shift."}
@@ -742,7 +742,7 @@ export default function SparkRecapCreate() {
               <p className="display font-bold text-lg">
                 {selectedEvent.request?.retailer?.name ?? selectedEvent.name}
               </p>
-              <p className="mono text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "0.12em" }}>
+              <p className="mono text-[11px] mt-1" style={{ color: "var(--spark-text-secondary)", letterSpacing: "0.12em" }}>
                 {fmtEventWhen(selectedEvent.date)} · {selectedEvent.address}
               </p>
             </div>
@@ -778,13 +778,13 @@ export default function SparkRecapCreate() {
                     </span>
                   )}
                   <p className="text-sm font-semibold">{evt.request?.retailer?.name ?? evt.name}</p>
-                  <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}>
+                  <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
                     {fmtEventWhen(evt.date)} · {evt.address?.slice(0, 60)}
                   </p>
                 </button>
               ))}
               {events.length === 0 && (
-                <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
+                <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
                   NO MATCHES
                 </p>
               )}
@@ -800,7 +800,7 @@ export default function SparkRecapCreate() {
       {useCustomFlow && (
         <Card title="RECAP TEMPLATE">
           <label className="block">
-            <span className="mono text-[10px] block mb-1.5" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+            <span className="mono text-[10px] block mb-1.5" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
               CLIENT RECAP TEMPLATE
             </span>
             <select
@@ -844,7 +844,7 @@ export default function SparkRecapCreate() {
       {isAdmin && !useCustomFlow && (
         <Card title="IMPORT FROM CONNECTEAM">
           <div className="flex items-start justify-between gap-3 flex-wrap">
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
+            <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
               Drop a Connecteam recap PDF to auto-fill the numbers and notes
               below. Review everything before submitting — values you've
               already typed are kept.
@@ -945,7 +945,7 @@ export default function SparkRecapCreate() {
       )}
       {useCustomFlow && !selectedTemplate && (
         <Card title="FIELDS">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             Pick a recap template above to load this client's fields.
           </p>
         </Card>
@@ -971,7 +971,7 @@ export default function SparkRecapCreate() {
         <Suspense
           fallback={
             <Card title="PRODUCTS SAMPLED">
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+              <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
                 Loading products…
               </p>
             </Card>
@@ -1030,7 +1030,7 @@ export default function SparkRecapCreate() {
             <Suspense
               fallback={
                 <Card title="PRODUCTS SAMPLED">
-                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
                     Loading products…
                   </p>
                 </Card>
@@ -1207,7 +1207,7 @@ export default function SparkRecapCreate() {
             }
           />
         </div>
-        <p className="mono text-[10px] mt-3" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+        <p className="mono text-[10px] mt-3" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
           {pendingFiles.length} FILE{pendingFiles.length === 1 ? "" : "S"} READY
         </p>
         {pendingFiles.length > 0 && (
@@ -1221,10 +1221,10 @@ export default function SparkRecapCreate() {
                   border: "1px solid var(--spark-border)",
                 }}
               >
-                <span className="mono text-[11px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>
+                <span className="mono text-[11px] truncate" style={{ color: "var(--spark-text-secondary)" }}>
                   {isReceiptLikeCategory(item.categoryName) ? "📎" : "📷"}{" "}
                   {item.blob.split("/").pop()}
-                  <span style={{ color: "rgba(255,255,255,0.45)" }}>
+                  <span style={{ color: "var(--spark-text-meta)" }}>
                     {" "}
                     · {item.categoryName}
                   </span>
@@ -1239,7 +1239,7 @@ export default function SparkRecapCreate() {
                     letterSpacing: "0.14em",
                     background: "rgba(255,255,255,0.05)",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    color: "rgba(255,255,255,0.65)",
+                    color: "var(--spark-text-secondary)",
                   }}
                 >
                   REMOVE
@@ -1249,7 +1249,7 @@ export default function SparkRecapCreate() {
           </div>
         )}
         {pendingFiles.length > 0 && (
-          <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="text-xs mt-2" style={{ color: "var(--spark-text-meta)" }}>
             Files upload to GCS as you pick them — they only get attached to the recap when you submit. Tap Upload again to add more into the selected section.
           </p>
         )}
@@ -1264,7 +1264,7 @@ export default function SparkRecapCreate() {
           borderTop: "1px solid var(--spark-border)",
         }}
       >
-        <div className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+        <div className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
           {selectedEvent ? `EVENT · ${(selectedEvent.request?.retailer?.name ?? selectedEvent.name).toUpperCase()}` : "PICK AN EVENT TO SUBMIT"}
         </div>
         <button
@@ -1289,7 +1289,7 @@ const inputCls =
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <label className="block">
-    <span className="mono text-[10px] block mb-1.5" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+    <span className="mono text-[10px] block mb-1.5" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
       {label.toUpperCase()}
     </span>
     {children}
@@ -1349,7 +1349,7 @@ const CustomTemplateFields: React.FC<{
   if (sections.length === 0) {
     return (
       <Card title="FIELDS">
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
           This template has no fields configured.
         </p>
       </Card>
@@ -1369,7 +1369,7 @@ const CustomTemplateFields: React.FC<{
                 return (
                   <div key={id} className="sm:col-span-2">
                     <Field label={label}>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
                         Attach this in “Photos + Files” below.
                       </p>
                     </Field>
@@ -1385,7 +1385,7 @@ const CustomTemplateFields: React.FC<{
                           <Field label={label}>
                             <p
                               className="text-sm"
-                              style={{ color: "rgba(255,255,255,0.6)" }}
+                              style={{ color: "var(--spark-text-secondary)" }}
                             >
                               Loading products…
                             </p>
@@ -1475,7 +1475,7 @@ const CustomTemplateFields: React.FC<{
                           <Field label={label}>
                             <p
                               className="text-sm"
-                              style={{ color: "rgba(255,255,255,0.6)" }}
+                              style={{ color: "var(--spark-text-secondary)" }}
                             >
                               Loading products…
                             </p>
@@ -1676,7 +1676,7 @@ const ProductsSampledPillsField: React.FC<{
 
   return (
     <Field label={label}>
-      <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <p className="text-sm mb-2" style={{ color: "var(--spark-text-secondary)" }}>
         {productSampleQtyHelper(qtyContextName ?? label)}
         {searchable
           ? ` Search filters the list (${selected.length} selected).`
@@ -1739,7 +1739,7 @@ const ProductsSampledPillsField: React.FC<{
         })}
       </div>
       {searchable && visiblePills.length === 0 ? (
-        <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <p className="text-sm mt-2" style={{ color: "var(--spark-text-meta)" }}>
           No SKUs match “{skuFilter.trim()}”.
         </p>
       ) : null}
@@ -1839,7 +1839,7 @@ const ProductSamplesSection: React.FC<{
   if (products.length === 0) {
     return (
       <Card title="PRODUCTS SAMPLED">
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
           No products are set up for this client yet — add SKUs in Products
           to track units sampled.
         </p>
@@ -1849,7 +1849,7 @@ const ProductSamplesSection: React.FC<{
 
   return (
     <Card title="PRODUCTS SAMPLED">
-      <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
         Units sampled per SKU. Leave a product at 0 if none went out.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1892,7 +1892,7 @@ const ProductSamplesSection: React.FC<{
                     className="mono text-[10px] mt-0.5 truncate"
                     style={{
                       letterSpacing: "0.12em",
-                      color: "rgba(255,255,255,0.5)",
+                      color: "var(--spark-text-meta)",
                     }}
                   >
                     {p.productType.name.toUpperCase()}

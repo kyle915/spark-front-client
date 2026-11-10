@@ -353,13 +353,13 @@ export default function SparkNewClient() {
     <Layout>
       <div className="space-y-6 max-w-3xl" style={{ paddingBottom: "6rem" }}>
         <div>
-          <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
+          <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
             ONBOARDING · NEW BRAND
           </p>
           <h1 className="display text-4xl font-bold mt-2" style={{ letterSpacing: "-0.04em" }}>
             Launch a client.
           </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             The Drink Lyft pattern, codified: brand basics, a cloned recap
             template, the Product catalog, and a standing walk-up code —
             previewed before anything goes live. Requests stay Pending and
@@ -391,7 +391,7 @@ export default function SparkNewClient() {
             <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>
               LIVE · {launched.tenantName.toUpperCase()}
             </p>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+            <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
               Standing walk-up code <strong>{launched.checkinCode}</strong> — minted
               once and never rotated. Share the link or QR with the field team.
             </p>
@@ -422,7 +422,7 @@ export default function SparkNewClient() {
                     <label className="label-mini block mb-1.5">Exact slug *</label>
                     <input style={inputStyle} value={draft.slug} onChange={(e) => set("slug", e.target.value)} placeholder="drink-lyft" />
                     {slugError && <p className="text-xs mt-1" style={{ color: "#ef5a2a" }}>{slugError}</p>}
-                    <p className="mono text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>RESOLVED EXACTLY — NEVER A SUBSTRING MATCH.</p>
+                    <p className="mono text-[10px] mt-1" style={{ color: "var(--spark-text-meta)" }}>RESOLVED EXACTLY — NEVER A SUBSTRING MATCH.</p>
                   </div>
                   <div>
                     <label className="label-mini block mb-1.5">Logo URL (optional)</label>
@@ -442,7 +442,7 @@ export default function SparkNewClient() {
             {step === "template" && (
               <div className="spark-card p-6 space-y-5">
                 <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>02 · CLONE RECAP TEMPLATE</p>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+                <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                   Pick a donor tenant&apos;s recap form. Fields, photo buckets, and
                   location mode are cloned onto the new tenant — the donor is
                   never changed. Products Sampled pills read the new catalog.
@@ -473,7 +473,7 @@ export default function SparkNewClient() {
             {step === "catalog" && (
               <div className="spark-card p-6 space-y-5">
                 <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>03 · PRODUCT CATALOG</p>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+                <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                   Paste a CSV (name, sku, image_url) or a Shopify collection
                   JSON. Imports are idempotent by SKU — re-running adds
                   nothing. Only paste SKUs that really exist.
@@ -496,7 +496,7 @@ export default function SparkNewClient() {
             {step === "walkup" && (
               <div className="spark-card p-6 space-y-5">
                 <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>04 · STANDING WALK-UP CODE</p>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+                <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                   One durable code, minted once at launch and never rotated.
                   If this slug already has a code, launch keeps it.
                 </p>
@@ -504,7 +504,7 @@ export default function SparkNewClient() {
                   <label className="label-mini block mb-1.5">Code prefix (1–4 characters)</label>
                   <input style={inputStyle} value={draft.codePrefix} onChange={(e) => set("codePrefix", e.target.value.toUpperCase())} placeholder={deriveCodePrefix(draft.slug, draft.name)} maxLength={4} />
                 </div>
-                <p className="mono text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <p className="mono text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
                   WILL SERVE https://client.igniteproductions.co/checkin/{(draft.codePrefix || deriveCodePrefix(draft.slug, draft.name) || "SP")}-XXXXXX
                 </p>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -532,7 +532,7 @@ export default function SparkNewClient() {
               <div className="spark-card p-6 space-y-5">
                 <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>05 · PREVIEW & LAUNCH</p>
                 {!preview ? (
-                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                     Render the check-in/recap form for {draft.name || "the new tenant"} before
                     marking it live. Preview writes nothing.
                   </p>
@@ -551,7 +551,7 @@ export default function SparkNewClient() {
                     {preview.sections.map((section) => (
                       <div key={section.name} className="rounded-xl p-4" style={{ border: "1px solid var(--spark-border)" }}>
                         <p className="font-semibold">{section.name}</p>
-                        <ul className="mt-2 space-y-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+                        <ul className="mt-2 space-y-1" style={{ color: "var(--spark-text-secondary)" }}>
                           {section.fields.map((f) => (
                             <li key={f.name}>{f.name} <span className="mono text-[10px]">[{f.type}]{f.required ? " *" : ""}</span></li>
                           ))}
@@ -572,7 +572,7 @@ export default function SparkNewClient() {
             )}
 
             <div className="flex items-center justify-between">
-              <button type="button" onClick={stepIndex === 0 ? () => navigate("/clients") : back} className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+              <button type="button" onClick={stepIndex === 0 ? () => navigate("/clients") : back} className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
                 ← BACK
               </button>
               {step !== "review" && (

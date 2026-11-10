@@ -217,7 +217,7 @@ const Inner: React.FC = () => {
                 style={{
                   fontSize: 10,
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 <th className="px-4 py-3">SUBMITTED</th>
@@ -235,7 +235,7 @@ const Inner: React.FC = () => {
                   <td
                     colSpan={7}
                     className="px-4 py-10 text-center text-sm"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
+                    style={{ color: "var(--spark-text-meta)" }}
                   >
                     Nothing submitted in the last 7 days.
                   </td>
@@ -284,7 +284,7 @@ const Inner: React.FC = () => {
                       className="px-4 py-3 mono text-xs"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.7)",
+                        color: "var(--spark-text-secondary)",
                       }}
                     >
                       {r.reqId}
@@ -347,7 +347,7 @@ export default function SparkRecentSubmissions() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             LAST 7 DAYS
@@ -358,7 +358,7 @@ export default function SparkRecentSubmissions() {
           >
             Recent submissions.
           </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             Every request that came in this week, sorted by submission
             time. Approve pending requests inline — no admin access needed.
           </p>
@@ -367,7 +367,7 @@ export default function SparkRecentSubmissions() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               Loading…
             </div>

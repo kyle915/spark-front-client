@@ -142,7 +142,7 @@ const SuggestionsInner: React.FC<{
           className="mono text-[9px]"
           style={{
             letterSpacing: "0.16em",
-            color: "rgba(255,255,255,0.35)",
+            color: "var(--spark-text-meta)",
           }}
         >
           TAP TO {verb.toUpperCase()}
@@ -231,7 +231,7 @@ const SuggestionsInner: React.FC<{
                     className="mono text-[9px] shrink-0"
                     style={{
                       letterSpacing: "0.12em",
-                      color: "rgba(255,255,255,0.6)",
+                      color: "var(--spark-text-secondary)",
                       background: "rgba(255,255,255,0.05)",
                       border: "1px solid var(--spark-border)",
                       padding: "1px 6px",
@@ -276,7 +276,7 @@ const SuggestionsInner: React.FC<{
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta)",
                   }}
                 >
                   …
@@ -326,7 +326,7 @@ const SuggestionsSection: React.FC<{
         className="px-5 py-4 mono text-[10px]"
         style={{
           letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
           borderBottom: "1px solid var(--spark-border)",
         }}
       >
@@ -735,7 +735,7 @@ const Inner: React.FC<{
             className="mono text-[10px] mb-1"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-text-meta)",
             }}
           >
             ADD A BRAND AMBASSADOR
@@ -817,7 +817,7 @@ const Inner: React.FC<{
           {filtered.length === 0 && (
             <p
               className="p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               No active BAs match.
             </p>
@@ -896,7 +896,7 @@ const Inner: React.FC<{
                       className="mono text-[10px] truncate"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-text-meta)",
                         maxWidth: "100%",
                       }}
                     >
@@ -953,7 +953,7 @@ const Inner: React.FC<{
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.18em",
-                      color: "rgba(255,255,255,0.55)",
+                      color: "var(--spark-text-meta)",
                       paddingRight: 4,
                     }}
                   >
@@ -1059,7 +1059,7 @@ export default function InviteBAModal({
     <Suspense
       fallback={
         <SparkOverlay onClose={onClose} size="md" label="Loading">
-          <p style={{ color: "rgba(255,255,255,0.55)" }}>Loading BAs…</p>
+          <p style={{ color: "var(--spark-text-meta)" }}>Loading BAs…</p>
         </SparkOverlay>
       }
     >

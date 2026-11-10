@@ -124,7 +124,7 @@ export default function DeleteRequestModal({
           {label && (
             <p
               className="text-sm mt-1 truncate"
-              style={{ color: "rgba(255,255,255,0.6)" }}
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               {label}
             </p>
@@ -132,7 +132,7 @@ export default function DeleteRequestModal({
         </div>
 
         <div className="p-5 space-y-3">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
             It'll be removed from the tracker, lists, and exports. This is
             recoverable — the record and any recaps are kept, so reach out if
             you need it restored.

@@ -53,8 +53,8 @@ const STATUS_MIX: Array<{
   label: string;
   color: string;
 }> = [
-  { slug: "pending", label: "Pending", color: "rgba(255,255,255,0.35)" },
-  { slug: "queue", label: "Queue", color: "rgba(255,255,255,0.45)" },
+  { slug: "pending", label: "Pending", color: "var(--spark-text-meta)" },
+  { slug: "queue", label: "Queue", color: "var(--spark-text-meta)" },
   { slug: "approved", label: "Approved", color: "var(--spark-sky, #7dd3fc)" },
   { slug: "scheduled", label: "Scheduled", color: "rgba(242,243,238,0.75)" },
   { slug: "done", label: "Done", color: "var(--spark-lime)" },
@@ -104,7 +104,7 @@ const StatusMixBar: React.FC<{ rows: NonNullable<PlanRequestNode>[] }> = ({
     segments.push({
       slug: "other",
       label: "Other",
-      color: "rgba(255,255,255,0.22)",
+      color: "var(--spark-text-meta)",
       count: other,
     });
   }

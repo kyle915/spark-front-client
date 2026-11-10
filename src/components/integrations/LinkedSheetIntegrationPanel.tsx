@@ -48,7 +48,7 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
 
   if (!tenant) {
     return (
-      <div className="spark-card p-5 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <div className="spark-card p-5 text-sm" style={{ color: "var(--spark-text-secondary)" }}>
         Select a tenant to view sheet integration status.
       </div>
     );
@@ -94,7 +94,7 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
         <h3 className="display text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
           {tenant.name}
         </h3>
-        <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+        <p className="text-sm mt-1" style={{ color: "var(--spark-text-secondary)" }}>
           Spark-form and request rows append to the linked sheet automatically.
           Torch / Pivot / Famus BA confirmation Send stamps are a separate Apps
           Script path — see{" "}
@@ -111,7 +111,7 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl p-3" style={{ border: "1px solid var(--spark-border)" }}>
-          <p className="mono text-[9px]" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+          <p className="mono text-[9px]" style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
             STATUS
           </p>
           <p className="text-sm font-semibold mt-1" style={{ color: statusColor }}>
@@ -119,13 +119,13 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
           </p>
         </div>
         <div className="rounded-xl p-3" style={{ border: "1px solid var(--spark-border)" }}>
-          <p className="mono text-[9px]" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+          <p className="mono text-[9px]" style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
             LAST SYNC
           </p>
           <p className="text-sm font-semibold mt-1">{fmtWhen(lastSync)}</p>
         </div>
         <div className="rounded-xl p-3" style={{ border: "1px solid var(--spark-border)" }}>
-          <p className="mono text-[9px]" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+          <p className="mono text-[9px]" style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}>
             LAST REQUEST
           </p>
           <p className="text-sm font-semibold mt-1">
@@ -150,7 +150,7 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
           style={{
             border: "1px solid rgba(239, 90, 42, 0.35)",
             background: "rgba(239, 90, 42, 0.08)",
-            color: "rgba(255,255,255,0.85)",
+            color: "var(--spark-text)",
           }}
         >
           <p className="mono text-[9px] mb-1" style={{ letterSpacing: "0.14em", color: "#ef5a2a" }}>
@@ -171,7 +171,7 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
           Open linked sheet →
         </a>
       ) : (
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
           Link a sheet in Settings below to enable auto-append from spark-form.
         </p>
       )}

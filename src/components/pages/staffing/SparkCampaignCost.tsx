@@ -67,7 +67,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
 
   if (!report || rows.length === 0) {
     return (
-      <p className="p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+      <p className="p-10 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
         No campaign activity in this range.
       </p>
     );
@@ -82,7 +82,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
   return (
     <>
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <span className="mono text-[11px]" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}>
+        <span className="mono text-[11px]" style={{ letterSpacing: "0.12em", color: "var(--spark-text-secondary)" }}>
           {rows.length} CAMPAIGN{rows.length === 1 ? "" : "S"} · {money(report.totalCost)} COST
           {" "}({money(report.totalLabor)} labor · {money(report.totalSpend)} spend)
         </span>
@@ -98,7 +98,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                   className="mono text-[10px] px-3 py-2"
                   style={{
                     letterSpacing: "0.12em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-text-meta)",
                     textAlign: i === 0 ? "left" : "right",
                   }}
                 >
@@ -114,7 +114,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                 <tr key={r.tenantId} style={{ borderBottom: "1px solid var(--spark-border)" }}>
                   <td className="px-3 py-2">
                     <p className="font-medium">{r.tenantName}</p>
-                    <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <p className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
                       {r.shifts} BA-shift{r.shifts === 1 ? "" : "s"}
                       {r.eventsMissingRates > 0 ? (
                         <span title="Some events have BAs with no booked rate — labor is understated" style={{ color: "var(--spark-gold)" }}>
@@ -193,7 +193,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
         </table>
       </div>
 
-      <p className="text-[11px] mt-4" style={{ color: "rgba(255,255,255,0.4)" }}>
+      <p className="text-[11px] mt-4" style={{ color: "var(--spark-text-meta)" }}>
         Labor = clocked hours × booked rate; spend = expense receipts. Both are
         real. Enter what you billed the client under Revenue to see margin —
         that figure stays in your browser (Spark doesn't store client pricing).
@@ -221,23 +221,23 @@ export default function SparkCampaignCost() {
 
   return (
     <div className="p-5 md:p-8">
-      <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
+      <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}>
         WORKSPACE
       </p>
       <div className="mb-5">
         <h1 className="display text-2xl font-bold">Campaign cost &amp; margin</h1>
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
           What each program cost — labor + spend, straight from the clock and
           receipt data. Add revenue to see margin.
         </p>
       </div>
 
       <div className="flex items-end gap-3 flex-wrap mb-5">
-        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
           FROM
           <input type="date" value={start} max={end} onChange={(e) => setStart(e.target.value)} style={inputStyle} />
         </label>
-        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <label className="flex flex-col gap-1 text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
           TO
           <input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} style={inputStyle} />
         </label>
@@ -252,7 +252,7 @@ export default function SparkCampaignCost() {
 
       <Suspense
         fallback={
-          <p className="p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="p-10 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
             Computing costs…
           </p>
         }

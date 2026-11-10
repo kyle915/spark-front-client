@@ -27,7 +27,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.16em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-text-meta)",
         }}
       >
         ACTIVATION PLANS · PIPELINE
@@ -47,7 +47,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 className="mono text-[9px] shrink-0"
                 style={{
                   letterSpacing: "0.12em",
-                  color: "rgba(255,255,255,0.45)",
+                  color: "var(--spark-text-meta)",
                 }}
               >
                 TRACKER

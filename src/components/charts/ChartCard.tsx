@@ -55,7 +55,7 @@ export default function ChartCard({
           {subtitle ? (
             <p
               className="text-xs mt-1.5"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {subtitle}
             </p>
