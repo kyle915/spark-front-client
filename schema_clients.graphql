@@ -5391,6 +5391,7 @@ type Mutation {
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
+  setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
   exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
   sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
@@ -6145,6 +6146,7 @@ type Query {
   upcomingShiftsForConfirmation(tenantId: ID!): [ConfirmationShiftOption!]!
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
+  myReportSubscription(tenantId: ID = null): Boolean!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
@@ -7843,6 +7845,19 @@ type SetMyPreferencesResponse {
   success: Boolean!
   message: String!
   preferences: UserPreferencesType
+  clientMutationId: ID
+}
+
+input SetMyReportSubscriptionInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  subscribed: Boolean!
+}
+
+type MyReportSubscriptionResponse {
+  success: Boolean!
+  message: String!
+  subscribed: Boolean!
   clientMutationId: ID
 }
 
