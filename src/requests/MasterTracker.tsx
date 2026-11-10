@@ -30,6 +30,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
 import TrackerPlanAttachBar from "@/plans/TrackerPlanAttachBar";
+import TrackerBulkBar from "./TrackerBulkBar";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import SparkGhostButton from "@/shared/SparkGhostButton";
@@ -2436,6 +2437,17 @@ export default function MasterTracker() {
         )}
 
         {/* Table */}
+        {isAdmin && selectedIds.size > 0 ? (
+          <TrackerBulkBar
+            rows={visibleRows
+              .filter((r) => selectedIds.has(r.id))
+              .map((r) => ({ id: r.id, statusSlug: r.statusSlug, eventId: r.eventId }))}
+            onDone={() => {
+              clearSelection();
+              setRefetchTick((t) => t + 1);
+            }}
+          />
+        ) : null}
         {isAdmin && tenantId && selectedIds.size > 0 ? (
           <TrackerPlanAttachBar
             tenantId={tenantId}
