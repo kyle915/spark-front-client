@@ -1,3 +1,4 @@
+import MyShiftsCard from "./MyShiftsCard";
 import {
   useCallback,
   useEffect,
@@ -1919,6 +1920,9 @@ function CheckedInFlow({
           <p style={errText}>{msg}</p>
         ) : null}
       </div>
+
+      {/* The BA's own recent shifts: hours + review / approved / paid. */}
+      <MyShiftsCard code={code} token={token} />
 
       {/* Another gig — deliberately outside the Time Clock card so it cannot
           be mistaken for an action on this shift. Same start-another flow as
