@@ -1,3 +1,4 @@
+import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
@@ -575,9 +576,12 @@ const FieldPhotos: React.FC = () => {
     () =>
       (data?.customRecaps?.edges ?? [])
         .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n?.heroImageUrl))
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((n) => ({ n, src: pickFieldPhoto(n.customRecapFiles) }))
+        // Recaps whose only images are receipts / product spend are skipped.
+        .filter((x): x is { n: typeof x.n; src: string } => Boolean(x.src))
         .slice(0, 24)
-        .map((n) => {
+        .map(({ n, src }) => {
           const day = n.eventDate
             ? new Date(`${String(n.eventDate).slice(0, 10)}T12:00:00`).toLocaleDateString(
                 undefined,
@@ -586,7 +590,7 @@ const FieldPhotos: React.FC = () => {
             : "";
           const where = [n.eventRetailer, n.eventState].filter(Boolean).join(", ");
           return {
-            url: thumbUrl(String(n.heroImageUrl), 800),
+            url: thumbUrl(src, 800) || src,
             caption: [where, day].filter(Boolean).join(" · "),
           };
         }),
