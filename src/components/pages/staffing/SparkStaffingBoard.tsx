@@ -67,7 +67,7 @@ type AssignTarget = {
  * active BAs (searchable) and hands the chosen ambassador global-id back.
  * Loads its own query lazily so the board isn't slowed by it until opened.
  */
-const BulkBaPicker: React.FC<{
+export const BulkBaPicker: React.FC<{
   count: number;
   busy: boolean;
   onPick: (ambassadorId: string, name: string) => void;
