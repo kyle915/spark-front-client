@@ -1792,6 +1792,70 @@ const RecapCustomViewInner = ({
             </div>
           </div>
 
+          {/* Photos first: the recap leads with what the activation looked
+              like. Up to five photos; any tile opens the full-size viewer,
+              the last one jumps to the Photos tab when there are more. */}
+          {!isEditingValues && flatImages.length > 0 ? (
+            <div
+              className="grid gap-2"
+              data-no-print=""
+              style={{
+                gridTemplateColumns:
+                  flatImages.length === 1 ? "1fr" : "repeat(4, minmax(0, 1fr))",
+                gridAutoRows: flatImages.length === 1 ? "minmax(220px, 46vh)" : "minmax(110px, 19vh)",
+              }}
+            >
+              {flatImages.slice(0, 5).map((file, i) => {
+                const src = displaySrc(file);
+                const more = i === 4 ? flatImages.length - 5 : 0;
+                const lead = i === 0 && flatImages.length > 1;
+                return (
+                  <button
+                    key={file.id}
+                    type="button"
+                    onClick={() =>
+                      more > 0 ? setDetailTab("photos") : setPreviewIndex(i)
+                    }
+                    aria-label={
+                      more > 0
+                        ? `See all ${flatImages.length} photos`
+                        : `Open photo ${i + 1} of ${flatImages.length}`
+                    }
+                    className="relative overflow-hidden rounded-xl"
+                    style={{
+                      gridColumn: lead ? "span 2" : undefined,
+                      gridRow: lead ? "span 2" : undefined,
+                      background: "rgba(20, 22, 15, 0.06)",
+                      padding: 0,
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <img
+                      src={thumbUrl(src, 800) || src}
+                      alt=""
+                      loading={i === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                      onError={(event) => {
+                        const img = event.currentTarget;
+                        if (src && img.src !== src) img.src = src;
+                      }}
+                    />
+                    {more > 0 ? (
+                      <span
+                        className="absolute inset-0 grid place-items-center text-base font-semibold"
+                        style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
+                      >
+                        +{more} more
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           <RecapDetailChrome>
             <RecapDetailTabs
               value={detailTab}

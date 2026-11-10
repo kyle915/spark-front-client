@@ -242,7 +242,13 @@ export const SparkTopbar: React.FC = () => {
           <span className="spark-crumb-sep hidden sm:inline" aria-hidden>
             /
           </span>
-          <span className="spark-crumb-current">{crumb.current}</span>
+          <span
+            className="spark-crumb-current truncate"
+            style={{ maxWidth: "min(38vw, 420px)" }}
+            title={crumb.current}
+          >
+            {crumb.current}
+          </span>
         </nav>
         </div>
 
