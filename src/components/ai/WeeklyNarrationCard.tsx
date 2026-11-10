@@ -1,3 +1,4 @@
+import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { Suspense } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
@@ -162,8 +163,8 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 const WeeklyNarrationCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   if (!tenantId) return null;
   return (
-    <ErrorBoundary fallback={null}>
-      <Suspense fallback={null}>
+    <ErrorBoundary fallback={<PanelSkeleton />}>
+      <Suspense fallback={<PanelSkeleton />}>
         <WeeklyNarrationBody tenantId={tenantId} />
       </Suspense>
     </ErrorBoundary>

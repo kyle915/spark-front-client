@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
+import { documentTitleFor, humanizeSegment, routeTitleFor } from "./routeTitles";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
@@ -27,36 +28,29 @@ type Role = "admin" | "client";
 
 type CrumbParts = { parent: string; current: string };
 
-const useBreadcrumb = (): CrumbParts => {
+const useBreadcrumb = (isClient: boolean): CrumbParts => {
   const { pathname } = useLocation();
   const pageCrumb = usePageCrumb();
   return useMemo(() => {
     if (pageCrumb) {
       return { parent: pageCrumb.parent, current: pageCrumb.title };
     }
-    if (
-      pathname === "/" ||
-      pathname === "/insights" ||
-      pathname === "/client-dashboard"
-    ) {
-      return { parent: "Spark", current: "Dashboard" };
-    }
+    const known = routeTitleFor(pathname, { isClient });
+    if (known) return { parent: known.parent, current: known.title };
     const parts = pathname.split("/").filter(Boolean);
     const last = parts[parts.length - 1] ?? "";
     if (looksLikeRouteId(last)) {
       const parent = parts[parts.length - 2] ?? "page";
       return {
-        parent: parent.replace(/-/g, " "),
+        parent: humanizeSegment(parent),
         current: "Detail",
       };
     }
-    const current = last.replace(/-/g, " ");
+    const current = humanizeSegment(last);
     const parent =
-      parts.length > 1
-        ? parts[parts.length - 2].replace(/-/g, " ")
-        : "Spark";
+      parts.length > 1 ? humanizeSegment(parts[parts.length - 2]) : "Spark";
     return { parent, current };
-  }, [pathname, pageCrumb]);
+  }, [pathname, pageCrumb, isClient]);
 };
 
 function PublicFormPillSlot({ className = "" }: { className?: string }) {
@@ -108,8 +102,14 @@ export const SparkTopbar: React.FC = () => {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const crumb = useBreadcrumb();
   const { role, isClient, setRole, canToggleRole } = useSparkRole();
+  const crumb = useBreadcrumb(isClient);
+  // Browser tab title follows the page, so several Spark tabs are tellable apart.
+  useEffect(() => {
+    const page =
+      crumb.current === "Detail" ? `${crumb.parent} detail` : crumb.current;
+    document.title = documentTitleFor(page);
+  }, [crumb.current, crumb.parent]);
   const { toggle: toggleNav } = useMobileNav();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)

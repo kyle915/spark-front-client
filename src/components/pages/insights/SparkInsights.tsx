@@ -774,7 +774,7 @@ export function InsightsBody({
             onStateSelect={(code) => setSelectedState(code)}
           />
 
-          <Suspense fallback={null}>
+          <Suspense fallback={<PanelSkeleton />}>
             <TenantKpiComparison
               tenantId={tenantId}
               period={comparisonPeriod}
@@ -782,7 +782,7 @@ export function InsightsBody({
             />
           </Suspense>
 
-          <Suspense fallback={null}>
+          <Suspense fallback={<PanelSkeleton />}>
             <TenantInsightsPanel
               tenantId={tenantId}
               startDate={startDate}
@@ -790,7 +790,7 @@ export function InsightsBody({
             />
           </Suspense>
 
-          <Suspense fallback={null}>
+          <Suspense fallback={<PanelSkeleton />}>
             <ActivationBreakdown
               tenantId={tenantId}
               startDate={startDate}
@@ -810,10 +810,10 @@ export function InsightsBody({
             }
           >
             <div className="space-y-6 lg:space-y-8">
-              <Suspense fallback={null}>
+              <Suspense fallback={<PanelSkeleton />}>
                 <TenantSentimentCard tenantId={tenantId} />
               </Suspense>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PanelSkeleton />}>
                 <TenantGeoHeatmap
                   tenantId={tenantId}
                   startDate={startDate}
@@ -822,7 +822,7 @@ export function InsightsBody({
                   onStateSelect={(code) => setSelectedState(code)}
                 />
               </Suspense>
-              <Suspense fallback={null}>
+              <Suspense fallback={<PanelSkeleton />}>
                 <MetroBreakdownCard tenantId={tenantId} />
               </Suspense>
             </div>

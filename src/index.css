@@ -817,12 +817,13 @@ body:has(.spark-login-page) {
   border-radius: var(--spark-radius-card, 14px);
 }
 .spark-fade-in {
-  animation: spark-fade-in var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  /* Short and subtle: a long fade made every page look greyed-out on load. */
+  animation: spark-fade-in 0.16s ease-out both;
 }
 @keyframes spark-fade-in {
   from {
-    opacity: 0;
-    transform: translateY(6px);
+    opacity: 0.6;
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -2384,4 +2385,17 @@ main:not(.recap-doc-body)::-webkit-scrollbar-thumb,
 .text-\[9px\],
 .text-\[10px\] {
   font-size: 11px;
+}
+
+/* Lists: a quiet row highlight so the eye can follow a row across wide
+   tables, and aligned digits in numeric cells. */
+main table tbody tr {
+  transition: background-color 120ms ease;
+}
+main table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.035);
+}
+main table td,
+main table th {
+  font-variant-numeric: tabular-nums;
 }

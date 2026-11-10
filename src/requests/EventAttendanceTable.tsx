@@ -1,3 +1,4 @@
+import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { Suspense, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { EventAttendanceQuery } from "@/api/queries/EventAttendanceQuery";
@@ -153,7 +154,7 @@ const EventAttendanceTable: React.FC<{ eventUuid: string }> = ({
   const [refreshKey, setRefreshKey] = useState(0);
   if (!eventUuid) return null;
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PanelSkeleton />}>
       <Inner
         eventUuid={eventUuid}
         refreshKey={refreshKey}
