@@ -3262,7 +3262,11 @@ export default function SparkRecapsList() {
           eyebrow={`RECAPS · ${windowLabel}`}
           title="Recaps"
           titleClassName="text-3xl md:text-4xl font-bold"
-          support="Scan, flag-check, approve. Advisory badges never auto-approve."
+          support={
+            isClient
+              ? "Every approved recap from your program — photos, numbers and notes."
+              : "Scan, flag-check, approve. Advisory badges never auto-approve."
+          }
           action={
             !isClient ? (
               <div className="flex flex-wrap gap-2">
@@ -3974,7 +3978,9 @@ export default function SparkRecapsList() {
               </option>
             ))}
           </select>
-          {tenantId && (
+          {/* Internal filters (regional manager, ambassador name) are for
+              Ignite staff; brand users filter by retailer, state and date. */}
+          {tenantId && !isClient && (
             <Suspense fallback={null}>
               <RmmFilterDropdown
                 tenantId={tenantId}
@@ -3983,7 +3989,7 @@ export default function SparkRecapsList() {
               />
             </Suspense>
           )}
-          {tenantId && (
+          {tenantId && !isClient && (
             <BaNameFilter
               tenantId={tenantId}
               value={baName}

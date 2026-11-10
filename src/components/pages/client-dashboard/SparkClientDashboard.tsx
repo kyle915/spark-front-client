@@ -11,6 +11,8 @@
  * Legacy /insights redirects here (#performance).
  */
 
+import ClientProgramSnapshot from "./ClientProgramSnapshot";
+import { tenantDisplayName } from "@/utils/tenantDisplayName";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import SparkEmptyState from "@/shared/SparkEmptyState";
@@ -519,16 +521,16 @@ const ClientInner: React.FC = () => {
         <TenantLogo
           variant="header"
           tone="dark"
-          name={tenantMeta?.requestUrlName}
+          name={tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug) || tenantMeta?.requestUrlName}
           requestUrlName={tenantMeta?.requestUrlName}
           tenantSlug={tenantSlug}
           image={tenantMeta?.logo}
         />
         <div className="min-w-0 flex-1">
           <SparkPageHeader
-            eyebrow="YOUR PROGRAM · MONTH AHEAD"
+            eyebrow="YOUR PROGRAM"
             title="Home"
-            support="What's ahead this month. Performance lives on its own tab."
+            support="What happened in the last 30 days, and what's coming up."
             action={
               <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
                 <ActiveTenantAskAi />
@@ -614,6 +616,11 @@ const ClientInner: React.FC = () => {
       )}
 
       {activeTab === "overview" && (<>
+        {tenantId ? (
+          <Suspense fallback={<PanelSkeleton label="Loading your program" />}>
+            <ClientProgramSnapshot tenantId={tenantId} />
+          </Suspense>
+        ) : null}
 
       {torch ? (
         <DashboardProgramSwitch program={program} onChange={choose} />
