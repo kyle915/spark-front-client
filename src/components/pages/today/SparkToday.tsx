@@ -535,7 +535,10 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               className="p-6 text-center text-sm"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              No events on the books today.
+              No events on the books today.{" "}
+              <a href="/upcoming" className="underline">
+                See upcoming events
+              </a>
             </li>
           )}
           {shifts.map((s) => {

@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
@@ -247,12 +248,27 @@ const Inner: React.FC<{
       </div>
 
       {shifts.length === 0 ? (
-        <p
-          className="p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.5)" }}
-        >
-          No staffed shifts today.
-        </p>
+        <div className="p-10 text-center">
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+            No staffed shifts today.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Link
+              to="/schedule"
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            >
+              Open the Staffing Board
+            </Link>
+            <Link
+              to="/upcoming"
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
+            >
+              See upcoming events
+            </Link>
+          </div>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           {shifts.map((s) => (

@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { Suspense, useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
@@ -157,7 +158,28 @@ const Inner: React.FC = () => {
 
   if (groups.length === 0) {
     return (
-      <SparkEmptyState title="Nothing on the schedule for the next 7 days." />
+      <SparkEmptyState
+        title="Nothing on the schedule for the next 7 days."
+        body="New requests show here once they're approved or pending."
+        action={
+          <>
+            <Link
+              to="/requests/create"
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            >
+              Create a request
+            </Link>
+            <Link
+              to="/requests/list"
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
+            >
+              Open the tracker
+            </Link>
+          </>
+        }
+      />
     );
   }
 
