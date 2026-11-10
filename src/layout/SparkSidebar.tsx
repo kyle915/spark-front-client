@@ -145,7 +145,8 @@ const SECTIONS: NavSection[] = [
         label: "Master Tracker",
         Icon: ListChecks,
         to: "/requests/list",
-        clientLabel: "Master Tracker",
+        // Matches the page title brand users see ("My requests.").
+        clientLabel: "My Requests",
       },
       {
         label: "All Plans",

@@ -4,7 +4,7 @@ import SparkGhostButton from "@/shared/SparkGhostButton";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
-import { Suspense, useMemo } from "react";
+import { Suspense, createContext, useContext, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQuery";
 import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
@@ -85,6 +85,85 @@ const engagementFromCustom = (n: {
   return 0;
 };
 
+// ---------------------------------------------------------------------------
+// Date range — one window for the KPI strip and every chart on the page.
+// ---------------------------------------------------------------------------
+type RangeKey = "30" | "90" | "180" | "ytd" | "custom";
+type ReportsRange = { start: Date; end: Date; label: string };
+
+const ymdLocal = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const parseYmd = (v: string): Date | null => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const [y, m, d] = v.split("-").map(Number);
+  const out = new Date(y, m - 1, d);
+  return Number.isNaN(out.getTime()) ? null : out;
+};
+
+function buildReportsRange(
+  key: RangeKey,
+  customFrom: string,
+  customTo: string,
+  now: Date = new Date(),
+): ReportsRange {
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const startOf = (d: Date) => {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  };
+  if (key === "custom") {
+    const from = parseYmd(customFrom);
+    const to = parseYmd(customTo);
+    if (from && to && from <= to) {
+      const e = new Date(to);
+      e.setHours(23, 59, 59, 999);
+      return { start: startOf(from), end: e, label: `${customFrom} → ${customTo}` };
+    }
+    key = "90";
+  }
+  if (key === "ytd") {
+    return {
+      start: new Date(now.getFullYear(), 0, 1),
+      end,
+      label: "Year to date",
+    };
+  }
+  const days = Number(key);
+  const start = startOf(now);
+  start.setDate(start.getDate() - days);
+  return { start, end, label: `Last ${days} days` };
+}
+
+/** Contiguous Monday-start week buckets covering the range (4–53 weeks). */
+const weekBuckets = (range: ReportsRange) => {
+  const start = new Date(range.start);
+  const dow = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - dow);
+  const weeks = Math.min(
+    53,
+    Math.max(4, Math.ceil((range.end.getTime() - start.getTime()) / (7 * 86_400_000))),
+  );
+  const buckets: { key: string; count: number }[] = [];
+  for (let i = 0; i < weeks; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i * 7);
+    buckets.push({ key: isoWeekKey(d), count: 0 });
+  }
+  return buckets;
+};
+
+const ReportsRangeContext = createContext<ReportsRange>(
+  buildReportsRange("90", "", ""),
+);
+const useReportsRange = () => useContext(ReportsRangeContext);
+
 const useReportsRequestRows = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<ReportsRequestsChartQueryType>(
@@ -140,23 +219,13 @@ const useReportsEngagementRows = (): EngagementRow[] => {
 
 const EventsPerWeekChart: React.FC = () => {
   const rows = useReportsRequestRows();
+  const range = useReportsRange();
   const { labels, values } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cutoff = new Date(today);
-    cutoff.setDate(today.getDate() - 7 * 12); // 12 weeks
-
-    // Build a list of 12 contiguous week buckets (oldest → newest)
-    // so the X-axis shows zero-count weeks instead of gaps.
-    const buckets: { key: string; count: number }[] = [];
-    const start = new Date(cutoff);
-    const dow = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - dow);
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i * 7);
-      buckets.push({ key: isoWeekKey(d), count: 0 });
-    }
+    const cutoff = range.start;
+    const today = range.end;
+    // Contiguous week buckets (oldest → newest) so the X-axis shows
+    // zero-count weeks instead of gaps.
+    const buckets = weekBuckets(range);
     const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
 
     for (const r of rows) {
@@ -172,7 +241,7 @@ const EventsPerWeekChart: React.FC = () => {
       labels: buckets.map((b) => b.key),
       values: buckets.map((b) => b.count),
     };
-  }, [rows]);
+  }, [rows, range]);
 
   const chartData: ChartData<"bar"> = {
     labels,
@@ -225,12 +294,14 @@ const EventsPerWeekChart: React.FC = () => {
 
 const ActivationMixChart: React.FC = () => {
   const rows = useReportsRequestRows();
+  const range = useReportsRange();
   const { labels, values } = useMemo(() => {
-    const cutoff = Date.now() - 90 * 86_400_000;
+    const cutoff = range.start.getTime();
+    const until = range.end.getTime();
     const counts = new Map<string, number>();
     for (const r of rows) {
       const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
-      if (!Number.isFinite(t) || t < cutoff) continue;
+      if (!Number.isFinite(t) || t < cutoff || t > until) continue;
       const key = r.requestType?.name ?? "Other";
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
@@ -239,7 +310,7 @@ const ActivationMixChart: React.FC = () => {
       labels: sorted.map(([k]) => k),
       values: sorted.map(([, v]) => v),
     };
-  }, [rows]);
+  }, [rows, range]);
 
   const chartData: ChartData<"doughnut"> = {
     labels,
@@ -277,7 +348,7 @@ const ActivationMixChart: React.FC = () => {
       className="grid place-items-center h-full text-xs"
       style={{ color: "rgba(255,255,255,0.45)" }}
     >
-      No requests in the last 90 days.
+      No requests in this date range.
     </div>
   ) : (
     <Doughnut data={chartData} options={options} />
@@ -290,21 +361,11 @@ const ActivationMixChart: React.FC = () => {
 
 const ConsumersSampledChart: React.FC = () => {
   const rows = useReportsEngagementRows();
+  const range = useReportsRange();
   const { labels, values } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cutoff = new Date(today);
-    cutoff.setDate(today.getDate() - 7 * 12);
-
-    const buckets: { key: string; count: number }[] = [];
-    const start = new Date(cutoff);
-    const dow = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - dow);
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i * 7);
-      buckets.push({ key: isoWeekKey(d), count: 0 });
-    }
+    const cutoff = range.start;
+    const today = range.end;
+    const buckets = weekBuckets(range);
     const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
 
     for (const r of rows) {
@@ -320,7 +381,7 @@ const ConsumersSampledChart: React.FC = () => {
       labels: buckets.map((b) => b.key),
       values: buckets.map((b) => b.count),
     };
-  }, [rows]);
+  }, [rows, range]);
 
   const total = values.reduce((s, v) => s + v, 0);
   if (total === 0) {
@@ -385,13 +446,15 @@ const ConsumersSampledChart: React.FC = () => {
 
 const TopRetailersChart: React.FC = () => {
   const rows = useReportsEngagementRows();
+  const range = useReportsRange();
   const { labels, values } = useMemo(() => {
-    const cutoff = Date.now() - 90 * 86_400_000;
+    const cutoff = range.start.getTime();
+    const until = range.end.getTime();
     const totals = new Map<string, number>();
     for (const r of rows) {
       const raw = r.eventDate ?? r.createdAt;
       const t = raw ? new Date(raw).getTime() : NaN;
-      if (!Number.isFinite(t) || t < cutoff) continue;
+      if (!Number.isFinite(t) || t < cutoff || t > until) continue;
       if (r.consumers <= 0) continue;
       const name = r.eventRetailer || "Unknown";
       totals.set(name, (totals.get(name) ?? 0) + r.consumers);
@@ -403,7 +466,7 @@ const TopRetailersChart: React.FC = () => {
       labels: sorted.map(([k]) => k),
       values: sorted.map(([, v]) => v),
     };
-  }, [rows]);
+  }, [rows, range]);
 
   if (values.length === 0 || values.every((v) => v === 0)) {
     return (
@@ -411,7 +474,7 @@ const TopRetailersChart: React.FC = () => {
         className="grid place-items-center h-full text-xs"
         style={{ color: "rgba(255,255,255,0.45)" }}
       >
-        No retailer activity in the last 90 days.
+        No retailer activity in this date range.
       </div>
     );
   }
@@ -472,21 +535,12 @@ const TopRetailersChart: React.FC = () => {
  *
  * KPI strip wired to dashboard metrics. Four charts wired to live data
  * (slim ReportsRequestsChartQuery + ReportsEngagementsChartQuery).
- * Scheduled-exports tiles remain visual-only until the exports backend
- * ships (tracked in REBUILD-PLAN.md).
+ * One date range (presets or custom) drives the KPI strip and every chart.
  */
 
 const fmtNum = (v: number | null | undefined) =>
   typeof v === "number" ? v.toLocaleString() : "—";
 
-const SCHEDULED = [
-  { name: "Monthly brand recap", category: "Brand performance", method: "PDF · Email", cadence: "daily" },
-  { name: "$/Sample by market", category: "Market & RMM", method: "CSV · Sheets", cadence: "weekly" },
-  { name: "Per-SKU performance", category: "Brand performance", method: "CSV", cadence: "weekly" },
-  { name: "Payroll summary", category: "Financial", method: "CSV", cadence: "weekly" },
-  { name: "Activation pipeline", category: "Operations", method: "PDF", cadence: "daily" },
-  { name: "RMM scorecard", category: "Market & RMM", method: "PDF · Slack", cadence: "weekly" },
-];
 
 const ChartCard: React.FC<{
   title: string;
@@ -539,24 +593,36 @@ const ChartCard: React.FC<{
 
 export default function SparkReports() {
   const { tenantId } = useAuthStore();
+  const [rangeKey, setRangeKey] = useState<RangeKey>("90");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const range = useMemo(
+    () => buildReportsRange(rangeKey, customFrom, customTo),
+    [rangeKey, customFrom, customTo],
+  );
+  const customIncomplete =
+    rangeKey === "custom" && range.label.startsWith("Last ");
+  const startYmd = ymdLocal(range.start);
+  const endYmd = ymdLocal(range.end);
   const filters: DashboardFilters = useMemo(
     () => ({
       distributorIds: [],
       rmmAsignedId: null,
       quarter: null,
-      startDate: null,
-      endDate: null,
+      startDate: startYmd,
+      endDate: endYmd,
     }),
-    [],
+    [startYmd, endYmd],
   );
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
   const m = dashboard.metrics;
 
   return (
     <Layout>
+      <ReportsRangeContext.Provider value={range}>
       <div className="space-y-6 max-w-7xl spark-fade-in">
         <SparkPageHeader
-          eyebrow="REPORTS · LAST 90 DAYS"
+          eyebrow={`REPORTS · ${range.label.toUpperCase()}`}
           title="The numbers."
           support="Live from the analytics warehouse. Consumers counted are sampled — not reach or samples handed out."
           action={
@@ -569,10 +635,79 @@ export default function SparkReports() {
           }
         />
 
+        {/* Date range */}
+        <div className="flex items-center gap-2 flex-wrap print:hidden">
+          {(
+            [
+              ["30", "30 days"],
+              ["90", "90 days"],
+              ["180", "6 months"],
+              ["ytd", "Year to date"],
+              ["custom", "Custom"],
+            ] as [RangeKey, string][]
+          ).map(([key, label]) => {
+            const on = rangeKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setRangeKey(key)}
+                aria-pressed={on}
+                className="text-sm rounded-xl px-3 py-1.5 font-semibold"
+                style={{
+                  color: on ? "#0a0d09" : "var(--spark-text)",
+                  background: on ? "var(--spark-lime)" : "transparent",
+                  border: `1px solid ${on ? "var(--spark-lime)" : "var(--spark-border)"}`,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+          {rangeKey === "custom" && (
+            <span className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo || undefined}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                aria-label="Range start"
+                className="rounded-lg px-2 py-1"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  colorScheme: "dark",
+                }}
+              />
+              <span style={{ color: "rgba(255,255,255,0.5)" }}>to</span>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+                aria-label="Range end"
+                className="rounded-lg px-2 py-1"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  colorScheme: "dark",
+                }}
+              />
+              {customIncomplete && (
+                <span style={{ color: "rgba(255,255,255,0.55)" }}>
+                  Pick both dates — showing the last 90 days until then.
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+
         {/* KPI strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="spark-card p-4">
-            <p className="label-mini">EVENTS · 90D</p>
+            <p className="label-mini">EVENTS</p>
             <p
               className="tab-num text-3xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
@@ -614,7 +749,7 @@ export default function SparkReports() {
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2">
             <ChartCard
-              title="Requests per week · last 12 weeks"
+              title="Requests per week"
               subtitle="Inbound activation volume."
             >
               <EventsPerWeekChart />
@@ -622,7 +757,7 @@ export default function SparkReports() {
           </div>
           <ChartCard
             title="Activation mix"
-            subtitle="90d share by type."
+            subtitle="Share by type in this range."
           >
             <ActivationMixChart />
           </ChartCard>
@@ -630,76 +765,22 @@ export default function SparkReports() {
 
         <div className="grid lg:grid-cols-2 gap-5">
           <ChartCard
-            title="Consumers sampled · last 12 weeks"
+            title="Consumers sampled per week"
             subtitle="Sum of recap engagements per week."
             tall
           >
             <ConsumersSampledChart />
           </ChartCard>
           <ChartCard
-            title="Top retailers · last 90 days"
+            title="Top retailers"
             subtitle="Consumers sampled — top 8 retailers."
             tall
           >
             <TopRetailersChart />
           </ChartCard>
         </div>
-
-        {/* Scheduled exports */}
-        <div>
-          <h3
-            className="display font-bold mb-3"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Scheduled exports
-          </h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {SCHEDULED.map((r) => (
-              <div key={r.name} className="spark-card p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className="mono text-[10px]"
-                    style={{
-                      letterSpacing: "0.16em",
-                      color: "var(--spark-lime)",
-                    }}
-                  >
-                    {r.category.toUpperCase()}
-                  </span>
-                  <span
-                    className={`chip ${r.cadence === "daily" ? "chip-lime" : "chip-sky"}`}
-                  >
-                    ● {r.cadence.toUpperCase()}
-                  </span>
-                </div>
-                <p className="font-bold text-sm">{r.name}</p>
-                <p
-                  className="mono text-[10px] mt-2"
-                  style={{
-                    letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.55)",
-                  }}
-                >
-                  {r.method.toUpperCase()}
-                </p>
-                <button
-                  disabled
-                  title="Scheduled-exports backend ships in the next sprint"
-                  className="mt-3 w-full px-3 py-2 rounded-xl text-xs transition"
-                  style={{
-                    background: "transparent",
-                    color: "rgba(255,255,255,0.4)",
-                    border: "1px solid var(--spark-border)",
-                    cursor: "not-allowed",
-                  }}
-                >
-                  Manage → (soon)
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
+      </ReportsRangeContext.Provider>
     </Layout>
   );
 }

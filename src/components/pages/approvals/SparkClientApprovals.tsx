@@ -7,6 +7,8 @@ import {
 } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { commitMutation } from "relay-runtime";
+import environment from "@/api/relay/environment";
 import Layout from "@/layout/Layout";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import SparkEmptyState from "@/shared/SparkEmptyState";
@@ -138,7 +140,9 @@ const joinWhere = (venue: string | null, city: string | null, st: string | null)
 const ApprovalRow: React.FC<{
   row: PendingRecap;
   onApproved: (key: string) => void;
-}> = ({ row, onApproved }) => {
+  selected: boolean;
+  onToggleSelected: (key: string) => void;
+}> = ({ row, onApproved, selected, onToggleSelected }) => {
   const reviewTo =
     row.kind === "custom"
       ? `/recap/view-custom/${row.uuid}`
@@ -191,6 +195,14 @@ const ApprovalRow: React.FC<{
         borderRadius: 14,
       }}
     >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelected(`${row.kind}:${row.id}`)}
+        aria-label={`Select ${row.name} for sign-off`}
+        className="w-4 h-4 shrink-0"
+        style={{ accentColor: "var(--spark-lime)" }}
+      />
       {row.heroImage ? (
         <img
           src={row.heroImage}
@@ -499,6 +511,74 @@ const ClientApprovalsMerged: React.FC<{
     [rows, approvedKeys],
   );
 
+  // Bulk sign-off: tick rows, then confirm once. Each recap is signed off
+  // with the same mutation the per-row button uses, one after another, so
+  // a failure on one leaves the rest untouched and still selected.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirming, setBulkConfirming] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkNote, setBulkNote] = useState<string | null>(null);
+  const toggleSelected = useCallback((key: string) => {
+    setBulkNote(null);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+  const selectedRows = useMemo(
+    () => visibleRows.filter((r) => selected.has(`${r.kind}:${r.id}`)),
+    [visibleRows, selected],
+  );
+  const allSelected =
+    visibleRows.length > 0 && selectedRows.length === visibleRows.length;
+
+  const signOffOne = (row: PendingRecap) =>
+    new Promise<boolean>((resolve) => {
+      if (row.kind === "custom") {
+        commitMutation<ApproveCustomRecapMutationType>(environment, {
+          mutation: ApproveCustomRecapMutation,
+          variables: { input: { id: row.id, approved: true } },
+          onCompleted: (res) => resolve(Boolean(res.approveCustomRecap?.success)),
+          onError: () => resolve(false),
+        });
+      } else {
+        commitMutation<ApproveRecapMutationType>(environment, {
+          mutation: ApproveRecapMutation,
+          variables: { input: { id: row.id, approved: true } },
+          onCompleted: (res) => resolve(Boolean(res.approveRecap?.success)),
+          onError: () => resolve(false),
+        });
+      }
+    });
+
+  const runBulk = async () => {
+    setBulkBusy(true);
+    setBulkConfirming(false);
+    let failed = 0;
+    for (const row of selectedRows) {
+      const key = `${row.kind}:${row.id}`;
+      const ok = await signOffOne(row);
+      if (ok) {
+        onApproved(key);
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      } else {
+        failed += 1;
+      }
+    }
+    setBulkBusy(false);
+    setBulkNote(
+      failed > 0
+        ? `${failed} recap${failed === 1 ? "" : "s"} couldn't be signed off and ${failed === 1 ? "is" : "are"} still selected. Please try again.`
+        : null,
+    );
+  };
+
   if (visibleRows.length === 0) {
     return (
       <SparkEmptyState
@@ -509,15 +589,83 @@ const ClientApprovalsMerged: React.FC<{
   }
 
   return (
-    <ul className="space-y-2">
-      {visibleRows.map((r) => (
-        <ApprovalRow
-          key={`${r.kind}:${r.id}`}
-          row={r}
-          onApproved={onApproved}
-        />
-      ))}
-    </ul>
+    <>
+      <div className="flex items-center gap-3 flex-wrap mb-3 text-sm">
+        <label className="inline-flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={() =>
+              setSelected(
+                allSelected
+                  ? new Set()
+                  : new Set(visibleRows.map((r) => `${r.kind}:${r.id}`)),
+              )
+            }
+            className="w-4 h-4"
+            style={{ accentColor: "var(--spark-lime)" }}
+          />
+          Select all ({visibleRows.length})
+        </label>
+        {selectedRows.length > 0 &&
+          (bulkConfirming ? (
+            <>
+              <span>
+                Sign off {selectedRows.length} recap
+                {selectedRows.length === 1 ? "" : "s"}? Each one is emailed
+                to your team.
+              </span>
+              <button
+                type="button"
+                onClick={runBulk}
+                className="px-3 py-1.5 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+              >
+                Yes, sign off
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkConfirming(false)}
+                className="underline"
+                style={{ color: "rgba(255,255,255,0.6)" }}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setBulkConfirming(true)}
+              disabled={bulkBusy}
+              className="px-3 py-1.5 rounded-xl text-sm font-semibold disabled:opacity-50"
+              style={{
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              {bulkBusy
+                ? "Signing off…"
+                : `Sign off selected (${selectedRows.length})`}
+            </button>
+          ))}
+        {bulkNote && (
+          <span role="alert" style={{ color: "var(--spark-orange)" }}>
+            {bulkNote}
+          </span>
+        )}
+      </div>
+      <ul className="space-y-2">
+        {visibleRows.map((r) => (
+          <ApprovalRow
+            key={`${r.kind}:${r.id}`}
+            row={r}
+            onApproved={onApproved}
+            selected={selected.has(`${r.kind}:${r.id}`)}
+            onToggleSelected={toggleSelected}
+          />
+        ))}
+      </ul>
+    </>
   );
 };
 
