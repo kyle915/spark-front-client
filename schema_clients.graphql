@@ -7337,6 +7337,9 @@ input RequestFiltersInput {
   schedulingStatus: String = null
   activationPlanId: ID = null
   hasActivationPlan: Boolean = null
+
+  """True = has an event with no ambassador assigned; False = at least one assigned."""
+  unstaffed: Boolean = null
   stateCode: String = null
   createdWithinHours: Int = null
   edited: Boolean = null
