@@ -1404,7 +1404,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
 
       {/* Who did what, when — staff only (it names people). */}
       {role.isAdmin && (
-        <RequestActivityTimeline requestUuid={String(request.uuid)} />
+        <RequestActivityTimeline requestUuid={uuid} />
       )}
 
       {/* Shift Replay */}

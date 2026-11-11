@@ -2,7 +2,11 @@ import { Suspense, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { RequestActivityQuery } from "@/api/queries/RequestActivityQuery";
 import type { RequestActivityQuery as QueryType } from "@api/queries/__generated__/RequestActivityQuery.graphql";
-import { activityActor, activityKindLabel, activityWhen } from "./activityLabels";
+import {
+  activityActor,
+  activityKindLabel,
+  activityWhen,
+} from "./activityLabels";
 
 const SHOW_FIRST = 8;
 
@@ -35,13 +39,22 @@ const Body: React.FC<{ requestUuid: string }> = ({ requestUuid }) => {
             />
             <div className="min-w-0">
               <p className="text-sm">
-                <span className="font-semibold">{activityKindLabel(e.kind)}</span>
+                <span className="font-semibold">
+                  {activityKindLabel(e.kind)}
+                </span>
                 {e.summary ? (
-                  <span style={{ color: "var(--spark-text-secondary)" }}> · {e.summary}</span>
+                  <span style={{ color: "var(--spark-text-secondary)" }}>
+                    {" "}
+                    · {e.summary}
+                  </span>
                 ) : null}
               </p>
-              <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
-                {activityActor(e.actorName, e.actorEmail)} · {activityWhen(e.createdAt)}
+              <p
+                className="text-xs"
+                style={{ color: "var(--spark-text-meta)" }}
+              >
+                {activityActor(e.actorName, e.actorEmail)} ·{" "}
+                {activityWhen(e.createdAt)}
               </p>
             </div>
           </li>
@@ -66,23 +79,30 @@ const Body: React.FC<{ requestUuid: string }> = ({ requestUuid }) => {
  * and when. Staff-only — it names people. Reads the server's existing
  * RequestActivityLog; nothing is written here.
  */
-export const RequestActivityTimeline: React.FC<{ requestUuid: string }> = ({
-  requestUuid,
-}) => (
-  <section className="spark-card p-5" aria-label="Activity history">
-    <h3 className="font-semibold mb-3" style={{ letterSpacing: "-0.01em" }}>
-      Activity history
-    </h3>
-    <Suspense
-      fallback={
-        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-          Loading history…
-        </p>
-      }
-    >
-      <Body requestUuid={requestUuid} />
-    </Suspense>
-  </section>
-);
+export const RequestActivityTimeline: React.FC<{
+  requestUuid: string | null | undefined;
+}> = ({ requestUuid }) => {
+  // A record can render before its uuid has hydrated; String(undefined) would
+  // send "undefined" to the server and show an empty history.
+  if (!requestUuid || requestUuid === "undefined" || requestUuid === "null") {
+    return null;
+  }
+  return (
+    <section className="spark-card p-5" aria-label="Activity history">
+      <h3 className="font-semibold mb-3" style={{ letterSpacing: "-0.01em" }}>
+        Activity history
+      </h3>
+      <Suspense
+        fallback={
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+            Loading history…
+          </p>
+        }
+      >
+        <Body requestUuid={requestUuid} />
+      </Suspense>
+    </section>
+  );
+};
 
 export default RequestActivityTimeline;
