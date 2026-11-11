@@ -5,6 +5,7 @@ import {
   photoCaption,
   photoFileName,
   rangeDates,
+  storeLabel,
   type GalleryPhoto,
 } from "./photoGallery";
 
@@ -50,5 +51,15 @@ describe("photo gallery", () => {
       endDate: "2026-11-10",
     });
     expect(rangeDates("all", today)).toEqual({ startDate: null, endDate: null });
+  });
+
+  it("drops the leading date from walk-up event names", () => {
+    expect(storeLabel("11/8/2026 - 1099 E Hospitality Ln, San Bernardino, CA 92408")).toBe(
+      "1099 E Hospitality Ln, San Bernardino, CA 92408",
+    );
+    expect(storeLabel("Costco #1715")).toBe("Costco #1715");
+    expect(
+      photoCaption({ ...photo, store: "11/8/2026 - 1099 E Hospitality Ln", state: "CA" }),
+    ).toBe("1099 E Hospitality Ln · CA · Oct 11, 2026");
   });
 });
