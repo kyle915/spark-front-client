@@ -47,6 +47,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/announcements": { parent: "Communication", title: "Announcements" },
   "/inbox": { parent: "Communication", title: "Inbox" },
   "/alerts": { parent: "Communication", title: "Alerts" },
+  "/email-preferences": { parent: "Account", title: "Email preferences" },
   "/academy": { parent: "People", title: "Spark Academy" },
   "/academy/manage": { parent: "People", title: "Manage Library" },
   "/forms/builder": { parent: "Build", title: "Form Builder" },

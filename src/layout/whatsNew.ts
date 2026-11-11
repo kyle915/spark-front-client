@@ -7,6 +7,18 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-11",
+    date: "November 11, 2026",
+    title: "Your emails, your call",
+    items: [
+      "Email preferences (in the menu behind your initial): turn off request updates, recap-review alerts, digests, mentions or ambassador-application emails for yourself.",
+      "Requests and events show an activity history: who created, approved or edited, and when.",
+      "A setup checklist appears on the dashboard for clients that haven't launched yet.",
+      "Master Tracker: select rows to approve or assign an ambassador in bulk.",
+      "Program report: field photos, a map of where you activated, and a monthly email you can subscribe to.",
+    ],
+  },
+  {
     id: "2026-11-10",
     date: "November 10, 2026",
     title: "Easier to read, easier to get around",
