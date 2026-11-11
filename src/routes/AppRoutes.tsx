@@ -443,6 +443,9 @@ const CampaignUpload = lazyDefault(
 // Public, no-login shareable campaign report. The signed :token in the URL
 // is the auth — fetches the no-auth REST report endpoint and renders the
 // same <CampaignReportView> the admin view uses.
+const PublicProgram = lazyDefault(
+  () => import("@/public/program/PublicProgram"),
+);
 const PublicCampaignReport = lazyDefault(
   () => import("@/public/reports/PublicCampaignReport"),
 );
@@ -537,6 +540,13 @@ const PublicRoutes = {
     {
       path: "/report/:token",
       component: <PublicCampaignReport />,
+      isPublic: true,
+    },
+    // Public program page for a whole brand. The token plus the brand's
+    // "public program link" switch are the auth.
+    {
+      path: "/program/:token",
+      component: <PublicProgram />,
       isPublic: true,
     },
     {
