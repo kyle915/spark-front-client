@@ -42,7 +42,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/chat": { parent: "Workspace", title: "Chat" },
   "/connect-calendar": { parent: "Workspace", title: "Calendar" },
   "/account-map": { parent: "Workspace", title: "Account Map" },
-  "/reports": { parent: "Reports", title: "Reports" },
+  "/reports": { parent: "Spark", title: "Program report" },
   "/field-sampling-report": { parent: "Reports", title: "Field Sampling Report" },
   "/announcements": { parent: "Communication", title: "Announcements" },
   "/inbox": { parent: "Communication", title: "Inbox" },

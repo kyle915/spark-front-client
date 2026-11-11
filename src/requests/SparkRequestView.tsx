@@ -1,3 +1,4 @@
+import RequestActivityTimeline from "./RequestActivityTimeline";
 import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
@@ -1395,6 +1396,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
       >
         <FieldReportsLoader requestUuid={String(request.uuid)} />
       </Suspense>
+
+      {/* Who did what, when — staff only (it names people). */}
+      {role.isAdmin && (
+        <RequestActivityTimeline requestUuid={String(request.uuid)} />
+      )}
 
       {/* Shift Replay */}
       {(request.events ?? [])

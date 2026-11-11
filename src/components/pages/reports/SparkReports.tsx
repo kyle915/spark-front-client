@@ -655,6 +655,33 @@ const ChartCard: React.FC<{
   </div>
 );
 
+/** The two request charts, shown only when the range has requests. */
+const RequestChartsRow: React.FC = () => {
+  const rows = useReportsRequestRows();
+  const range = useReportsRange();
+  const hasRequests = useMemo(() => {
+    const from = range.start.getTime();
+    const to = range.end.getTime();
+    return rows.some((r) => {
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+      return Number.isFinite(t) && t >= from && t <= to;
+    });
+  }, [rows, range]);
+  if (!hasRequests) return null;
+  return (
+    <div className="grid lg:grid-cols-3 gap-5">
+      <div className="lg:col-span-2">
+        <ChartCard title="Requests per week" subtitle="Inbound activation volume.">
+          <EventsPerWeekChart />
+        </ChartCard>
+      </div>
+      <ChartCard title="Activation mix" subtitle="Share by type in this range.">
+        <ActivationMixChart />
+      </ChartCard>
+    </div>
+  );
+};
+
 export default function SparkReports() {
   const { tenantId } = useAuthStore();
   const [rangeKey, setRangeKey] = useState<RangeKey>("90");
@@ -840,23 +867,11 @@ export default function SparkReports() {
           </div>
         </div>
 
-        {/* Charts row */}
-        <div className="grid lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
-            <ChartCard
-              title="Requests per week"
-              subtitle="Inbound activation volume."
-            >
-              <EventsPerWeekChart />
-            </ChartCard>
-          </div>
-          <ChartCard
-            title="Activation mix"
-            subtitle="Share by type in this range."
-          >
-            <ActivationMixChart />
-          </ChartCard>
-        </div>
+        {/* Request charts — hidden when nothing was requested in the range,
+            so two empty boxes don't lead the report. */}
+        <Suspense fallback={null}>
+          <RequestChartsRow />
+        </Suspense>
 
         <div className="grid lg:grid-cols-2 gap-5">
           <ChartCard
