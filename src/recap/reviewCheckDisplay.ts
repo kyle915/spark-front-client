@@ -62,22 +62,22 @@ export function reviewCheckTint(status: ReviewCheckStatus): {
   switch (status) {
     case "flag":
       return {
-        color: "#ffb59d",
+        color: "var(--spark-flag-ink, #ffb59d)",
         background: "rgba(239,90,42,0.14)",
         border: "rgba(239,90,42,0.5)",
         mark: "⚠",
       };
     case "pass":
       return {
-        color: "#f2f3ee",
-        background: "rgba(242,243,238,0.08)",
-        border: "rgba(242,243,238,0.28)",
+        color: "var(--spark-lime, #f2f3ee)",
+        background: "rgba(var(--spark-accent-rgb, 242,243,238),0.08)",
+        border: "rgba(var(--spark-accent-rgb, 242,243,238),0.28)",
         mark: "✓",
       };
     case "na":
       return {
-        color: "rgba(255,255,255,0.55)",
-        background: "rgba(255,255,255,0.04)",
+        color: "rgba(var(--spark-ink-rgb, 255,255,255),0.6)",
+        background: "rgba(var(--spark-ink-rgb, 255,255,255),0.04)",
         border: "var(--spark-border)",
         mark: "–",
       };

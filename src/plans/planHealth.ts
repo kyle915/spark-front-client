@@ -30,7 +30,7 @@ export function planHealth(pipeline: PlanPipeline): PlanHealth {
     return {
       kind: "empty",
       label: "No requests",
-      color: "rgba(255,255,255,0.45)",
+      color: "rgba(var(--spark-ink-rgb, 255,255,255),0.5)",
     };
   }
   if (verified >= planned && planned > 0) {
