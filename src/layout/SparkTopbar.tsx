@@ -423,6 +423,18 @@ export const SparkTopbar: React.FC = () => {
               >
                 Keyboard shortcuts
               </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/email-preferences");
+                }}
+                className="mt-2 w-full flex items-center px-3 py-2 rounded-xl text-sm"
+                style={{ border: "1px solid var(--spark-border)" }}
+              >
+                Email preferences
+              </button>
               {/* Staff only while light mode is being checked page by page. */}
               {canToggleRole ? (
               <button

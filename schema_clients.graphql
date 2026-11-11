@@ -5392,6 +5392,7 @@ type Mutation {
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
+  setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
   exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
   sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
@@ -6147,6 +6148,7 @@ type Query {
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   myReportSubscription(tenantId: ID = null): Boolean!
+  myNotificationPreferences: [NotificationPreferenceItem!]!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
@@ -7845,6 +7847,27 @@ type SetMyPreferencesResponse {
   success: Boolean!
   message: String!
   preferences: UserPreferencesType
+  clientMutationId: ID
+}
+
+type NotificationPreferenceItem {
+  category: String!
+  label: String!
+  description: String!
+  emailEnabled: Boolean!
+}
+
+input SetMyNotificationPreferenceInput {
+  clientMutationId: ID = null
+  category: String!
+  emailEnabled: Boolean!
+}
+
+type SetMyNotificationPreferenceResponse {
+  success: Boolean!
+  message: String!
+  category: String!
+  emailEnabled: Boolean!
   clientMutationId: ID
 }
 
