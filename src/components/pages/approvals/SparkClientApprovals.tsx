@@ -53,6 +53,7 @@ import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/muta
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
 import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import { approvalNumberParts, type ApprovalNumbers } from "./approvalNumbers";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { ApproveRequestMutation } from "@/api/mutations/ApproveRequestMutation";
 import type { ApproveRequestMutation as ApproveRequestMutationType } from "@api/mutations/__generated__/ApproveRequestMutation.graphql";
@@ -108,6 +109,8 @@ type PendingRecap = {
   sortMs: number;
   heroImage: string | null;
   fileCount: number;
+  /** Headline numbers the recap reported; absent on legacy recaps. */
+  numbers: ApprovalNumbers;
 };
 
 const fmtDate = (raw: string | null | undefined): string => {
@@ -160,6 +163,7 @@ const ApprovalRow: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const inFlight = legacyInFlight || customInFlight;
   const hasPhotos = Boolean(row.heroImage) || row.fileCount > 0;
+  const numberParts = approvalNumberParts(row.numbers);
 
   const approve = useCallback(() => {
     setError(null);
@@ -245,6 +249,16 @@ const ApprovalRow: React.FC<{
           <span style={{ opacity: 0.5 }}> · </span>
           {fmtDate(row.date)}
         </p>
+        {numberParts.length > 0 && (
+          <p className="text-sm mt-1.5 flex items-center gap-4 flex-wrap">
+            {numberParts.map((part) => (
+              <span key={part.label}>
+                <span className="font-semibold tabular-nums">{part.value}</span>{" "}
+                <span style={{ color: "var(--spark-text-meta)" }}>{part.label}</span>
+              </span>
+            ))}
+          </p>
+        )}
         {error && (
           <p
             className="text-[12px] mt-1.5"
@@ -472,6 +486,7 @@ const ClientApprovalsMerged: React.FC<{
               ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
               : null,
             fileCount: n.recapFilesCount ?? 0,
+            numbers: {},
           };
         }) ?? [];
 
@@ -499,6 +514,11 @@ const ClientApprovalsMerged: React.FC<{
             sortMs: toMs(n.eventDate) || toMs(n.createdAt),
             heroImage: n.heroImageUrl ? thumbUrl(n.heroImageUrl, 400) : null,
             fileCount: n.customRecapFilesCount ?? 0,
+            numbers: {
+              sampled: n.consumersSampled,
+              sold: n.soldUnits,
+              engaged: n.peopleEngaged ?? n.totalEngagements,
+            },
           };
         }) ?? [];
 
