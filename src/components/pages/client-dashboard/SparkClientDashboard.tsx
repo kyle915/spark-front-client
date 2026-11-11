@@ -266,11 +266,11 @@ const WeekAheadPanel: React.FC<{
                   letterSpacing: "0.12em",
                   color:
                     horizonDays === d
-                      ? "var(--spark-on-accent)"
+                      ? "var(--spark-selected-ink)"
                       : "rgba(var(--spark-ink-rgb),0.55)",
                   background:
                     horizonDays === d
-                      ? "var(--spark-lime)"
+                      ? "var(--spark-selected-bg)"
                       : "transparent",
                   border: "1px solid var(--spark-border)",
                 }}

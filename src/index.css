@@ -434,6 +434,8 @@ code, kbd, samp, pre, .mono-code {
      accent tint is built from these, so a second theme only swaps them. */
   --spark-ink-rgb: 255, 255, 255;
   --spark-accent-rgb: 242, 243, 238;
+  --spark-selected-bg: rgba(var(--spark-ink-rgb), 0.14);
+  --spark-selected-ink: var(--spark-text);
   --spark-bg-rgb: 10, 11, 13;
   --spark-ok-rgb: 197, 245, 70;
   --spark-flag-ink: #ffb59d;
@@ -1204,9 +1206,12 @@ thead .spark-table-sticky-date {
   font-family: "Space Grotesk", sans-serif;
 }
 .pill-btn:hover { color: rgba(var(--spark-ink-rgb), 0.85); }
+/* Selected segment: a quiet "you are here", not a filled button. The solid
+   accent fill is reserved for a screen's one primary action. */
 .pill-btn.on {
-  color: var(--spark-on-accent);
-  background: var(--spark-lime);
+  color: var(--spark-selected-ink);
+  background: var(--spark-selected-bg);
+  font-weight: 600;
   box-shadow: none;
 }
 
@@ -2517,4 +2522,35 @@ main table tbody tr:hover {
 main table td,
 main table th {
   font-variant-numeric: tabular-nums;
+}
+
+
+/* === "Done" mark on caught-up empty states ===
+   A single check drawn once when the queue is clear. No loop, no colour
+   burst; skipped entirely for people who ask for reduced motion. */
+.spark-done-mark circle,
+.spark-done-mark path {
+  stroke: var(--spark-text);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.spark-done-mark circle {
+  opacity: 0.22;
+}
+.spark-done-mark path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: spark-done-draw 0.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes spark-done-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-done-mark path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
 }

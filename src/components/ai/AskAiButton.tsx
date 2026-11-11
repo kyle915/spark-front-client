@@ -56,6 +56,14 @@ const limeBtn: React.CSSProperties = {
   color: "var(--spark-on-accent)",
 };
 
+// The trigger that opens Ask AI is a secondary control: it sits beside a
+// page's main action and must not compete with it.
+const triggerBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--spark-text)",
+  border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
+};
+
 type ScopeCopy = {
   kicker: string;
   title: string;
@@ -343,7 +351,7 @@ const AskAiButton: React.FC<{
                 border: "none",
                 padding: 0,
               }
-            : limeBtn
+            : triggerBtn
         }
         title="Ask AI a question about this client's program"
       >

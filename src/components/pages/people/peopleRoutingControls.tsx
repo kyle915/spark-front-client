@@ -92,8 +92,8 @@ export const PeopleTabsSwitcher: React.FC<{
             onClick={() => onChangeTab(t.id)}
             className="px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition"
             style={{
-              background: isActive ? "var(--spark-lime)" : "transparent",
-              color: isActive ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.68)",
+              background: isActive ? "var(--spark-selected-bg)" : "transparent",
+              color: isActive ? "var(--spark-selected-ink)" : "rgba(var(--spark-ink-rgb),0.68)",
               boxShadow: isActive
                 ? "0 0 16px rgba(var(--spark-accent-rgb),0.28)"
                 : "none",

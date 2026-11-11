@@ -216,8 +216,9 @@ const ApprovalRow: React.FC<{
             disabled={busy}
             className={`${actionPad} rounded-lg font-semibold`}
             style={{
-              background: "var(--spark-lime)",
-              color: "var(--spark-on-accent)",
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
               opacity: busy ? 0.5 : 1,
             }}
           >
@@ -1066,6 +1067,7 @@ const ApprovalsInner: React.FC = () => {
           </>
         ) : (
           <SparkEmptyState
+            done
             title="Nothing in the approval queue."
             body="Nice work."
           />

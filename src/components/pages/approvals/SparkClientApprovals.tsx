@@ -601,6 +601,7 @@ const ClientApprovalsMerged: React.FC<{
   if (visibleRows.length === 0) {
     return (
       <SparkEmptyState
+        done
         title="You're all caught up."
         body="Nothing awaiting your approval."
       />
@@ -851,9 +852,9 @@ const RequestApprovalRow: React.FC<{
                 onClick={() => setMode("approve")}
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
-                  background: "var(--spark-lime)",
-                  color: "var(--spark-on-accent)",
-                  border: "none",
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
                 }}
               >
                 ✓ Approve
@@ -1023,6 +1024,7 @@ const ClientRequestApprovalsInner: React.FC = () => {
   if (visible.length === 0) {
     return (
       <SparkEmptyState
+        done
         title="You're all caught up."
         body="No requests awaiting your approval."
       />
@@ -1091,8 +1093,8 @@ export const ClientApprovalsBody: React.FC = () => {
             onClick={() => setTab(key)}
             className="px-4 py-2 rounded-xl text-sm font-semibold transition"
             style={{
-              background: tab === key ? "var(--spark-lime)" : "transparent",
-              color: tab === key ? "var(--spark-on-accent)" : "var(--spark-text)",
+              background: tab === key ? "var(--spark-selected-bg)" : "transparent",
+              color: tab === key ? "var(--spark-selected-ink)" : "var(--spark-text)",
               border:
                 tab === key
                   ? "none"

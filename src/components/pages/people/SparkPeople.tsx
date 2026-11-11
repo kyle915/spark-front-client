@@ -1572,8 +1572,8 @@ const InviteModal: React.FC<{
                     style={{
                       letterSpacing: "0.14em",
                       background:
-                        tab === t ? "var(--spark-lime)" : "transparent",
-                      color: tab === t ? "var(--spark-on-accent)" : "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
+                        tab === t ? "var(--spark-selected-bg)" : "transparent",
+                      color: tab === t ? "var(--spark-selected-ink)" : "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                       fontWeight: tab === t ? 700 : 400,
                     }}
                   >

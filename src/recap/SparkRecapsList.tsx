@@ -1,3 +1,4 @@
+import SparkGhostButton from "@/shared/SparkGhostButton";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
@@ -35,7 +36,6 @@ import { useAlertStore } from "@/store/alertStore";
 import useBaLabel from "@/hooks/useBaLabel";
 import useSparkRole from "@/hooks/useSparkRole";
 import SparkPageHeader from "@/shared/SparkPageHeader";
-import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
@@ -3276,13 +3276,13 @@ export default function SparkRecapsList() {
           action={
             !isClient ? (
               <div className="flex flex-wrap gap-2">
-                <SparkPrimaryButton
+                <SparkGhostButton
                   onClick={() => {
                     window.location.href = "/recap/create";
                   }}
                 >
                   + New recap
-                </SparkPrimaryButton>
+                </SparkGhostButton>
               </div>
             ) : null
           }

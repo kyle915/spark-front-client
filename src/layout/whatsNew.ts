@@ -11,6 +11,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     date: "November 11, 2026",
     title: "Your emails, your call",
     items: [
+      "Light mode: open the menu behind your initial and choose Appearance.",
+      "One main button per screen: selected tabs are now quiet, and row buttons are outlined.",
       "Email preferences (in the menu behind your initial): turn off request updates, recap-review alerts, digests, mentions or ambassador-application emails for yourself.",
       "Requests and events show an activity history: who created, approved or edited, and when.",
       "A setup checklist appears on the dashboard for clients that haven't launched yet.",

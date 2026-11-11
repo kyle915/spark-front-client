@@ -419,8 +419,8 @@ const Inner: React.FC<{
           style={{
             letterSpacing: "0.1em",
             padding: "4px 12px",
-            color: bulkMode ? "var(--spark-on-accent)" : "var(--spark-lime)",
-            background: bulkMode ? "var(--spark-lime)" : "transparent",
+            color: bulkMode ? "var(--spark-selected-ink)" : "var(--spark-lime)",
+            background: bulkMode ? "var(--spark-selected-bg)" : "transparent",
             border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(var(--spark-accent-rgb),0.35)"}`,
           }}
         >

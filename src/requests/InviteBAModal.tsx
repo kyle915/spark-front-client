@@ -765,8 +765,8 @@ const Inner: React.FC<{
                   className="flex-1 rounded-lg text-center"
                   style={{
                     padding: "0.5rem 0.4rem",
-                    background: active ? "var(--spark-lime)" : "transparent",
-                    color: active ? "var(--spark-on-accent)" : "var(--spark-text)",
+                    background: active ? "var(--spark-selected-bg)" : "transparent",
+                    color: active ? "var(--spark-selected-ink)" : "var(--spark-text)",
                   }}
                 >
                   <span className="block text-sm font-semibold">{opt.label}</span>
