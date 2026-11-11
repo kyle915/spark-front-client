@@ -5400,6 +5400,7 @@ type Mutation {
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
   issueCheckinCode(input: IssueCheckinCodeInput!): IssueCheckinCodeResponse!
   setProgramShareEnabled(input: SetProgramShareEnabledInput!): SetProgramShareEnabledResponse!
+  setBoothDayCounting(input: SetBoothDayCountingInput!): SetBoothDayCountingResponse!
   setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
   exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
@@ -6159,6 +6160,7 @@ type Query {
   tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
+  tenantBoothDayCounting(tenantId: ID!): Boolean!
   programShareLink(tenantId: ID = null): ProgramShareLink!
   myNotificationPreferences: [NotificationPreferenceItem!]!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
@@ -7890,6 +7892,19 @@ type ProgramShareLink {
   expired: Boolean!
   views: Int!
   lastViewedAt: String
+}
+
+input SetBoothDayCountingInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  enabled: Boolean!
+}
+
+type SetBoothDayCountingResponse {
+  success: Boolean!
+  message: String!
+  enabled: Boolean!
+  clientMutationId: ID
 }
 
 input SetProgramShareEnabledInput {

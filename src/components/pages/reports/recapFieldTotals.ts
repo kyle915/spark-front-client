@@ -28,8 +28,20 @@ export const fieldTotalValue = (f: FieldTotal): string => {
   return trim(f.total, 0);
 };
 
-/** Says what the figure is, so an average is never read as a total. */
-export const fieldTotalNote = (f: FieldTotal): string => {
-  const recaps = `${f.recaps.toLocaleString("en-US")} recap${f.recaps === 1 ? "" : "s"}`;
-  return f.kind === "average" ? `average across ${recaps}` : `total across ${recaps}`;
+/** Says what the figure is, so an average is never read as a total. When the
+ *  brand is counted once per store per day, the unit is store-days. */
+export const fieldTotalNote = (f: FieldTotal, perStoreDay = false): string => {
+  const n = f.recaps.toLocaleString("en-US");
+  const unit = perStoreDay
+    ? `store-day${f.recaps === 1 ? "" : "s"}`
+    : `recap${f.recaps === 1 ? "" : "s"}`;
+  return f.kind === "average"
+    ? `average across ${n} ${unit}`
+    : `total across ${n} ${unit}`;
 };
+
+/** One line under the heading saying how the totals were counted. */
+export const countingBasisLine = (perStoreDay: boolean): string =>
+  perStoreDay
+    ? "Every number your approved recaps collected in this range, counted once per store per day. When more than one recap covers the same store and day, the highest figure is used. Prices, rates and ratings are averaged."
+    : "Every number your approved recaps collected in this range, added up by question. Prices, rates and ratings are averaged.";

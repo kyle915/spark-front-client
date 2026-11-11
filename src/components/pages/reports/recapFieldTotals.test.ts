@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fieldTotalNote, fieldTotalValue } from "./recapFieldTotals";
+import { countingBasisLine, fieldTotalNote, fieldTotalValue } from "./recapFieldTotals";
 
 const base = { label: "x", average: 0, recaps: 3, isPercent: false };
 
@@ -20,5 +20,16 @@ describe("recap field totals", () => {
     expect(fieldTotalNote({ ...base, kind: "count", total: 1, recaps: 1 })).toBe(
       "total across 1 recap",
     );
+  });
+
+  it("counts in store-days when the brand is counted once per store per day", () => {
+    expect(fieldTotalNote({ ...base, kind: "count", total: 1 }, true)).toBe(
+      "total across 3 store-days",
+    );
+    expect(fieldTotalNote({ ...base, kind: "average", total: 1, recaps: 1 }, true)).toBe(
+      "average across 1 store-day",
+    );
+    expect(countingBasisLine(true)).toContain("once per store per day");
+    expect(countingBasisLine(false)).not.toContain("store per day");
   });
 });
