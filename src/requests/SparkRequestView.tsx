@@ -146,7 +146,10 @@ const NotesLoader: React.FC<{
   requestLabel: string;
 }> = ({ requestUuid, requestLabel }) => {
   const { tenantId } = useAuthStore();
-  const filters = tenantId ? { tenantId } : null;
+  // Memoised: a fresh object every render made the effect below re-run on
+  // every render, and its state reset triggered the next render — an
+  // endless loop that refetched UsersQuery and starved the rest of the page.
+  const filters = useMemo(() => (tenantId ? { tenantId } : null), [tenantId]);
   const data = useLazyLoadQuery<UsersQueryType>(
     UsersQuery,
     { filters, first: MENTION_ROSTER_PAGE_SIZE },
@@ -183,9 +186,11 @@ const NotesLoader: React.FC<{
         after = next?.users?.pageInfo?.endCursor ?? null;
         hasNext = Boolean(next?.users?.pageInfo?.hasNextPage && after);
       }
-      if (!cancelled) setExtraEdges(collected);
+      if (!cancelled && collected.length > 0) setExtraEdges(collected);
     };
-    setExtraEdges([]);
+    // Only reset when there is something to clear, so an unchanged empty
+    // list does not schedule another render.
+    setExtraEdges((prev) => (prev.length > 0 ? [] : prev));
     void walk();
     return () => {
       cancelled = true;
