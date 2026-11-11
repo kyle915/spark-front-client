@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { numberHint, wantsDecimalKeypad } from "./numberSanity";
 import { isExpenseReceiptBucket } from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
 import { applyVoiceFills, type VoiceFill } from "./voiceDraft";
@@ -1912,6 +1913,7 @@ function FieldInput({
   const isLong = field.type.includes("long") || field.type.includes("area") || field.type.includes("paragraph");
   const isNumber = field.type.includes("number") || field.type.includes("int") || field.type.includes("decimal");
   const example = (field.placeholder || "").trim();
+  const hint = isLong ? null : numberHint(field.name, value, { isNumberField: isNumber });
   if (!isLong && isSpendAmountField(field)) {
     return (
       <div>
@@ -1944,12 +1946,24 @@ function FieldInput({
       ) : (
         <input
           style={input}
-          inputMode={isNumber ? "numeric" : "text"}
+          // "numeric" on iPhone is a keypad with NO decimal point, which is
+          // how a $12.79 price was being entered as 1279.
+          inputMode={
+            isNumber ? (wantsDecimalKeypad(field.name) ? "decimal" : "numeric") : "text"
+          }
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={example || (isNumber ? undefined : undefined)}
         />
       )}
+      {hint ? (
+        <p
+          role="status"
+          style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.35, color: "#92400e" }}
+        >
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }
