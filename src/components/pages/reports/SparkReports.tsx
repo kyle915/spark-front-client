@@ -1,4 +1,5 @@
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
+import useStickyState from "@/hooks/useStickyState";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
 import ProgramShareControl from "./ProgramShareControl";
@@ -14,7 +15,7 @@ import SparkGhostButton from "@/shared/SparkGhostButton";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
-import { Suspense, createContext, useContext, useMemo, useState } from "react";
+import { Suspense, createContext, useContext, useMemo } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
@@ -686,9 +687,21 @@ const RequestChartsRow: React.FC = () => {
 
 export default function SparkReports() {
   const { tenantId } = useAuthStore();
-  const [rangeKey, setRangeKey] = useState<RangeKey>("90");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
+  // The chosen range sticks per client in this browser, so a view someone
+  // set up is still there next time.
+  const stickyKey = `@spark.view.reports/${tenantId || "all"}`;
+  const [rangeKey, setRangeKey] = useStickyState<RangeKey>(
+    `${stickyKey}/range`,
+    "90",
+    (raw) =>
+      raw === "30" || raw === "90" || raw === "180" || raw === "ytd" || raw === "custom"
+        ? raw
+        : null,
+  );
+  const isYmd = (raw: unknown) =>
+    typeof raw === "string" && (raw === "" || /^\d{4}-\d{2}-\d{2}$/.test(raw)) ? raw : null;
+  const [customFrom, setCustomFrom] = useStickyState<string>(`${stickyKey}/from`, "", isYmd);
+  const [customTo, setCustomTo] = useStickyState<string>(`${stickyKey}/to`, "", isYmd);
   const range = useMemo(
     () => buildReportsRange(rangeKey, customFrom, customTo),
     [rangeKey, customFrom, customTo],
