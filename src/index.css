@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* One corner scale. Tailwind's larger radii line up with the Spark tokens
+   (card 14px, panel 18px) so hand-rolled containers match .spark-card. */
+@theme {
+  --radius-2xl: 14px;
+  --radius-3xl: 18px;
+}
+
 /* Spark v2 fonts are self-hosted via index.html → /fonts/fonts.css */
 
 /* ========================================================================
@@ -551,21 +558,17 @@ body:has(.spark-login-page) {
 }
 
 /* === Card === */
+/* Flat by design: one surface, a hairline, no drop shadow. Elevation is
+   reserved for things that float (menus, dialogs, toasts). */
 .spark-card {
-  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  background: var(--spark-surface);
   border: 1px solid var(--spark-hairline, var(--spark-border));
   border-radius: var(--spark-radius-card, 14px);
-  box-shadow: var(--spark-elev-1, 0 8px 24px rgba(0, 0, 0, 0.28));
-  transition:
-    border-color 0.2s ease,
-    transform var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
-    box-shadow 0.25s ease;
+  transition: border-color 0.2s ease;
   position: relative;
 }
 .spark-card.hov:hover {
-  transform: translateY(-2px);
   border-color: rgba(242, 243, 238, 0.22);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
 
 /* === Shared page chrome (promoted from Plans Apple UX) === */
@@ -889,7 +892,7 @@ thead .spark-table-sticky-date {
 .spark-card-flat {
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid var(--spark-border);
-  border-radius: 14px;
+  border-radius: var(--spark-radius-card, 14px);
 }
 .spark-card-glow {
   background: var(--spark-surface);
