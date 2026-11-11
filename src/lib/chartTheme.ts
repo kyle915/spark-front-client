@@ -12,8 +12,8 @@ export const SPARK_CHART_PALETTE = [
 ];
 
 export const sparkChartText = inkRgba(0.72);
-export const sparkChartMuted = inkRgba(0.55);
-export const sparkChartGrid = inkRgba(0.08);
+export const sparkChartMuted = inkRgba(0.45);
+export const sparkChartGrid = inkRgba(0.06);
 
 export function sparkScaleDefaults() {
   return {
@@ -40,8 +40,8 @@ export function sparkTooltipDefaults() {
   return {
     // The tooltip is a dark chip in both appearances.
     backgroundColor: "rgba(10,11,13,0.92)",
-    titleColor: "rgba(255,255,255,0.9)",
-    bodyColor: "rgba(255,255,255,0.7)",
+    titleColor: "rgba(255,255,255,0.72)",
+    bodyColor: "rgba(255,255,255,0.45)",
     borderColor: "rgba(255,255,255,0.14)",
     borderWidth: 1,
     padding: 10,
