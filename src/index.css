@@ -329,7 +329,7 @@ code, kbd, samp, pre, .mono-code {
 /* Lime accent text with a soft glow — used for headline highlights */
 .spark-accent {
   color: var(--color-primary);
-  filter: drop-shadow(0 0 12px rgba(242, 243, 238, 0.35));
+  filter: drop-shadow(0 0 12px rgba(var(--spark-accent-rgb), 0.35));
 }
 
 /* The Spark wordmark style: italic, tightened, with a quiet "BY IGNITE" tag */
@@ -346,7 +346,7 @@ code, kbd, samp, pre, .mono-code {
   letter-spacing: 0.18em;
   margin-left: 0.4rem;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--spark-ink-rgb), 0.55);
 }
 
 /* Mono micro-label used on metric cards: "RECAPS · 90D", etc.
@@ -356,7 +356,7 @@ code, kbd, samp, pre, .mono-code {
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--spark-ink-rgb), 0.5);
   font-weight: 500;
 }
 
@@ -366,7 +366,7 @@ code, kbd, samp, pre, .mono-code {
 }
 .hov:hover {
   transform: translateY(-2px);
-  border-color: rgba(242, 243, 238, 0.3);
+  border-color: rgba(var(--spark-accent-rgb), 0.3);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
@@ -383,12 +383,12 @@ code, kbd, samp, pre, .mono-code {
   text-transform: uppercase;
   font-weight: 600;
   border: 1px solid currentColor;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--spark-ink-rgb), 0.04);
 }
-.chip-lime    { color: var(--color-primary); background: rgba(242, 243, 238, 0.10); }
+.chip-lime    { color: var(--color-primary); background: rgba(var(--spark-accent-rgb), 0.10); }
 .chip-orange  { color: var(--color-warning); background: rgba(255, 138, 76, 0.10); }
 .chip-sky     { color: var(--color-info);    background: rgba(109, 213, 250, 0.10); }
-.chip-muted   { color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.04); }
+.chip-muted   { color: rgba(var(--spark-ink-rgb), 0.55); background: rgba(var(--spark-ink-rgb), 0.04); }
 .chip-gold    { color: #ffc960; background: rgba(255, 201, 96, 0.10); }
 .chip-purple  { color: #c9a4ff; background: rgba(201, 164, 255, 0.10); }
 
@@ -435,6 +435,7 @@ code, kbd, samp, pre, .mono-code {
   --spark-ink-rgb: 255, 255, 255;
   --spark-accent-rgb: 242, 243, 238;
   --spark-bg-rgb: 10, 11, 13;
+  --spark-ok-rgb: 197, 245, 70;
   --spark-on-accent: #0a0d09;
   --spark-bg: #0A0B0D;
   --spark-surface: #141416;
@@ -471,6 +472,7 @@ code, kbd, samp, pre, .mono-code {
   --spark-ink-rgb: 20, 22, 15;
   --spark-accent-rgb: 20, 22, 15;
   --spark-bg-rgb: 246, 246, 242;
+  --spark-ok-rgb: 63, 92, 18;
   --spark-on-accent: #ffffff;
   --spark-lime: #14160f;
   --spark-lime-dim: #3a3d33;
@@ -513,6 +515,12 @@ code, kbd, samp, pre, .mono-code {
   --color-error: #c9304c;
   --color-error-content: #ffffff;
 }
+
+/* Tinted chips: the pastel dark-mode inks are unreadable on white. */
+[data-theme="spark-v2"][data-spark-mode="light"] .chip-gold { color: #8a6400; background: rgba(154, 114, 0, 0.1); }
+[data-theme="spark-v2"][data-spark-mode="light"] .chip-purple { color: #5b46a3; background: rgba(107, 85, 181, 0.1); }
+[data-theme="spark-v2"][data-spark-mode="light"] .chip-orange { background: rgba(210, 72, 27, 0.1); }
+[data-theme="spark-v2"][data-spark-mode="light"] .chip-sky { background: rgba(31, 127, 192, 0.1); }
 
 /* The navigation rail stays dark in light mode — it frames the page and
    keeps the Spark mark on its own ground. Re-declare the dark values on the
