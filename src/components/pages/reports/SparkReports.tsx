@@ -1,6 +1,7 @@
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
+import ProgramShareControl from "./ProgramShareControl";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
@@ -761,6 +762,10 @@ export default function SparkReports() {
 
         <div className="print:hidden">
           <ReportSubscriptionToggle tenantId={tenantId || null} />
+        </div>
+
+        <div className="print:hidden">
+          <ProgramShareControl tenantId={tenantId || null} />
         </div>
 
         {/* Date range */}
