@@ -6,6 +6,10 @@ export const ProgramShareLinkQuery = graphql`
     programShareLink(tenantId: $tenantId) {
       enabled
       token
+      expiresAt
+      expired
+      views
+      lastViewedAt
     }
   }
 `;

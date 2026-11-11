@@ -7886,12 +7886,17 @@ type SetMyNotificationPreferenceResponse {
 type ProgramShareLink {
   enabled: Boolean!
   token: String
+  expiresAt: String
+  expired: Boolean!
+  views: Int!
+  lastViewedAt: String
 }
 
 input SetProgramShareEnabledInput {
   clientMutationId: ID = null
   tenantId: ID!
   enabled: Boolean!
+  expiresInDays: Int = null
 }
 
 type SetProgramShareEnabledResponse {
@@ -7899,6 +7904,7 @@ type SetProgramShareEnabledResponse {
   message: String!
   enabled: Boolean!
   token: String
+  expiresAt: String
   clientMutationId: ID
 }
 

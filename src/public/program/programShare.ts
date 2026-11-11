@@ -34,3 +34,32 @@ export const programStats = (t: ProgramSharePayload["totals"]): ProgramStat[] =>
 
 export const programLinkUrl = (origin: string, token: string): string =>
   `${origin.replace(/\/$/, "")}/program/${encodeURIComponent(token)}`;
+
+
+const shortDate = (iso: string): string => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
+/** "Opened 12 times, last Nov 9, 2026 · Works until Dec 10, 2026" */
+export const shareStatusLine = (s: {
+  views: number;
+  lastViewedAt: string | null;
+  expiresAt: string | null;
+}): string => {
+  const parts: string[] = [];
+  if (s.views > 0) {
+    const last = s.lastViewedAt ? shortDate(s.lastViewedAt) : "";
+    parts.push(
+      `Opened ${s.views.toLocaleString("en-US")} time${s.views === 1 ? "" : "s"}` +
+        (last ? `, last ${last}` : ""),
+    );
+  } else {
+    parts.push("Not opened yet");
+  }
+  const until = s.expiresAt ? shortDate(s.expiresAt) : "";
+  parts.push(until ? `Works until ${until}` : "No end date");
+  return parts.join(" · ");
+};

@@ -8,6 +8,7 @@ export const SetProgramShareEnabledMutation = graphql`
       message
       enabled
       token
+      expiresAt
     }
   }
 `;
