@@ -7,6 +7,7 @@ export const TenantRecapFieldTotalsQuery = graphql`
     $startDate: String
     $endDate: String
   ) {
+    tenantBoothDayCounting(tenantId: $tenantId)
     tenantRecapFieldTotals(
       tenantId: $tenantId
       startDate: $startDate
