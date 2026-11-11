@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   cachedContextKey,
   clearCachedContext,
+  clearLostPunch,
+  readLostPunch,
   clearPendingClock,
   enqueueClockIn,
   enqueueClockOut,
@@ -347,5 +349,59 @@ describe("newIdempotencyKey", () => {
     expect(a).toBeTruthy();
     expect(b).toBeTruthy();
     expect(a).not.toBe(b);
+  });
+});
+
+describe("a queued punch the server will never accept", () => {
+  const queue = (storage: MemoryStorage) =>
+    enqueueClockIn(
+      { code: "LD-9", token: "t", clockedInAt: THREE_PM, nowMs: THREE_PM_MS },
+      storage,
+    );
+
+  it("stops retrying, clears the queue and leaves a notice with the tap time", async () => {
+    const storage = new MemoryStorage();
+    queue(storage);
+    const result = await flushPendingClock(
+      { code: "LD-9", postClock: async () => ({ ok: false, status: 409 }) },
+      storage,
+    );
+    expect(result).toBe("rejected");
+    expect(readPendingClock("LD-9", storage)).toBeNull();
+    const lost = readLostPunch("LD-9", storage);
+    expect(lost?.kind).toBe("in");
+    expect(lost?.at).toBe(new Date(THREE_PM).toISOString());
+    clearLostPunch("LD-9", storage);
+    expect(readLostPunch("LD-9", storage)).toBeNull();
+  });
+
+  it("keeps retrying through a server error", async () => {
+    const storage = new MemoryStorage();
+    queue(storage);
+    const result = await flushPendingClock(
+      { code: "LD-9", postClock: async () => ({ ok: false, status: 500 }) },
+      storage,
+    );
+    expect(result).toBe("retry");
+    expect(readPendingClock("LD-9", storage)).not.toBeNull();
+    expect(readLostPunch("LD-9", storage)).toBeNull();
+  });
+
+  it("posts once when two flushes fire together", async () => {
+    const storage = new MemoryStorage();
+    queue(storage);
+    let posts = 0;
+    const postClock = async () => {
+      posts += 1;
+      await new Promise((r) => setTimeout(r, 5));
+      return { ok: true, status: 200 };
+    };
+    const [a, b] = await Promise.all([
+      flushPendingClock({ code: "LD-9", postClock }, storage),
+      flushPendingClock({ code: "LD-9", postClock }, storage),
+    ]);
+    expect(posts).toBe(1);
+    expect(a).toBe("flushed");
+    expect(b).toBe("flushed");
   });
 });

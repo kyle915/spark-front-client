@@ -82,7 +82,13 @@ export type PendingRecapFile = {
   filename: string;
   contentType: string;
   sha256?: string;
+  /** Failed upload attempts that were NOT connectivity (rate limit, 5xx). */
+  attempts?: number;
 };
+
+/** After this many non-connectivity failures a photo is given up on, so one
+ *  permanently bad file cannot hold the whole recap hostage. */
+export const PHOTO_FLUSH_MAX_ATTEMPTS = 3;
 
 export type PendingRecap = {
   v: 1;
@@ -491,21 +497,50 @@ export async function flushPendingRecap(
   storage: StorageLike = liveStorage(),
   photos: PhotoBlobStore = livePhotoStore(),
 ): Promise<RecapFlushResult> {
+  const existing = inflightRecap.get(args.code);
+  if (existing) return existing;
+  const p = flushRecapOnce(args, storage, photos).finally(() =>
+    inflightRecap.delete(args.code),
+  );
+  inflightRecap.set(args.code, p);
+  return p;
+}
+
+// One flush per link at a time — see the same guard in offlineClock.ts. Two
+// concurrent flushes filed the same recap (and its photos) twice.
+const inflightRecap = new Map<string, Promise<RecapFlushResult>>();
+
+async function flushRecapOnce(
+  args: Parameters<typeof flushPendingRecap>[0],
+  storage: StorageLike,
+  photos: PhotoBlobStore,
+): Promise<RecapFlushResult> {
   const pending = readPendingRecap(args.code, storage);
   if (!pending) return "none";
 
   const files = pending.files.map((f) => ({ ...f }));
   for (const file of files) {
     if (file.blobName) continue;
+    if ((file.attempts ?? 0) >= PHOTO_FLUSH_MAX_ATTEMPTS) continue; // given up
+    let blob: File | null | undefined;
     try {
-      const blob = await photos.get(file.id);
-      if (!blob) continue;
+      blob = await photos.get(file.id);
+    } catch {
+      blob = null;
+    }
+    if (!blob) continue; // bytes are gone from this device: nothing to send
+    try {
       const { blobName } = await args.putPhoto(blob, pending.token);
       file.blobName = blobName;
       writePendingRecap({ ...pending, files }, storage);
     } catch (error) {
       if (isOfflineClockFailure({ error })) return "retry";
-      // Leave this shot behind; others may still file.
+      // A rate limit or server blip is not a reason to file the recap
+      // WITHOUT this photo and then delete it. Hold the recap and try the
+      // photo again next flush; only give up after repeated failures.
+      file.attempts = (file.attempts ?? 0) + 1;
+      writePendingRecap({ ...pending, files }, storage);
+      if (file.attempts < PHOTO_FLUSH_MAX_ATTEMPTS) return "retry";
     }
   }
 

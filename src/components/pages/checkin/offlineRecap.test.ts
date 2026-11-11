@@ -601,3 +601,93 @@ describe("putCheckinPhoto", () => {
     expect(photoPutTimeoutMs(32_000_000)).toBe(1_000_000);
   });
 });
+
+describe("queued recap with a photo that fails to upload", () => {
+  const seed = async (storage: MemoryStorage, photos: ReturnType<typeof memoryPhotoStore>) => {
+    await enqueueRecap(
+      {
+        code: "FV-1",
+        token: "tok",
+        fieldValues: [],
+        files: [
+          { id: "ok", blobName: "blob-ok", category: null, filename: "a.jpg", contentType: "image/jpeg" },
+          { id: "bad", blobName: null, category: null, filename: "b.jpg", contentType: "image/jpeg" },
+        ],
+        productSamples: [],
+        totalEngagements: null,
+        nowMs: Date.now(),
+        photoFiles: { bad: new File(["x"], "b.jpg", { type: "image/jpeg" }) },
+      },
+      storage,
+      photos,
+    );
+  };
+
+  it("holds the recap instead of filing it without the photo", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await seed(storage, photos);
+    let posted = 0;
+    const result = await flushPendingRecap(
+      {
+        code: "FV-1",
+        postRecap: async () => {
+          posted += 1;
+          return { ok: true, status: 200 };
+        },
+        // A rate limit / server blip: a plain Error, not a connectivity failure.
+        putPhoto: async () => {
+          throw new Error("Too many photo uploads");
+        },
+      },
+      storage,
+      photos,
+    );
+    expect(result).toBe("retry");
+    expect(posted).toBe(0);
+    expect(await photos.get("bad")).not.toBeNull();
+    expect(readPendingRecap("FV-1", storage)?.files.find((f) => f.id === "bad")?.attempts).toBe(1);
+  });
+
+  it("files with the photo once the upload works", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await seed(storage, photos);
+    const bodies: Record<string, unknown>[] = [];
+    const result = await flushPendingRecap(
+      {
+        code: "FV-1",
+        postRecap: async (body) => {
+          bodies.push(body);
+          return { ok: true, status: 200 };
+        },
+        putPhoto: async () => ({ blobName: "blob-bad" }),
+      },
+      storage,
+      photos,
+    );
+    expect(result).toBe("flushed");
+    expect((bodies[0].files as unknown[]).length).toBe(2);
+  });
+
+  it("gives up on one bad photo after repeated failures so the recap still files", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await seed(storage, photos);
+    const run = () =>
+      flushPendingRecap(
+        {
+          code: "FV-1",
+          postRecap: async () => ({ ok: true, status: 200 }),
+          putPhoto: async () => {
+            throw new Error("unreadable");
+          },
+        },
+        storage,
+        photos,
+      );
+    expect(await run()).toBe("retry");
+    expect(await run()).toBe("retry");
+    expect(await run()).toBe("flushed");
+  });
+});

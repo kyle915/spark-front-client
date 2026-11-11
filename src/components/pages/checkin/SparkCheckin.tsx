@@ -1,3 +1,4 @@
+import { timedFetch } from "./timedFetch";
 import CheckinStepBar from "./CheckinStepBar";
 import { checkinSteps } from "./checkinSteps";
 import MyShiftsCard from "./MyShiftsCard";
@@ -64,6 +65,10 @@ import {
   readCachedContext,
   readPendingClock,
   readPendingClockOut,
+  readLostPunch,
+  clearLostPunch,
+  formatSavedClockTime,
+  type LostPunch,
   writeCachedContext,
   type PendingClockIn,
   type PendingClockOut,
@@ -380,7 +385,7 @@ export default function SparkCheckin() {
     try {
       // Session token rides a header, never the URL — keeps the bearer out of
       // access logs / browser history / Referer.
-      const res = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}`, {
+      const res = await timedFetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}`, {
         headers: token ? { "X-Checkin-Session": token } : undefined,
       });
       const json = (await res.json()) as Context;
@@ -862,6 +867,11 @@ function CheckedInFlow({
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
   );
+  // A queued punch the server refused for good (see offlineClock.ts). Shown
+  // until dismissed so the hours get fixed by a lead instead of vanishing.
+  const [lostPunch, setLostPunch] = useState<LostPunch | null>(() =>
+    readLostPunch(code),
+  );
   const [queuedClockOut, setQueuedClockOut] = useState<PendingClockOut | null>(
     () => readPendingClockOut(code),
   );
@@ -998,6 +1008,11 @@ function CheckedInFlow({
         return { ok: res.ok, status: res.status, alreadyIn };
       },
     });
+    if (result === "rejected") {
+      setQueuedClock(readPendingClock(code));
+      setLostPunch(readLostPunch(code));
+      await onRefresh();
+    }
     if (result === "flushed" || result === "already") {
       setQueuedClock(readPendingClock(code));
       await onRefresh();
@@ -1025,6 +1040,10 @@ function CheckedInFlow({
         return { ok: res.ok, status: res.status, alreadyOut };
       },
     });
+    if (result === "rejected") {
+      setQueuedClockOut(readPendingClockOut(code));
+      setLostPunch(readLostPunch(code));
+    }
     if (result === "flushed" || result === "already") {
       setQueuedClockOut(readPendingClockOut(code));
       await onRefresh();
@@ -1909,6 +1928,47 @@ function CheckedInFlow({
         <div ref={shiftActionsRef} style={{ display: "flex", gap: 10, marginTop: 14 }}>
           {renderShiftActions(false)}
         </div>
+        {lostPunch ? (
+          <div
+            role="alert"
+            style={{
+              marginTop: 12,
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #b91c1c",
+              background: "#fef2f2",
+              color: "#7f1d1d",
+              fontSize: 14,
+              lineHeight: 1.4,
+            }}
+          >
+            <strong>
+              Your {formatSavedClockTime(lostPunch.at) || "saved"} clock-
+              {lostPunch.kind === "in" ? "in" : "out"} didn't save.
+            </strong>{" "}
+            It was held while you had no service and couldn't be recorded
+            afterwards. Tell your lead the time so your hours can be fixed.
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  clearLostPunch(code);
+                  setLostPunch(null);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #b91c1c",
+                  color: "#7f1d1d",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  fontSize: 13,
+                }}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        ) : null}
         {queuedClock ? (
           <p style={{ ...errText, color: "#92400e" }}>
             {offlineClockBanner(queuedClock.clockedInAt)}
