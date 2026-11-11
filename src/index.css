@@ -501,6 +501,12 @@ code, kbd, samp, pre, .mono-code {
   --spark-elev-2: 0 18px 36px rgba(20, 22, 15, 0.1);
   --spark-elev-3: 0 24px 48px rgba(20, 22, 15, 0.12);
   --spark-toast-bg: #14160f;
+  /* Sticky table column: an opaque hover tone that matches the row, a
+     lighter edge shadow, and white filter fields instead of a dark wash. */
+  --spark-sticky-bg: #f3f3ef;
+  --spark-sticky-hover: #ebebe7;
+  --spark-sticky-shadow: 4px 0 10px rgba(20, 22, 15, 0.06);
+  --spark-field-bg: #ffffff;
   --color-base-100: #ffffff;
   --color-base-200: #f6f6f2;
   --color-base-300: #ecece6;
@@ -786,7 +792,7 @@ body:has(.spark-login-page) {
   padding: 0.28rem 0.6rem;
   border-radius: 8px;
   border: 1px solid var(--spark-hairline, var(--spark-border));
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--spark-field-bg, rgba(0, 0, 0, 0.22));
   color: var(--spark-text);
   outline: none;
   font-size: 0.75rem;
@@ -911,7 +917,7 @@ body:has(.spark-login-page) {
   background: var(--spark-surface-2, #0A0B0D);
 }
 .spark-tracker-table tbody tr:hover td.spark-table-sticky-date {
-  background: #121316;
+  background: var(--spark-sticky-hover, #121316);
 }
 .spark-tracker-cell-muted {
   color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
@@ -960,8 +966,8 @@ body:has(.spark-login-page) {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: var(--spark-surface, #0A0B0D);
-  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.18);
+  background: var(--spark-sticky-bg, var(--spark-surface, #0A0B0D));
+  box-shadow: var(--spark-sticky-shadow, 4px 0 12px rgba(0, 0, 0, 0.18));
 }
 thead .spark-table-sticky-date {
   top: 0;
