@@ -39,8 +39,10 @@ describe("sparkChartOptions", () => {
     });
     expect(options.plugins?.tooltip).toMatchObject({
       backgroundColor: "rgba(10,11,13,0.92)",
-      titleColor: sparkChartText,
-      bodyColor: sparkChartMuted,
+      // The tooltip is a dark chip in both appearances, so its text is
+      // always white.
+      titleColor: "rgba(255,255,255,0.72)",
+      bodyColor: "rgba(255,255,255,0.45)",
       borderColor: "rgba(255,255,255,0.14)",
       borderWidth: 1,
     });

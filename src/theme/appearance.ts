@@ -1,5 +1,6 @@
 /**
- * Light / dark appearance for the signed-in app.
+ * Light / dark appearance for the signed-in app. Light is the default; a
+ * person's own choice (account menu → Appearance) is remembered per browser.
  *
  * Light is a MODIFIER on top of the spark-v2 theme (`data-spark-mode="light"`
  * on <html>) rather than a second daisyUI theme, so nothing else that sets
@@ -13,11 +14,15 @@ const KEY = "@spark.appearance";
 export const APPEARANCE_ATTR = "data-spark-mode";
 const EVENT = "spark:appearance";
 
+/** Light unless this browser explicitly chose dark. */
+export const DEFAULT_APPEARANCE: Appearance = "light";
+
 export const readAppearance = (): Appearance => {
   try {
-    return localStorage.getItem(KEY) === "light" ? "light" : "dark";
+    const saved = localStorage.getItem(KEY);
+    return saved === "dark" || saved === "light" ? saved : DEFAULT_APPEARANCE;
   } catch {
-    return "dark";
+    return DEFAULT_APPEARANCE;
   }
 };
 
@@ -30,8 +35,7 @@ export const applyAppearance = (mode: Appearance): void => {
 
 export const setAppearance = (mode: Appearance): void => {
   try {
-    if (mode === "light") localStorage.setItem(KEY, "light");
-    else localStorage.removeItem(KEY);
+    localStorage.setItem(KEY, mode);
   } catch {
     /* private mode: applies for this visit only */
   }
