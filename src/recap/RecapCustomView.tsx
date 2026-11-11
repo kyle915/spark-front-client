@@ -154,6 +154,7 @@ import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 const RecapReviewChecks = lazy(() => import("./RecapReviewChecks"));
+const RecapPhotoTrust = lazy(() => import("./RecapPhotoTrust"));
 
 // Custom-field type → control kind. Field-type names are lowercase by
 // convention (text / number / image / longtext / select / multiselect);
@@ -1705,6 +1706,12 @@ const RecapCustomViewInner = ({
               </div>
             )}
           </div>
+
+          {isClient && recap.approved ? (
+            <Suspense fallback={null}>
+              <RecapPhotoTrust recapId={recap.id} isCustom={true} />
+            </Suspense>
+          ) : null}
 
           {!isClient && (
             <Suspense fallback={null}>
