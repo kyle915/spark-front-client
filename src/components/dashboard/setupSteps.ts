@@ -50,7 +50,7 @@ export const buildSetupSteps = (f: SetupFacts): SetupStep[] => [
   {
     key: "hasCheckinLink",
     label: "Issue the check-in link",
-    hint: "The link ambassadors use to clock in and recap. Issued during onboarding.",
+    hint: "The link ambassadors use to clock in and recap.",
     done: f.hasCheckinLink,
   },
   {

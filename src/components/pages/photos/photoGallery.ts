@@ -1,0 +1,78 @@
+export type GalleryPhoto = {
+  id: string;
+  url: string;
+  category: string;
+  recapUuid: string;
+  store: string;
+  state: string;
+  eventDate: string;
+};
+
+export type DeckLayout = 1 | 4 | 6 | 9;
+export const DECK_LAYOUTS: DeckLayout[] = [1, 4, 6, 9];
+
+/** Split the chosen photos into deck pages of `perPage`. */
+export const deckPages = <T>(photos: readonly T[], perPage: DeckLayout): T[][] => {
+  const pages: T[][] = [];
+  for (let i = 0; i < photos.length; i += perPage) {
+    pages.push(photos.slice(i, i + perPage));
+  }
+  return pages;
+};
+
+/** Columns for a deck page: 1 → 1, 4 → 2, 6 → 3, 9 → 3. */
+export const deckColumns = (perPage: DeckLayout): number =>
+  perPage === 1 ? 1 : perPage === 4 ? 2 : 3;
+
+const fmtDate = (iso: string): string => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+/** "Costco · Highland, CA · Oct 11, 2026" — only the parts that exist. */
+export const photoCaption = (p: GalleryPhoto): string =>
+  [p.store.trim(), p.state.trim(), fmtDate(p.eventDate)].filter(Boolean).join(" · ");
+
+/** A safe, sortable file name for the zip: date, store, category, index. */
+export const photoFileName = (p: GalleryPhoto, index: number): string => {
+  const slug = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40);
+  const ext = (p.url.split("?")[0].match(/\.(jpe?g|png|webp|gif)$/i)?.[1] ?? "jpg").toLowerCase();
+  const parts = [p.eventDate, slug(p.store), slug(p.category)].filter(Boolean);
+  return `${parts.join("_") || "photo"}_${String(index + 1).padStart(3, "0")}.${ext}`;
+};
+
+export const DATE_RANGES = [
+  { key: "30", label: "30 days", days: 30 },
+  { key: "90", label: "90 days", days: 90 },
+  { key: "365", label: "12 months", days: 365 },
+  { key: "all", label: "All time", days: null },
+] as const;
+export type DateRangeKey = (typeof DATE_RANGES)[number]["key"];
+
+const ymd = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+/** Inclusive start/end for a range key; nulls mean "no bound". */
+export const rangeDates = (
+  key: DateRangeKey,
+  today: Date = new Date(),
+): { startDate: string | null; endDate: string | null } => {
+  const range = DATE_RANGES.find((r) => r.key === key);
+  if (!range || range.days === null) return { startDate: null, endDate: null };
+  const start = new Date(today);
+  start.setDate(start.getDate() - range.days);
+  return { startDate: ymd(start), endDate: ymd(today) };
+};
