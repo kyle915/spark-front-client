@@ -16,6 +16,7 @@
  *   - Back link respects history state, falls back to the Master Tracker.
  */
 
+import RequestActivityTimeline from "@/requests/RequestActivityTimeline";
 import { clientSafeBaName } from "@/utils/clientSafeBaName";
 import React, { Suspense, useState } from "react";
 import { displayBaCount } from "@/public/form/eventActivationSchedule";
@@ -1306,6 +1307,9 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
       <ShiftReplayPanel eventUuid={String(event.uuid)} />
       <EventAttendanceTable eventUuid={String(event.uuid)} />
       {role.isAdmin && <EventMileagePanel eventUuid={String(event.uuid)} />}
+      {role.isAdmin && requestUuid ? (
+        <RequestActivityTimeline requestUuid={String(requestUuid)} />
+      ) : null}
 
       {/* Audit footer */}
       <div className="spark-card p-5">
