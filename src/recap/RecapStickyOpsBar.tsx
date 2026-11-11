@@ -108,6 +108,26 @@ export function RecapStickyOpsBar({
       <div className="flex items-center gap-1.5 flex-wrap justify-center">
         {children}
       </div>
+      {queueNav && queueNav.total > 0 ? (
+        // The shortcuts have always worked; nobody knew. Shown on wide
+        // screens only — there is no keyboard to press on a phone.
+        <span
+          className="recap-sticky-ops-label mono text-[10px] hidden xl:inline shrink-0"
+          aria-label={
+            queueNav.onApproveNext
+              ? "Keyboard: J next, K previous, A approve and go to the next recap"
+              : "Keyboard: J next, K previous"
+          }
+        >
+          <kbd>J</kbd>/<kbd>K</kbd> move
+          {queueNav.onApproveNext ? (
+            <>
+              {" · "}
+              <kbd>A</kbd> approve
+            </>
+          ) : null}
+        </span>
+      ) : null}
     </div>
   );
 }
