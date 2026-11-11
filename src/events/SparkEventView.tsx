@@ -752,7 +752,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   border: "1px solid var(--spark-lime)",
                 }}
               >
@@ -891,7 +891,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               <div
                 key={cb.tenantPk}
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: "rgba(var(--spark-ink-rgb),0.03)",
                   border: "1px solid var(--spark-border)",
                   borderRadius: 12,
                   padding: "0.75rem 1rem",
@@ -952,7 +952,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                   key={p.id}
                   className="flex items-center gap-3"
                   style={{
-                    background: "rgba(255,255,255,0.03)",
+                    background: "rgba(var(--spark-ink-rgb),0.03)",
                     border: "1px solid var(--spark-border)",
                     borderRadius: 12,
                     padding: "0.75rem",
@@ -975,7 +975,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                         width: 44,
                         height: 44,
                         borderRadius: 8,
-                        background: "rgba(242,243,238,0.10)",
+                        background: "rgba(var(--spark-accent-rgb),0.10)",
                         color: "var(--spark-lime)",
                         display: "grid",
                         placeItems: "center",
@@ -1066,7 +1066,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 key={a.uuid}
                 className="flex items-center gap-3"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
+                  background: "rgba(var(--spark-ink-rgb),0.03)",
                   border: "1px solid var(--spark-border)",
                   borderRadius: 12,
                   padding: "0.75rem",
@@ -1079,11 +1079,11 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                     height: 36,
                     borderRadius: "50%",
                     background: a.isApproved
-                      ? "rgba(242,243,238,0.14)"
-                      : "rgba(255,255,255,0.06)",
+                      ? "rgba(var(--spark-accent-rgb),0.14)"
+                      : "rgba(var(--spark-ink-rgb),0.06)",
                     color: a.isApproved
                       ? "var(--spark-lime)"
-                      : "rgba(255,255,255,0.55)",
+                      : "rgba(var(--spark-ink-rgb),0.55)",
                     display: "grid",
                     placeItems: "center",
                     fontSize: 12,
@@ -1211,7 +1211,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                     className="h-32 relative overflow-hidden"
                     style={{
                       background:
-                        "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.10), transparent 70%)",
+                        "radial-gradient(circle at 50% 50%, rgba(var(--spark-accent-rgb),0.10), transparent 70%)",
                     }}
                   >
                     {hero ? (
@@ -1245,9 +1245,9 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                           letterSpacing: "0.14em",
                           padding: "2px 6px",
                           borderRadius: 999,
-                          background: "rgba(242,243,238,0.15)",
+                          background: "rgba(var(--spark-accent-rgb),0.15)",
                           color: "var(--spark-lime)",
-                          border: "1px solid rgba(242,243,238,0.35)",
+                          border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
                         }}
                       >
                         ◉ {fileCount} FILE{fileCount === 1 ? "" : "S"}

@@ -215,7 +215,7 @@ const ProfileInner: React.FC<{
             style={{
               color:
                 p.reliabilityScore == null
-                  ? "rgba(255,255,255,0.45)"
+                  ? "rgba(var(--spark-ink-rgb),0.45)"
                   : p.reliabilityScore >= 70
                     ? "var(--spark-lime)"
                     : p.reliabilityScore >= 40
@@ -285,7 +285,7 @@ const ProfileInner: React.FC<{
             className="px-4 py-2 rounded-xl text-sm font-semibold w-full"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity: openingThread ? 0.6 : 1,
             }}
           >

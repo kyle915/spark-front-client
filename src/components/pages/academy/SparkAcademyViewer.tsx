@@ -131,7 +131,7 @@ const ViewerInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         className="w-full py-3 rounded-2xl text-sm font-semibold"
         style={{
           background: "var(--spark-lime)",
-          color: "#0a0d09",
+          color: "var(--spark-on-accent)",
         }}
       >
         ✓ I've read this · Back to academy

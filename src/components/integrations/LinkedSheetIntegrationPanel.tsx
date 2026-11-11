@@ -80,7 +80,7 @@ const LinkedSheetIntegrationPanel: React.FC = () => {
       ? "var(--spark-lime)"
       : status === "error"
         ? "var(--spark-orange, #ef5a2a)"
-        : "rgba(255,255,255,0.45)";
+        : "rgba(var(--spark-ink-rgb),0.45)";
 
   return (
     <div className="spark-card p-5 space-y-4">

@@ -282,7 +282,7 @@ export const SparkTopbar: React.FC = () => {
           aria-label="Create Request"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
           }}
           title={
             isClient
@@ -407,7 +407,7 @@ export const SparkTopbar: React.FC = () => {
                 {unseenNews ? (
                   <span
                     className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: "var(--spark-sky)", color: "#0a0d09" }}
+                    style={{ background: "var(--spark-sky)", color: "var(--spark-on-accent)" }}
                   >
                     New
                   </span>
@@ -511,7 +511,7 @@ export const SparkTopbar: React.FC = () => {
             type="button"
             onClick={() => setPanel(null)}
             className="mt-6 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
           >
             Close
           </button>

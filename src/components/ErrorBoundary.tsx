@@ -84,7 +84,7 @@ class ErrorBoundary extends Component<Props, State> {
             type="button"
             onClick={this.handleRetry}
             className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
           >
             Try again
           </button>

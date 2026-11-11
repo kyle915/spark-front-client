@@ -111,7 +111,7 @@ const RecipientPicker: React.FC<{
                 <label
                   key={g.uuid}
                   className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm"
-                  style={{ background: checked ? "rgba(242,243,238,0.08)" : undefined }}
+                  style={{ background: checked ? "rgba(var(--spark-accent-rgb),0.08)" : undefined }}
                 >
                   <input
                     type="checkbox"
@@ -147,7 +147,7 @@ const RecipientPicker: React.FC<{
               <label
                 key={b.uuid}
                 className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm"
-                style={{ background: checked ? "rgba(242,243,238,0.08)" : undefined }}
+                style={{ background: checked ? "rgba(var(--spark-accent-rgb),0.08)" : undefined }}
               >
                 <input
                   type="checkbox"
@@ -394,7 +394,7 @@ const BroadcastComposer: React.FC<{
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold transition"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity: canSend ? 1 : 0.5,
                 }}
               >

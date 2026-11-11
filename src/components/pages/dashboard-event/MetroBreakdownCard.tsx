@@ -187,8 +187,8 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
           style={{
             padding: "6px 8px",
             borderRadius: 8,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
             color: "#fff",
           }}
         >
@@ -208,7 +208,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
             onClick={() => applyPreset(p.weeks)}
             className="text-xs px-2.5 py-1 rounded-full transition hover:bg-white/5"
             style={{
-              border: "1px solid rgba(255,255,255,0.14)",
+              border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
               color: "var(--spark-text-secondary)",
               background: "transparent",
             }}
@@ -231,8 +231,8 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
           style={{
             padding: "5px 8px",
             borderRadius: 8,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
             color: "#fff",
             colorScheme: "dark",
           }}
@@ -247,8 +247,8 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
           style={{
             padding: "5px 8px",
             borderRadius: 8,
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.12)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
             color: "#fff",
             colorScheme: "dark",
           }}
@@ -261,8 +261,8 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
             style={{
               padding: "5px 8px",
               borderRadius: 8,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "rgba(var(--spark-ink-rgb),0.04)",
+              border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
               color: "#fff",
             }}
           >
@@ -320,7 +320,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
                 return (
                   <tr
                     key={`${week.isoYear}-${week.isoWeek}`}
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                    style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
                   >
                     <td className="py-2 pr-3" style={{ color: "var(--spark-text-secondary)" }}>
                       {shortDate(week.weekStart)}
@@ -333,8 +333,8 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
                           className="text-right py-2 px-3 tabular-nums"
                           style={{
                             color: cell
-                              ? "rgba(255,255,255,0.9)"
-                              : "rgba(255,255,255,0.25)",
+                              ? "rgba(var(--spark-ink-rgb),0.9)"
+                              : "rgba(var(--spark-ink-rgb),0.25)",
                           }}
                         >
                           {cell ? fmtNum(cell[metric] ?? 0) : "—"}

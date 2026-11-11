@@ -76,7 +76,7 @@ export function PublicFormPill({
     <div
       className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${className}`}
       style={{
-        background: "rgba(255,255,255,0.05)",
+        background: "rgba(var(--spark-ink-rgb),0.05)",
         border: "1px solid var(--spark-border)",
       }}
       title={PUBLIC_PILL_HINT}

@@ -189,7 +189,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
             <button
               onClick={copy}
               className="px-4 py-2 rounded-xl text-sm font-semibold flex-1"
-              style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+              style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
             >
               Copy code
             </button>
@@ -224,7 +224,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
           onClick={generate}
           disabled={generating}
           className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-          style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+          style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
         >
           {generating
             ? "Generating…"

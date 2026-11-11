@@ -59,7 +59,7 @@ const label: React.CSSProperties = {
   textTransform: "uppercase",
   color: "var(--spark-text-meta)",
 };
-const muted = "rgba(255,255,255,0.55)";
+const muted = "rgba(var(--spark-ink-rgb),0.55)";
 
 type Tab = "today" | "week";
 
@@ -96,7 +96,7 @@ const ClockFrame: React.FC<{
             className="text-sm"
             style={{
               background: "transparent",
-              color: tab === t ? "var(--spark-text)" : "rgba(255,255,255,0.45)",
+              color: tab === t ? "var(--spark-text)" : "rgba(var(--spark-ink-rgb),0.45)",
               border: "none",
               fontWeight: tab === t ? 600 : 500,
               padding: 0,
@@ -291,7 +291,7 @@ const Row: React.FC<{
       style={{
         fontSize: 12,
         whiteSpace: "nowrap",
-        color: warn ? "#f0b429" : "rgba(255,255,255,0.75)",
+        color: warn ? "#f0b429" : "rgba(var(--spark-ink-rgb),0.75)",
       }}
     >
       {right}

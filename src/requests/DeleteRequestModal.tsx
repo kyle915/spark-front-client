@@ -172,7 +172,7 @@ export default function DeleteRequestModal({
             className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
             style={{
               background: "var(--spark-orange)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
           >
             {submitting ? "Deleting…" : "Delete gig"}

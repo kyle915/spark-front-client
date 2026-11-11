@@ -14,7 +14,7 @@ const VISIBLE_LIMIT = 10;
 
 const STAR = "★";
 const GOLD = "var(--spark-gold)";
-const STAR_EMPTY = "rgba(255,255,255,0.18)";
+const STAR_EMPTY = "rgba(var(--spark-ink-rgb),0.18)";
 
 type Entry =
   TenantBaLeaderboardQueryType["response"]["tenantBaLeaderboard"][number];
@@ -80,7 +80,7 @@ const LeaderboardRow: React.FC<{
     style={
       isFirst
         ? undefined
-        : { borderTop: "1px solid rgba(255,255,255,0.06)" }
+        : { borderTop: "1px solid rgba(var(--spark-ink-rgb),0.06)" }
     }
     onClick={onClick}
     onKeyDown={(e) => {

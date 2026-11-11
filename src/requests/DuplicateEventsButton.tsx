@@ -115,7 +115,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
           <div
             key={`${c.key}-${idx}`}
             className="rounded-xl p-3"
-            style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+            style={{ border: "1px solid rgba(var(--spark-ink-rgb),0.1)" }}
           >
             <div className="flex items-center justify-between mb-2">
               <p
@@ -135,7 +135,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
                 className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50"
                 style={{
                   background: "var(--spark-lime, #f2f3ee)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                 }}
               >
                 {mergingIdx === idx
@@ -171,7 +171,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
                     color:
                       e.recapsFiled > 0
                         ? "var(--spark-lime, #f2f3ee)"
-                        : "rgba(255,255,255,0.4)",
+                        : "rgba(var(--spark-ink-rgb),0.4)",
                   }}
                 >
                   {e.recapsFiled} recap{e.recapsFiled === 1 ? "" : "s"} ·{" "}
@@ -190,7 +190,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
           className="px-4 py-2 rounded-lg text-sm"
           style={{
             background: "transparent",
-            border: "1px solid rgba(255,255,255,0.18)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
             color: "var(--spark-text-secondary)",
           }}
         >

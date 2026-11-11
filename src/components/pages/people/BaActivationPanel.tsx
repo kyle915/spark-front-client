@@ -226,7 +226,7 @@ const BaActivationPanel: React.FC = () => {
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                             style={{
                               background: "var(--spark-lime)",
-                              color: "#0a0d09",
+                              color: "var(--spark-on-accent)",
                             }}
                           >
                             Confirm
@@ -251,7 +251,7 @@ const BaActivationPanel: React.FC = () => {
                           style={{
                             background: "transparent",
                             color: busy === r.email
-                              ? "rgba(255,255,255,0.35)"
+                              ? "rgba(var(--spark-ink-rgb),0.35)"
                               : "var(--spark-lime)",
                             border: "1px solid rgba(196,216,46,0.35)",
                           }}

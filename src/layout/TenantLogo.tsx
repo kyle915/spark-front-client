@@ -45,7 +45,7 @@ export function TenantLogo({
         <span
           className="text-sm font-medium truncate max-w-[9rem]"
           style={{
-            color: tone === "light" ? "#57534e" : "rgba(255,255,255,0.7)",
+            color: tone === "light" ? "#57534e" : "rgba(var(--spark-ink-rgb),0.7)",
           }}
         >
           {label}

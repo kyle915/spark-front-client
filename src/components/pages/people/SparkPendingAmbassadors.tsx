@@ -174,7 +174,7 @@ const Inner: React.FC = () => {
           <tr
             style={{
               borderBottom: "1px solid var(--spark-border)",
-              background: "rgba(255,255,255,0.02)",
+              background: "rgba(var(--spark-ink-rgb),0.02)",
             }}
           >
             <th className="text-left p-4 label-mini">BA</th>
@@ -206,7 +206,7 @@ const Inner: React.FC = () => {
                       style={{
                         width: 36,
                         height: 36,
-                        background: "rgba(242,243,238,0.10)",
+                        background: "rgba(var(--spark-accent-rgb),0.10)",
                         color: "var(--spark-lime)",
                         fontSize: 13,
                       }}
@@ -275,7 +275,7 @@ const Inner: React.FC = () => {
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                       style={{
                         background: "var(--spark-lime)",
-                        color: "#0a0d09",
+                        color: "var(--spark-on-accent)",
                         opacity: busy ? 0.5 : 1,
                       }}
                       title="Approve — BA can now be invited to shifts"

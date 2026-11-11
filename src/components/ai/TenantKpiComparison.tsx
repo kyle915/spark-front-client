@@ -65,9 +65,9 @@ const HIDDEN_DELTA: PeriodDelta = { kind: "sparse", label: "n/a", note: "" };
 type ChipStyle = { label: string; text: string; bg: string; border: string };
 
 const MUTED: Pick<ChipStyle, "text" | "bg" | "border"> = {
-  text: "rgba(255,255,255,0.55)",
-  bg: "rgba(255,255,255,0.04)",
-  border: "rgba(255,255,255,0.14)",
+  text: "rgba(var(--spark-ink-rgb),0.55)",
+  bg: "rgba(var(--spark-ink-rgb),0.04)",
+  border: "rgba(var(--spark-ink-rgb),0.14)",
 };
 
 const chipForDelta = (d: PeriodDelta): ChipStyle => {
@@ -77,8 +77,8 @@ const chipForDelta = (d: PeriodDelta): ChipStyle => {
       return {
         label: `↑ ${d.pct}%`,
         text: "var(--spark-lime)",
-        bg: "rgba(242,243,238,0.10)",
-        border: "rgba(242,243,238,0.30)",
+        bg: "rgba(var(--spark-accent-rgb),0.10)",
+        border: "rgba(var(--spark-accent-rgb),0.30)",
       };
     case "down":
       // orange #ef5a2a → 239,90,42 (restrained, not an alarm red).
@@ -104,8 +104,8 @@ const chipForDelta = (d: PeriodDelta): ChipStyle => {
         return {
           label: `↑ >${d.cappedPct}%`,
           text: "var(--spark-lime)",
-          bg: "rgba(242,243,238,0.10)",
-          border: "rgba(242,243,238,0.30)",
+          bg: "rgba(var(--spark-accent-rgb),0.10)",
+          border: "rgba(var(--spark-accent-rgb),0.30)",
         };
       }
       return {
@@ -232,8 +232,8 @@ const ConversionTile: React.FC<{
     chip = {
       label,
       text: "var(--spark-lime)",
-      bg: "rgba(242,243,238,0.10)",
-      border: "rgba(242,243,238,0.30)",
+      bg: "rgba(var(--spark-accent-rgb),0.10)",
+      border: "rgba(var(--spark-accent-rgb),0.30)",
     };
   else
     chip = {
@@ -307,7 +307,7 @@ const SecondaryRow: React.FC<{
     <div
       className="rounded-xl px-3.5 py-3"
       style={{
-        background: "rgba(255,255,255,0.02)",
+        background: "rgba(var(--spark-ink-rgb),0.02)",
         border: "1px solid var(--spark-border)",
       }}
     >
@@ -514,7 +514,7 @@ const TenantKpiComparison: React.FC<{
             onChange={(e) => setPeriodLocal(e.target.value)}
             className="mono text-[11px] rounded-lg px-2.5 py-1.5 cursor-pointer"
             style={{
-              background: "rgba(255,255,255,0.04)",
+              background: "rgba(var(--spark-ink-rgb),0.04)",
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text)",
               letterSpacing: "0.06em",

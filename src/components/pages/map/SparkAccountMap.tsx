@@ -98,8 +98,8 @@ type MapStyleRule = {
 };
 
 const DARK_MAP_STYLE: MapStyleRule[] = [
-  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "geometry", stylers: [{ color: "var(--spark-on-accent)" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "var(--spark-on-accent)" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
   {
     featureType: "administrative.locality",
@@ -440,8 +440,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             className="mono text-[11px]"
             style={{
               letterSpacing: "0.14em",
-              color: "#0a0d09",
-              background: loadingRest ? "rgba(242,243,238,0.45)" : "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+              background: loadingRest ? "rgba(var(--spark-accent-rgb),0.45)" : "var(--spark-lime)",
               borderRadius: 999,
               padding: "6px 12px",
             }}
@@ -493,7 +493,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 onClick={() => setCoverageFilter(tile.key)}
                 className="text-left transition rounded-xl"
                 style={{
-                  background: on ? "rgba(255,255,255,0.04)" : "transparent",
+                  background: on ? "rgba(var(--spark-ink-rgb),0.04)" : "transparent",
                   border: on
                     ? "1px solid var(--spark-border)"
                     : "1px solid transparent",
@@ -553,7 +553,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </div>
           <div
             className="h-1.5 rounded-full overflow-hidden flex"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            style={{ background: "rgba(var(--spark-ink-rgb),0.06)" }}
             aria-hidden
           >
             {counts.repeat > 0 ? (
@@ -818,7 +818,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                         <div
                           style={{
                             fontFamily: "Space Grotesk, sans-serif",
-                            color: "#0a0d09",
+                            color: "var(--spark-on-accent)",
                             minWidth: 240,
                             maxWidth: 280,
                           }}
@@ -918,7 +918,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                               }}
                               style={{
                                 background: "#f2f3ee",
-                                color: "#0a0d09",
+                                color: "var(--spark-on-accent)",
                                 border: "none",
                                 padding: "10px 14px",
                                 borderRadius: 10,
@@ -928,7 +928,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 fontSize: 14,
                                 cursor: "pointer",
                                 boxShadow:
-                                  "0 0 18px rgba(242,243,238,0.55)",
+                                  "0 0 18px rgba(var(--spark-accent-rgb),0.55)",
                               }}
                             >
                               ✦ Schedule a visit
@@ -947,7 +947,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 style={{
                                   flex: 1,
                                   background: "transparent",
-                                  color: "#0a0d09",
+                                  color: "var(--spark-on-accent)",
                                   border:
                                     "1px solid rgba(10,13,9,0.2)",
                                   padding: "6px 8px",
@@ -971,7 +971,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 rel="noreferrer"
                                 style={{
                                   background: "transparent",
-                                  color: "#0a0d09",
+                                  color: "var(--spark-on-accent)",
                                   border:
                                     "1px solid rgba(10,13,9,0.2)",
                                   padding: "6px 10px",
@@ -1040,7 +1040,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   borderBottom: "1px solid var(--spark-border)",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.02)")
+                  (e.currentTarget.style.background = "rgba(var(--spark-ink-rgb),0.02)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")
@@ -1083,7 +1083,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                     className="px-2.5 py-1 rounded-lg text-[10px] font-semibold shrink-0 transition"
                     style={{
                       background: "var(--spark-lime)",
-                      color: "#0a0d09",
+                      color: "var(--spark-on-accent)",
                       border: "none",
                       letterSpacing: "0.14em",
                     }}

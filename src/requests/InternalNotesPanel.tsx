@@ -323,7 +323,7 @@ export const InternalNotesPanel: React.FC<{
     <div
       className="rounded-xl p-4"
       style={{
-        background: "rgba(255,255,255,0.02)",
+        background: "rgba(var(--spark-ink-rgb),0.02)",
         border: "1px solid var(--spark-border)",
       }}
     >
@@ -344,7 +344,7 @@ export const InternalNotesPanel: React.FC<{
             letterSpacing: "0.14em",
             color: shipmentMode
               ? "var(--spark-lime)"
-              : "rgba(255,255,255,0.55)",
+              : "rgba(var(--spark-ink-rgb),0.55)",
           }}
         >
           {shipmentMode ? "× CANCEL SHIPMENT" : "SHIP ASSET →"}
@@ -411,7 +411,7 @@ export const InternalNotesPanel: React.FC<{
                   background: "transparent",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(242,243,238,0.06)")
+                  (e.currentTarget.style.background = "rgba(var(--spark-accent-rgb),0.06)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")
@@ -448,10 +448,10 @@ export const InternalNotesPanel: React.FC<{
           className="px-3.5 py-1.5 rounded-xl text-xs font-semibold"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
             boxShadow:
               draft.trim() || shipmentMode
-                ? "0 0 12px rgba(242,243,238,0.35)"
+                ? "0 0 12px rgba(var(--spark-accent-rgb),0.35)"
                 : "none",
             opacity: draft.trim() || shipmentMode ? 1 : 0.4,
           }}
@@ -468,7 +468,7 @@ export const InternalNotesPanel: React.FC<{
               key={n.id}
               className="flex items-start gap-3 p-3 rounded-xl"
               style={{
-                background: "rgba(255,255,255,0.02)",
+                background: "rgba(var(--spark-ink-rgb),0.02)",
                 border: "1px solid var(--spark-border)",
               }}
             >
@@ -498,8 +498,8 @@ export const InternalNotesPanel: React.FC<{
                   <div
                     className="mt-2 p-2 rounded-lg"
                     style={{
-                      background: "rgba(242,243,238,0.06)",
-                      border: "1px solid rgba(242,243,238,0.25)",
+                      background: "rgba(var(--spark-accent-rgb),0.06)",
+                      border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
                     }}
                   >
                     <p className="text-xs font-semibold">{n.shipment.label}</p>

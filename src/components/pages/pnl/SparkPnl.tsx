@@ -34,8 +34,8 @@ const money = (v: number) =>
 const inputStyle: React.CSSProperties = {
   padding: "8px 10px",
   borderRadius: 8,
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(var(--spark-ink-rgb),0.04)",
+  border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
   color: "#fff",
   colorScheme: "dark",
 };
@@ -152,7 +152,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
           className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50"
           style={{
             background: "var(--spark-lime, #f2f3ee)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
           }}
         >
           Export CSV
@@ -160,14 +160,14 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
       </div>
       <div
         className="rounded-xl overflow-x-auto"
-        style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+        style={{ border: "1px solid rgba(var(--spark-ink-rgb),0.08)" }}
       >
         <table className="w-full text-sm">
           <thead>
             <tr
               className="mono text-[10px]"
               style={{
-                background: "rgba(255,255,255,0.04)",
+                background: "rgba(var(--spark-ink-rgb),0.04)",
                 color: "var(--spark-text-meta)",
                 letterSpacing: "0.12em",
               }}
@@ -197,7 +197,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
                 <tr
                   key={r.uuid}
                   style={{
-                    borderTop: "1px solid rgba(255,255,255,0.05)",
+                    borderTop: "1px solid rgba(var(--spark-ink-rgb),0.05)",
                   }}
                 >
                   <td

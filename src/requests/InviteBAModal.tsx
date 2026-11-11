@@ -161,10 +161,10 @@ const SuggestionsInner: React.FC<{
             onClick={onClick}
             className="flex items-center gap-3 px-5 py-3"
             style={{
-              borderTop: "1px solid rgba(255,255,255,0.04)",
+              borderTop: "1px solid rgba(var(--spark-ink-rgb),0.04)",
               cursor: invited || busy ? "default" : "pointer",
               background: invited
-                ? "rgba(242,243,238,0.04)"
+                ? "rgba(var(--spark-accent-rgb),0.04)"
                 : "transparent",
               opacity: invited ? 0.7 : 1,
             }}
@@ -176,7 +176,7 @@ const SuggestionsInner: React.FC<{
               style={{
                 width: 18,
                 color:
-                  i === 0 ? "var(--spark-lime)" : "rgba(255,255,255,0.4)",
+                  i === 0 ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.4)",
                 fontWeight: i === 0 ? 700 : 400,
               }}
             >
@@ -187,7 +187,7 @@ const SuggestionsInner: React.FC<{
               style={{
                 width: 32,
                 height: 32,
-                background: "rgba(242,243,238,0.10)",
+                background: "rgba(var(--spark-accent-rgb),0.10)",
                 color: "var(--spark-lime)",
                 fontSize: 12,
               }}
@@ -232,7 +232,7 @@ const SuggestionsInner: React.FC<{
                     style={{
                       letterSpacing: "0.12em",
                       color: "var(--spark-text-secondary)",
-                      background: "rgba(255,255,255,0.05)",
+                      background: "rgba(var(--spark-ink-rgb),0.05)",
                       border: "1px solid var(--spark-border)",
                       padding: "1px 6px",
                       borderRadius: 999,
@@ -247,7 +247,7 @@ const SuggestionsInner: React.FC<{
                     style={{
                       letterSpacing: "0.12em",
                       color: "var(--spark-gold)",
-                      background: "rgba(255,255,255,0.05)",
+                      background: "rgba(var(--spark-ink-rgb),0.05)",
                       border: "1px solid var(--spark-border)",
                       padding: "1px 6px",
                       borderRadius: 999,
@@ -292,7 +292,7 @@ const SuggestionsInner: React.FC<{
                   </span>
                   <div
                     className="h-1 w-full overflow-hidden rounded-full"
-                    style={{ background: "rgba(255,255,255,0.08)" }}
+                    style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
                     aria-hidden
                   >
                     <div
@@ -766,7 +766,7 @@ const Inner: React.FC<{
                   style={{
                     padding: "0.5rem 0.4rem",
                     background: active ? "var(--spark-lime)" : "transparent",
-                    color: active ? "#0a0d09" : "var(--spark-text)",
+                    color: active ? "var(--spark-on-accent)" : "var(--spark-text)",
                   }}
                 >
                   <span className="block text-sm font-semibold">{opt.label}</span>
@@ -776,7 +776,7 @@ const Inner: React.FC<{
                       letterSpacing: "0.1em",
                       color: active
                         ? "rgba(10,13,9,0.7)"
-                        : "rgba(255,255,255,0.4)",
+                        : "rgba(var(--spark-ink-rgb),0.4)",
                     }}
                   >
                     {opt.hint.toUpperCase()}
@@ -840,7 +840,7 @@ const Inner: React.FC<{
                   borderBottom: "1px solid var(--spark-border)",
                   cursor: row.alreadyInvited || busy ? "default" : "pointer",
                   background: checked
-                    ? "rgba(242,243,238,0.06)"
+                    ? "rgba(var(--spark-accent-rgb),0.06)"
                     : "transparent",
                 }}
               >
@@ -862,7 +862,7 @@ const Inner: React.FC<{
                   style={{
                     width: 32,
                     height: 32,
-                    background: "rgba(242,243,238,0.10)",
+                    background: "rgba(var(--spark-accent-rgb),0.10)",
                     color: "var(--spark-lime)",
                     fontSize: 12,
                   }}
@@ -924,8 +924,8 @@ const Inner: React.FC<{
                         style={{
                           letterSpacing: "0.16em",
                           color: "var(--spark-lime)",
-                          background: "rgba(242,243,238,0.10)",
-                          border: "1px solid rgba(242,243,238,0.30)",
+                          background: "rgba(var(--spark-accent-rgb),0.10)",
+                          border: "1px solid rgba(var(--spark-accent-rgb),0.30)",
                           padding: "1px 6px",
                           borderRadius: 999,
                         }}
@@ -971,7 +971,7 @@ const Inner: React.FC<{
                 disabled={loadingMore}
                 className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
                 style={{
-                  background: "rgba(242,243,238,0.08)",
+                  background: "rgba(var(--spark-accent-rgb),0.08)",
                   color: "var(--spark-text)",
                   border: "1px solid var(--spark-border)",
                 }}
@@ -997,7 +997,7 @@ const Inner: React.FC<{
               color:
                 selectedIds.size > 0
                   ? "var(--spark-lime)"
-                  : "rgba(255,255,255,0.35)",
+                  : "rgba(var(--spark-ink-rgb),0.35)",
             }}
           >
             {selectedIds.size === 0
@@ -1023,10 +1023,10 @@ const Inner: React.FC<{
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow:
                   selectedIds.size > 0
-                    ? "0 0 16px rgba(242,243,238,0.35)"
+                    ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)"
                     : "none",
               }}
             >

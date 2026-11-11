@@ -159,7 +159,7 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                   letterSpacing: "0.18em",
                   color: isToday
                     ? "var(--spark-lime)"
-                    : "rgba(255,255,255,0.45)",
+                    : "rgba(var(--spark-ink-rgb),0.45)",
                 }}
               >
                 {d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}
@@ -250,7 +250,7 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                 position: "relative",
                 borderLeft: "1px solid var(--spark-border)",
                 background: isToday
-                  ? "linear-gradient(180deg, rgba(242,243,238,0.025), transparent)"
+                  ? "linear-gradient(180deg, rgba(var(--spark-accent-rgb),0.025), transparent)"
                   : "transparent",
                 height: hours.length * HOUR_PX,
               }}

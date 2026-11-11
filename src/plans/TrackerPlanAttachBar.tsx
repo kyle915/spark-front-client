@@ -150,8 +150,8 @@ export default function TrackerPlanAttachBar({
     <div
       className="flex flex-wrap items-center gap-2 px-4 py-3 rounded-2xl"
       style={{
-        background: "rgba(242,243,238,0.06)",
-        border: "1px solid rgba(242,243,238,0.22)",
+        background: "rgba(var(--spark-accent-rgb),0.06)",
+        border: "1px solid rgba(var(--spark-accent-rgb),0.22)",
       }}
     >
       <span
@@ -176,7 +176,7 @@ export default function TrackerPlanAttachBar({
         className="px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-40"
         style={{
           background: targetPlanId ? "var(--spark-lime)" : "transparent",
-          color: targetPlanId ? "#0a0a0a" : "rgba(255,255,255,0.4)",
+          color: targetPlanId ? "#0a0a0a" : "rgba(var(--spark-ink-rgb),0.4)",
           border: targetPlanId
             ? "none"
             : "1px solid var(--spark-border)",

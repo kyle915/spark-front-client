@@ -165,7 +165,7 @@ const ThreadList: React.FC<{
                 className="mono text-[10px] rounded-full px-2 py-0.5 shrink-0"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   letterSpacing: "0.06em",
                   fontWeight: 700,
                 }}
@@ -271,7 +271,7 @@ const SparkChatPage: React.FC = () => {
             className="px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
           >
             ✏️ New message

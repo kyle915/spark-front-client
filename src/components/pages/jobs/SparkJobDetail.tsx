@@ -377,7 +377,7 @@ const ApplicantsCard: React.FC<{
                       className="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0"
                       style={{
                         background: "var(--spark-lime)",
-                        color: "#0a0d09",
+                        color: "var(--spark-on-accent)",
                         opacity: inFlight ? 0.6 : 1,
                       }}
                     >
@@ -682,7 +682,7 @@ const BABriefingCard: React.FC<{
               className="px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 opacity: inFlight || !dirty ? 0.5 : 1,
               }}
             >
@@ -990,7 +990,7 @@ const GigTemplateRow: React.FC<{
           className="px-3 py-1.5 rounded-xl text-xs font-semibold"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
             opacity: busy ? 0.5 : 1,
           }}
         >
@@ -1216,7 +1216,7 @@ const PostJobModal: React.FC<{
               padding: "0.85rem",
               borderRadius: 14,
               border: "1px solid var(--spark-border)",
-              background: "rgba(255,255,255,0.02)",
+              background: "rgba(var(--spark-ink-rgb),0.02)",
             }}
           >
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1399,9 +1399,9 @@ const PostJobModal: React.FC<{
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow:
-                  valid && !posting ? "0 0 16px rgba(242,243,238,0.35)" : "none",
+                  valid && !posting ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)" : "none",
               }}
             >
               {posting ? "Posting…" : "Post job"}
@@ -1664,9 +1664,9 @@ const EditJobModal: React.FC<{
             className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               boxShadow:
-                valid && !saving ? "0 0 16px rgba(242,243,238,0.35)" : "none",
+                valid && !saving ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)" : "none",
             }}
           >
             {saving ? "Saving…" : "Save changes"}
@@ -1914,7 +1914,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                 }}
               >
                 Post job
@@ -1925,9 +1925,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 className="px-3 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
                 title="This job is live to BAs on the job board"
                 style={{
-                  background: "rgba(242,243,238,0.12)",
+                  background: "rgba(var(--spark-accent-rgb),0.12)",
                   color: "var(--spark-lime)",
-                  border: "1px solid rgba(242,243,238,0.35)",
+                  border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
                 }}
               >
                 <span style={{ fontSize: "0.7rem" }}>●</span> Live to BAs
@@ -1989,7 +1989,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   onClick={confirmDuplicate}
                   disabled={cloning || !dupDate}
                   className="px-3 py-1 rounded-lg text-sm font-semibold disabled:opacity-50"
-                  style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                  style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
                 >
                   Duplicate
                 </button>
@@ -2009,7 +2009,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
               }}
             >
               ⤴ Share job link
@@ -2264,7 +2264,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   key={m.uuid}
                   className="flex items-center gap-3 p-3 rounded-xl transition"
                   style={{
-                    background: "rgba(255,255,255,0.025)",
+                    background: "rgba(var(--spark-ink-rgb),0.025)",
                     border: "1px solid var(--spark-border)",
                   }}
                 >

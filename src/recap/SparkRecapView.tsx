@@ -367,7 +367,7 @@ const BaSearch: React.FC<{
                   className="mt-2 w-full text-left rounded-lg px-3 py-2 text-sm"
                   style={{
                     background:
-                      "var(--spark-surface-2, rgba(255,255,255,0.04))",
+                      "var(--spark-surface-2, rgba(var(--spark-ink-rgb),0.04))",
                     border: "1px dashed var(--spark-border)",
                   }}
                 >
@@ -402,7 +402,7 @@ const BaSearch: React.FC<{
                   onClick={() => onPick(String(amb.id), display)}
                   className="w-full text-left rounded-lg px-3 py-2 text-sm"
                   style={{
-                    background: "var(--spark-surface-2, rgba(255,255,255,0.04))",
+                    background: "var(--spark-surface-2, rgba(var(--spark-ink-rgb),0.04))",
                     border: "1px solid var(--spark-border)",
                   }}
                 >
@@ -1373,7 +1373,7 @@ const SparkRecapInner: React.FC<{
       {isAdmin && editingNumbers && (
         <div
           className="spark-card p-6"
-          style={{ borderColor: "rgba(242,243,238,0.3)" }}
+          style={{ borderColor: "rgba(var(--spark-accent-rgb),0.3)" }}
         >
           <p
             className="mono text-[10px]"
@@ -1771,7 +1771,7 @@ const SparkRecapInner: React.FC<{
               className="px-5 py-2.5 rounded-xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 opacity: isUpdating ? 0.5 : 1,
               }}
             >
@@ -1952,7 +1952,7 @@ const SparkRecapInner: React.FC<{
                 className="italic text-sm leading-relaxed pl-4"
                 style={{
                   color: "var(--recap-text, #14160f)",
-                  borderLeft: "2px solid rgba(242,243,238,0.5)",
+                  borderLeft: "2px solid rgba(var(--spark-accent-rgb),0.5)",
                 }}
               >
                 "{consumerFeedback.quotes}"
@@ -2111,9 +2111,9 @@ const SparkRecapInner: React.FC<{
       <div
         className="spark-card p-6"
         style={{
-          borderColor: "rgba(242,243,238,0.25)",
+          borderColor: "rgba(var(--spark-accent-rgb),0.25)",
           background:
-            "linear-gradient(180deg, rgba(242,243,238,0.04), transparent)",
+            "linear-gradient(180deg, rgba(var(--spark-accent-rgb),0.04), transparent)",
         }}
       >
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -2430,7 +2430,7 @@ const SparkRecapInner: React.FC<{
                 className="italic text-sm leading-relaxed pl-4"
                 style={{
                   color: "var(--recap-text, #14160f)",
-                  borderLeft: "2px solid rgba(242,243,238,0.5)",
+                  borderLeft: "2px solid rgba(var(--spark-accent-rgb),0.5)",
                 }}
               >
                 "{notes}"
@@ -2624,7 +2624,7 @@ const SparkRecapInner: React.FC<{
                 background: editingNumbers
                   ? "var(--spark-lime)"
                   : "transparent",
-                color: editingNumbers ? "#0a0d09" : "var(--spark-text)",
+                color: editingNumbers ? "var(--spark-on-accent)" : "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
               title="Edit the recap's numbers (products sold, cans, packs, engagements, spend)"
@@ -2657,7 +2657,7 @@ const SparkRecapInner: React.FC<{
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                 style={{
                   background: "transparent",
-                  color: "rgba(255,255,255,0.7)",
+                  color: "rgba(var(--spark-ink-rgb),0.7)",
                   border: "1px solid var(--spark-border)",
                   opacity: isArchiving ? 0.5 : 1,
                 }}
@@ -2712,12 +2712,12 @@ const SparkRecapInner: React.FC<{
                       ? {
                           background: "transparent",
                           color: "var(--spark-lime)",
-                          border: "1px solid rgba(242,243,238,0.45)",
+                          border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
                           opacity: isApproving ? 0.5 : 1,
                         }
                       : {
                           background: "var(--spark-lime)",
-                          color: "#0a0d09",
+                          color: "var(--spark-on-accent)",
                           opacity: isApproving ? 0.5 : 1,
                         }
                   }
@@ -2739,7 +2739,7 @@ const SparkRecapInner: React.FC<{
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={{
                       background: "var(--spark-lime)",
-                      color: "#0a0d09",
+                      color: "var(--spark-on-accent)",
                       opacity: isApproving ? 0.5 : 1,
                     }}
                     title="Approve this recap and advance to the next unapproved recap in the queue (a)"

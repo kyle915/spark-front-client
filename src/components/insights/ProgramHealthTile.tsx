@@ -61,7 +61,7 @@ const Inner: React.FC<{
             className="mono text-[10px] px-3 py-1.5 rounded-lg"
             style={{
               letterSpacing: "0.12em",
-              color: weak ? "var(--spark-orange)" : "rgba(255,255,255,0.55)",
+              color: weak ? "var(--spark-orange)" : "rgba(var(--spark-ink-rgb),0.55)",
               border: `1px solid ${
                 weak ? "rgba(239,90,42,0.40)" : "var(--spark-border)"
               }`,
@@ -117,13 +117,13 @@ const Step: React.FC<{
         : "var(--spark-text)";
   const bg =
     tone === "lime"
-      ? "rgba(242,243,238,0.08)"
+      ? "rgba(var(--spark-accent-rgb),0.08)"
       : tone === "orange"
         ? "rgba(239,90,42,0.10)"
-        : "rgba(255,255,255,0.03)";
+        : "rgba(var(--spark-ink-rgb),0.03)";
   const border =
     tone === "lime"
-      ? "rgba(242,243,238,0.30)"
+      ? "rgba(var(--spark-accent-rgb),0.30)"
       : tone === "orange"
         ? "rgba(239,90,42,0.35)"
         : "var(--spark-border)";

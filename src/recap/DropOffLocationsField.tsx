@@ -221,10 +221,10 @@ export function DropOffLocationsField({
         background: "rgba(0,0,0,0.02)",
       }
     : {
-        border: "1px solid rgba(255,255,255,0.12)",
+        border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
         borderRadius: 12,
         padding: 14,
-        background: "rgba(255,255,255,0.03)",
+        background: "rgba(var(--spark-ink-rgb),0.03)",
       };
 
   const muted: CSSProperties = {
@@ -250,7 +250,7 @@ export function DropOffLocationsField({
     : {
         padding: "8px 12px",
         borderRadius: 10,
-        border: "1px solid rgba(255,255,255,0.2)",
+        border: "1px solid rgba(var(--spark-ink-rgb),0.2)",
         background: "transparent",
         fontSize: 13,
         fontWeight: 600,
@@ -329,7 +329,7 @@ export function DropOffLocationsField({
               ) : (
                 <input
                   className={opsInputCls}
-                  style={{ borderColor: "rgba(255,255,255,0.15)" }}
+                  style={{ borderColor: "rgba(var(--spark-ink-rgb),0.15)" }}
                   value={loc.placeName}
                   onChange={(e) => updateAt(idx, { placeName: e.target.value })}
                   placeholder="e.g. Whole Foods — Downtown"
@@ -346,7 +346,7 @@ export function DropOffLocationsField({
                   style={{
                     ...secondaryBtn,
                     background: locatingIdx === idx ? accent : "transparent",
-                    color: locatingIdx === idx ? "#0a0d09" : undefined,
+                    color: locatingIdx === idx ? "var(--spark-on-accent)" : undefined,
                   }}
                   disabled={locatingIdx === idx}
                   onClick={() => pullGps(idx)}
@@ -380,7 +380,7 @@ export function DropOffLocationsField({
                         width: "100%",
                         padding: "8px 12px",
                         borderRadius: 8,
-                        border: "1px solid rgba(255,255,255,0.15)",
+                        border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
                         background: "transparent",
                         color: "inherit",
                         fontSize: 14,
@@ -410,7 +410,7 @@ export function DropOffLocationsField({
                       <input
                         className={opsInputCls}
                         style={{
-                          borderColor: "rgba(255,255,255,0.15)",
+                          borderColor: "rgba(var(--spark-ink-rgb),0.15)",
                           marginBottom: 8,
                         }}
                         type="search"
@@ -460,7 +460,7 @@ export function DropOffLocationsField({
                             cursor: "pointer",
                             border: on
                               ? "1px solid var(--spark-orange, #ef5a2a)"
-                              : "1px solid rgba(255,255,255,0.2)",
+                              : "1px solid rgba(var(--spark-ink-rgb),0.2)",
                             background: on
                               ? "rgba(239, 90, 42, 0.85)"
                               : "transparent",
@@ -541,7 +541,7 @@ export function DropOffLocationsField({
                                 className={opsInputCls}
                                 style={{
                                   width: 88,
-                                  borderColor: "rgba(255,255,255,0.15)",
+                                  borderColor: "rgba(var(--spark-ink-rgb),0.15)",
                                 }}
                                 inputMode="numeric"
                                 placeholder="cases"

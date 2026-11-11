@@ -134,7 +134,7 @@ const Inner: React.FC = () => {
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    background: "rgba(242,243,238,0.10)",
+                    background: "rgba(var(--spark-accent-rgb),0.10)",
                     color: "var(--spark-lime)",
                     display: "grid",
                     placeItems: "center",

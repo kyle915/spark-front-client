@@ -151,7 +151,7 @@ export default function EmailCampaignReportModal({
                   color:
                     invalid.length > 0
                       ? "var(--spark-orange)"
-                      : "rgba(255,255,255,0.40)",
+                      : "rgba(var(--spark-ink-rgb),0.40)",
                 }}
               >
                 {recipients.length > 0 ? (
@@ -286,10 +286,10 @@ export default function EmailCampaignReportModal({
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow:
                   ready && !isSending
-                    ? "0 0 16px rgba(242,243,238,0.4)"
+                    ? "0 0 16px rgba(var(--spark-accent-rgb),0.4)"
                     : "none",
               }}
             >

@@ -1062,8 +1062,8 @@ export default function FieldMarketing() {
                                 : row.status === "submitted"
                                   ? "#f2f3ee"
                                   : hasLogged(row)
-                                    ? "rgba(255,255,255,0.7)"
-                                    : "rgba(255,255,255,0.55)",
+                                    ? "rgba(var(--spark-ink-rgb),0.7)"
+                                    : "rgba(var(--spark-ink-rgb),0.55)",
                             }}
                           >
                             {rowStatus(row)}
@@ -1080,10 +1080,10 @@ export default function FieldMarketing() {
                               letterSpacing: "0.08em",
                               color: row.resultsCounted ? "#f2f3ee" : "#ef5a2a",
                               background: row.resultsCounted
-                                ? "rgba(242,243,238,0.10)"
+                                ? "rgba(var(--spark-accent-rgb),0.10)"
                                 : "rgba(239,90,42,0.10)",
                               border: row.resultsCounted
-                                ? "1px solid rgba(242,243,238,0.3)"
+                                ? "1px solid rgba(var(--spark-accent-rgb),0.3)"
                                 : "1px solid rgba(239,90,42,0.3)",
                             }}
                             onClick={() => setResultsFor(row)}

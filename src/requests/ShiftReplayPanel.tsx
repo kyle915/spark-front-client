@@ -30,7 +30,7 @@ type TrailPoint = {
 };
 
 const TRAIL_LIME = "#f2f3ee";
-const TRAIL_LIME_TRANSLUCENT = "rgba(242,243,238,0.35)";
+const TRAIL_LIME_TRANSLUCENT = "rgba(var(--spark-accent-rgb),0.35)";
 
 const fmtTimeLabel = (raw: string): string => {
   try {
@@ -201,10 +201,10 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
             mapId="spark-v2-shift-replay"
             styles={
               [
-                { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
+                { elementType: "geometry", stylers: [{ color: "var(--spark-on-accent)" }] },
                 {
                   elementType: "labels.text.stroke",
-                  stylers: [{ color: "#0a0d09" }],
+                  stylers: [{ color: "var(--spark-on-accent)" }],
                 },
                 {
                   elementType: "labels.text.fill",
@@ -296,7 +296,7 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
                 <div
                   style={{
                     fontFamily: "Space Grotesk, sans-serif",
-                    color: "#0a0d09",
+                    color: "var(--spark-on-accent)",
                     minWidth: 160,
                   }}
                 >

@@ -126,7 +126,7 @@ const components: Components = {
   code: ({ children }) => (
     <code
       className="mono text-[12px] px-1 py-0.5 rounded"
-      style={{ background: "rgba(255,255,255,0.08)" }}
+      style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
     >
       {children}
     </code>

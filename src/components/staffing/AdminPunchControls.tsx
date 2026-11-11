@@ -205,7 +205,7 @@ const AdminPunchControls: React.FC<Props> = ({
           onChange={(e) => setClockTime(e.target.value)}
           className="text-xs px-2 py-1 rounded"
           style={{
-            background: "rgba(255,255,255,0.06)",
+            background: "rgba(var(--spark-ink-rgb),0.06)",
             border: "1px solid var(--spark-border)",
             color: "#fff",
           }}
@@ -217,7 +217,7 @@ const AdminPunchControls: React.FC<Props> = ({
           placeholder="Note (optional)"
           className="text-xs px-2 py-1 rounded"
           style={{
-            background: "rgba(255,255,255,0.06)",
+            background: "rgba(var(--spark-ink-rgb),0.06)",
             border: "1px solid var(--spark-border)",
             color: "#fff",
           }}
@@ -230,7 +230,7 @@ const AdminPunchControls: React.FC<Props> = ({
             style={{
               ...btnStyle,
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               border: "none",
               fontWeight: 600,
             }}

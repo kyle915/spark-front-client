@@ -219,7 +219,7 @@ const Inner: React.FC = () => {
             className="mono text-[10px] px-3 py-2 rounded-xl"
             style={{
               letterSpacing: "0.18em",
-              background: "rgba(255,255,255,0.04)",
+              background: "rgba(var(--spark-ink-rgb),0.04)",
               color: "var(--spark-text-secondary)",
               border: "1px solid var(--spark-border)",
             }}
@@ -250,16 +250,16 @@ const Inner: React.FC = () => {
                         ? "1px solid var(--spark-border)"
                         : "none",
                     background: r.unread
-                      ? "rgba(255,255,255,0.015)"
+                      ? "rgba(var(--spark-ink-rgb),0.015)"
                       : "transparent",
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background =
-                      "rgba(255,255,255,0.03)")
+                      "rgba(var(--spark-ink-rgb),0.03)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = r.unread
-                      ? "rgba(255,255,255,0.015)"
+                      ? "rgba(var(--spark-ink-rgb),0.015)"
                       : "transparent")
                   }
                 >
@@ -281,7 +281,7 @@ const Inner: React.FC = () => {
                           style={{
                             color: r.unread
                               ? "var(--spark-text)"
-                              : "rgba(255,255,255,0.7)",
+                              : "rgba(var(--spark-ink-rgb),0.7)",
                           }}
                         >
                           {r.title}

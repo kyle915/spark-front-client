@@ -29,7 +29,7 @@ type Shift = Data["upcomingShiftsForConfirmation"][number];
 type Confirmation = Data["eventConfirmations"][number];
 
 const panel: React.CSSProperties = {
-  background: "var(--spark-panel, rgba(255,255,255,0.03))",
+  background: "var(--spark-panel, rgba(var(--spark-ink-rgb),0.03))",
   border: "1px solid var(--spark-border)",
   borderRadius: 16,
 };
@@ -42,7 +42,7 @@ const labelMini: React.CSSProperties = {
 };
 
 const field: React.CSSProperties = {
-  background: "rgba(255,255,255,0.04)",
+  background: "rgba(var(--spark-ink-rgb),0.04)",
   border: "1px solid var(--spark-border)",
   borderRadius: 10,
   padding: "9px 11px",
@@ -210,7 +210,7 @@ const ProductPicker: React.FC<{
                     <label
                       key={opt}
                       className="flex items-center gap-2 cursor-pointer text-[13px] py-0.5"
-                      style={{ color: on ? "var(--spark-text)" : "rgba(255,255,255,0.65)" }}
+                      style={{ color: on ? "var(--spark-text)" : "rgba(var(--spark-ink-rgb),0.65)" }}
                     >
                       <input
                         type="checkbox"
@@ -237,8 +237,8 @@ const ConfirmationStatusChip: React.FC<{
   const tone =
     status === "Sent"
       ? {
-          background: "rgba(242,243,238,0.14)",
-          border: "1px solid rgba(242,243,238,0.4)",
+          background: "rgba(var(--spark-accent-rgb),0.14)",
+          border: "1px solid rgba(var(--spark-accent-rgb),0.4)",
           color: "var(--spark-lime)",
         }
       : status === "Error"
@@ -248,7 +248,7 @@ const ConfirmationStatusChip: React.FC<{
             color: "var(--spark-orange)",
           }
         : {
-            background: "rgba(255,255,255,0.05)",
+            background: "rgba(var(--spark-ink-rgb),0.05)",
             border: "1px solid var(--spark-border)",
             color: "var(--spark-text-secondary)",
           };
@@ -269,9 +269,9 @@ const StageBadge: React.FC<{ stage: string; sentAt: string | null }> = ({
   <span
     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px]"
     style={{
-      background: sentAt ? "rgba(190,242,100,0.12)" : "rgba(255,255,255,0.05)",
+      background: sentAt ? "rgba(190,242,100,0.12)" : "rgba(var(--spark-ink-rgb),0.05)",
       border: `1px solid ${sentAt ? "rgba(190,242,100,0.4)" : "var(--spark-border)"}`,
-      color: sentAt ? "var(--spark-lime)" : "rgba(255,255,255,0.5)",
+      color: sentAt ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.5)",
     }}
   >
     {STAGE_LABEL[stage] ?? stage} {sentAt ? "✓" : "·"}
@@ -378,7 +378,7 @@ const HistoryRow: React.FC<{
                       color: "var(--spark-orange)",
                     }
                   : {
-                      background: "rgba(255,255,255,0.05)",
+                      background: "rgba(var(--spark-ink-rgb),0.05)",
                       border: "1px solid var(--spark-border)",
                       color: "var(--spark-text-secondary)",
                     }
@@ -620,7 +620,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
         <div
           className="px-4 py-3 rounded-xl text-sm"
           style={{
-            background: "rgba(255,255,255,0.04)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
             border: "1px solid var(--spark-border)",
             color: "var(--spark-text-secondary)",
           }}
@@ -783,7 +783,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
         <div
           className="mt-5 p-3 rounded-xl text-[12px]"
           style={{
-            background: "rgba(255,255,255,0.03)",
+            background: "rgba(var(--spark-ink-rgb),0.03)",
             border: "1px solid var(--spark-border)",
             color: "var(--spark-text-meta)",
           }}
@@ -815,8 +815,8 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
             onClick={() => submit(true)}
             className="px-4 py-2.5 rounded-xl text-sm font-bold"
             style={{
-              background: canSend ? "var(--spark-lime)" : "rgba(255,255,255,0.08)",
-              color: canSend ? "#0a0d09" : "rgba(255,255,255,0.35)",
+              background: canSend ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.08)",
+              color: canSend ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.35)",
               border: "none",
               cursor: canSend ? "pointer" : "not-allowed",
             }}

@@ -9,7 +9,9 @@ const updateChartTheme = () => {
   if (typeof window === "undefined") return;
 
   const root = document.documentElement;
-  const isDark = root.getAttribute("data-theme") === DARK_THEME;
+  const isDark =
+    root.getAttribute("data-theme") === DARK_THEME &&
+    root.getAttribute("data-spark-mode") !== "light";
   const styles = getComputedStyle(root);
   const cssText = styles.getPropertyValue("--color-base-content").trim();
   let textColor = styles.color || (isDark ? "#e2e8f0" : "#334155");
@@ -71,6 +73,6 @@ if (typeof window !== "undefined") {
   const observer = new MutationObserver(() => updateChartTheme());
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ["data-theme"],
+    attributeFilter: ["data-theme", "data-spark-mode"],
   });
 }

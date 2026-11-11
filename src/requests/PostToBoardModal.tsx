@@ -158,8 +158,8 @@ export default function PostToBoardModal({
             <div
               className="rounded-xl p-4"
               style={{
-                background: "rgba(242,243,238,0.06)",
-                border: "1px solid rgba(242,243,238,0.3)",
+                background: "rgba(var(--spark-accent-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
               }}
             >
               <p
@@ -301,9 +301,9 @@ export default function PostToBoardModal({
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow: canSubmit
-                  ? "0 0 16px rgba(242,243,238,0.35)"
+                  ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)"
                   : "none",
               }}
             >

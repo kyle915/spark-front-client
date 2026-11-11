@@ -36,8 +36,8 @@ export function RecapTypeChips({
               compact ? "flex-1 px-2 py-2 text-[11px]" : "px-2.5 py-2 text-xs"
             } font-semibold whitespace-nowrap inline-flex items-center justify-center gap-1.5`}
             style={{
-              background: on ? "rgba(242,243,238,0.16)" : "transparent",
-              color: on ? "var(--spark-lime)" : "rgba(255,255,255,0.65)",
+              background: on ? "rgba(var(--spark-accent-rgb),0.16)" : "transparent",
+              color: on ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.65)",
             }}
           >
             {label}

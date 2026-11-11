@@ -697,7 +697,7 @@ const TrackerTable: React.FC<{
                         aria-label={`Select ${r.venue}`}
                         className="checkbox checkbox-xs"
                         style={{
-                          borderColor: "rgba(255,255,255,0.35)",
+                          borderColor: "rgba(var(--spark-ink-rgb),0.35)",
                           accentColor: "var(--spark-orange, #ef5a2a)",
                         }}
                       />
@@ -867,7 +867,7 @@ const TrackerTable: React.FC<{
                     style={{
                       color: isDone
                         ? "var(--spark-lime)"
-                        : "var(--spark-text-meta, rgba(255,255,255,0.3))",
+                        : "var(--spark-text-meta, rgba(var(--spark-ink-rgb),0.3))",
                     }}
                   >
                     —
@@ -912,7 +912,7 @@ const TrackerTable: React.FC<{
                             letterSpacing: "0.14em",
                             color: isExpanded
                               ? "var(--spark-lime)"
-                              : "var(--spark-muted, rgba(255,255,255,0.5))",
+                              : "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                           }}
                           title="Internal notes & shipments"
                         >
@@ -941,7 +941,7 @@ const TrackerTable: React.FC<{
                             className="mono text-[10px] transition"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                              color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                             }}
                             title="Clone this request to N new dates"
                           >
@@ -957,7 +957,7 @@ const TrackerTable: React.FC<{
                             className="mono text-[10px] transition"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                              color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                             }}
                             title="Assign a BA to this event — sends a shift offer"
                           >
@@ -973,7 +973,7 @@ const TrackerTable: React.FC<{
                             className="mono text-[10px] transition"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                              color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                             }}
                             title="Post this event's job to the public BA board — open to all eligible BAs"
                           >
@@ -1516,7 +1516,7 @@ const MasterTrackerInner: React.FC<{
         <div ref={loadMoreRef} className="py-3 text-center">
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.16em", color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
+            style={{ letterSpacing: "0.16em", color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))" }}
           >
             {loadingMore ? "LOADING MORE…" : "SCROLL FOR MORE"}
           </p>
@@ -2254,7 +2254,7 @@ export default function MasterTracker() {
               className="mono text-[10px] px-3 py-1.5 rounded-xl"
               style={{
                 letterSpacing: "0.16em",
-                color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 border: "1px solid var(--spark-border)",
                 background: "transparent",
               }}
@@ -2269,8 +2269,8 @@ export default function MasterTracker() {
           <div
             className="spark-card px-4 py-3 flex flex-wrap items-center justify-between gap-2"
             style={{
-              borderColor: "rgba(242,243,238,0.35)",
-              background: "rgba(242,243,238,0.06)",
+              borderColor: "rgba(var(--spark-accent-rgb),0.35)",
+              background: "rgba(var(--spark-accent-rgb),0.06)",
             }}
           >
             <p
@@ -2288,7 +2288,7 @@ export default function MasterTracker() {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.12em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
                 {torchProgram ? "PLANS" : "ALL PLANS"}
@@ -2299,7 +2299,7 @@ export default function MasterTracker() {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.12em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
                 × CLEAR
@@ -2326,7 +2326,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(255,255,255,0.38))",
+                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
               }}
             >
               TRACKER REQUESTS
@@ -2349,7 +2349,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(255,255,255,0.38))",
+                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
               }}
               title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
             >
@@ -2373,7 +2373,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(255,255,255,0.38))",
+                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
               }}
               title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
             >
@@ -2397,7 +2397,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(255,255,255,0.38))",
+                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
               }}
               title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
             >
@@ -2464,7 +2464,7 @@ export default function MasterTracker() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+              style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
             >
               Loading events…
             </div>
@@ -2695,7 +2695,7 @@ export default function MasterTracker() {
                   className="mono text-[11px] px-3"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                    color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                   }}
                 >
                   CANCEL
@@ -2709,7 +2709,7 @@ export default function MasterTracker() {
                   className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                   style={{
                     background: "var(--spark-sky)",
-                    color: "#0a0d09",
+                    color: "var(--spark-on-accent)",
                   }}
                 >
                   Save link

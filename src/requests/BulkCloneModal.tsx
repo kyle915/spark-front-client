@@ -211,8 +211,8 @@ export default function BulkCloneModal({
             <div
               className="rounded-xl px-3 py-2 text-xs"
               style={{
-                background: "rgba(242,243,238,0.06)",
-                border: "1px solid rgba(242,243,238,0.20)",
+                background: "rgba(var(--spark-accent-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.20)",
                 color: "var(--spark-text-secondary)",
               }}
             >
@@ -236,7 +236,7 @@ export default function BulkCloneModal({
               color:
                 ok.length > 0
                   ? "var(--spark-lime)"
-                  : "rgba(255,255,255,0.40)",
+                  : "rgba(var(--spark-ink-rgb),0.40)",
             }}
           >
             {ok.length === 0
@@ -264,8 +264,8 @@ export default function BulkCloneModal({
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: ready ? "0 0 16px rgba(242,243,238,0.4)" : "none",
+                color: "var(--spark-on-accent)",
+                boxShadow: ready ? "0 0 16px rgba(var(--spark-accent-rgb),0.4)" : "none",
               }}
             >
               {isCloning

@@ -77,8 +77,8 @@ const PRESETS: { key: string; label: string; weeks: number }[] = [
 const inputStyle: React.CSSProperties = {
   padding: "6px 8px",
   borderRadius: 8,
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(var(--spark-ink-rgb),0.04)",
+  border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
   color: "#fff",
   colorScheme: "dark",
 };
@@ -100,7 +100,7 @@ const modeColor = (mode: string): string =>
     ? "var(--spark-lime, #f2f3ee)"
     : mode === "sessions"
       ? "rgba(255,200,80,0.85)"
-      : "rgba(255,255,255,0.4)";
+      : "rgba(var(--spark-ink-rgb),0.4)";
 
 const SkuBreakdownCard: React.FC<{
   title: string;
@@ -138,7 +138,7 @@ const SkuBreakdownCard: React.FC<{
               {items.map((item) => (
                 <tr
                   key={item.product}
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                  style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
                 >
                   <td className="py-1.5 pr-3" style={{ color: "var(--spark-text)" }}>
                     {item.product}
@@ -271,7 +271,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             type="button"
             onClick={() => applyPreset(p.weeks)}
             className="text-xs px-2.5 py-1 rounded-full transition hover:bg-white/5"
-            style={{ border: "1px solid rgba(255,255,255,0.14)", color: "var(--spark-text-secondary)" }}
+            style={{ border: "1px solid rgba(var(--spark-ink-rgb),0.14)", color: "var(--spark-text-secondary)" }}
           >
             {p.label}
           </button>
@@ -403,7 +403,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               </thead>
               <tbody>
                 {report.locationsHit.map((loc, i) => (
-                  <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <tr key={i} style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}>
                     <td className="py-1.5 pr-3" style={{ color: "var(--spark-text-secondary)" }}>
                       {shortDate(loc.date)}
                     </td>
@@ -445,7 +445,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               <li
                 key={i}
                 className="flex flex-wrap items-baseline justify-between gap-2 py-2"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
               >
                 <div>
                   <span className="font-semibold text-xs">{shift.market ?? shift.name ?? "—"}</span>
@@ -488,7 +488,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 : undefined
             }
             className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40"
-            style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime, #f2f3ee)", color: "var(--spark-on-accent)" }}
           >
             {summaryInFlight ? "Summarizing…" : "✦ Summarize with AI"}
           </button>
@@ -498,8 +498,8 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           <div
             className="rounded-xl p-3 mb-4 text-xs whitespace-pre-line"
             style={{
-              background: "rgba(242,243,238,0.06)",
-              border: "1px solid rgba(242,243,238,0.25)",
+              background: "rgba(var(--spark-accent-rgb),0.06)",
+              border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
               color: "var(--spark-text)",
             }}
           >
@@ -517,7 +517,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         ) : (
           <ul className="space-y-2">
             {report.callouts.map((c, i) => (
-              <li key={i} className="py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <li key={i} className="py-2" style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}>
                 <p className="mono text-[9px] mb-1" style={dimmer}>
                   {[c.market, c.corridor].filter(Boolean).join(" · ") || "UNKNOWN LOCATION"}
                   {c.date ? ` · ${shortDate(c.date).toUpperCase()}` : ""}

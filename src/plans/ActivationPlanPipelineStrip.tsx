@@ -46,7 +46,7 @@ export default function ActivationPlanPipelineStrip({
               className="rounded-md overflow-hidden"
               style={{
                 height: compact ? 6 : 8,
-                background: "rgba(255,255,255,0.06)",
+                background: "rgba(var(--spark-ink-rgb),0.06)",
               }}
               title={`${stage.label}: ${value}`}
             >
@@ -55,7 +55,7 @@ export default function ActivationPlanPipelineStrip({
                   width: `${fill * 100}%`,
                   height: "100%",
                   background:
-                    i >= 3 ? "var(--spark-lime)" : "rgba(242,243,238,0.55)",
+                    i >= 3 ? "var(--spark-lime)" : "rgba(var(--spark-accent-rgb),0.55)",
                 }}
               />
             </div>
@@ -63,7 +63,7 @@ export default function ActivationPlanPipelineStrip({
               className="tab-num font-bold mt-1.5"
               style={{
                 fontSize: compact ? 14 : 18,
-                color: value > 0 ? "var(--spark-text)" : "rgba(255,255,255,0.35)",
+                color: value > 0 ? "var(--spark-text)" : "rgba(var(--spark-ink-rgb),0.35)",
               }}
             >
               {value}

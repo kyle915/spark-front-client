@@ -213,7 +213,7 @@ export default function NotificationBell() {
         {unread > 0 && (
           <span
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
-            style={{ background: "var(--spark-orange, #ef5a2a)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-orange, #ef5a2a)", color: "var(--spark-on-accent)" }}
           >
             {unread > 9 ? "9+" : unread}
           </span>
@@ -316,8 +316,8 @@ export default function NotificationBell() {
                             className="flex-1 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
                             style={
                               confirm.decision === "approve"
-                                ? { background: "var(--spark-lime)", color: "#0a0d09" }
-                                : { background: "var(--spark-orange)", color: "#0a0d09" }
+                                ? { background: "var(--spark-lime)", color: "var(--spark-on-accent)" }
+                                : { background: "var(--spark-orange)", color: "var(--spark-on-accent)" }
                             }
                           >
                             {busy === p.uuid
@@ -353,7 +353,7 @@ export default function NotificationBell() {
                             setErr(null);
                           }}
                           className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
-                          style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                          style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
                         >
                           {`Approve +${p.minutesRequested}m`}
                         </button>
@@ -393,7 +393,7 @@ export default function NotificationBell() {
                   <div
                     key={n.uuid}
                     className="group flex gap-2.5 px-1 py-2"
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                    style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.04)" }}
                   >
                     <span className="text-base leading-none mt-0.5">{kindEmoji(n.kind)}</span>
                     <div className="min-w-0 flex-1">

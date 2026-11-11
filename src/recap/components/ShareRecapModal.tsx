@@ -134,10 +134,10 @@ export default function ShareRecapModal({
             className="px-3 rounded-xl text-sm font-semibold shrink-0 transition"
             style={{
               minHeight: 44,
-              background: copied ? "rgba(242,243,238,0.15)" : "transparent",
+              background: copied ? "rgba(var(--spark-accent-rgb),0.15)" : "transparent",
               color: copied ? "var(--spark-lime)" : "var(--spark-text)",
               border: `1px solid ${
-                copied ? "rgba(242,243,238,0.4)" : "var(--spark-border)"
+                copied ? "rgba(var(--spark-accent-rgb),0.4)" : "var(--spark-border)"
               }`,
             }}
           >
@@ -152,7 +152,7 @@ export default function ShareRecapModal({
         </p>
       </div>
 
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }} />
+      <div style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.08)" }} />
 
       <div>
         <p
@@ -200,8 +200,8 @@ export default function ShareRecapModal({
           <div
             className="rounded-xl p-4 text-sm"
             style={{
-              background: "rgba(242,243,238,0.08)",
-              border: "1px solid rgba(242,243,238,0.3)",
+              background: "rgba(var(--spark-accent-rgb),0.08)",
+              border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
               color: "var(--spark-lime)",
             }}
           >
@@ -235,10 +235,10 @@ export default function ShareRecapModal({
             style={{
               minHeight: 44,
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               boxShadow:
                 recipientsRaw.trim().length > 0
-                  ? "0 0 16px rgba(242,243,238,0.35)"
+                  ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)"
                   : "none",
             }}
           >
@@ -283,7 +283,7 @@ export default function ShareRecapModal({
       >
         <div
           className="p-5"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.08)" }}
         >
           <p
             className="mono text-[10px] mb-1"

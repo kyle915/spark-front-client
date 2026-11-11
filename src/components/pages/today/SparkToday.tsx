@@ -74,7 +74,7 @@ const clockTone = (status: string): string => {
   if (status === "clocked_in") return "var(--spark-lime)";
   if (status === "clocked_out") return "var(--spark-sky, #6db3f2)";
   if (status === "no_show" || status === "missed") return "var(--spark-orange)";
-  return "rgba(255,255,255,0.55)";
+  return "rgba(var(--spark-ink-rgb),0.55)";
 };
 
 const minutesSince = (iso: string): number => {
@@ -274,8 +274,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               mapId="spark-v2-today"
               styles={
                 [
-                  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
-                  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
+                  { elementType: "geometry", stylers: [{ color: "var(--spark-on-accent)" }] },
+                  { elementType: "labels.text.stroke", stylers: [{ color: "var(--spark-on-accent)" }] },
                   { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
                   { featureType: "road", elementType: "geometry", stylers: [{ color: "#1f2418" }] },
                   { featureType: "water", elementType: "geometry", stylers: [{ color: "#050605" }] },
@@ -351,7 +351,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       <div
                         style={{
                           fontFamily: "Space Grotesk, sans-serif",
-                          color: "#0a0d09",
+                          color: "var(--spark-on-accent)",
                           minWidth: 180,
                         }}
                       >
@@ -389,7 +389,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       <div
                         style={{
                           fontFamily: "Space Grotesk, sans-serif",
-                          color: "#0a0d09",
+                          color: "var(--spark-on-accent)",
                           minWidth: 180,
                         }}
                       >
@@ -511,7 +511,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   color:
                     clockSummary.noShows > 0
                       ? "var(--spark-orange)"
-                      : "rgba(255,255,255,0.55)",
+                      : "rgba(var(--spark-ink-rgb),0.55)",
                 }}
               >
                 {clockSummary.noShows} NO-SHOW{clockSummary.noShows === 1 ? "" : "S"}
@@ -561,7 +561,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 style={{ borderBottom: "1px solid var(--spark-border)" }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.background =
-                    "rgba(255,255,255,0.02)")
+                    "rgba(var(--spark-ink-rgb),0.02)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")

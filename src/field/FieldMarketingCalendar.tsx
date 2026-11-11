@@ -87,8 +87,8 @@ export default function FieldMarketingCalendar({ month, events, onMonth }: Props
                           key={row.id}
                           className="text-[11px] leading-snug rounded px-1 py-0.5"
                           style={{
-                            color: booked ? "#f2f3ee" : "rgba(255,255,255,0.72)",
-                            background: "rgba(255,255,255,0.04)",
+                            color: booked ? "#f2f3ee" : "rgba(var(--spark-ink-rgb),0.72)",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
                           }}
                           title={`${row.activityLabel} · ${row.marketLabel}`}
                         >

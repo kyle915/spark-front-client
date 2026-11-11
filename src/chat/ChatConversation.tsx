@@ -114,8 +114,8 @@ const MessageAttachments: React.FC<{
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs"
             style={{
-              background: mine ? "rgba(10,13,9,0.12)" : "rgba(255,255,255,0.07)",
-              color: mine ? "#0a0d09" : "var(--spark-text)",
+              background: mine ? "rgba(10,13,9,0.12)" : "rgba(var(--spark-ink-rgb),0.07)",
+              color: mine ? "var(--spark-on-accent)" : "var(--spark-text)",
               border: mine
                 ? "1px solid rgba(10,13,9,0.2)"
                 : "1px solid var(--spark-border)",
@@ -425,8 +425,8 @@ const ChatConversation: React.FC<{
                 <div
                   className="rounded-2xl px-4 py-2.5 max-w-[70%]"
                   style={{
-                    background: mine ? "var(--spark-lime)" : "var(--spark-surface-2, rgba(255,255,255,0.05))",
-                    color: mine ? "#0a0d09" : "var(--spark-text)",
+                    background: mine ? "var(--spark-lime)" : "var(--spark-surface-2, rgba(var(--spark-ink-rgb),0.05))",
+                    color: mine ? "var(--spark-on-accent)" : "var(--spark-text)",
                     borderBottomRightRadius: mine ? 6 : undefined,
                     borderBottomLeftRadius: mine ? undefined : 6,
                   }}
@@ -444,7 +444,7 @@ const ChatConversation: React.FC<{
                     className="mono text-[9px] mt-1.5"
                     style={{
                       letterSpacing: "0.12em",
-                      color: mine ? "rgba(10,13,9,0.55)" : "rgba(255,255,255,0.45)",
+                      color: mine ? "rgba(10,13,9,0.55)" : "rgba(var(--spark-ink-rgb),0.45)",
                     }}
                   >
                     {m.senderIsAmbassador ? m.senderName ?? "BA" : "You"} ·{" "}
@@ -570,7 +570,7 @@ const ChatConversation: React.FC<{
             className="px-4 py-2.5 rounded-xl text-sm font-semibold transition"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity:
                 isSending ||
                 uploading ||

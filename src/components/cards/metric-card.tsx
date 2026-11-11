@@ -112,16 +112,16 @@ export function MetricCard({
             style={{
               background:
                 tone === "lime"
-                  ? "rgba(242,243,238,0.12)"
+                  ? "rgba(var(--spark-accent-rgb),0.12)"
                   : tone === "orange"
                     ? "rgba(239,90,42,0.12)"
-                    : "rgba(255,255,255,0.04)",
+                    : "rgba(var(--spark-ink-rgb),0.04)",
               color:
                 tone === "lime"
                   ? "var(--spark-lime)"
                   : tone === "orange"
                     ? "var(--spark-orange)"
-                    : "rgba(255,255,255,0.55)",
+                    : "rgba(var(--spark-ink-rgb),0.55)",
               border: "1px solid var(--spark-border)",
             }}
           >
@@ -148,7 +148,7 @@ export function MetricCard({
                 style={{
                   color:
                     delta?.kind === "none" || delta?.kind === "sparse"
-                      ? "rgba(255,255,255,0.45)"
+                      ? "rgba(var(--spark-ink-rgb),0.45)"
                       : "var(--spark-lime)",
                 }}
               />
@@ -160,7 +160,7 @@ export function MetricCard({
                 color: isNegative
                   ? "var(--spark-orange)"
                   : delta?.kind === "sparse" || delta?.kind === "none"
-                    ? "rgba(255,255,255,0.55)"
+                    ? "rgba(var(--spark-ink-rgb),0.55)"
                     : "var(--spark-lime)",
               }}
             >

@@ -113,7 +113,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
       <div
         key={row.uuid}
         className="py-2"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+        style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.04)" }}
       >
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">

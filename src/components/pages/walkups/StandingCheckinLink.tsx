@@ -88,7 +88,7 @@ const StandingCheckinLink: React.FC = () => {
                   void copy(activeUrl);
                 }}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
               >
                 Copy link
               </button>
@@ -146,9 +146,9 @@ const StandingCheckinLink: React.FC = () => {
                 className="rounded-xl p-3"
                 style={{
                   border: isActive
-                    ? "1px solid rgba(242,243,238,0.55)"
+                    ? "1px solid rgba(var(--spark-accent-rgb),0.55)"
                     : "1px solid var(--spark-border)",
-                  background: isActive ? "rgba(242,243,238,0.06)" : "transparent",
+                  background: isActive ? "rgba(var(--spark-accent-rgb),0.06)" : "transparent",
                 }}
               >
                 <div className="flex items-start justify-between gap-3 flex-wrap">

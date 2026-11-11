@@ -214,7 +214,7 @@ const TalentInner: React.FC = () => {
           className="px-4 py-2.5 rounded-xl text-sm font-semibold"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
           }}
         >
           + Invite BA

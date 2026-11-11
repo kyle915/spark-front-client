@@ -554,7 +554,7 @@ const Inner: React.FC = () => {
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background =
-                      "rgba(255,255,255,0.025)")
+                      "rgba(var(--spark-ink-rgb),0.025)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
@@ -621,7 +621,7 @@ const Inner: React.FC = () => {
                             className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
                             style={{
                               background: "var(--spark-lime)",
-                              color: "#0a0d09",
+                              color: "var(--spark-on-accent)",
                               opacity:
                                 actingOn?.uuid === it.uuid ? 0.5 : 1,
                             }}
@@ -766,7 +766,7 @@ const Inner: React.FC = () => {
                 onClick={() => void loadMorePending()}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
+                  background: "rgba(var(--spark-ink-rgb),0.06)",
                   color: "var(--spark-text)",
                   border: "1px solid var(--spark-border)",
                   opacity: loadingMore || !hasMore ? 0.55 : 1,

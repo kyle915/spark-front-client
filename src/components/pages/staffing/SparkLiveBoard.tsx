@@ -29,7 +29,7 @@ const STATUS: Record<
   no_show: { label: "No-show", fg: "var(--spark-orange)", bg: "rgba(239,90,42,0.14)", border: "rgba(239,90,42,0.5)" },
   missed: { label: "Missed", fg: "var(--spark-orange)", bg: "rgba(239,90,42,0.1)", border: "rgba(239,90,42,0.35)" },
   awaiting: { label: "Not in yet", fg: "var(--spark-gold)", bg: "rgba(255,196,0,0.12)", border: "rgba(255,196,0,0.45)" },
-  upcoming: { label: "Upcoming", fg: "rgba(255,255,255,0.6)", bg: "rgba(255,255,255,0.05)", border: "var(--spark-border)" },
+  upcoming: { label: "Upcoming", fg: "rgba(var(--spark-ink-rgb),0.6)", bg: "rgba(var(--spark-ink-rgb),0.05)", border: "var(--spark-border)" },
 };
 
 const fmtTime = (iso: string | null | undefined): string => {
@@ -208,8 +208,8 @@ const Inner: React.FC<{
           style={{
             letterSpacing: "0.12em",
             color: "var(--spark-lime)",
-            background: "rgba(242,243,238,0.1)",
-            border: "1px solid rgba(242,243,238,0.3)",
+            background: "rgba(var(--spark-accent-rgb),0.1)",
+            border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
             padding: "4px 12px",
             borderRadius: 999,
           }}
@@ -220,7 +220,7 @@ const Inner: React.FC<{
           className="mono text-[11px]"
           style={{
             letterSpacing: "0.12em",
-            color: noShows > 0 ? "var(--spark-orange)" : "rgba(255,255,255,0.45)",
+            color: noShows > 0 ? "var(--spark-orange)" : "rgba(var(--spark-ink-rgb),0.45)",
             background: noShows > 0 ? "rgba(239,90,42,0.12)" : "transparent",
             border: `1px solid ${noShows > 0 ? "rgba(239,90,42,0.4)" : "var(--spark-border)"}`,
             padding: "4px 12px",
@@ -256,7 +256,7 @@ const Inner: React.FC<{
             <Link
               to="/schedule"
               className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+              style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
             >
               Open the Staffing Board
             </Link>
@@ -276,7 +276,7 @@ const Inner: React.FC<{
               key={s.eventUuid}
               className="rounded-2xl p-4"
               style={{
-                background: "var(--spark-panel, rgba(255,255,255,0.02))",
+                background: "var(--spark-panel, rgba(var(--spark-ink-rgb),0.02))",
                 border: `1px solid ${s.noShows > 0 ? "rgba(239,90,42,0.3)" : "var(--spark-border)"}`,
               }}
             >

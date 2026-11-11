@@ -55,7 +55,7 @@ export const UpdateBanner: React.FC = () => {
           border: "none",
           cursor: "pointer",
           background: "var(--spark-lime, #f2f3ee)",
-          color: "#0a0d09",
+          color: "var(--spark-on-accent)",
           whiteSpace: "nowrap",
         }}
       >

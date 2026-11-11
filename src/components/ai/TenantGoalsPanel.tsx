@@ -92,10 +92,10 @@ type Tone = {
 // is a muted track with no fill (the row shows "Set a target" instead of a %).
 const toneFor = (target: number, pacePct: number): Tone => {
   if (target <= 0) {
-    return { color: "var(--spark-text-meta)", track: "rgba(255,255,255,0.06)" };
+    return { color: "var(--spark-text-meta)", track: "rgba(var(--spark-ink-rgb),0.06)" };
   }
   if (pacePct >= 100) {
-    return { color: "var(--spark-lime)", track: "rgba(242,243,238,0.10)" };
+    return { color: "var(--spark-lime)", track: "rgba(var(--spark-accent-rgb),0.10)" };
   }
   return { color: "var(--spark-gold, #f0b429)", track: "rgba(240,180,41,0.10)" };
 };
@@ -112,7 +112,7 @@ const PaceRow: React.FC<{ item: GoalItem }> = ({ item }) => {
     <div
       className="rounded-2xl px-4 py-4"
       style={{
-        background: "rgba(255,255,255,0.02)",
+        background: "rgba(var(--spark-ink-rgb),0.02)",
         border: "1px solid var(--spark-border)",
       }}
     >
@@ -155,7 +155,7 @@ const PaceRow: React.FC<{ item: GoalItem }> = ({ item }) => {
               background: tone.color,
               boxShadow:
                 hasTarget && item.pacePct >= 100
-                  ? "0 0 10px rgba(242,243,238,0.45)"
+                  ? "0 0 10px rgba(var(--spark-accent-rgb),0.45)"
                   : "none",
               transition: "width 240ms ease",
             }}
@@ -346,7 +346,7 @@ const EditGoalsModal: React.FC<{
               className="px-5 py-2.5 rounded-xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 opacity: isSaving ? 0.5 : 1,
               }}
             >
@@ -438,7 +438,7 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="px-4 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
           >
             Set this year's targets
@@ -477,8 +477,8 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             onClick={() => setEditing(true)}
             className="mono text-[11px] rounded-lg px-3 py-1.5 cursor-pointer"
             style={{
-              background: "rgba(242,243,238,0.08)",
-              border: "1px solid rgba(242,243,238,0.30)",
+              background: "rgba(var(--spark-accent-rgb),0.08)",
+              border: "1px solid rgba(var(--spark-accent-rgb),0.30)",
               color: "var(--spark-lime)",
               letterSpacing: "0.10em",
             }}

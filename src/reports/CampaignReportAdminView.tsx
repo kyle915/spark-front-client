@@ -50,7 +50,7 @@ const ghostBtn: React.CSSProperties = {
 
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
-  color: "#0a0d09",
+  color: "var(--spark-on-accent)",
 };
 
 type AiAnswerResult = {
@@ -154,7 +154,7 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
           placeholder="Ask about this campaign's results…"
           className="flex-1 min-w-[220px] px-4 py-2 rounded-xl text-sm transition disabled:opacity-60"
           style={{
-            background: "rgba(255,255,255,0.04)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
             color: "var(--spark-text)",
             border: "1px solid var(--spark-border)",
           }}

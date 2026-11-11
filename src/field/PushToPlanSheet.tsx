@@ -189,8 +189,8 @@ export default function PushToPlanSheet({
             <div
               className="rounded-xl p-3 flex flex-wrap items-center gap-3 justify-between"
               style={{
-                border: "1px solid rgba(242,243,238,0.3)",
-                background: "rgba(242,243,238,0.06)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
+                background: "rgba(var(--spark-accent-rgb),0.06)",
               }}
             >
               <div className="min-w-0">
@@ -247,7 +247,7 @@ export default function PushToPlanSheet({
                           border: on
                             ? "1px solid var(--spark-lime)"
                             : "1px solid var(--spark-border)",
-                          background: on ? "rgba(242,243,238,0.07)" : "rgba(255,255,255,0.02)",
+                          background: on ? "rgba(var(--spark-accent-rgb),0.07)" : "rgba(var(--spark-ink-rgb),0.02)",
                         }}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -259,7 +259,7 @@ export default function PushToPlanSheet({
                             aria-hidden
                             className="mt-1 h-3.5 w-3.5 shrink-0 rounded-full"
                             style={{
-                              border: "1px solid rgba(255,255,255,0.35)",
+                              border: "1px solid rgba(var(--spark-ink-rgb),0.35)",
                               background: on ? "var(--spark-lime)" : "transparent",
                             }}
                           />
@@ -298,7 +298,7 @@ export default function PushToPlanSheet({
                         key={m.key}
                         className="flex items-start gap-3 px-3 py-2.5 cursor-pointer"
                         style={{
-                          borderTop: i ? "1px solid rgba(255,255,255,0.06)" : undefined,
+                          borderTop: i ? "1px solid rgba(var(--spark-ink-rgb),0.06)" : undefined,
                         }}
                       >
                         <input

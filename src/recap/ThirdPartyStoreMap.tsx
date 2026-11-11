@@ -116,7 +116,7 @@ export function ThirdPartyStoreMap({
               className="w-full text-left rounded-xl px-3 py-2"
               style={{
                 border: "1px solid var(--spark-border)",
-                background: "rgba(255,255,255,0.04)",
+                background: "rgba(var(--spark-ink-rgb),0.04)",
               }}
             >
               <span className="font-semibold text-sm">{hit.name}</span>
@@ -157,7 +157,7 @@ export function ThirdPartyStoreMap({
                   className="w-full text-left rounded-xl px-3 py-2 mb-1"
                   style={{
                     border: "1px solid var(--spark-border)",
-                    background: "rgba(255,255,255,0.04)",
+                    background: "rgba(var(--spark-ink-rgb),0.04)",
                   }}
                 >
                   <span className="text-sm font-semibold">{r.name}</span>

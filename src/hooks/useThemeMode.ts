@@ -6,6 +6,7 @@ const DARK = "spark-v2";
 const getIsDark = () => {
   if (typeof window === "undefined") return false;
   const root = document.documentElement;
+  if (root.getAttribute("data-spark-mode") === "light") return false;
   const dataTheme = root.getAttribute("data-theme");
   if (dataTheme) {
     if (dataTheme === "dark") return true;
@@ -37,7 +38,7 @@ export function useThemeMode() {
 
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-theme"],
+      attributeFilter: ["data-theme", "data-spark-mode"],
     });
 
     return () => observer.disconnect();

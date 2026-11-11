@@ -43,7 +43,7 @@ const Cell: React.FC<{
   const href = mapsHref(coords);
   return (
     <span>
-      <span style={{ color: label === "—" ? "rgba(255,255,255,0.35)" : "#fff" }}>
+      <span style={{ color: label === "—" ? "rgba(var(--spark-ink-rgb),0.35)" : "#fff" }}>
         {label}
       </span>
       {href && (
@@ -89,7 +89,7 @@ const Inner: React.FC<{ eventUuid: string; refreshKey: number; bump: () => void 
             <tr
               style={{
                 color: "var(--spark-text-meta)",
-                borderBottom: "1px solid rgba(255,255,255,0.1)",
+                borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.1)",
               }}
             >
               <th className="text-left py-2 pr-3 font-normal">Ambassador</th>
@@ -104,7 +104,7 @@ const Inner: React.FC<{ eventUuid: string; refreshKey: number; bump: () => void 
             {rows.map((r) => (
               <tr
                 key={r.ambassadorUuid}
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
               >
                 <td className="py-2 pr-3 font-semibold">{r.ambassadorName}</td>
                 <td className="py-2 pr-3">

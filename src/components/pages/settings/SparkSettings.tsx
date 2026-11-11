@@ -90,7 +90,7 @@ const LinkedSheetRow: React.FC = () => {
     <div
       className="rounded-xl"
       style={{
-        background: "rgba(255,255,255,0.025)",
+        background: "rgba(var(--spark-ink-rgb),0.025)",
         border: "1px solid var(--spark-border)",
       }}
     >
@@ -166,7 +166,7 @@ const LinkedSheetRow: React.FC = () => {
             className="px-4 py-2 rounded-lg text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity: saving ? 0.5 : 1,
             }}
           >
@@ -333,15 +333,15 @@ export default function SparkSettings() {
                     key={t.id}
                     className="flex items-center gap-3 py-2 px-3 rounded-xl"
                     style={{
-                      background: "rgba(255,255,255,0.025)",
+                      background: "rgba(var(--spark-ink-rgb),0.025)",
                       border: "1px solid var(--spark-border)",
                     }}
                   >
                     <span
                       className="mono w-8 h-8 rounded-lg flex items-center justify-center"
                       style={{
-                        background: "rgba(242,243,238,0.10)",
-                        border: "1px solid rgba(242,243,238,0.25)",
+                        background: "rgba(var(--spark-accent-rgb),0.10)",
+                        border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
                         color: "var(--spark-lime)",
                       }}
                     >
@@ -372,7 +372,7 @@ export default function SparkSettings() {
           <div
             className="flex items-center gap-3 py-3 px-3 rounded-xl"
             style={{
-              background: "rgba(255,255,255,0.025)",
+              background: "rgba(var(--spark-ink-rgb),0.025)",
               border: "1px solid var(--spark-border)",
             }}
           >

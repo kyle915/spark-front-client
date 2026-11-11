@@ -1,4 +1,4 @@
-import React, { type ReactNode } from "react";
+import React, { useEffect, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { PageTransition } from "./PageTransition";
 import SparkSidebar from "./SparkSidebar";
@@ -8,6 +8,7 @@ import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
 import { MobileNavProvider, useMobileNav } from "./MobileNavContext";
+import { applyAppearance, readAppearance } from "@/theme/appearance";
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -30,6 +31,13 @@ interface LayoutProps {
 function LayoutChromeInner({ children }: LayoutProps) {
   const location = useLocation();
   const { open, setOpen } = useMobileNav();
+
+  // Light mode applies only while the signed-in shell is on screen; public
+  // pages and the ambassador check-in keep their own styling.
+  useEffect(() => {
+    applyAppearance(readAppearance());
+    return () => applyAppearance("dark");
+  }, []);
 
   return (
     <div className="flex min-h-[100dvh] bg-base-200 text-base-content spark-mesh">
