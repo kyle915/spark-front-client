@@ -13,6 +13,7 @@
  */
 
 import { isOfflineClockFailure, readCachedContext, type StorageLike } from "./offlineClock";
+import { timedFetch, type FetchLike } from "./timedFetch";
 
 export const IDENTIFY_OFFLINE_NO_CACHE =
   "No service. Stay on this page and tap again when you have a bar.";
@@ -109,7 +110,6 @@ export function clearPendingIdentify(code: string, storage: StorageLike = liveSt
   }
 }
 
-type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Replay one queued identify. Success is a real session token from the API.
@@ -125,7 +125,7 @@ export async function flushPendingIdentify(args: {
   const storage = args.storage ?? liveStorage();
   const pending = readPendingIdentify(args.code, storage);
   if (!pending) return { status: "idle" };
-  const doFetch = args.fetchImpl ?? fetch;
+  const doFetch = args.fetchImpl ?? timedFetch;
   try {
     const res = await doFetch(
       `${args.origin}/api/public/checkin/${encodeURIComponent(args.code)}/identify`,

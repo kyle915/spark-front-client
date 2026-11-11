@@ -285,6 +285,13 @@ export async function flushPendingClockOut(
   },
   storage: StorageLike = liveStorage(),
 ): Promise<ClockFlushResult> {
+  return singleFlight(`out:${args.code}`, () => flushClockOutOnce(args, storage));
+}
+
+async function flushClockOutOnce(
+  args: Parameters<typeof flushPendingClockOut>[0],
+  storage: StorageLike,
+): Promise<ClockFlushResult> {
   const pending = readPendingClockOut(args.code, storage);
   if (!pending) return "none";
   try {
@@ -297,11 +304,16 @@ export async function flushPendingClockOut(
       ...(pending.latitude != null ? { latitude: pending.latitude } : {}),
       ...(pending.longitude != null ? { longitude: pending.longitude } : {}),
     });
-    if (res.ok || res.alreadyOut || res.status === 409) {
+    if (res.ok || res.alreadyOut) {
       clearPendingClockOut(args.code, storage);
       return res.alreadyOut ? "already" : "flushed";
     }
     if (isOfflineClockFailure({ status: res.status })) return "retry";
+    if (isPermanentClockReject(res.status)) {
+      writeLostPunch(args.code, { kind: "out", at: pending.clockedOutAt }, storage);
+      clearPendingClockOut(args.code, storage);
+      return "rejected";
+    }
     return "retry";
   } catch (error) {
     if (isOfflineClockFailure({ error })) return "retry";
@@ -309,7 +321,75 @@ export async function flushPendingClockOut(
   }
 }
 
-export type ClockFlushResult = "none" | "flushed" | "retry" | "already";
+export type ClockFlushResult = "none" | "flushed" | "retry" | "already" | "rejected";
+
+/** The server will never accept this punch (bad/expired session, a time it
+ *  refuses, a day that is over). Retrying forever just leaves the screen
+ *  saying "on the clock" for hours that were never recorded. */
+export const isPermanentClockReject = (status: number): boolean =>
+  status === 400 || status === 401 || status === 403 || status === 409 ||
+  status === 410 || status === 422;
+
+/** A queued punch the server refused. Shown to the ambassador until they
+ *  dismiss it, so the hours can be fixed by a lead instead of vanishing. */
+export type LostPunch = { v: 1; kind: "in" | "out"; at: string; lostAt: number };
+
+export const lostPunchKey = (code: string) => `@spark.checkin.lostPunch/${code}`;
+
+export function readLostPunch(
+  code: string,
+  storage: StorageLike = liveStorage(),
+): LostPunch | null {
+  if (!code) return null;
+  try {
+    const raw = storage.getItem(lostPunchKey(code));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LostPunch;
+    return parsed?.v === 1 && (parsed.kind === "in" || parsed.kind === "out")
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeLostPunch(
+  code: string,
+  punch: { kind: "in" | "out"; at: string },
+  storage: StorageLike = liveStorage(),
+): void {
+  try {
+    storage.setItem(
+      lostPunchKey(code),
+      JSON.stringify({ v: 1, ...punch, lostAt: Date.now() } satisfies LostPunch),
+    );
+  } catch {
+    /* private mode — the banner just won't survive a reload */
+  }
+}
+
+export function clearLostPunch(code: string, storage: StorageLike = liveStorage()): void {
+  try {
+    storage.removeItem(lostPunchKey(code));
+  } catch {
+    /* nothing to clear */
+  }
+}
+
+// One flush per link at a time. "online" and "visibilitychange" both fire
+// when a phone wakes up, and two page effects listen for each — without
+// this the same queued punch was posted two or three times at once.
+const inflightClock = new Map<string, Promise<ClockFlushResult>>();
+function singleFlight(
+  key: string,
+  run: () => Promise<ClockFlushResult>,
+): Promise<ClockFlushResult> {
+  const existing = inflightClock.get(key);
+  if (existing) return existing;
+  const p = run().finally(() => inflightClock.delete(key));
+  inflightClock.set(key, p);
+  return p;
+}
 
 export async function flushPendingClock(
   args: {
@@ -322,6 +402,13 @@ export async function flushPendingClock(
   },
   storage: StorageLike = liveStorage(),
 ): Promise<ClockFlushResult> {
+  return singleFlight(`in:${args.code}`, () => flushClockInOnce(args, storage));
+}
+
+async function flushClockInOnce(
+  args: Parameters<typeof flushPendingClock>[0],
+  storage: StorageLike,
+): Promise<ClockFlushResult> {
   const pending = readPendingClock(args.code, storage);
   if (!pending) return "none";
   try {
@@ -333,13 +420,18 @@ export async function flushPendingClock(
       ...(pending.latitude != null ? { latitude: pending.latitude } : {}),
       ...(pending.longitude != null ? { longitude: pending.longitude } : {}),
     });
-    if (res.ok || res.alreadyIn || res.status === 409) {
+    if (res.ok || res.alreadyIn) {
       clearPendingClock(args.code, storage);
       return res.alreadyIn ? "already" : "flushed";
     }
     if (isOfflineClockFailure({ status: res.status })) return "retry";
-    // Auth / validation — don't loop forever, but keep the row so a BA
-    // can still see the time they meant.
+    if (isPermanentClockReject(res.status)) {
+      // Never accepted, never will be: stop pretending they are on the
+      // clock, and keep the time they tapped where they can read it out.
+      writeLostPunch(args.code, { kind: "in", at: pending.clockedInAt }, storage);
+      clearPendingClock(args.code, storage);
+      return "rejected";
+    }
     return "retry";
   } catch (error) {
     if (isOfflineClockFailure({ error })) return "retry";

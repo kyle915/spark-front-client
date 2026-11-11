@@ -25,6 +25,7 @@ import {
   todayISO,
   writeIdentity,
 } from "./checkinHelpers";
+import { timedFetch } from "./timedFetch";
 import type {
   EventTypeOption,
   StoreOption,
@@ -400,7 +401,7 @@ export default function IdentifyStep({
         setPendingProximity(null);
         setProximityMiles(null);
         try {
-          const res = await fetch(
+          const res = await timedFetch(
             `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/where`,
             {
               method: "POST",
@@ -632,7 +633,9 @@ export default function IdentifyStep({
       : { firstName, lastName, phone, email };
     setBusy(true);
     try {
-      const res = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/identify`, {
+      // Timed: a stalled request must fail so the offline queue below can
+      // take over instead of leaving the ambassador on a spinner.
+      const res = await timedFetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/identify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(identifyBody),

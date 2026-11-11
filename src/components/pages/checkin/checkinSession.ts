@@ -1,3 +1,4 @@
+import { timedFetch, type FetchLike } from "./timedFetch";
 /**
  * Standing walk-up session token hygiene — every tenant standing code
  * (`FF-`, `LD-`, `TH-`, `BD-`, …), not just Feel Free.
@@ -95,7 +96,6 @@ export type OpenShift = {
   clockInAt: string | null;
 };
 
-type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Phone lookup on a standing link: shifts still missing a recap, plus the
@@ -110,7 +110,7 @@ export async function lookupShiftsByPhone<S = unknown>(opts: {
   eventDate: string;
   fetchImpl?: FetchLike;
 }): Promise<{ shifts: S[]; openShift: OpenShift | null }> {
-  const doFetch = opts.fetchImpl ?? fetch;
+  const doFetch = opts.fetchImpl ?? timedFetch;
   try {
     const res = await doFetch(
       `${opts.origin}/api/public/checkin/${encodeURIComponent(opts.code)}/unfiled-recaps`,
@@ -154,7 +154,7 @@ export async function resumeOpenShift<P extends { sessionToken?: string }>(opts:
   eventDate: string;
   fetchImpl?: FetchLike;
 }): Promise<(P & { sessionToken: string }) | null> {
-  const doFetch = opts.fetchImpl ?? fetch;
+  const doFetch = opts.fetchImpl ?? timedFetch;
   try {
     const res = await doFetch(
       `${opts.origin}/api/public/checkin/${encodeURIComponent(opts.code)}/identify`,
