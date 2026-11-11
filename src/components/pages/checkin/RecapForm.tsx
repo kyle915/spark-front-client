@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { reportFieldIssue } from "./fieldIssues";
 import { numberHint, wantsDecimalKeypad } from "./numberSanity";
 import { isExpenseReceiptBucket } from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
@@ -593,6 +594,17 @@ export default function RecapForm({
       const autoRetry =
         retryableUploadFailure(failedOffline, failReason) && scheduleAutoRetry(id);
       patchPhoto(id, { state: "failed", failReason, failedOffline, autoRetry });
+      // Offline failures are expected and retried; the others are the ones a
+      // lead needs to hear about.
+      if (!failedOffline) {
+        reportFieldIssue({
+          origin: apiOrigin(),
+          code,
+          kind: "photo_upload_failed",
+          detail: failReason,
+          session: token,
+        });
+      }
     }
   };
 

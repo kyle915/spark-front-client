@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { reportFieldIssue } from "./fieldIssues";
 import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
 import {
   decideStoreProximity,
@@ -672,7 +673,16 @@ export default function IdentifyStep({
       // Intent did its job — past-day session opens File recap (no clock).
       if (pastRecap) clearPastRecapIntent(code);
       onDone(json.sessionToken);
-    } catch {
+    } catch (identifyError) {
+      reportFieldIssue({
+        origin: apiOrigin(),
+        code,
+        kind: "request_timeout",
+        detail:
+          identifyError instanceof Error && identifyError.name === "AbortError"
+            ? "identify timed out"
+            : "identify could not reach the server",
+      });
       if (readCachedContext(code)) {
         writePendingIdentify(code, identifyBody);
         setErr(IDENTIFY_OFFLINE_QUEUED);
