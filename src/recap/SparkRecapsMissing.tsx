@@ -66,7 +66,7 @@ const overdueChipStyle = (
   if (hoursOverdue >= 24) {
     return {
       background: "rgba(255,200,60,0.12)",
-      color: "#f5c042",
+      color: "var(--spark-warn-ink, #f5c042)",
       border: "1px solid rgba(255,200,60,0.35)",
       label: `OVERDUE ${Math.floor(hoursOverdue / 24)}d`,
     };

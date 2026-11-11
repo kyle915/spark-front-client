@@ -437,6 +437,7 @@ code, kbd, samp, pre, .mono-code {
   --spark-bg-rgb: 10, 11, 13;
   --spark-ok-rgb: 197, 245, 70;
   --spark-flag-ink: #ffb59d;
+  --spark-warn-ink: #f5c042;
   --spark-on-accent: #0a0d09;
   --spark-bg: #0A0B0D;
   --spark-surface: #141416;
@@ -475,13 +476,15 @@ code, kbd, samp, pre, .mono-code {
   --spark-bg-rgb: 246, 246, 242;
   --spark-ok-rgb: 63, 92, 18;
   --spark-flag-ink: #a8340f;
+  /* Amber is unreadable on white: ageing/attention text goes red. */
+  --spark-warn-ink: #b3261e;
+  --spark-gold: #b3261e;
   --spark-on-accent: #ffffff;
   --spark-lime: #14160f;
   --spark-lime-dim: #3a3d33;
   --spark-orange: #d2481b;
   --spark-sky: #1f7fc0;
   --spark-purple: #6b55b5;
-  --spark-gold: #9a7200;
   --spark-bg: #f6f6f2;
   --spark-surface: #ffffff;
   --spark-surface-2: #f1f1ec;

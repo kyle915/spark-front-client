@@ -294,7 +294,7 @@ const SlaHours: React.FC<{ since: string }> = ({ since }) => {
   const hours = ms / 3_600_000;
   const days = hours / 24;
   const label = hours < 24 ? `${Math.max(1, Math.round(hours))}h since event` : `${Math.round(days)}d since event`;
-  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))";
+  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "var(--spark-warn-ink, #f5c042)" : "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))";
   return (
     <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.12em", color }} title="Time since the activation — 3h is the sell, not 9 days.">
       {label}
