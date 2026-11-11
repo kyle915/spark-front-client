@@ -6,7 +6,7 @@ import { SetProgramShareEnabledMutation } from "@/api/mutations/SetProgramShareE
 import type { SetProgramShareEnabledMutation as MutationType } from "@api/mutations/__generated__/SetProgramShareEnabledMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { clientOrigin } from "@/utils/publicHosts";
-import { programLinkUrl } from "@/public/program/programShare";
+import { programLinkUrl, shareStatusLine } from "@/public/program/programShare";
 
 const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -23,16 +23,25 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   }, [data.programShareLink.enabled, data.programShareLink.token]);
   const [commit, saving] = useMutation<MutationType>(SetProgramShareEnabledMutation);
   const [confirming, setConfirming] = useState(false);
+  // 0 = no expiry.
+  const [expiryDays, setExpiryDays] = useState(0);
+  const [expiresAt, setExpiresAt] = useState<string | null>(
+    data.programShareLink.expiresAt ?? null,
+  );
+  const expired = Boolean(data.programShareLink.expired);
 
   const set = (next: boolean) => {
     setConfirming(false);
     commit({
-      variables: { input: { tenantId, enabled: next } },
+      variables: {
+        input: { tenantId, enabled: next, expiresInDays: next ? expiryDays || null : null },
+      },
       onCompleted: (res) => {
         const r = res.setProgramShareEnabled;
         if (r?.success) {
           setEnabled(Boolean(r.enabled));
           setToken(r.token ?? null);
+          setExpiresAt(r.expiresAt ?? null);
           showAlert(r.message, "success");
         } else {
           showAlert(r?.message || "Couldn't update the program link.", "error");
@@ -42,7 +51,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     });
   };
 
-  const url = enabled && token ? programLinkUrl(clientOrigin(), token) : "";
+  const url = enabled && !expired && token ? programLinkUrl(clientOrigin(), token) : "";
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);
@@ -63,10 +72,21 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <div className="min-w-0">
           <h3 className="font-semibold text-sm">Public program link</h3>
           <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
-            {enabled
-              ? "On — anyone with the link can see program totals, states and field photos. No ambassador names, receipts or spend."
-              : "Off. Turn it on to share a live page of totals, states and field photos with people who don't have a Spark login."}
+            {enabled && expired
+              ? "Expired — the link has stopped working. Turn it off, or turn it on again to restart it."
+              : enabled
+                ? "On — anyone with the link can see program totals, states and field photos. No ambassador names, receipts or spend."
+                : "Off. Turn it on to share a live page of totals, states and field photos with people who don't have a Spark login."}
           </p>
+          {enabled ? (
+            <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
+              {shareStatusLine({
+                views: data.programShareLink.views,
+                lastViewedAt: data.programShareLink.lastViewedAt ?? null,
+                expiresAt,
+              })}
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {enabled ? (
@@ -91,6 +111,20 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             </>
           ) : confirming ? (
             <>
+              <label className="inline-flex items-center gap-1.5 text-sm">
+                <span style={{ color: "var(--spark-text-meta)" }}>Works for</span>
+                <select
+                  value={expiryDays}
+                  onChange={(e) => setExpiryDays(Number(e.target.value))}
+                  className="px-2 py-1.5 rounded-xl text-sm"
+                  style={{ ...btn, background: "var(--spark-surface)" }}
+                >
+                  <option value={0}>Until I turn it off</option>
+                  <option value={7}>7 days</option>
+                  <option value={30}>30 days</option>
+                  <option value={90}>90 days</option>
+                </select>
+              </label>
               <button
                 type="button"
                 onClick={() => set(true)}
