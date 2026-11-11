@@ -41,7 +41,7 @@ const Inner: React.FC<{
   return (
     <div
       className="rounded-2xl px-4 py-3"
-      style={{ background: "#0A0B0D", border: "1px solid var(--spark-border)" }}
+      style={{ background: "var(--spark-bg)", border: "1px solid var(--spark-border)" }}
       aria-label="Review checks"
     >
       <div className="flex items-center gap-2 flex-wrap">

@@ -1,18 +1,19 @@
 import type { ChartOptions } from "chart.js";
+import { accentRgba, inkRgba } from "@/theme/chartInk";
 
 /** Shared Spark dark Chart.js chrome — off-white / sky / orange, no lime. */
 export const SPARK_CHART_PALETTE = [
-  "rgba(242,243,238,0.75)",
+  accentRgba(0.75),
   "rgba(95,184,239,0.85)",
   "rgba(239,90,42,0.85)",
   "rgba(168,85,247,0.75)",
-  "rgba(255,255,255,0.35)",
-  "rgba(255,255,255,0.22)",
+  inkRgba(0.35),
+  inkRgba(0.22),
 ];
 
-export const sparkChartText = "rgba(255,255,255,0.72)";
-export const sparkChartMuted = "rgba(255,255,255,0.45)";
-export const sparkChartGrid = "rgba(255,255,255,0.06)";
+export const sparkChartText = inkRgba(0.72);
+export const sparkChartMuted = inkRgba(0.55);
+export const sparkChartGrid = inkRgba(0.08);
 
 export function sparkScaleDefaults() {
   return {
@@ -37,9 +38,10 @@ export function sparkLegendDefaults() {
 
 export function sparkTooltipDefaults() {
   return {
+    // The tooltip is a dark chip in both appearances.
     backgroundColor: "rgba(10,11,13,0.92)",
-    titleColor: sparkChartText,
-    bodyColor: sparkChartMuted,
+    titleColor: "rgba(255,255,255,0.9)",
+    bodyColor: "rgba(255,255,255,0.7)",
     borderColor: "rgba(255,255,255,0.14)",
     borderWidth: 1,
     padding: 10,
