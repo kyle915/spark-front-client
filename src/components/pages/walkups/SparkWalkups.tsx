@@ -442,8 +442,8 @@ export default function SparkWalkups() {
                 onClick={() => setFilter(f)}
                 className="px-4 py-2 rounded-full text-sm font-semibold"
                 style={{
-                  background: filter === f ? "var(--spark-lime)" : "transparent",
-                  color: filter === f ? "var(--spark-on-accent)" : "var(--spark-text)",
+                  background: filter === f ? "var(--spark-selected-bg)" : "transparent",
+                  color: filter === f ? "var(--spark-selected-ink)" : "var(--spark-text)",
                   border:
                     filter === f ? "none" : "1px solid var(--spark-border)",
                 }}

@@ -1861,8 +1861,8 @@ export default function SparkReceipts() {
                     onClick={() => setTab(t.key)}
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={{
-                      background: on ? "var(--spark-lime)" : "transparent",
-                      color: on ? "var(--spark-on-accent)" : "var(--spark-text)",
+                      background: on ? "var(--spark-selected-bg)" : "transparent",
+                      color: on ? "var(--spark-selected-ink)" : "var(--spark-text)",
                       border: `1px solid ${
                         on ? "var(--spark-lime)" : "var(--spark-border)"
                       }`,

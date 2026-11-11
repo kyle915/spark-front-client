@@ -55,8 +55,8 @@ function SwitchInner({
             onClick={() => onChange(t.key)}
             className="px-3 py-1.5 rounded-lg text-sm font-semibold transition"
             style={{
-              background: active ? "var(--spark-lime)" : "transparent",
-              color: active ? "var(--spark-on-accent)" : muted,
+              background: active ? "var(--spark-selected-bg)" : "transparent",
+              color: active ? "var(--spark-selected-ink)" : muted,
             }}
           >
             {t.label}
@@ -339,8 +339,8 @@ export function BrandComparePanel({
             className="mono text-[10px] px-2.5 py-1.5 rounded-lg"
             style={{
               letterSpacing: "0.12em",
-              color: period === p.key ? "var(--spark-on-accent)" : muted,
-              background: period === p.key ? "var(--spark-lime)" : "transparent",
+              color: period === p.key ? "var(--spark-selected-ink)" : muted,
+              background: period === p.key ? "var(--spark-selected-bg)" : "transparent",
               border: "1px solid var(--spark-border)",
             }}
           >

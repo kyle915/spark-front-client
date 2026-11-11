@@ -209,7 +209,8 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
   if (rows.length === 0) {
     return (
       <SparkEmptyState
-        title="✦ All clear"
+        done
+        title="All clear"
         body={`Every shift in the last ${lookbackDays} day${lookbackDays === 1 ? "" : "s"} has a recap on file.`}
       />
     );

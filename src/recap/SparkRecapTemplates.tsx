@@ -339,9 +339,9 @@ const Inner: React.FC = () => {
                     }
                     className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold"
                     style={{
-                      background: "var(--spark-lime)",
-                      color: "var(--spark-on-accent)",
-                      border: "1px solid var(--spark-lime)",
+                      background: "transparent",
+                      color: "var(--spark-text)",
+                      border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
                     }}
                     title="Add, rename, reorder, or delete fields + sections"
                   >
