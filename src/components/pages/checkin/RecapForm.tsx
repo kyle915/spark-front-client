@@ -15,12 +15,14 @@ import {
   fileIsReadable,
   fmtDay,
   isPhotoType,
+  photoAnalysis,
   photoPrep,
   photoUploads,
   postCheckinClock,
   postCheckinPayableMileage,
   postCheckinRecap,
   retryableUploadFailure,
+  flushQueuedRecap,
 } from "./checkinHelpers";
 import {
   stalledUploadingCount,
@@ -623,7 +625,7 @@ export default function RecapForm({
     const hashed = await Promise.all(
       targets.map(async (ph) => {
         try {
-          return { ph, hash: await quickPhotoHash(ph.file) };
+          return { ph, hash: await photoAnalysis(() => quickPhotoHash(ph.file)) };
         } catch {
           return { ph, hash: null as string | null };
         }
@@ -655,7 +657,7 @@ export default function RecapForm({
         .filter((ph) => !duplicates.has(ph.id))
         .map(async (ph) => {
           try {
-            const stats = await analyzePhotoFile(ph.file);
+            const stats = await photoAnalysis(() => analyzePhotoFile(ph.file));
             const kind = stats ? classifyPhotoQuality(stats) : null;
             if (kind && photosRef.current.some((p) => p.id === ph.id)) {
               setPhotoWarnings((prev) => ({
@@ -963,10 +965,12 @@ export default function RecapForm({
     const submittedAt = new Date().toISOString();
     const coBrandsBody = coBrand.payload();
 
-    const queueThisSubmit = async () => {
+    const queueThisSubmit = async (opts: { includeUploading?: boolean; silent?: boolean } = {}) => {
       const photoFiles: Record<string, File> = {};
       const files = photos
-        .filter((p) => p.state !== "uploading" && !p.unrecoverable)
+        .filter(
+          (p) => (opts.includeUploading || p.state !== "uploading") && !p.unrecoverable,
+        )
         .map((p) => {
           if (!p.blobName) photoFiles[p.id] = p.file;
           return {
@@ -998,7 +1002,7 @@ export default function RecapForm({
         photoFiles,
       });
       // Draft stays until the server ACKs — flushQueuedRecap clears it.
-      onQueued();
+      if (!opts.silent) onQueued();
     };
 
     setBusy(true);
@@ -1057,6 +1061,19 @@ export default function RecapForm({
       submittedRef.current = true;
       for (const id of [...retryTimers.current.keys()]) cancelAutoRetry(id);
       clearDraft(code, token);
+      // "Submit without N photos" used to throw those photos away for good.
+      // The recap is in; keep the unfinished photos on this device and send
+      // them after it — the server adds photos to the same recap. Not done
+      // for an extra-shift recap, where a re-post would file a second one.
+      const leftBehind = photos.filter((p) => !p.blobName && !p.unrecoverable);
+      if (leftBehind.length > 0 && !forceNew) {
+        try {
+          await queueThisSubmit({ includeUploading: true, silent: true });
+          void flushQueuedRecap(code);
+        } catch {
+          /* could not be stored — same outcome as before this change */
+        }
+      }
       setSubmitPhase("success");
       await holdActionSuccess();
       await onSubmitted();
