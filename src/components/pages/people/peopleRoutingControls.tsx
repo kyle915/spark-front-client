@@ -105,7 +105,7 @@ export const PeopleTabsSwitcher: React.FC<{
                 className="mono text-[10px] px-1.5 py-0.5 rounded-md"
                 style={{
                   background: isActive
-                    ? "rgba(10,13,9,0.16)"
+                    ? "rgba(var(--spark-bg-rgb),0.16)"
                     : "rgba(var(--spark-ink-rgb),0.08)",
                   color: isActive ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.7)",
                 }}

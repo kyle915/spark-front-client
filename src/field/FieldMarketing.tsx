@@ -885,7 +885,7 @@ export default function FieldMarketing() {
               key={kpi.key}
               kpi={kpi}
               showTarget={Boolean(month) && !tactic}
-              className="rounded-xl border border-white/10 p-3.5 bg-[#0A0B0D]"
+              className="rounded-xl border border-white/10 p-3.5 bg-[var(--spark-bg)]"
             />
           ))}
         </section>

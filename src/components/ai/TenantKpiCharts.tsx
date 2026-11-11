@@ -21,6 +21,7 @@ import { TenantKpisQuery } from "@/api/queries/TenantKpisQuery";
 import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__generated__/TenantKpisQuery.graphql";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import { CountReel } from "@/motion/CountReel";
+import { inkRgba, accentRgba } from "@/theme/chartInk";
 
 /**
  * Phase 1 KPI panel for the dashboards.
@@ -76,7 +77,7 @@ const DEFAULT_SERIES: readonly TrendSeries[] = [
   { key: "samples", label: "Samples" },
 ];
 
-const SERIES_COLORS = ["rgba(242,243,238,0.72)", "rgba(95,184,239,0.85)"];
+const SERIES_COLORS = [accentRgba(0.72), "rgba(95,184,239,0.85)"];
 
 const seriesValue = (row: MonthRow, key: string): number =>
   Number((row as Record<string, unknown>)[key]) || 0;
@@ -107,7 +108,7 @@ const sparseMonthPlugin = (flags: boolean[]): Plugin<"bar" | "line"> => ({
     const xScale = scales.x;
     if (!xScale || !chartArea) return;
     ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillStyle = inkRgba(0.4);
     ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "center";
     flags.forEach((sparse, i) => {
@@ -147,8 +148,8 @@ const TrendChart: React.FC<{
         type: "line",
         label: "Recaps",
         data: data.map((d) => d.recaps),
-        borderColor: "rgba(242,243,238,0.85)",
-        pointBackgroundColor: "rgba(242,243,238,0.95)",
+        borderColor: accentRgba(0.85),
+        pointBackgroundColor: accentRgba(0.95),
         borderWidth: 2,
         tension: 0.35,
         yAxisID: "y2",
@@ -472,7 +473,7 @@ const TenantKpiCharts: React.FC<{
             onChange={(e) => setYearValue(e.target.value)}
             className="display text-[12px] rounded-lg px-2.5 py-1.5 cursor-pointer"
             style={{
-              background: "rgba(255,255,255,0.04)",
+              background: inkRgba(0.04),
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text)",
             }}

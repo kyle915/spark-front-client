@@ -5,6 +5,7 @@ import { Pie } from "react-chartjs-2";
 import { memo, useMemo } from "react";
 import { useThemeMode } from "@/hooks/useThemeMode";
 import ChartCard from "@/components/charts/ChartCard";
+import { inkRgba } from "@/theme/chartInk";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -21,7 +22,7 @@ export default memo(function DemographicInsightSection({
     return {
       textColor: isDark ? "#e5e7eb" : "#1f2937", // gray-200 / gray-800
       labelColor: isDark ? "#cbd5e1" : "#475569", // slate-300 / slate-600
-      borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+      borderColor: isDark ? inkRgba(0.1) : "rgba(0,0,0,0.08)",
     };
   }, [isDark]);
 

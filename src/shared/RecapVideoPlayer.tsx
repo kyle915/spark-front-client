@@ -50,7 +50,7 @@ export function RecapVideoPlayer({
     <div
       onClick={onClose}
       className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-      style={{ background: "rgba(10,13,9,0.78)", backdropFilter: "blur(10px)" }}
+      style={{ background: "rgba(var(--spark-bg-rgb),0.78)", backdropFilter: "blur(10px)" }}
       role="dialog"
       aria-modal="true"
       aria-label={name || "Video"}
@@ -61,7 +61,7 @@ export function RecapVideoPlayer({
         aria-label="Close"
         className="fixed top-4 right-4 z-[71]"
         style={{
-          background: "rgba(10,13,9,0.6)",
+          background: "rgba(var(--spark-bg-rgb),0.6)",
           color: "var(--spark-text, #f2f3ee)",
           border: "1px solid var(--spark-border, #1f2418)",
           borderRadius: 9999,

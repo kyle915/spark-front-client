@@ -1877,7 +1877,7 @@ const SparkRequestInner: React.FC = () => {
         className="fixed left-0 right-0 z-40"
         style={{
           bottom: 0,
-          background: "rgba(10,13,9,0.92)",
+          background: "rgba(var(--spark-bg-rgb),0.92)",
           backdropFilter: "blur(14px)",
           borderTop: "1px solid var(--spark-border)",
         }}

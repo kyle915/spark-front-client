@@ -775,7 +775,7 @@ const Inner: React.FC<{
                     style={{
                       letterSpacing: "0.1em",
                       color: active
-                        ? "rgba(10,13,9,0.7)"
+                        ? "rgba(var(--spark-bg-rgb),0.7)"
                         : "rgba(var(--spark-ink-rgb),0.4)",
                     }}
                   >

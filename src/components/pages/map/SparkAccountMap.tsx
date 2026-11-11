@@ -949,7 +949,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                   background: "transparent",
                                   color: "var(--spark-on-accent)",
                                   border:
-                                    "1px solid rgba(10,13,9,0.2)",
+                                    "1px solid rgba(var(--spark-bg-rgb),0.2)",
                                   padding: "6px 8px",
                                   borderRadius: 8,
                                   fontFamily:
@@ -973,7 +973,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                   background: "transparent",
                                   color: "var(--spark-on-accent)",
                                   border:
-                                    "1px solid rgba(10,13,9,0.2)",
+                                    "1px solid rgba(var(--spark-bg-rgb),0.2)",
                                   padding: "6px 10px",
                                   borderRadius: 8,
                                   fontFamily:

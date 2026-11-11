@@ -114,10 +114,10 @@ const MessageAttachments: React.FC<{
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs"
             style={{
-              background: mine ? "rgba(10,13,9,0.12)" : "rgba(var(--spark-ink-rgb),0.07)",
+              background: mine ? "rgba(var(--spark-bg-rgb),0.12)" : "rgba(var(--spark-ink-rgb),0.07)",
               color: mine ? "var(--spark-on-accent)" : "var(--spark-text)",
               border: mine
-                ? "1px solid rgba(10,13,9,0.2)"
+                ? "1px solid rgba(var(--spark-bg-rgb),0.2)"
                 : "1px solid var(--spark-border)",
               textDecoration: "none",
               maxWidth: 240,
@@ -444,7 +444,7 @@ const ChatConversation: React.FC<{
                     className="mono text-[9px] mt-1.5"
                     style={{
                       letterSpacing: "0.12em",
-                      color: mine ? "rgba(10,13,9,0.55)" : "rgba(var(--spark-ink-rgb),0.45)",
+                      color: mine ? "rgba(var(--spark-bg-rgb),0.55)" : "rgba(var(--spark-ink-rgb),0.45)",
                     }}
                   >
                     {m.senderIsAmbassador ? m.senderName ?? "BA" : "You"} ·{" "}

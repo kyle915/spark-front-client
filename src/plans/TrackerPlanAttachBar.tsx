@@ -176,7 +176,7 @@ export default function TrackerPlanAttachBar({
         className="px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-40"
         style={{
           background: targetPlanId ? "var(--spark-lime)" : "transparent",
-          color: targetPlanId ? "#0a0a0a" : "rgba(var(--spark-ink-rgb),0.4)",
+          color: targetPlanId ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.4)",
           border: targetPlanId
             ? "none"
             : "1px solid var(--spark-border)",

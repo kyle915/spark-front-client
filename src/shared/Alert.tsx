@@ -38,7 +38,7 @@ export default function Alert() {
               className="pointer-events-auto text-left max-w-sm text-sm font-semibold overflow-hidden"
               style={{
                 borderRadius: 14,
-                background: "var(--spark-toast-bg, rgba(17,20,14,0.92))",
+                background: "var(--spark-toast-bg, rgba(var(--spark-bg-rgb),0.92))",
                 border: `1px solid ${tone.border}`,
                 backdropFilter: "saturate(180%) blur(16px)",
                 WebkitBackdropFilter: "saturate(180%) blur(16px)",

@@ -37,6 +37,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
 import { receiptCampaignPublicUrl } from "@/utils/publicHosts";
+import { inkRgba } from "@/theme/chartInk";
 
 /**
  * Upload a single File to GCS and return its blob name, or throw. Mirrors
@@ -233,7 +234,7 @@ const inputStyle: React.CSSProperties = {
 
 const limeButton: React.CSSProperties = {
   background: "var(--spark-lime)",
-  color: "#0a0d09",
+  color: "var(--spark-on-accent)",
 };
 
 const ghostButton: React.CSSProperties = {
@@ -388,7 +389,7 @@ const CountTile: React.FC<{
   <div
     className="rounded-xl px-3 py-2 text-center"
     style={{
-      background: "rgba(255,255,255,0.03)",
+      background: inkRgba(0.03),
       border: "1px solid var(--spark-border)",
     }}
   >
@@ -431,7 +432,7 @@ const BudgetBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
       </div>
       <div
         className="mt-2 h-2 w-full rounded-full overflow-hidden"
-        style={{ background: "rgba(255,255,255,0.08)" }}
+        style={{ background: inkRgba(0.08) }}
         role="progressbar"
         aria-valuenow={Math.round(pct)}
         aria-valuemin={0}
@@ -1011,7 +1012,7 @@ const ReceiptCard: React.FC<{
           style={{
             minHeight: 160,
             background:
-              "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.08), transparent 70%)",
+              "radial-gradient(circle at 50% 50%, rgba(var(--spark-accent-rgb),0.08), transparent 70%)",
             borderRight: "1px solid var(--spark-border)",
           }}
         >
@@ -1702,7 +1703,7 @@ const ImagePickerField: React.FC<{
     ) : (
       <div
         className="h-10 w-16 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px]"
-        style={{ background: "rgba(255,255,255,0.06)", color: "var(--spark-text-meta)" }}
+        style={{ background: inkRgba(0.06), color: "var(--spark-text-meta)" }}
       >
         none
       </div>
@@ -1861,7 +1862,7 @@ export default function SparkReceipts() {
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={{
                       background: on ? "var(--spark-lime)" : "transparent",
-                      color: on ? "#0a0d09" : "var(--spark-text)",
+                      color: on ? "var(--spark-on-accent)" : "var(--spark-text)",
                       border: `1px solid ${
                         on ? "var(--spark-lime)" : "var(--spark-border)"
                       }`,

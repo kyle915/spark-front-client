@@ -32,7 +32,7 @@ export const UpdateBanner: React.FC = () => {
         gap: 14,
         padding: "10px 14px 10px 18px",
         borderRadius: 12,
-        background: "rgba(18,20,16,0.96)",
+        background: "rgba(var(--spark-bg-rgb),0.96)",
         border: "1px solid var(--spark-lime, #f2f3ee)",
         boxShadow: "0 8px 30px rgba(0,0,0,0.45)",
         color: "var(--spark-text)",

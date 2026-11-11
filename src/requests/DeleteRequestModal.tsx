@@ -98,7 +98,7 @@ export default function DeleteRequestModal({
       onClick={onClose}
       className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
       style={{
-        background: "rgba(10,11,13,0.7)",
+        background: "rgba(var(--spark-bg-rgb),0.7)",
         backdropFilter: "blur(8px)",
       }}
     >

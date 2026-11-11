@@ -2260,7 +2260,7 @@ const SparkRecapInner: React.FC<{
                       title="Remove this file from the recap"
                       className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full grid place-items-center text-xs font-bold transition opacity-0 group-hover:opacity-100"
                       style={{
-                        background: "rgba(10,13,9,0.85)",
+                        background: "rgba(var(--spark-bg-rgb),0.85)",
                         color: "var(--spark-orange)",
                         border: "1px solid rgba(239,90,42,0.5)",
                       }}

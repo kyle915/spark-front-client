@@ -171,7 +171,7 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
               aria-hidden
               className="inline-block w-3.5 h-3.5 rounded-full animate-spin"
               style={{
-                border: "2px solid rgba(10,13,9,0.35)",
+                border: "2px solid rgba(var(--spark-bg-rgb),0.35)",
                 borderTopColor: "#0a0d09",
               }}
             />

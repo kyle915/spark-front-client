@@ -226,7 +226,7 @@ const DuplicateEventsButton: React.FC = () => {
           onClick={() => setOpen(false)}
           className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
           style={{
-            background: "rgba(10,11,13,0.7)",
+            background: "rgba(var(--spark-bg-rgb),0.7)",
             backdropFilter: "blur(8px)",
           }}
         >

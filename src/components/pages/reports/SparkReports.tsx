@@ -34,6 +34,7 @@ import {
   type ChartData,
   type ChartOptions,
 } from "chart.js";
+import { inkRgba, accentRgba, accentHex, surfaceHex } from "@/theme/chartInk";
 
 ChartJS.register(
   CategoryScale,
@@ -45,7 +46,7 @@ ChartJS.register(
 );
 
 const SPARK_PALETTE = [
-  "#f2f3ee", // lime
+  accentHex(), // lime
   "#5fb8ef", // sky
   "#a08bd9", // purple
   "#d6c45f", // gold
@@ -261,8 +262,8 @@ const EventsPerWeekChart: React.FC = () => {
       {
         label: "Requests created",
         data: values,
-        backgroundColor: "rgba(242,243,238,0.65)",
-        borderColor: "rgba(242,243,238,1)",
+        backgroundColor: accentRgba(0.65),
+        borderColor: accentRgba(1),
         borderWidth: 1,
         borderRadius: 6,
       },
@@ -287,7 +288,7 @@ const EventsPerWeekChart: React.FC = () => {
       y: {
         beginAtZero: true,
         ticks: { color: "var(--spark-text-meta)", precision: 0 },
-        grid: { color: "rgba(255,255,255,0.06)" },
+        grid: { color: inkRgba(0.06) },
       },
     },
   };
@@ -332,7 +333,7 @@ const ActivationMixChart: React.FC = () => {
         backgroundColor: labels.map(
           (_, i) => SPARK_PALETTE[i % SPARK_PALETTE.length],
         ),
-        borderColor: "#0a0d09",
+        borderColor: surfaceHex(),
         borderWidth: 2,
       },
     ],
@@ -439,7 +440,7 @@ const ConsumersSampledChart: React.FC = () => {
       y: {
         beginAtZero: true,
         ticks: { color: "var(--spark-text-meta)", precision: 0 },
-        grid: { color: "rgba(255,255,255,0.06)" },
+        grid: { color: inkRgba(0.06) },
       },
     },
   };
@@ -497,8 +498,8 @@ const TopRetailersChart: React.FC = () => {
       {
         label: "Consumers sampled",
         data: values,
-        backgroundColor: "rgba(242,243,238,0.55)",
-        borderColor: "rgba(242,243,238,1)",
+        backgroundColor: accentRgba(0.55),
+        borderColor: accentRgba(1),
         borderWidth: 1,
         borderRadius: 6,
       },
@@ -520,7 +521,7 @@ const TopRetailersChart: React.FC = () => {
       x: {
         beginAtZero: true,
         ticks: { color: "var(--spark-text-meta)", precision: 0 },
-        grid: { color: "rgba(255,255,255,0.06)" },
+        grid: { color: inkRgba(0.06) },
       },
       y: {
         ticks: { color: "var(--spark-text-secondary)" },

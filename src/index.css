@@ -434,6 +434,7 @@ code, kbd, samp, pre, .mono-code {
      accent tint is built from these, so a second theme only swaps them. */
   --spark-ink-rgb: 255, 255, 255;
   --spark-accent-rgb: 242, 243, 238;
+  --spark-bg-rgb: 10, 11, 13;
   --spark-on-accent: #0a0d09;
   --spark-bg: #0A0B0D;
   --spark-surface: #141416;
@@ -469,6 +470,7 @@ code, kbd, samp, pre, .mono-code {
   color-scheme: light;
   --spark-ink-rgb: 20, 22, 15;
   --spark-accent-rgb: 20, 22, 15;
+  --spark-bg-rgb: 246, 246, 242;
   --spark-on-accent: #ffffff;
   --spark-lime: #14160f;
   --spark-lime-dim: #3a3d33;
@@ -510,6 +512,44 @@ code, kbd, samp, pre, .mono-code {
   --color-warning-content: #ffffff;
   --color-error: #c9304c;
   --color-error-content: #ffffff;
+}
+
+/* The navigation rail stays dark in light mode — it frames the page and
+   keeps the Spark mark on its own ground. Re-declare the dark values on the
+   rail so everything inside it resolves as before. */
+[data-theme="spark-v2"][data-spark-mode="light"] .spark-sidebar {
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.92);
+  --spark-ink-rgb: 255, 255, 255;
+  --spark-accent-rgb: 242, 243, 238;
+  --spark-bg-rgb: 10, 11, 13;
+  --spark-on-accent: #0a0d09;
+  --spark-lime: #f2f3ee;
+  --spark-lime-dim: #c8c9c4;
+  --spark-orange: #ef5a2a;
+  --spark-sky: #5fb8ef;
+  --spark-purple: #a08bd9;
+  --spark-gold: #ffc400;
+  --spark-bg: #0A0B0D;
+  --spark-surface: #141416;
+  --spark-surface-2: #1a1a1d;
+  --spark-border: #2a2a2e;
+  --spark-text: #f2f3ee;
+  --spark-text-secondary: rgba(255, 255, 255, 0.76);
+  --spark-text-meta: rgba(255, 255, 255, 0.64);
+  --spark-faint: rgba(255, 255, 255, 0.52);
+  --spark-muted: rgba(255, 255, 255, 0.66);
+  --spark-hairline: rgba(255, 255, 255, 0.08);
+  --color-base-100: #141416;
+  --color-base-200: #0A0B0D;
+  --color-base-300: #1c1c1f;
+  --color-base-content: rgba(255, 255, 255, 0.92);
+  --color-primary: #f2f3ee;
+  --color-primary-content: #0A0B0D;
+  --color-secondary: rgba(255, 255, 255, 0.08);
+  --color-secondary-content: rgba(255, 255, 255, 0.92);
+  --color-neutral: #1c1c1f;
+  --color-neutral-content: rgba(255, 255, 255, 0.92);
 }
 
 /* === Spark mesh — flat dark page shell (no radials, no dot grid) === */
@@ -570,7 +610,7 @@ body:has(.spark-login-page) {
 .spark-login-form .btn.btn-primary {
   background: #f2f3ee !important;
   border-color: #f2f3ee !important;
-  color: #0A0B0D !important;
+  color: var(--spark-on-accent) !important;
   font-family: var(--font-display, 'Space Grotesk', sans-serif) !important;
   font-weight: 700 !important;
   letter-spacing: -0.01em !important;
@@ -594,7 +634,7 @@ body:has(.spark-login-page) {
 .spark-input:focus {
   border-color: rgba(var(--spark-accent-rgb), 0.7);
   box-shadow: 0 0 0 3px rgba(var(--spark-accent-rgb), 0.28);
-  background: rgba(17, 20, 14, 0.95);
+  background: rgba(var(--spark-bg-rgb), 0.95);
 }
 .spark-input::selection {
   background: var(--spark-selection-bg, rgba(239, 90, 42, 0.55));
@@ -677,7 +717,7 @@ body:has(.spark-login-page) {
   border-radius: 999px;
   border: none;
   background: var(--spark-lime);
-  color: #0a0a0a;
+  color: var(--spark-on-accent);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -764,7 +804,7 @@ body:has(.spark-login-page) {
   gap: 0.4rem !important;
   border-radius: var(--spark-radius-control, 8px) !important;
   border-color: rgba(var(--spark-ink-rgb), 0.07) !important;
-  background: rgba(10, 13, 9, 0.9) !important;
+  background: rgba(var(--spark-bg-rgb), 0.9) !important;
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
 }
@@ -799,7 +839,7 @@ body:has(.spark-login-page) {
   gap: 0 !important;
   border-radius: 10px !important;
   border: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08)) !important;
-  background: rgba(10, 11, 13, 0.92) !important;
+  background: rgba(var(--spark-bg-rgb), 0.92) !important;
 }
 .spark-tracker-filters .spark-filter-bar {
   padding: 0.28rem 0.35rem;
@@ -1152,7 +1192,7 @@ thead .spark-table-sticky-date {
 }
 .pill-btn:hover { color: rgba(var(--spark-ink-rgb), 0.85); }
 .pill-btn.on {
-  color: #0A0B0D;
+  color: var(--spark-on-accent);
   background: var(--spark-lime);
   box-shadow: none;
 }
@@ -1298,7 +1338,7 @@ thead .spark-table-sticky-date {
   height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--spark-lime), var(--spark-lime-dim));
-  color: #0a0d09;
+  color: var(--spark-on-accent);
   display: grid;
   place-items: center;
   font-weight: 700;
@@ -1642,7 +1682,7 @@ body { background: var(--spark-bg); }
 
   body {
     background: #ffffff !important;
-    color: #0a0d09 !important;
+    color: var(--spark-on-accent) !important;
   }
 
   /* Hide chrome: sidebar, admin headers, anything tagged no-print.
@@ -1679,7 +1719,7 @@ body { background: var(--spark-bg); }
 
   /* All text → near-black for legibility on paper */
   body * {
-    color: #0a0d09 !important;
+    color: var(--spark-on-accent) !important;
     text-shadow: none !important;
   }
 
@@ -1692,7 +1732,7 @@ body { background: var(--spark-bg); }
   .chip {
     background: transparent !important;
     border: 1px solid #6b7280 !important;
-    color: #0a0d09 !important;
+    color: var(--spark-on-accent) !important;
     box-shadow: none !important;
   }
 
@@ -1755,7 +1795,7 @@ body { background: var(--spark-bg); }
   background: rgba(var(--spark-ink-rgb), 0.05);
 }
 .recap-detail-tab.is-active {
-  color: #0a0b0d;
+  color: var(--spark-on-accent);
   background: var(--spark-lime);
   box-shadow: 0 1px 0 rgba(var(--spark-ink-rgb), 0.12);
 }
@@ -1777,7 +1817,7 @@ body { background: var(--spark-bg); }
   background: linear-gradient(
     135deg,
     rgba(var(--spark-ink-rgb), 0.03),
-    rgba(10, 11, 13, 0.35)
+    rgba(var(--spark-bg-rgb), 0.35)
   );
 }
 @media (min-width: 1024px) {
@@ -2023,7 +2063,7 @@ body { background: var(--spark-bg); }
   z-index: 80;
   transform: translateY(-50%);
   pointer-events: none;
-  background: #0a0b0d;
+  background: var(--spark-bg);
   color: rgba(var(--spark-ink-rgb), 0.92);
   border: 1px solid var(--spark-border);
   border-radius: 6px;
@@ -2114,7 +2154,7 @@ body { background: var(--spark-bg); }
   --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
   --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);
   --spark-scrollbar-thumb: rgba(var(--spark-ink-rgb), 0.28);
-  --spark-scrollbar-track: #0a0b0d;
+  --spark-scrollbar-track: var(--spark-bg);
 }
 
 /* Keyboard focus stays lime on dark ops. Paper recolors the ring below
@@ -2258,7 +2298,7 @@ tr:hover > td .spark-row-actions > a,
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(10, 11, 13, 0.55);
+  background: rgba(var(--spark-bg-rgb), 0.55);
   backdrop-filter: saturate(180%) blur(8px);
   animation: spark-sheet-scrim-in var(--spark-spring-duration, 0.35s)
     var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)) both;
@@ -2326,7 +2366,7 @@ tr:hover > td .spark-row-actions > a,
 .recap-sticky-ops {
   padding: 0.45rem 0.65rem;
   border-radius: var(--spark-radius-card, 14px);
-  background: rgba(10, 11, 13, 0.94);
+  background: rgba(var(--spark-bg-rgb), 0.94);
   border: 1px solid var(--spark-hairline, var(--spark-border));
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   backdrop-filter: saturate(180%) blur(12px);

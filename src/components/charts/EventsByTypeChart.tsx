@@ -9,18 +9,19 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { memo } from "react";
+import { inkRgba, accentRgba } from "@/theme/chartInk";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 type EventsByTypeAnalytics = Record<string, number>;
 
 const SPARK_PALETTE = [
-  "rgba(242,243,238,0.90)", // lime
+  accentRgba(0.90), // lime
   "rgba(95,184,239,0.90)", // sky
   "rgba(239,90,42,0.90)", // orange
   "rgba(245,200,66,0.90)", // gold
-  "rgba(255,255,255,0.35)",
-  "rgba(242,243,238,0.45)",
+  inkRgba(0.35),
+  accentRgba(0.45),
 ];
 
 function EventsByTypeChart({ analytics }: { analytics: EventsByTypeAnalytics }) {
@@ -50,7 +51,7 @@ function EventsByTypeChart({ analytics }: { analytics: EventsByTypeAnalytics }) 
     scales: {
       x: {
         ticks: { color: "var(--spark-text-meta)" },
-        grid: { color: "rgba(255,255,255,0.08)" },
+        grid: { color: inkRgba(0.08) },
       },
       y: {
         ticks: { color: "var(--spark-text-secondary)" },

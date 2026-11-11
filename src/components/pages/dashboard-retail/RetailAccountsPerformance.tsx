@@ -15,6 +15,7 @@ import ChartCard from "@/components/charts/ChartCard";
 import { useThemeMode } from "@/hooks/useThemeMode";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import { useGlobalDistributors } from "../hooks/useGlobalDistributors";
+import { inkRgba } from "@/theme/chartInk";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -53,7 +54,7 @@ export default memo(function RetailAccountsPerformance({
   const { textColor, gridColor } = useMemo(
     () => ({
       textColor: isDark ? "#e5e7eb" : "#1f2937",
-      gridColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+      gridColor: isDark ? inkRgba(0.1) : "rgba(0,0,0,0.08)",
     }),
     [isDark],
   );

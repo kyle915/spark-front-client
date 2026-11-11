@@ -6,6 +6,7 @@ import { feature } from "topojson-client";
 import statesTopoJson from "us-atlas/states-10m.json";
 import { TenantMarketPerformanceQuery } from "@/api/queries/TenantMarketPerformanceQuery";
 import type { TenantMarketPerformanceQuery as TenantMarketPerformanceQueryType } from "@api/queries/__generated__/TenantMarketPerformanceQuery.graphql";
+import { inkRgba, surfaceHex } from "@/theme/chartInk";
 
 /**
  * Geographic Performance heatmap for the dashboards.
@@ -174,8 +175,8 @@ const mapPathGen = geoPath(mapProjection);
 // with no data render in EMPTY_FILL (a neutral, near-invisible fill).
 const RAMP_BASE: [number, number, number] = [32, 34, 30]; // muted neutral dark
 const RAMP_ACCENT: [number, number, number] = [242, 243, 238]; // var(--spark-lime)
-const EMPTY_FILL = "rgba(255,255,255,0.045)";
-const STROKE = "#0a0d09"; // var(--spark-bg) — thin separators between states
+const EMPTY_FILL = inkRgba(0.045);
+const STROKE = surfaceHex(); // var(--spark-bg) — thin separators between states
 
 const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
 
@@ -376,7 +377,7 @@ const TenantGeoHeatmap: React.FC<{
             onChange={(e) => setMetricKey(e.target.value as MetricKey)}
             className="mono text-[11px] rounded-lg px-2.5 py-1.5 cursor-pointer"
             style={{
-              background: "rgba(255,255,255,0.04)",
+              background: inkRgba(0.04),
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text)",
               letterSpacing: "0.06em",
