@@ -436,6 +436,7 @@ code, kbd, samp, pre, .mono-code {
   --spark-accent-rgb: 242, 243, 238;
   --spark-bg-rgb: 10, 11, 13;
   --spark-ok-rgb: 197, 245, 70;
+  --spark-flag-ink: #ffb59d;
   --spark-on-accent: #0a0d09;
   --spark-bg: #0A0B0D;
   --spark-surface: #141416;
@@ -473,6 +474,7 @@ code, kbd, samp, pre, .mono-code {
   --spark-accent-rgb: 20, 22, 15;
   --spark-bg-rgb: 246, 246, 242;
   --spark-ok-rgb: 63, 92, 18;
+  --spark-flag-ink: #a8340f;
   --spark-on-accent: #ffffff;
   --spark-lime: #14160f;
   --spark-lime-dim: #3a3d33;

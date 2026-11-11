@@ -43,8 +43,8 @@ describe("reviewCheckCounts", () => {
 
 describe("reviewCheckTint", () => {
   it("tints flag orange and pass off-white on dark ops chrome", () => {
-    expect(reviewCheckTint("flag").color).toBe("#ffb59d");
-    expect(reviewCheckTint("pass").color).toBe("#f2f3ee");
+    expect(reviewCheckTint("flag").color).toContain("#ffb59d");
+    expect(reviewCheckTint("pass").color).toContain("#f2f3ee");
     expect(reviewCheckTint("na").mark).toBe("–");
   });
 });
