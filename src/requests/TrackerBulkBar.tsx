@@ -17,7 +17,10 @@ async function approveOne(id: string): Promise<boolean> {
         "Content-Type": "application/json",
         Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
       },
-      body: JSON.stringify({ query: APPROVE_MUTATION, variables: { input: { id } } }),
+      body: JSON.stringify({
+        query: APPROVE_MUTATION,
+        variables: { input: { id } },
+      }),
     });
     const json = await res.json();
     return !json.errors?.length && Boolean(json?.data?.approveRequest?.success);
@@ -43,21 +46,21 @@ export const TrackerBulkBar: React.FC<{
   onDone: () => void;
 }> = ({ rows, onDone }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
+  const showUndoable = useAlertStore((s) => s.showUndoable);
   const { approvable, assignable } = bulkTargets(rows);
-  const [confirmApprove, setConfirmApprove] = useState(false);
   const [approving, setApproving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [commitAssign, assigning] = useMutation<BulkAssignType>(BulkAssignAmbassadorMutation);
+  const [commitAssign, assigning] = useMutation<BulkAssignType>(
+    BulkAssignAmbassadorMutation,
+  );
 
-  const runApprove = async () => {
-    setConfirmApprove(false);
-    setApproving(true);
+  const runApprove = async (targets: typeof approvable) => {
     let ok = 0;
-    for (const r of approvable) {
+    for (const r of targets) {
       if (await approveOne(r.id)) ok += 1;
     }
     setApproving(false);
-    const failed = approvable.length - ok;
+    const failed = targets.length - ok;
     showAlert(
       failed === 0
         ? `Approved ${ok} request${ok === 1 ? "" : "s"}.`
@@ -97,62 +100,43 @@ export const TrackerBulkBar: React.FC<{
       aria-label="Bulk actions for selected events"
     >
       <span className="font-semibold">{rows.length} selected</span>
-      {confirmApprove ? (
-        <>
-          <span>
-            Approve {approvable.length} pending request
-            {approvable.length === 1 ? "" : "s"}? Each sends its usual
-            confirmation email.
-          </span>
-          <button
-            type="button"
-            onClick={() => void runApprove()}
-            className="px-3 py-1.5 rounded-xl font-semibold"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
-          >
-            Yes, approve
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmApprove(false)}
-            className="underline"
-            style={{ color: "var(--spark-text-secondary)" }}
-          >
-            Cancel
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setConfirmApprove(true)}
-            disabled={approving || approvable.length === 0}
-            title={
-              approvable.length === 0
-                ? "None of the selected rows are pending approval"
-                : undefined
-            }
-            className="px-3 py-1.5 rounded-xl font-semibold disabled:opacity-50"
-            style={btn}
-          >
-            {approving ? "Approving…" : `Approve (${approvable.length})`}
-          </button>
-          <button
-            type="button"
-            onClick={() => setPickerOpen(true)}
-            disabled={assigning || assignable.length === 0}
-            title={
-              assignable.length === 0
-                ? "None of the selected rows have an event to staff yet"
-                : undefined
-            }
-            className="px-3 py-1.5 rounded-xl font-semibold disabled:opacity-50"
-            style={btn}
-          >
-            Assign ambassador ({assignable.length})
-          </button>
-        </>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          // No "are you sure?" — hold it for a few seconds with Undo.
+          const targets = approvable;
+          setApproving(true);
+          showUndoable(
+            `Approving ${targets.length} request${targets.length === 1 ? "" : "s"} — each sends its usual confirmation email.`,
+            () => void runApprove(targets),
+            { onUndo: () => setApproving(false) },
+          );
+        }}
+        disabled={approving || approvable.length === 0}
+        title={
+          approvable.length === 0
+            ? "None of the selected rows are pending approval"
+            : undefined
+        }
+        className="px-3 py-1.5 rounded-xl font-semibold disabled:opacity-50"
+        style={btn}
+      >
+        {approving ? "Approving…" : `Approve (${approvable.length})`}
+      </button>
+      <button
+        type="button"
+        onClick={() => setPickerOpen(true)}
+        disabled={assigning || assignable.length === 0}
+        title={
+          assignable.length === 0
+            ? "None of the selected rows have an event to staff yet"
+            : undefined
+        }
+        className="px-3 py-1.5 rounded-xl font-semibold disabled:opacity-50"
+        style={btn}
+      >
+        Assign ambassador ({assignable.length})
+      </button>
       {pickerOpen ? (
         <Suspense fallback={null}>
           <BulkBaPicker

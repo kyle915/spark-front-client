@@ -88,7 +88,9 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
   const rows: Row[] = (sheet?.rows ?? []) as Row[];
   const [reviewOnly, setReviewOnly] = useState(false);
   // "Approve all" is two-step: the first click arms it, the second commits.
-  const [confirmApproveAll, setConfirmApproveAll] = useState(false);
+  // True while an approve-all sits in its undo window.
+  const [held, setHeld] = useState(false);
+  const showUndoable = useAlertStore((s) => s.showUndoable);
   // Which ambassador's shifts are expanded under their row (one at a time).
   const [openUuid, setOpenUuid] = useState<string | null>(null);
   const shown = reviewOnly ? rows.filter((r) => r.needsReview) : rows;
@@ -161,35 +163,21 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
         ) : null}
         <div className="ml-auto flex items-center gap-2">
           {unapprovedUuids.length > 0 ? (
-            confirmApproveAll ? (
-              <>
-                <span className="text-sm" style={{ color: "var(--spark-text)" }}>
-                  Approve hours for all {unapprovedUuids.length}?
-                </span>
-                <button
-                  onClick={() => setConfirmApproveAll(false)}
-                  disabled={busy}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-                  style={{ background: "transparent", color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    setConfirmApproveAll(false);
-                    runPayroll("approve", unapprovedUuids);
-                  }}
-                  disabled={busy}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-                  style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
-                >
-                  Yes, approve all
-                </button>
-              </>
-            ) : (
+            (
               <button
-                onClick={() => setConfirmApproveAll(true)}
-                disabled={busy}
+                onClick={() => {
+                  const uuids = unapprovedUuids;
+                  setHeld(true);
+                  showUndoable(
+                    `Approving hours for ${uuids.length} ${uuids.length === 1 ? "person" : "people"}.`,
+                    () => {
+                      setHeld(false);
+                      runPayroll("approve", uuids);
+                    },
+                    { onUndo: () => setHeld(false) },
+                  );
+                }}
+                disabled={busy || held}
                 className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
                 style={{ background: "transparent", color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
               >
