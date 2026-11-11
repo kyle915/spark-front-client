@@ -41,6 +41,11 @@ export function telHref(phone: string): string {
 export const photoUploads = createLimiter(3);
 // Decoding a 12MP shot to re-encode it is the memory spike; two at a time.
 export const photoPrep = createLimiter(2);
+// Quality/duplicate checks decode a photo at full resolution. Twenty picked
+// at once used to decode all twenty together, which is enough to get the tab
+// killed on an iPhone. One at a time keeps memory flat; the checks are
+// advisory and uploads never wait on them.
+export const photoAnalysis = createLimiter(1);
 
 // Weak signal / rate limit / server hiccup: try again on our own before the
 // BA has to notice. After these, the tile waits for Retry.
