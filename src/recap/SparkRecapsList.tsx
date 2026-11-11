@@ -556,7 +556,7 @@ const RecapCard: React.FC<{
       className="h-32 relative overflow-hidden"
       style={{
         background:
-          "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
+          "radial-gradient(circle at 50% 50%, rgba(var(--spark-ok-rgb),0.10), transparent 70%)",
       }}
     >
       {recap.heroImage && !heroFailed ? (
@@ -607,8 +607,8 @@ const RecapCard: React.FC<{
                   // Reminted chip-lime is off-white outline — unreadable as
                   // "approved" on busy hero photos. Match the green used by
                   // the "Approved by …" meta line under the card title.
-                  background: "rgba(197,245,70,0.92)",
-                  border: "1px solid rgba(197,245,70,1)",
+                  background: "rgba(var(--spark-ok-rgb),0.92)",
+                  border: "1px solid rgba(var(--spark-ok-rgb),1)",
                   color: "var(--spark-on-accent)",
                 }
               : undefined
@@ -677,7 +677,7 @@ const RecapCard: React.FC<{
           className="mono text-[10px] mt-1"
           style={{
             letterSpacing: "0.1em",
-            color: "rgba(197,245,70,0.75)",
+            color: "rgba(var(--spark-ok-rgb),0.75)",
           }}
         >
           {recap.approvalMeta}
@@ -709,8 +709,8 @@ const RecapCard: React.FC<{
             className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              background: "rgba(197,245,70,0.10)",
-              border: "1px solid rgba(197,245,70,0.30)",
+              background: "rgba(var(--spark-ok-rgb),0.10)",
+              border: "1px solid rgba(var(--spark-ok-rgb),0.30)",
               color: "var(--spark-lime)",
             }}
             title="View the parent request on the Master Tracker"
@@ -1953,8 +1953,8 @@ const RecapsListFetched: React.FC<{
                     style={{
                       letterSpacing: "0.12em",
                       color: "var(--spark-lime)",
-                      background: "rgba(197,245,70,0.10)",
-                      border: "1px solid rgba(197,245,70,0.28)",
+                      background: "rgba(var(--spark-ok-rgb),0.10)",
+                      border: "1px solid rgba(var(--spark-ok-rgb),0.28)",
                     }}
                   >
                     {chip.label}
@@ -3335,7 +3335,7 @@ export default function SparkRecapsList() {
                     style={{
                       background:
                         pipelineKey === key
-                          ? "rgba(197,245,70,0.16)"
+                          ? "rgba(var(--spark-ok-rgb),0.16)"
                           : "transparent",
                       color:
                         pipelineKey === key
@@ -3418,7 +3418,7 @@ export default function SparkRecapsList() {
                         style={{
                           background:
                             density === key
-                              ? "rgba(197,245,70,0.16)"
+                              ? "rgba(var(--spark-ok-rgb),0.16)"
                               : "transparent",
                           color:
                             density === key
@@ -3520,7 +3520,7 @@ export default function SparkRecapsList() {
                         style={{
                           background:
                             datePreset === p
-                              ? "rgba(197,245,70,0.16)"
+                              ? "rgba(var(--spark-ok-rgb),0.16)"
                               : "transparent",
                           color:
                             datePreset === p
@@ -3584,7 +3584,7 @@ export default function SparkRecapsList() {
                   className="px-2.5 py-2 text-xs font-semibold"
                   style={{
                     background:
-                      density === key ? "rgba(197,245,70,0.16)" : "transparent",
+                      density === key ? "rgba(var(--spark-ok-rgb),0.16)" : "transparent",
                     color:
                       density === key
                         ? "var(--spark-lime)"
@@ -3682,7 +3682,7 @@ export default function SparkRecapsList() {
                   className="px-2.5 py-2 text-xs font-semibold"
                   style={{
                     background:
-                      datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
+                      datePreset === p ? "rgba(var(--spark-ok-rgb),0.16)" : "transparent",
                     color:
                       datePreset === p
                         ? "var(--spark-lime)"
