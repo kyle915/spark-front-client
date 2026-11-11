@@ -8,6 +8,7 @@ import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
+import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { showsMissingRecaps } from "@/field/missingRecaps";
@@ -148,6 +149,12 @@ function DashboardInner() {
         <BrandComparePanel tenantId={tenantId} canManageAccess={isAdmin} />
       ) : (
       <>
+      {isAdmin ? (
+        <Suspense fallback={null}>
+          <SetupChecklistCard key={String(tenantId ?? "")} />
+        </Suspense>
+      ) : null}
+
       {program === "field" ? null : (
         <>
           <Suspense fallback={null}>
