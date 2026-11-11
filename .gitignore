@@ -145,3 +145,6 @@ TASKS.md
 
 # Local tool artifacts
 .claude/
+
+# A worktree may symlink node_modules; the trailing-slash rule above does not match a symlink.
+/node_modules
