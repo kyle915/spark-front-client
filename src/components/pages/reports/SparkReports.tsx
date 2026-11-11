@@ -1,3 +1,4 @@
+import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
@@ -873,6 +874,23 @@ export default function SparkReports() {
             <TopRetailersChart />
           </ChartCard>
         </div>
+
+        {/* Where the program ran: states shaded by activity for the range. */}
+        {tenantId ? (
+          <div>
+            <h3 className="display font-bold mb-3" style={{ letterSpacing: "-0.02em" }}>
+              Where we activated
+            </h3>
+            <Suspense fallback={<PanelSkeleton label="Loading the map" />}>
+              <TenantGeoHeatmap
+                tenantId={tenantId}
+                startDate={startYmd}
+                endDate={endYmd}
+                rangeLabel={range.label}
+              />
+            </Suspense>
+          </div>
+        ) : null}
 
         {/* Program recap: what it looked like and what people said. */}
         <Suspense fallback={<PanelSkeleton label="Loading photos" />}>
