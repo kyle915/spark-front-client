@@ -14,6 +14,7 @@ import {
 } from "chart.js";
 import { Chart } from "react-chartjs-2";
 import type { ChartData, ChartOptions } from "chart.js";
+import { inkRgba } from "@/theme/chartInk";
 
 /**
  * Renders the optional chart an Ask-AI answer can carry.
@@ -70,7 +71,7 @@ const PALETTE = [
 ];
 
 const TEXT_COLOR = "#e5e7eb";
-const GRID_COLOR = "rgba(255,255,255,0.12)";
+const GRID_COLOR = inkRgba(0.12);
 
 const AiChartView: React.FC<{ chart: AiChart }> = ({ chart }) => {
   const isLine = chart.type === "line";

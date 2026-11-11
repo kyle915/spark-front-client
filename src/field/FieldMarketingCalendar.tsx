@@ -74,7 +74,7 @@ export default function FieldMarketingCalendar({ month, events, onMonth }: Props
             <div
               key={`${month}-${index}`}
               className="min-h-24 rounded-lg border border-white/10 p-1.5"
-              style={{ background: day ? "#0A0B0D" : "transparent" }}
+              style={{ background: day ? "var(--spark-bg)" : "transparent" }}
             >
               {day ? (
                 <>

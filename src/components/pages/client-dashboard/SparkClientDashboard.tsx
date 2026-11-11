@@ -266,7 +266,7 @@ const WeekAheadPanel: React.FC<{
                   letterSpacing: "0.12em",
                   color:
                     horizonDays === d
-                      ? "#0a0a0a"
+                      ? "var(--spark-on-accent)"
                       : "rgba(var(--spark-ink-rgb),0.55)",
                   background:
                     horizonDays === d

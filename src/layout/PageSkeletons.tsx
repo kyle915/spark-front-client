@@ -30,7 +30,7 @@ export function AppShellSkeleton({
       <aside
         className="w-64 shrink-0 hidden md:flex flex-col h-screen"
         style={{
-          background: "rgba(10,13,9,0.85)",
+          background: "rgba(var(--spark-bg-rgb),0.85)",
           borderRight: "1px solid var(--spark-border)",
         }}
       >

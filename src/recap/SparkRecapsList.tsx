@@ -3290,7 +3290,7 @@ export default function SparkRecapsList() {
         <div
           className="sticky top-0 z-20 spark-sticky-filters flex flex-col"
           style={{
-            background: "rgba(10, 11, 13, 0.94)",
+            background: "rgba(var(--spark-bg-rgb),0.94)",
             border: "1px solid rgba(var(--spark-ink-rgb),0.07)",
             borderRadius: 10,
           }}
@@ -3394,7 +3394,7 @@ export default function SparkRecapsList() {
                 <div
                   className="absolute inset-x-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 rounded-2xl"
                   style={{
-                    background: "rgba(10,13,9,0.98)",
+                    background: "rgba(var(--spark-bg-rgb),0.98)",
                     border: "1px solid var(--spark-border)",
                     boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
                   }}
@@ -3718,7 +3718,7 @@ export default function SparkRecapsList() {
                 <div
                   className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
                   style={{
-                    background: "rgba(10,13,9,0.98)",
+                    background: "rgba(var(--spark-bg-rgb),0.98)",
                     border: "1px solid var(--spark-border)",
                     boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
                   }}
@@ -3780,7 +3780,7 @@ export default function SparkRecapsList() {
             <div
               className="md:hidden flex flex-col gap-1 p-2 rounded-2xl"
               style={{
-                background: "rgba(10,13,9,0.98)",
+                background: "rgba(var(--spark-bg-rgb),0.98)",
                 border: "1px solid var(--spark-border)",
               }}
             >
@@ -4147,7 +4147,7 @@ export default function SparkRecapsList() {
         <div
           className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl px-4 py-3"
           style={{
-            background: "rgba(10, 13, 9, 0.95)",
+            background: "rgba(var(--spark-bg-rgb),0.95)",
             border: "1px solid var(--spark-border)",
             boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
             backdropFilter: "blur(8px)",
@@ -4305,7 +4305,7 @@ export default function SparkRecapsList() {
       {showHelp && (
         <div
           className="fixed inset-0 z-[60] grid place-items-center px-4"
-          style={{ background: "rgba(10,13,9,0.62)", backdropFilter: "blur(8px)" }}
+          style={{ background: "rgba(var(--spark-bg-rgb),0.62)", backdropFilter: "blur(8px)" }}
           onClick={() => setShowHelp(false)}
         >
           <div

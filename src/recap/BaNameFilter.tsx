@@ -59,7 +59,7 @@ const BaNameSuggestions: React.FC<{
     <div
       className="absolute left-0 top-full mt-1 z-40 max-h-64 overflow-y-auto rounded-xl py-1"
       style={{
-        background: "rgba(10,13,9,0.98)",
+        background: "rgba(var(--spark-bg-rgb),0.98)",
         border: "1px solid var(--spark-border)",
         boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
         minWidth: "100%",

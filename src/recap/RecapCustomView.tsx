@@ -2922,7 +2922,7 @@ const RecapCustomViewInner = ({
                                     aria-label="Remove this file from the recap"
                                     className="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full opacity-0 shadow transition focus:opacity-100 group-hover:opacity-100 disabled:opacity-60"
                                     style={{
-                                      background: "rgba(10,13,9,0.85)",
+                                      background: "rgba(var(--spark-bg-rgb),0.85)",
                                       color: "var(--spark-orange)",
                                       border: "1px solid rgba(239,90,42,0.5)",
                                     }}

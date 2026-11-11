@@ -421,7 +421,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         <div
           className="absolute bottom-3 left-3 z-10 px-2.5 py-1.5 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1 pointer-events-none"
           style={{
-            background: "rgba(10,13,9,0.82)",
+            background: "rgba(var(--spark-bg-rgb),0.82)",
             backdropFilter: "blur(8px)",
             border: "1px solid var(--spark-border)",
             maxWidth: "calc(100% - 24px)",

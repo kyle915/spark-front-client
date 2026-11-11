@@ -15,6 +15,7 @@ import type { ChartData, ChartOptions } from "chart.js";
 
 // hook theme
 import { useThemeMode } from "@/hooks/useThemeMode";
+import { inkRgba } from "@/theme/chartInk";
 
 ChartJS.register(
   CategoryScale,
@@ -40,7 +41,7 @@ function MonthlyTrendsChart({ data }: { data: MonthlyTrend[] }) {
   const { textColor, gridColor } = useMemo(() => {
     return {
       textColor: isDark ? "#e5e7eb" : "#1f2937",
-      gridColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)",
+      gridColor: isDark ? inkRgba(0.12) : "rgba(0,0,0,0.1)",
     };
   }, [isDark]);
 

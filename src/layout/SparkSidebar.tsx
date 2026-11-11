@@ -646,11 +646,11 @@ export const SparkSidebar: React.FC = () => {
     <aside
       className={[
         "spark-sidebar shrink-0 flex flex-col h-screen min-h-0 w-64",
-        "fixed inset-y-0 left-0 z-50 transition-[width,transform] duration-200 ease-out md:static md:translate-x-0 md:z-auto",
+        "fixed inset-y-0 left-0 z-50 transition-[width,transform] duration-200 ease-out md:sticky md:top-0 md:bottom-auto md:translate-x-0 md:z-auto",
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       ].join(" ")}
       style={{
-        background: "rgba(10,13,9,0.92)",
+        background: "rgba(var(--spark-bg-rgb),0.92)",
         borderRight: "1px solid var(--spark-border)",
         backdropFilter: "blur(12px)",
       }}

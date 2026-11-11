@@ -1259,7 +1259,7 @@ export default function SparkRecapCreate() {
       <div
         className="sticky bottom-0 -mx-1 sm:mx-0 px-3 py-3 flex items-center justify-between gap-3 flex-wrap"
         style={{
-          background: "rgba(10,13,9,0.9)",
+          background: "rgba(var(--spark-bg-rgb),0.9)",
           backdropFilter: "blur(12px)",
           borderTop: "1px solid var(--spark-border)",
         }}

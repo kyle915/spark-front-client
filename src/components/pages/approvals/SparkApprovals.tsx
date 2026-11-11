@@ -1083,7 +1083,7 @@ const ApprovalsInner: React.FC = () => {
     <div
       className="sticky top-2 z-30 spark-card px-4 py-3 flex flex-wrap items-center gap-3"
       style={{
-        background: "rgba(17,20,14,0.92)",
+        background: "rgba(var(--spark-bg-rgb),0.92)",
         backdropFilter: "blur(10px)",
         border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
       }}
@@ -1190,7 +1190,7 @@ const ApprovalsInner: React.FC = () => {
           onClick={() => setShowHelp(false)}
           className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
           style={{
-            background: "rgba(10,11,13,0.7)",
+            background: "rgba(var(--spark-bg-rgb),0.7)",
             backdropFilter: "blur(8px)",
           }}
         >
@@ -1275,7 +1275,7 @@ const ApprovalsInner: React.FC = () => {
           onClick={() => !bulkBusy && setBulkConfirm(false)}
           className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
           style={{
-            background: "rgba(10,11,13,0.7)",
+            background: "rgba(var(--spark-bg-rgb),0.7)",
             backdropFilter: "blur(8px)",
           }}
         >
@@ -1388,7 +1388,7 @@ const ApprovalsInner: React.FC = () => {
           onClick={() => !bulkBusy && setBulkDeclineOpen(false)}
           className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
           style={{
-            background: "rgba(10,11,13,0.7)",
+            background: "rgba(var(--spark-bg-rgb),0.7)",
             backdropFilter: "blur(8px)",
           }}
         >
@@ -1574,7 +1574,7 @@ const ApprovalsInner: React.FC = () => {
           onClick={() => !busyId && setDeclining(null)}
           className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
           style={{
-            background: "rgba(10,11,13,0.7)",
+            background: "rgba(var(--spark-bg-rgb),0.7)",
             backdropFilter: "blur(8px)",
           }}
         >

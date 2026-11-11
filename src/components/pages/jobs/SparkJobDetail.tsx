@@ -1180,7 +1180,7 @@ const PostJobModal: React.FC<{
     <div
       onClick={onClose}
       className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
-      style={{ background: "rgba(10,11,13,0.7)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(var(--spark-bg-rgb),0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -1515,7 +1515,7 @@ const EditJobModal: React.FC<{
     <div
       onClick={onClose}
       className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[8vh] pb-8 overflow-y-auto"
-      style={{ background: "rgba(10,11,13,0.7)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(var(--spark-bg-rgb),0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}

@@ -9,6 +9,7 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { memo } from "react";
+import { inkRgba } from "@/theme/chartInk";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -40,11 +41,11 @@ function EventsByStatusChart({
     scales: {
       x: {
         ticks: { color: "var(--spark-text-meta)" },
-        grid: { color: "rgba(255,255,255,0.08)" },
+        grid: { color: inkRgba(0.08) },
       },
       y: {
         ticks: { color: "var(--spark-text-secondary)" },
-        grid: { color: "rgba(255,255,255,0.08)" },
+        grid: { color: inkRgba(0.08) },
       },
     },
   };

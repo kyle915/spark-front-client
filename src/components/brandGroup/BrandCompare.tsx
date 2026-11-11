@@ -56,7 +56,7 @@ function SwitchInner({
             className="px-3 py-1.5 rounded-lg text-sm font-semibold transition"
             style={{
               background: active ? "var(--spark-lime)" : "transparent",
-              color: active ? "#0a0a0a" : muted,
+              color: active ? "var(--spark-on-accent)" : muted,
             }}
           >
             {t.label}
@@ -339,7 +339,7 @@ export function BrandComparePanel({
             className="mono text-[10px] px-2.5 py-1.5 rounded-lg"
             style={{
               letterSpacing: "0.12em",
-              color: period === p.key ? "#0a0a0a" : muted,
+              color: period === p.key ? "var(--spark-on-accent)" : muted,
               background: period === p.key ? "var(--spark-lime)" : "transparent",
               border: "1px solid var(--spark-border)",
             }}

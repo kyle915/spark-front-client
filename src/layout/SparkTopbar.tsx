@@ -25,6 +25,7 @@ import { PublicFormPill, publicFormCtaLabel } from "./PublicFormPill";
 import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 import { useMobileNav } from "./MobileNavContext";
 import { TenantLogo } from "./TenantLogo.tsx";
+import { readAppearance, setAppearance } from "@/theme/appearance";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -422,6 +423,26 @@ export const SparkTopbar: React.FC = () => {
               >
                 Keyboard shortcuts
               </button>
+              {/* Staff only while light mode is being checked page by page. */}
+              {canToggleRole ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  // Reload so charts and maps (drawn outside CSS) pick up
+                  // the new colours too.
+                  setAppearance(readAppearance() === "light" ? "dark" : "light");
+                  window.location.reload();
+                }}
+                className="mt-2 w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm"
+                style={{ border: "1px solid var(--spark-border)" }}
+              >
+                <span>Appearance</span>
+                <span style={{ color: "var(--spark-text-meta)" }}>
+                  {readAppearance() === "light" ? "Light" : "Dark"}
+                </span>
+              </button>
+              ) : null}
               <Suspense fallback={null}>
                 <PublicLinkMenuItem onDone={() => setMenuOpen(false)} />
               </Suspense>
