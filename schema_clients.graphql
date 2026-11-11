@@ -6149,6 +6149,7 @@ type Query {
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   myReportSubscription(tenantId: ID = null): Boolean!
+  tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   programShareLink(tenantId: ID = null): ProgramShareLink!
   myNotificationPreferences: [NotificationPreferenceItem!]!
@@ -7905,6 +7906,23 @@ type RecapFieldTotal {
 type RecapFieldTotalSection {
   section: String!
   fields: [RecapFieldTotal!]!
+}
+
+type GalleryPhoto {
+  id: String!
+  url: String!
+  category: String!
+  recapUuid: String!
+  store: String!
+  state: String!
+  eventDate: String!
+}
+
+type PhotoGalleryPage {
+  total: Int!
+  photos: [GalleryPhoto!]!
+  categories: [String!]!
+  states: [String!]!
 }
 
 input SetMyReportSubscriptionInput {

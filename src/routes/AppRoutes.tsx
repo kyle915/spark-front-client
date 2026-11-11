@@ -310,6 +310,9 @@ const SparkInbox = lazyDefault(
 const SparkEmailPreferences = lazyDefault(
   () => import("@/components/pages/email-preferences/SparkEmailPreferences"),
 );
+const SparkPhotoGallery = lazyDefault(
+  () => import("@/components/pages/photos/SparkPhotoGallery"),
+);
 const SparkAlerts = lazyDefault(
   () => import("@/components/pages/alerts/SparkAlerts"),
 );
@@ -745,6 +748,11 @@ const RequestsLinks = {
     {
       path: "/alerts",
       component: <SparkAlerts />,
+      isPublic: false,
+    },
+    {
+      path: "/photos",
+      component: <SparkPhotoGallery />,
       isPublic: false,
     },
     {

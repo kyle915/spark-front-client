@@ -21,6 +21,7 @@ import {
   Users,
   Star,
   FileText,
+  Images,
   BarChart3,
   Mail,
   MessageCircle,
@@ -129,6 +130,7 @@ const SECTIONS: NavSection[] = [
         to: "/recaps/list",
         clientLabel: "My Recaps",
       },
+      { label: "Photos", Icon: Images, to: "/photos" },
       {
         label: "Missing Recaps",
         Icon: FileText,
