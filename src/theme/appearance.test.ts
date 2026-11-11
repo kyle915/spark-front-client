@@ -33,9 +33,8 @@ afterEach(() => {
 });
 
 describe("appearance", () => {
-  it("defaults to dark", () => {
-    expect(readAppearance()).toBe("dark");
-    expect(isLightMode()).toBe(false);
+  it("defaults to light until someone chooses", () => {
+    expect(readAppearance()).toBe("light");
   });
 
   it("remembers and applies light", () => {
@@ -45,7 +44,7 @@ describe("appearance", () => {
     expect(isLightMode()).toBe(true);
   });
 
-  it("going back to dark removes the attribute and the stored choice", () => {
+  it("choosing dark is remembered and removes the light attribute", () => {
     setAppearance("light");
     setAppearance("dark");
     expect(readAppearance()).toBe("dark");
@@ -53,6 +52,7 @@ describe("appearance", () => {
   });
 
   it("applyAppearance does not persist", () => {
+    setAppearance("dark");
     applyAppearance("light");
     expect(readAppearance()).toBe("dark");
   });

@@ -586,7 +586,11 @@ const RecapCard: React.FC<{
         style={{
           fontSize: 9,
           letterSpacing: "0.14em",
-          color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
+          // Always over a photo: white on a dark scrim in both appearances.
+          color: "rgba(255,255,255,0.92)",
+          background: "rgba(0,0,0,0.5)",
+          padding: "2px 6px",
+          borderRadius: 6,
         }}
       >
         R-{recap.uuid.slice(-4).toUpperCase()}
@@ -611,7 +615,13 @@ const RecapCard: React.FC<{
                   border: "1px solid rgba(var(--spark-ok-rgb),1)",
                   color: "var(--spark-on-accent)",
                 }
-              : undefined
+              : {
+                  // Sits on a photo: needs its own solid ground to be
+                  // readable in either appearance.
+                  background: "var(--spark-surface)",
+                  border: "1px solid var(--spark-orange)",
+                  color: "var(--spark-orange)",
+                }
         }
       >
         ● <StatusMorph value={statusText} />
