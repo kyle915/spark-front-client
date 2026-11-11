@@ -31,23 +31,21 @@ const IssueCheckinLinkButton: React.FC<{ tenantId: string; onIssued: () => void 
     if (busy) return;
     commit({
       variables: { input: { tenantId } },
-      onCompleted: async (res) => {
+      onCompleted: (res) => {
         const r = res.issueCheckinCode;
         if (!r?.success || !r.url) {
           showAlert(r?.message || "Couldn't issue a check-in link.", "error");
           return;
         }
-        let copied = false;
-        try {
-          await navigator.clipboard.writeText(r.url);
-          copied = true;
-        } catch {
-          /* clipboard blocked — the link is still shown on Walk-ups */
-        }
-        showAlert(
-          copied ? `${r.message} Copied to your clipboard.` : `${r.message} Find it on Walk-ups.`,
-          "success",
-        );
+        const url = r.url;
+        const message = r.message;
+        void navigator.clipboard
+          .writeText(url)
+          .then(
+            () => showAlert(`${message} Copied to your clipboard.`, "success"),
+            // Clipboard blocked: the link is still shown on Walk-ups.
+            () => showAlert(`${message} Find it on Walk-ups.`, "success"),
+          );
         onIssued();
       },
       onError: () => showAlert("Couldn't issue a check-in link.", "error"),
