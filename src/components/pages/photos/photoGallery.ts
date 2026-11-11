@@ -35,9 +35,14 @@ const fmtDate = (iso: string): string => {
   });
 };
 
+/** Walk-up events are named "11/8/2026 - <address>"; the date is shown
+ *  separately, so drop it from the store label. */
+export const storeLabel = (store: string): string =>
+  store.trim().replace(/^\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–—]\s*/, "");
+
 /** "Costco · Highland, CA · Oct 11, 2026" — only the parts that exist. */
 export const photoCaption = (p: GalleryPhoto): string =>
-  [p.store.trim(), p.state.trim(), fmtDate(p.eventDate)].filter(Boolean).join(" · ");
+  [storeLabel(p.store), p.state.trim(), fmtDate(p.eventDate)].filter(Boolean).join(" · ");
 
 /** A safe, sortable file name for the zip: date, store, category, index. */
 export const photoFileName = (p: GalleryPhoto, index: number): string => {
@@ -48,7 +53,7 @@ export const photoFileName = (p: GalleryPhoto, index: number): string => {
       .replace(/^-+|-+$/g, "")
       .slice(0, 40);
   const ext = (p.url.split("?")[0].match(/\.(jpe?g|png|webp|gif)$/i)?.[1] ?? "jpg").toLowerCase();
-  const parts = [p.eventDate, slug(p.store), slug(p.category)].filter(Boolean);
+  const parts = [p.eventDate, slug(storeLabel(p.store)), slug(p.category)].filter(Boolean);
   return `${parts.join("_") || "photo"}_${String(index + 1).padStart(3, "0")}.${ext}`;
 };
 
