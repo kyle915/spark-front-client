@@ -93,9 +93,9 @@ export const PeopleTabsSwitcher: React.FC<{
             className="px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2 transition"
             style={{
               background: isActive ? "var(--spark-lime)" : "transparent",
-              color: isActive ? "#0a0d09" : "rgba(255,255,255,0.68)",
+              color: isActive ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.68)",
               boxShadow: isActive
-                ? "0 0 16px rgba(242,243,238,0.28)"
+                ? "0 0 16px rgba(var(--spark-accent-rgb),0.28)"
                 : "none",
             }}
           >
@@ -106,8 +106,8 @@ export const PeopleTabsSwitcher: React.FC<{
                 style={{
                   background: isActive
                     ? "rgba(10,13,9,0.16)"
-                    : "rgba(255,255,255,0.08)",
-                  color: isActive ? "#0a0d09" : "rgba(255,255,255,0.7)",
+                    : "rgba(var(--spark-ink-rgb),0.08)",
+                  color: isActive ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.7)",
                 }}
               >
                 {t.badge}
@@ -174,11 +174,11 @@ export const DefaultRmmSelector: React.FC<{
             style={{
               letterSpacing: "0.14em",
               background: selectedPerson
-                ? "rgba(242,243,238,0.14)"
-                : "rgba(255,255,255,0.06)",
+                ? "rgba(var(--spark-accent-rgb),0.14)"
+                : "rgba(var(--spark-ink-rgb),0.06)",
               color: selectedPerson
                 ? "var(--spark-lime)"
-                : "rgba(255,255,255,0.6)",
+                : "rgba(var(--spark-ink-rgb),0.6)",
             }}
           >
             {selectedPerson ? "OVERRIDE ACTIVE" : "TERRITORY ROUTING"}
@@ -262,11 +262,11 @@ export const DefaultRmmSelector: React.FC<{
             className="w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between gap-2 transition"
             style={{
               background:
-                selectedId === "" ? "rgba(242,243,238,0.08)" : "transparent",
+                selectedId === "" ? "rgba(var(--spark-accent-rgb),0.08)" : "transparent",
               color:
                 selectedId === ""
                   ? "var(--spark-lime)"
-                  : "rgba(255,255,255,0.65)",
+                  : "rgba(var(--spark-ink-rgb),0.65)",
               borderBottom: "1px solid var(--spark-border)",
             }}
           >
@@ -303,7 +303,7 @@ export const DefaultRmmSelector: React.FC<{
                 className="w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between gap-3 transition"
                 style={{
                   background: isSelected
-                    ? "rgba(242,243,238,0.08)"
+                    ? "rgba(var(--spark-accent-rgb),0.08)"
                     : "transparent",
                   color: "var(--spark-text)",
                   borderBottom: "1px solid var(--spark-border)",
@@ -327,7 +327,7 @@ export const DefaultRmmSelector: React.FC<{
                       letterSpacing: "0.12em",
                       color: isSelected
                         ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.4)",
+                        : "rgba(var(--spark-ink-rgb),0.4)",
                     }}
                   >
                     {isSelected ? "SELECTED" : p.role}

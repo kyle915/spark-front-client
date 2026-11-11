@@ -148,7 +148,7 @@ const AcademyInner: React.FC<{ tenantId: string; isAdmin: boolean }> = ({
             className="px-5 py-3 rounded-2xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
           >
             Manage modules

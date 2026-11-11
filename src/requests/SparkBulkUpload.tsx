@@ -496,7 +496,7 @@ const Inner: React.FC = () => {
           className="mono text-[10px] px-3 py-2 rounded-xl"
           style={{
             letterSpacing: "0.18em",
-            background: "rgba(255,255,255,0.04)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
             color: "var(--spark-text-secondary)",
             border: "1px solid var(--spark-border)",
           }}
@@ -511,8 +511,8 @@ const Inner: React.FC = () => {
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 display text-xl font-bold"
             style={{
-              background: "rgba(242,243,238,0.12)",
-              border: "1px solid rgba(242,243,238,0.3)",
+              background: "rgba(var(--spark-accent-rgb),0.12)",
+              border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
               color: "var(--spark-lime)",
             }}
           >
@@ -544,7 +544,7 @@ const Inner: React.FC = () => {
             className="px-5 py-2.5 rounded-xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity: busy !== "idle" ? 0.5 : 1,
             }}
           >
@@ -652,7 +652,7 @@ const Inner: React.FC = () => {
                       letterSpacing: "0.04em",
                       color: required
                         ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.75)",
+                        : "rgba(var(--spark-ink-rgb),0.75)",
                     }}
                   >
                     {col}
@@ -666,7 +666,7 @@ const Inner: React.FC = () => {
                       letterSpacing: "0.14em",
                       color: required
                         ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.4)",
+                        : "rgba(var(--spark-ink-rgb),0.4)",
                     }}
                   >
                     {required ? "REQ" : "OPT"}
@@ -753,11 +753,11 @@ const Inner: React.FC = () => {
           style={{
             background: dropping
               ? "rgba(95,184,239,0.10)"
-              : "rgba(255,255,255,0.025)",
+              : "rgba(var(--spark-ink-rgb),0.025)",
             border: `2px dashed ${
               dropping
                 ? "var(--spark-sky)"
-                : "rgba(255,255,255,0.15)"
+                : "rgba(var(--spark-ink-rgb),0.15)"
             }`,
           }}
         >
@@ -821,11 +821,11 @@ const Inner: React.FC = () => {
               className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 display text-xl font-bold"
               style={{
                 background: allClean
-                  ? "rgba(242,243,238,0.12)"
+                  ? "rgba(var(--spark-accent-rgb),0.12)"
                   : "rgba(239,90,42,0.12)",
                 border: `1px solid ${
                   allClean
-                    ? "rgba(242,243,238,0.3)"
+                    ? "rgba(var(--spark-accent-rgb),0.3)"
                     : "rgba(239,90,42,0.3)"
                 }`,
                 color: allClean
@@ -894,7 +894,7 @@ const Inner: React.FC = () => {
                   className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                   style={{
                     background: "var(--spark-lime)",
-                    color: "#0a0d09",
+                    color: "var(--spark-on-accent)",
                     opacity:
                       busy !== "idle" || successCount === 0 ? 0.5 : 1,
                   }}
@@ -924,7 +924,7 @@ const Inner: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-sky)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                 }}
               >
                 View tracker →
@@ -1012,7 +1012,7 @@ const Inner: React.FC = () => {
               <div
                 className="px-4 py-2 flex items-center justify-between"
                 style={{
-                  background: "rgba(242,243,238,0.06)",
+                  background: "rgba(var(--spark-accent-rgb),0.06)",
                   borderBottom: "1px solid var(--spark-border)",
                 }}
               >
@@ -1050,8 +1050,8 @@ const Inner: React.FC = () => {
                       className="mono text-[10px] shrink-0 px-2 py-0.5 rounded-md"
                       style={{
                         letterSpacing: "0.12em",
-                        background: "rgba(242,243,238,0.12)",
-                        border: "1px solid rgba(242,243,238,0.3)",
+                        background: "rgba(var(--spark-accent-rgb),0.12)",
+                        border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
                         color: "var(--spark-lime)",
                       }}
                     >

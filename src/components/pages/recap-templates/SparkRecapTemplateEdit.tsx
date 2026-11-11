@@ -480,7 +480,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
                   padding: "0.5rem",
                   borderRadius: 12,
                   border: `1px solid ${showError ? "var(--spark-orange, #ef5a2a)" : "var(--spark-border)"}`,
-                  background: "rgba(255,255,255,0.02)",
+                  background: "rgba(var(--spark-ink-rgb),0.02)",
                 }}
               >
                 {/* Reorder arrows */}
@@ -622,8 +622,8 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
           className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
-            boxShadow: saveDisabled ? "none" : "0 0 16px rgba(242,243,238,0.30)",
+            color: "var(--spark-on-accent)",
+            boxShadow: saveDisabled ? "none" : "0 0 16px rgba(var(--spark-accent-rgb),0.30)",
           }}
         >
           {isUpdating ? "Saving…" : "Save changes"}

@@ -133,7 +133,7 @@ const ApprovalRow: React.FC<{
         ? { bg: "rgba(239,90,42,0.16)", border: "rgba(239,90,42,0.45)", fg: "var(--spark-orange)" }
         : h >= 24
           ? { bg: "rgba(214,196,95,0.14)", border: "rgba(214,196,95,0.4)", fg: "var(--spark-gold)" }
-          : { bg: "rgba(255,255,255,0.04)", border: "var(--spark-hairline, rgba(255,255,255,0.08))", fg: "var(--spark-muted, rgba(255,255,255,0.5))" };
+          : { bg: "rgba(var(--spark-ink-rgb),0.04)", border: "var(--spark-hairline, rgba(var(--spark-ink-rgb),0.08))", fg: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" };
     return (
       <span
         className="mono text-[10px] px-2 py-0.5 rounded-md"
@@ -186,7 +186,7 @@ const ApprovalRow: React.FC<{
           className="mono text-[10px] shrink-0"
           style={{
             letterSpacing: "0.14em",
-            color: "var(--spark-muted, rgba(255,255,255,0.5))",
+            color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
           }}
         >
           {row.reqId}
@@ -205,7 +205,7 @@ const ApprovalRow: React.FC<{
         </span>
         <span
           className="text-xs shrink-0 hidden lg:inline"
-          style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+          style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
         >
           {row.type}
         </span>
@@ -217,7 +217,7 @@ const ApprovalRow: React.FC<{
             className={`${actionPad} rounded-lg font-semibold`}
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity: busy ? 0.5 : 1,
             }}
           >
@@ -259,7 +259,7 @@ const ApprovalRow: React.FC<{
           </p>
           <p
             className="text-xs"
-            style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+            style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
           >
             {row.type} · {row.requester}
           </p>
@@ -869,7 +869,7 @@ const ApprovalsInner: React.FC = () => {
           style={{
             color:
               stats.slaPct === null
-                ? "var(--spark-muted, rgba(255,255,255,0.5))"
+                ? "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))"
                 : stats.slaPct >= 80
                   ? "var(--spark-lime)"
                   : "var(--spark-orange)",
@@ -921,7 +921,7 @@ const ApprovalsInner: React.FC = () => {
               ? "var(--spark-orange)"
               : "rgba(239,90,42,0.12)",
             border: `1px solid ${slaOnly ? "var(--spark-orange)" : "rgba(239,90,42,0.4)"}`,
-            color: slaOnly ? "#0a0d09" : "var(--spark-orange)",
+            color: slaOnly ? "var(--spark-on-accent)" : "var(--spark-orange)",
             fontWeight: slaOnly ? 700 : 400,
           }}
         >
@@ -937,9 +937,9 @@ const ApprovalsInner: React.FC = () => {
         title="Keyboard shortcuts"
         style={{
           letterSpacing: "0.14em",
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid var(--spark-hairline, rgba(255,255,255,0.08))",
-          color: "var(--spark-muted, rgba(255,255,255,0.5))",
+          background: "rgba(var(--spark-ink-rgb),0.04)",
+          border: "1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb),0.08))",
+          color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
         }}
       >
         ?
@@ -957,7 +957,7 @@ const ApprovalsInner: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "var(--spark-muted, rgba(255,255,255,0.5))",
+            color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
           }}
         >
           RECENTLY DECIDED · LAST 7D
@@ -966,7 +966,7 @@ const ApprovalsInner: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.14em",
-            color: "var(--spark-faint, rgba(255,255,255,0.38))",
+            color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
           }}
         >
           {recentlyDecided.length} ITEMS
@@ -1002,7 +1002,7 @@ const ApprovalsInner: React.FC = () => {
                     : "none",
               }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                (e.currentTarget.style.background = "rgba(var(--spark-ink-rgb),0.03)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "transparent")
@@ -1024,7 +1024,7 @@ const ApprovalsInner: React.FC = () => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                    color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                   }}
                 >
                   {d.row.reqId}
@@ -1036,7 +1036,7 @@ const ApprovalsInner: React.FC = () => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "var(--spark-faint, rgba(255,255,255,0.38))",
+                    color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
                   }}
                 >
                   {when.toUpperCase()}
@@ -1044,7 +1044,7 @@ const ApprovalsInner: React.FC = () => {
               </div>
               <p
                 className="text-xs mt-1"
-                style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+                style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
               >
                 {d.row.locationDate} · {d.row.requester}
               </p>
@@ -1085,7 +1085,7 @@ const ApprovalsInner: React.FC = () => {
       style={{
         background: "rgba(17,20,14,0.92)",
         backdropFilter: "blur(10px)",
-        border: "1px solid rgba(242,243,238,0.35)",
+        border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
       }}
     >
       <span
@@ -1114,7 +1114,7 @@ const ApprovalsInner: React.FC = () => {
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.14em",
-          color: "var(--spark-muted, rgba(255,255,255,0.5))",
+          color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
         }}
       >
         CLEAR
@@ -1141,7 +1141,7 @@ const ApprovalsInner: React.FC = () => {
         className="px-4 py-2 rounded-xl text-sm font-semibold"
         style={{
           background: "var(--spark-lime)",
-          color: "#0a0d09",
+          color: "var(--spark-on-accent)",
           opacity: bulkBusy ? 0.5 : 1,
         }}
       >
@@ -1241,8 +1241,8 @@ const ApprovalsInner: React.FC = () => {
                     className="mono px-2 py-0.5 rounded-md text-[11px]"
                     style={{
                       letterSpacing: "0.04em",
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.15)",
+                      background: "rgba(var(--spark-ink-rgb),0.05)",
+                      border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
                       color: "var(--spark-text)",
                     }}
                   >
@@ -1257,7 +1257,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
                 ESC
@@ -1311,8 +1311,8 @@ const ApprovalsInner: React.FC = () => {
             <div
               className="mt-4 p-4 rounded-xl text-xs max-h-48 overflow-y-auto"
               style={{
-                background: "rgba(242,243,238,0.06)",
-                border: "1px solid rgba(242,243,238,0.18)",
+                background: "rgba(var(--spark-accent-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.18)",
                 color: "var(--spark-text-secondary)",
                 lineHeight: 1.5,
               }}
@@ -1326,7 +1326,7 @@ const ApprovalsInner: React.FC = () => {
                       className="mono text-[10px]"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                        color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                       }}
                     >
                       {r.reqId}
@@ -1339,7 +1339,7 @@ const ApprovalsInner: React.FC = () => {
                   className="mono text-[10px] mt-1"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                    color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                   }}
                 >
                   …and {selectedCount - 20} more
@@ -1355,7 +1355,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
                 CANCEL
@@ -1366,7 +1366,7 @@ const ApprovalsInner: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity: bulkBusy ? 0.5 : 1,
                 }}
               >
@@ -1463,7 +1463,7 @@ const ApprovalsInner: React.FC = () => {
                 color:
                   bulkDeclineReason.trim().length < 8
                     ? "var(--spark-orange)"
-                    : "var(--spark-muted, rgba(255,255,255,0.5))",
+                    : "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
               }}
             >
               {bulkDeclineReason.trim().length < 8
@@ -1480,7 +1480,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
                 CANCEL
@@ -1491,7 +1491,7 @@ const ApprovalsInner: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-orange)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity:
                     bulkBusy || bulkDeclineReason.trim().length < 8 ? 0.5 : 1,
                 }}
@@ -1530,8 +1530,8 @@ const ApprovalsInner: React.FC = () => {
             <div
               className="mt-4 p-4 rounded-xl text-xs"
               style={{
-                background: "rgba(242,243,238,0.06)",
-                border: "1px solid rgba(242,243,238,0.18)",
+                background: "rgba(var(--spark-accent-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.18)",
                 color: "var(--spark-text-secondary)",
                 lineHeight: 1.6,
               }}
@@ -1661,7 +1661,7 @@ const ApprovalsInner: React.FC = () => {
                 color:
                   declineReason.trim().length < 8
                     ? "var(--spark-orange)"
-                    : "var(--spark-muted, rgba(255,255,255,0.5))",
+                    : "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
               }}
             >
               {declineReason.trim().length < 8
@@ -1678,7 +1678,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
                 CANCEL
@@ -1691,7 +1691,7 @@ const ApprovalsInner: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-orange)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity:
                     busyId !== null || declineReason.trim().length < 8
                       ? 0.5
@@ -1875,9 +1875,9 @@ export const ApprovalsBody: React.FC = () => {
         <details
           className="spark-card p-5"
           style={{
-            borderColor: "rgba(242,243,238,0.25)",
+            borderColor: "rgba(var(--spark-accent-rgb),0.25)",
             background:
-              "linear-gradient(180deg, rgba(242,243,238,0.06), transparent)",
+              "linear-gradient(180deg, rgba(var(--spark-accent-rgb),0.06), transparent)",
           }}
         >
           <summary
@@ -1940,7 +1940,7 @@ export const ApprovalsBody: React.FC = () => {
             fallback={
               <div
                 className="spark-card p-8 text-center text-sm"
-                style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+                style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
               >
                 Loading approvals…
               </div>
@@ -2022,7 +2022,7 @@ class ApprovalsErrorBoundary extends Component<
         </p>
         <p
           className="mono text-[10px] mt-4"
-          style={{ letterSpacing: "0.14em", color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
+          style={{ letterSpacing: "0.14em", color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))" }}
         >
           {this.state.error.message?.slice(0, 200)}
         </p>

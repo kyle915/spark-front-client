@@ -382,7 +382,7 @@ const Inner: React.FC = () => {
               disabled={loadingMore}
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
               style={{
-                background: "rgba(242,243,238,0.08)",
+                background: "rgba(var(--spark-accent-rgb),0.08)",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
@@ -435,7 +435,7 @@ const StarButton: React.FC<{
     style={{
       background: "transparent",
       border: "none",
-      color: isFav ? "var(--spark-lime)" : "rgba(255,255,255,0.30)",
+      color: isFav ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.30)",
       cursor: busy ? "default" : "pointer",
       opacity: busy ? 0.5 : 1,
     }}
@@ -461,7 +461,7 @@ const FavCard: React.FC<{
             width: 44,
             height: 44,
             borderRadius: 12,
-            background: "rgba(242,243,238,0.10)",
+            background: "rgba(var(--spark-accent-rgb),0.10)",
             color: "var(--spark-lime)",
             display: "grid",
             placeItems: "center",
@@ -496,7 +496,7 @@ const FavCard: React.FC<{
           className="text-xs mt-3"
           style={{
             color: "var(--spark-text-meta)",
-            borderTop: "1px solid rgba(255,255,255,0.05)",
+            borderTop: "1px solid rgba(var(--spark-ink-rgb),0.05)",
             paddingTop: "0.6rem",
           }}
         >
@@ -526,7 +526,7 @@ const BaCard: React.FC<{
             width: 44,
             height: 44,
             borderRadius: 12,
-            background: "rgba(242,243,238,0.10)",
+            background: "rgba(var(--spark-accent-rgb),0.10)",
             color: "var(--spark-lime)",
             display: "grid",
             placeItems: "center",
@@ -560,7 +560,7 @@ const BaCard: React.FC<{
       </div>
       <div
         className="flex items-center justify-between mt-3"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+        style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
       >
         <span
           className="mono text-[10px] mt-2"

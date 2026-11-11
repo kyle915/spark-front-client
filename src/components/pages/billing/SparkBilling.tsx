@@ -147,7 +147,7 @@ const inputStyle: React.CSSProperties = {
 
 const limeButton: React.CSSProperties = {
   background: "var(--spark-lime)",
-  color: "#0a0d09",
+  color: "var(--spark-on-accent)",
 };
 
 const ghostButton: React.CSSProperties = {
@@ -193,7 +193,7 @@ const ShareLink: React.FC<{ token: string }> = ({ token }) => {
       className="mono text-[11px] disabled:opacity-40"
       style={{
         letterSpacing: "0.12em",
-        color: copied ? "var(--spark-sky)" : "rgba(255,255,255,0.6)",
+        color: copied ? "var(--spark-sky)" : "rgba(var(--spark-ink-rgb),0.6)",
       }}
       title={url}
     >
@@ -369,13 +369,13 @@ const TotalRow: React.FC<{ label: string; value: string; strong?: boolean }> = (
   <div className="flex items-center justify-between">
     <span
       className={strong ? "text-sm font-bold" : "text-sm"}
-      style={{ color: strong ? "var(--spark-text)" : "rgba(255,255,255,0.6)" }}
+      style={{ color: strong ? "var(--spark-text)" : "rgba(var(--spark-ink-rgb),0.6)" }}
     >
       {label}
     </span>
     <span
       className={`mono tabular-nums ${strong ? "text-base font-bold" : "text-sm"}`}
-      style={{ color: strong ? "var(--spark-lime)" : "rgba(255,255,255,0.8)" }}
+      style={{ color: strong ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.8)" }}
     >
       {value}
     </span>
@@ -1000,7 +1000,7 @@ export default function SparkBilling() {
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                 style={{
                   background: on ? "var(--spark-lime)" : "transparent",
-                  color: on ? "#0a0d09" : "var(--spark-text)",
+                  color: on ? "var(--spark-on-accent)" : "var(--spark-text)",
                   border: `1px solid ${
                     on ? "var(--spark-lime)" : "var(--spark-border)"
                   }`,

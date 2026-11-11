@@ -31,7 +31,7 @@ type SheetMode = "create" | "paste";
 
 const DEFAULT_SHARE = "kyle@igniteproductions.co";
 
-const muted = "rgba(255,255,255,0.5)";
+const muted = "rgba(var(--spark-ink-rgb),0.5)";
 const fieldStyle: CSSProperties = {
   background: "var(--spark-bg, #0d0f10)",
   border: "1px solid var(--spark-border)",
@@ -46,7 +46,7 @@ const ghostBtn: CSSProperties = {
   color: "var(--spark-text)",
   border: "1px solid var(--spark-border)",
 };
-const limeBtn: CSSProperties = { background: "var(--spark-lime)", color: "#0a0d09" };
+const limeBtn: CSSProperties = { background: "var(--spark-lime)", color: "var(--spark-on-accent)" };
 
 const fmt = (iso: string | null | undefined, timeZone?: string): string => {
   if (!iso) return "—";
@@ -79,9 +79,9 @@ function Kicker({ children }: { children: ReactNode }) {
 
 function Pill({ tone, children }: { tone: "lime" | "orange" | "muted"; children: ReactNode }) {
   const colors = {
-    lime: ["var(--spark-lime)", "rgba(242,243,238,0.1)", "rgba(242,243,238,0.3)"],
+    lime: ["var(--spark-lime)", "rgba(var(--spark-accent-rgb),0.1)", "rgba(var(--spark-accent-rgb),0.3)"],
     orange: ["var(--spark-orange)", "rgba(239,90,42,0.12)", "rgba(239,90,42,0.35)"],
-    muted: ["rgba(255,255,255,0.6)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.15)"],
+    muted: ["rgba(var(--spark-ink-rgb),0.6)", "rgba(var(--spark-ink-rgb),0.05)", "rgba(var(--spark-ink-rgb),0.15)"],
   }[tone];
   return (
     <span

@@ -191,7 +191,7 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
                     key={p.id}
                     className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr] gap-3 px-4 py-3 text-sm"
                     style={{
-                      borderTop: "1px solid rgba(255,255,255,0.04)",
+                      borderTop: "1px solid rgba(var(--spark-ink-rgb),0.04)",
                     }}
                     title={p.memo ?? undefined}
                   >

@@ -64,10 +64,10 @@ const BUCKET_COLORS: Record<string, string> = {
   retail: "var(--spark-lime)",
   onprem: "var(--spark-orange)",
   event: "var(--spark-sky)",
-  other: "rgba(255,255,255,0.45)",
+  other: "rgba(var(--spark-ink-rgb),0.45)",
 };
 
-const MUTED_BUCKET = "rgba(255,255,255,0.35)";
+const MUTED_BUCKET = "rgba(var(--spark-ink-rgb),0.35)";
 
 /** Map page range → comparison period the year/month API can express. */
 const comparisonPeriodForRange = (
@@ -121,7 +121,7 @@ const ActivationBreakdown: React.FC<{
           className="display text-lg lg:text-xl font-bold"
           style={{
             letterSpacing: "-0.02em",
-            color: demoted ? "rgba(255,255,255,0.65)" : undefined,
+            color: demoted ? "rgba(var(--spark-ink-rgb),0.65)" : undefined,
           }}
         >
           By activation type
@@ -409,7 +409,7 @@ function InsightsTimeline({
             const dot = isToday
               ? "var(--spark-lime)"
               : isPast
-                ? "rgba(255,255,255,0.3)"
+                ? "rgba(var(--spark-ink-rgb),0.3)"
                 : "var(--spark-sky)";
             return (
               <div
@@ -464,7 +464,7 @@ function InsightsTimeline({
                       color: isToday
                         ? "var(--spark-lime)"
                         : isPast
-                          ? "rgba(255,255,255,0.45)"
+                          ? "rgba(var(--spark-ink-rgb),0.45)"
                           : "var(--spark-sky)",
                     }}
                   >

@@ -97,7 +97,7 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
         <Link
           to="/reports"
           className="px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+          style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
         >
           Open program report
         </Link>
@@ -127,7 +127,7 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
                 key={p.uuid}
                 to={`/recap/view-custom/${p.uuid}`}
                 className="group relative block overflow-hidden rounded-xl"
-                style={{ aspectRatio: "4 / 3", background: "rgba(255,255,255,0.04)" }}
+                style={{ aspectRatio: "4 / 3", background: "rgba(var(--spark-ink-rgb),0.04)" }}
                 title={p.label ? `Open the recap from ${p.label}` : "Open this recap"}
               >
                 <img

@@ -1063,7 +1063,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                         background: active
                           ? "var(--spark-lime)"
                           : "transparent",
-                        color: active ? "#0a0d09" : "var(--spark-text)",
+                        color: active ? "var(--spark-on-accent)" : "var(--spark-text)",
                         border: `1px solid ${
                           active ? "var(--spark-lime)" : "var(--spark-border)"
                         }`,

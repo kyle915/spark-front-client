@@ -140,8 +140,8 @@ export const AmbassadorPicker: React.FC<{
           className="mono text-[10px] px-3 py-1.5 rounded-full"
           style={{
             letterSpacing: "0.18em",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(var(--spark-ink-rgb),0.05)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.1)",
           }}
         >
           CHANGE
@@ -215,8 +215,8 @@ export const AmbassadorPicker: React.FC<{
                       className="mono text-[10px] px-3 py-1.5 rounded-full"
                       style={{
                         letterSpacing: "0.18em",
-                        background: "rgba(255,255,255,0.08)",
-                        border: "1px solid rgba(255,255,255,0.15)",
+                        background: "rgba(var(--spark-ink-rgb),0.08)",
+                        border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
                         opacity: creatingInFlight ? 0.5 : 1,
                       }}
                     >
@@ -231,8 +231,8 @@ export const AmbassadorPicker: React.FC<{
                       className="mono text-[10px] px-3 py-1.5 rounded-full"
                       style={{
                         letterSpacing: "0.18em",
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        background: "rgba(var(--spark-ink-rgb),0.05)",
+                        border: "1px solid rgba(var(--spark-ink-rgb),0.1)",
                       }}
                     >
                       CANCEL

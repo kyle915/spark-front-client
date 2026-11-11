@@ -435,8 +435,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 style={{
                   letterSpacing: "0.14em",
                   color: "var(--spark-lime)",
-                  background: "rgba(242,243,238,0.08)",
-                  border: "1px solid rgba(242,243,238,0.25)",
+                  background: "rgba(var(--spark-accent-rgb),0.08)",
+                  border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
                 }}
               >
                 {s.name.toUpperCase()}
@@ -520,7 +520,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   padding: "0.5rem",
                   borderRadius: 12,
                   border: `1px solid ${showError ? "var(--spark-orange, #ef5a2a)" : "var(--spark-border)"}`,
-                  background: "rgba(255,255,255,0.02)",
+                  background: "rgba(var(--spark-ink-rgb),0.02)",
                 }}
               >
                 <span
@@ -650,10 +650,10 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           className="px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
             boxShadow: submitDisabled
               ? "none"
-              : "0 0 16px rgba(242,243,238,0.30)",
+              : "0 0 16px rgba(var(--spark-accent-rgb),0.30)",
           }}
         >
           {isCreating ? "Saving…" : "Create template"}

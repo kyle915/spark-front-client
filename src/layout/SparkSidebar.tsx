@@ -694,14 +694,14 @@ export const SparkSidebar: React.FC = () => {
             <div
               className="flex items-center gap-2 px-3 py-2 rounded-md"
               style={{
-                background: "rgba(255,255,255,0.025)",
+                background: "rgba(var(--spark-ink-rgb),0.025)",
                 border: "1px solid var(--spark-border)",
               }}
             >
               <span
                 className="w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0"
                 style={{
-                  background: "rgba(242,243,238,0.15)",
+                  background: "rgba(var(--spark-accent-rgb),0.15)",
                   color: "var(--spark-lime)",
                 }}
               >

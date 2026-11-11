@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAlertStore, type Alert } from "@store/alertStore";
 
 const TONE: Record<Alert["type"], { border: string; accent: string }> = {
-  success: { border: "rgba(242,243,238,0.35)", accent: "var(--spark-lime)" },
+  success: { border: "rgba(var(--spark-accent-rgb),0.35)", accent: "var(--spark-lime)" },
   error: {
     border: "rgba(239,90,42,0.45)",
     accent: "var(--spark-orange, #ef5a2a)",
@@ -11,7 +11,7 @@ const TONE: Record<Alert["type"], { border: string; accent: string }> = {
     border: "rgba(239,90,42,0.35)",
     accent: "var(--spark-orange, #ef5a2a)",
   },
-  info: { border: "var(--spark-border)", accent: "rgba(255,255,255,0.65)" },
+  info: { border: "var(--spark-border)", accent: "rgba(var(--spark-ink-rgb),0.65)" },
 };
 
 /**
@@ -38,7 +38,7 @@ export default function Alert() {
               className="pointer-events-auto text-left max-w-sm text-sm font-semibold overflow-hidden"
               style={{
                 borderRadius: 14,
-                background: "rgba(17,20,14,0.92)",
+                background: "var(--spark-toast-bg, rgba(17,20,14,0.92))",
                 border: `1px solid ${tone.border}`,
                 backdropFilter: "saturate(180%) blur(16px)",
                 WebkitBackdropFilter: "saturate(180%) blur(16px)",
@@ -72,7 +72,7 @@ export default function Alert() {
                   style={{
                     height: 2,
                     transformOrigin: "left",
-                    background: "var(--spark-text-meta, rgba(255,255,255,0.64))",
+                    background: "var(--spark-text-meta, rgba(var(--spark-ink-rgb),0.64))",
                   }}
                 />
               ) : null}

@@ -157,7 +157,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           onClick={() => setComposing(true)}
           disabled={busy}
           className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-          style={{ background: "var(--spark-lime)", color: "#0a0d09", border: "none" }}
+          style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)", border: "none" }}
         >
           ✦ New announcement
         </button>
@@ -272,7 +272,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 onClick={send}
                 disabled={busy}
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--spark-lime)", color: "#0a0d09", border: "none" }}
+                style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)", border: "none" }}
               >
                 {busy ? "SENDING…" : "SEND TO ALL BAs"}
               </button>

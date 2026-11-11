@@ -152,7 +152,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
             style={{
               letterSpacing: "0.08em",
               padding: "4px 12px",
-              color: reviewOnly ? "#0a0d09" : "var(--spark-orange)",
+              color: reviewOnly ? "var(--spark-on-accent)" : "var(--spark-orange)",
               background: reviewOnly ? "var(--spark-orange)" : "rgba(239,90,42,0.12)",
               border: "1px solid rgba(239,90,42,0.4)",
             }}
@@ -197,7 +197,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
           <button
             onClick={() => downloadCsv(sheet)}
             className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09", border: "none" }}
+            style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)", border: "none" }}
           >
             ↓ Download CSV
           </button>
@@ -291,7 +291,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                         onClick={() => runPayroll("paid", [r.ambassadorUuid])}
                         disabled={busy}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-                        style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                        style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
                       >
                         Mark paid
                       </button>

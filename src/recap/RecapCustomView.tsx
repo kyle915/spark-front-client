@@ -214,7 +214,7 @@ const ghostBtn: React.CSSProperties = {
 };
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
-  color: "#0a0d09",
+  color: "var(--spark-on-accent)",
 };
 const dangerBtn: React.CSSProperties = {
   background: "transparent",
@@ -1538,7 +1538,7 @@ const RecapCustomViewInner = ({
     return (
       <div
         className="spark-card p-8 text-sm"
-        style={{ color: "rgba(255,255,255,0.7)" }}
+        style={{ color: "rgba(var(--spark-ink-rgb),0.7)" }}
       >
         Recap not found.
       </div>
@@ -1607,7 +1607,7 @@ const RecapCustomViewInner = ({
                         className="mono text-[10px]"
                         style={{
                           letterSpacing: "0.1em",
-                          color: "rgba(255,255,255,0.55)",
+                          color: "rgba(var(--spark-ink-rgb),0.55)",
                         }}
                       >
                         {approvalMeta}
@@ -2752,7 +2752,7 @@ const RecapCustomViewInner = ({
               <div className="flex items-center gap-3">
                 <div
                   className="p-2 rounded-lg"
-                  style={{ background: "rgba(242,243,238,0.10)" }}
+                  style={{ background: "rgba(var(--spark-accent-rgb),0.10)" }}
                 >
                   <ImageIcon className="h-6 w-6" style={lime} />
                 </div>
@@ -2818,7 +2818,7 @@ const RecapCustomViewInner = ({
                         <div
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                           style={{
-                            background: "rgba(242,243,238,0.10)",
+                            background: "rgba(var(--spark-accent-rgb),0.10)",
                             color: "var(--spark-lime)",
                           }}
                         >
@@ -2982,7 +2982,7 @@ const RecapCustomViewInner = ({
                                       className="rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-wider shadow"
                                       style={{
                                         background: "var(--spark-lime)",
-                                        color: "#0a0d09",
+                                        color: "var(--spark-on-accent)",
                                       }}
                                     >
                                       {isVideo ? "Play" : isImage ? "View" : "Open"}
@@ -3190,7 +3190,7 @@ const RecapCustomViewInner = ({
                     ? {
                         background: "transparent",
                         color: "var(--spark-lime)",
-                        border: "1px solid rgba(242,243,238,0.45)",
+                        border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
                         opacity: isApproving ? 0.5 : 1,
                       }
                     : { ...limeBtn, opacity: isApproving ? 0.5 : 1 }
@@ -3270,7 +3270,7 @@ const RecapCustomViewInner = ({
               className="mono text-[11px] transition"
               style={{
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
+                color: "rgba(var(--spark-ink-rgb),0.45)",
               }}
             >
               ← Recaps

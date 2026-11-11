@@ -46,7 +46,7 @@ export function RecapClientSignoff({
             disabled={approving}
             onClick={onApprove}
             className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-            style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime, #f2f3ee)", color: "var(--spark-on-accent)" }}
           >
             {approving ? "Approving…" : "Approve recap"}
           </button>

@@ -746,7 +746,7 @@ export default function SparkRecapCreate() {
                 {fmtEventWhen(selectedEvent.date)} · {selectedEvent.address}
               </p>
             </div>
-            <button type="button" onClick={() => setSelectedEvent(null)} className="mono text-[10px] px-3 py-1.5 rounded-full" style={{ letterSpacing: "0.18em", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <button type="button" onClick={() => setSelectedEvent(null)} className="mono text-[10px] px-3 py-1.5 rounded-full" style={{ letterSpacing: "0.18em", background: "rgba(var(--spark-ink-rgb),0.05)", border: "1px solid rgba(var(--spark-ink-rgb),0.1)" }}>
               CHANGE
             </button>
           </div>
@@ -809,7 +809,7 @@ export default function SparkRecapCreate() {
               className={inputCls}
               style={{
                 border: templateId
-                  ? "1px solid rgba(242,243,238,0.4)"
+                  ? "1px solid rgba(var(--spark-accent-rgb),0.4)"
                   : "1px solid rgba(255,200,80,0.5)",
               }}
             >
@@ -822,7 +822,7 @@ export default function SparkRecapCreate() {
             </select>
           </label>
           {selectedTemplate ? (
-            <p className="text-xs mt-1" style={{ color: "rgba(242,243,238,0.85)" }}>
+            <p className="text-xs mt-1" style={{ color: "rgba(var(--spark-accent-rgb),0.85)" }}>
               Filing against{" "}
               <b>{selectedTemplate.tenant?.name ?? "this client"}</b>’s{" "}
               <b>{selectedTemplate.name}</b> ·{" "}
@@ -853,7 +853,7 @@ export default function SparkRecapCreate() {
               className="shrink-0 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer"
               style={{
                 background: parsing ? "var(--spark-surface-2)" : "var(--spark-lime)",
-                color: parsing ? "rgba(255,255,255,0.6)" : "#0b0b0b",
+                color: parsing ? "rgba(var(--spark-ink-rgb),0.6)" : "#0b0b0b",
                 border: "1px solid var(--spark-border)",
                 opacity: parsing ? 0.7 : 1,
                 cursor: parsing ? "wait" : "pointer",
@@ -1237,8 +1237,8 @@ export default function SparkRecapCreate() {
                   className="mono text-[10px] px-2 py-1 rounded-full shrink-0"
                   style={{
                     letterSpacing: "0.14em",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "rgba(var(--spark-ink-rgb),0.05)",
+                    border: "1px solid rgba(var(--spark-ink-rgb),0.1)",
                     color: "var(--spark-text-secondary)",
                   }}
                 >
@@ -1273,7 +1273,7 @@ export default function SparkRecapCreate() {
           className="px-5 py-3 rounded-xl text-sm font-semibold"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
             opacity: submitting || !canSubmit ? 0.5 : 1,
           }}
         >
@@ -1511,11 +1511,11 @@ const CustomTemplateFields: React.FC<{
                               style={{
                                 borderColor: on
                                   ? "var(--spark-lime)"
-                                  : "rgba(255,255,255,0.15)",
+                                  : "rgba(var(--spark-ink-rgb),0.15)",
                                 background: on
                                   ? "var(--spark-lime)"
                                   : "transparent",
-                                color: on ? "#0a0d09" : "rgba(255,255,255,0.8)",
+                                color: on ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.8)",
                               }}
                             >
                               {o}
@@ -1728,9 +1728,9 @@ const ProductsSampledPillsField: React.FC<{
                 /* Dark ops: orange selected (spark-lime is off-white after quieter chrome). */
                 borderColor: on
                   ? "var(--spark-orange, #ef5a2a)"
-                  : "rgba(255,255,255,0.15)",
+                  : "rgba(var(--spark-ink-rgb),0.15)",
                 background: on ? "rgba(239, 90, 42, 0.85)" : "transparent",
-                color: on ? "#fff" : "rgba(255,255,255,0.8)",
+                color: on ? "#fff" : "rgba(var(--spark-ink-rgb),0.8)",
               }}
             >
               {o}
@@ -1756,7 +1756,7 @@ const ProductsSampledPillsField: React.FC<{
             >
               <div
                 className="w-12 h-12 rounded-lg shrink-0 grid place-items-center overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.9)" }}
+                style={{ background: "rgba(var(--spark-ink-rgb),0.9)" }}
               >
                 {product.image ? (
                   <img
@@ -1767,7 +1767,7 @@ const ProductsSampledPillsField: React.FC<{
                 ) : (
                   <span
                     className="mono text-[9px]"
-                    style={{ letterSpacing: "0.12em", color: "#0a0d09" }}
+                    style={{ letterSpacing: "0.12em", color: "var(--spark-on-accent)" }}
                   >
                     SKU
                   </span>
@@ -1866,7 +1866,7 @@ const ProductSamplesSection: React.FC<{
             >
               <div
                 className="w-12 h-12 rounded-lg shrink-0 grid place-items-center overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.9)" }}
+                style={{ background: "rgba(var(--spark-ink-rgb),0.9)" }}
               >
                 {p.image ? (
                   <img
@@ -1877,7 +1877,7 @@ const ProductSamplesSection: React.FC<{
                 ) : (
                   <span
                     className="mono text-[9px]"
-                    style={{ letterSpacing: "0.12em", color: "#0a0d09" }}
+                    style={{ letterSpacing: "0.12em", color: "var(--spark-on-accent)" }}
                   >
                     SKU
                   </span>

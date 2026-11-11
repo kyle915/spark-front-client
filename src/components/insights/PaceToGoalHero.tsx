@@ -146,7 +146,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
     ? "var(--spark-orange)"
     : onPace
       ? "var(--spark-lime)"
-      : "rgba(255,255,255,0.55)";
+      : "rgba(var(--spark-ink-rgb),0.55)";
 
   return (
     <div
@@ -252,7 +252,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
         <div className="mt-4">
           <div
             className="h-2 rounded-full overflow-hidden"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            style={{ background: "rgba(var(--spark-ink-rgb),0.06)" }}
           >
             <div
               className="h-full rounded-full"
@@ -270,7 +270,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
         <div
           className="mt-4 p-4 rounded-xl flex flex-wrap items-end gap-3"
           style={{
-            background: "rgba(255,255,255,0.03)",
+            background: "rgba(var(--spark-ink-rgb),0.03)",
             border: "1px solid var(--spark-border)",
           }}
         >
@@ -299,7 +299,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
             disabled={isSaving}
             onClick={save}
             className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
           >
             {isSaving ? "Saving…" : "Save"}
           </button>
@@ -328,14 +328,14 @@ const Tile: React.FC<{
     style={{
       background: accent
         ? accent.includes("lime")
-          ? "rgba(242,243,238,0.08)"
+          ? "rgba(var(--spark-accent-rgb),0.08)"
           : accent.includes("orange")
             ? "rgba(239,90,42,0.10)"
-            : "rgba(255,255,255,0.03)"
-        : "rgba(255,255,255,0.03)",
+            : "rgba(var(--spark-ink-rgb),0.03)"
+        : "rgba(var(--spark-ink-rgb),0.03)",
       border: `1px solid ${
         accent?.includes("lime")
-          ? "rgba(242,243,238,0.30)"
+          ? "rgba(var(--spark-accent-rgb),0.30)"
           : accent?.includes("orange")
             ? "rgba(239,90,42,0.35)"
             : "var(--spark-border)"

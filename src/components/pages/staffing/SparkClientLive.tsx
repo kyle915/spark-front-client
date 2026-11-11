@@ -160,7 +160,7 @@ export default function SparkClientLive() {
                           padding: "4px 10px",
                           borderRadius: 999,
                           background: on ? accent : bad ? "rgba(239,90,42,0.14)" : "rgba(0,0,0,0.05)",
-                          color: on ? "#0a0d09" : bad ? "#EF5A2A" : "inherit",
+                          color: on ? "var(--spark-on-accent)" : bad ? "#EF5A2A" : "inherit",
                           border: on ? "none" : "1px solid rgba(0,0,0,0.12)",
                         }}
                       >

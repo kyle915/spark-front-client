@@ -39,8 +39,8 @@ export function RecapEditHistorySheet({
             key={batch.batch}
             className="rounded-xl p-4 space-y-3"
             style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(var(--spark-ink-rgb),0.03)",
+              border: "1px solid rgba(var(--spark-ink-rgb),0.08)",
             }}
           >
             <header className="flex items-baseline justify-between gap-3 flex-wrap">

@@ -563,13 +563,13 @@ export default function GooglePlacesInput({
                 color: light ? "#111827" : "var(--spark-text, #f2f3ee)",
                 borderTop: light
                   ? "1px solid #f3f4f6"
-                  : "1px solid rgba(255,255,255,0.04)",
+                  : "1px solid rgba(var(--spark-ink-rgb),0.04)",
                 background: "transparent",
               }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.background = light
                   ? "#f3f4f6"
-                  : "rgba(242,243,238,0.06)")
+                  : "rgba(var(--spark-accent-rgb),0.06)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "transparent")
@@ -580,7 +580,7 @@ export default function GooglePlacesInput({
                 <div
                   className="text-[12px] mt-0.5"
                   style={{
-                    color: light ? "#4b5563" : "rgba(255,255,255,0.55)",
+                    color: light ? "#4b5563" : "rgba(var(--spark-ink-rgb),0.55)",
                     lineHeight: 1.35,
                   }}
                 >
@@ -594,7 +594,7 @@ export default function GooglePlacesInput({
           value.trim().length >= 3 ? (
             <div
               className="px-3 py-2.5 text-[12px]"
-              style={{ color: light ? "#6b7280" : "rgba(255,255,255,0.55)" }}
+              style={{ color: light ? "#6b7280" : "rgba(var(--spark-ink-rgb),0.55)" }}
             >
               Keep typing, then pick a suggestion so we can map the miles.
             </div>
@@ -615,21 +615,21 @@ export default function GooglePlacesInput({
               }}
               className="block w-full text-left px-3 py-2.5"
               style={{
-                background: light ? "#f9fafb" : "rgba(255,255,255,0.02)",
+                background: light ? "#f9fafb" : "rgba(var(--spark-ink-rgb),0.02)",
                 borderTop: light
                   ? "1px solid #e5e7eb"
-                  : "1px solid rgba(255,255,255,0.06)",
+                  : "1px solid rgba(var(--spark-ink-rgb),0.06)",
                 color: light ? "#166534" : "var(--spark-lime, #f2f3ee)",
               }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.background = light
                   ? "#ecfdf5"
-                  : "rgba(242,243,238,0.08)")
+                  : "rgba(var(--spark-accent-rgb),0.08)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = light
                   ? "#f9fafb"
-                  : "rgba(255,255,255,0.02)")
+                  : "rgba(var(--spark-ink-rgb),0.02)")
               }
             >
               <div
@@ -640,7 +640,7 @@ export default function GooglePlacesInput({
               </div>
               <div
                 className="text-[11px] mt-0.5"
-                style={{ color: light ? "#6b7280" : "rgba(255,255,255,0.55)" }}
+                style={{ color: light ? "#6b7280" : "rgba(var(--spark-ink-rgb),0.55)" }}
               >
                 Don&apos;t see your account? We&apos;ll save it exactly as you
                 wrote it.

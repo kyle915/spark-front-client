@@ -377,7 +377,7 @@ export default function SparkNewClient() {
               style={{
                 letterSpacing: "0.12em",
                 background: s === step ? "var(--spark-lime)" : "var(--spark-card)",
-                color: s === step ? "#0a0d09" : "rgba(255,255,255,0.6)",
+                color: s === step ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.6)",
                 border: "1px solid var(--spark-border)",
               }}
             >
@@ -400,7 +400,7 @@ export default function SparkNewClient() {
               <p>Check-in: <a href={launched.checkinUrl} target="_blank" rel="noreferrer" style={{ color: "var(--spark-lime)" }}>{launched.checkinUrl}</a></p>
               <p>Request form: <a href={launched.sparkFormUrl} target="_blank" rel="noreferrer" style={{ color: "var(--spark-lime)" }}>{launched.sparkFormUrl}</a></p>
             </div>
-            <button type="button" onClick={() => navigate("/clients")} className="px-5 py-3 rounded-2xl text-sm font-semibold" style={{ background: "var(--spark-lime)", color: "#0a0d09" }}>
+            <button type="button" onClick={() => navigate("/clients")} className="px-5 py-3 rounded-2xl text-sm font-semibold" style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}>
               Done
             </button>
           </div>
@@ -564,7 +564,7 @@ export default function SparkNewClient() {
                   <button type="button" onClick={() => void runPreview()} disabled={previewing} className="px-5 py-3 rounded-2xl text-sm font-semibold" style={{ border: "1px solid var(--spark-border)", color: "var(--spark-text)", opacity: previewing ? 0.5 : 1 }}>
                     {previewing ? "Previewing…" : "Preview form"}
                   </button>
-                  <button type="button" onClick={() => void onLaunch()} disabled={launching || !preview} className="px-6 py-3 rounded-2xl text-sm font-semibold" style={{ background: "var(--spark-lime)", color: "#0a0d09", opacity: launching || !preview ? 0.5 : 1 }}>
+                  <button type="button" onClick={() => void onLaunch()} disabled={launching || !preview} className="px-6 py-3 rounded-2xl text-sm font-semibold" style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)", opacity: launching || !preview ? 0.5 : 1 }}>
                     {launching ? "Launching…" : "Launch tenant →"}
                   </button>
                 </div>
@@ -576,7 +576,7 @@ export default function SparkNewClient() {
                 ← BACK
               </button>
               {step !== "review" && (
-                <button type="button" onClick={next} className="px-6 py-3 rounded-2xl text-sm font-semibold" style={{ background: "var(--spark-lime)", color: "#0a0d09" }}>
+                <button type="button" onClick={next} className="px-6 py-3 rounded-2xl text-sm font-semibold" style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}>
                   Continue →
                 </button>
               )}

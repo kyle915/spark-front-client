@@ -355,7 +355,7 @@ export default function CancelDemoDialog({
           style={{
             background: "var(--spark-orange)",
             borderColor: "var(--spark-orange)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
           }}
         >
           {busy ? "Cancelling…" : "Cancel event"}

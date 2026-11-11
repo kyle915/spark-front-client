@@ -116,7 +116,7 @@ const Inner: React.FC = () => {
           className="px-4 py-2 rounded-xl text-sm font-semibold transition"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
             border: "none",
             textDecoration: "none",
           }}
@@ -274,7 +274,7 @@ const MemberCard: React.FC<{
   const [email, setEmail] = useState(user.email ?? "");
 
   const role = (user.role?.name ?? "—").toLowerCase();
-  const tone = ROLE_TONE[role] ?? "rgba(255,255,255,0.6)";
+  const tone = ROLE_TONE[role] ?? "rgba(var(--spark-ink-rgb),0.6)";
 
   const startEdit = () => {
     // Seed inputs from the latest record values before opening.
@@ -360,7 +360,7 @@ const MemberCard: React.FC<{
               width: 40,
               height: 40,
               borderRadius: "50%",
-              background: "rgba(255,255,255,0.08)",
+              background: "rgba(var(--spark-ink-rgb),0.08)",
               display: "grid",
               placeItems: "center",
               fontSize: 14,
@@ -456,7 +456,7 @@ const MemberCard: React.FC<{
               className="px-3 py-1.5 rounded-lg text-xs font-semibold"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 border: "none",
                 opacity: canSave ? 1 : 0.5,
                 cursor: canSave ? "pointer" : "not-allowed",
@@ -567,7 +567,7 @@ const MemberCard: React.FC<{
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-orange)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   border: "none",
                   opacity: removeBusy ? 0.6 : 1,
                   cursor: removeBusy ? "not-allowed" : "pointer",

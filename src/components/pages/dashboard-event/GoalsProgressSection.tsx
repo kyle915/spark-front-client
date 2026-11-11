@@ -19,7 +19,7 @@ export default memo(function GoalsProgressSection({
   const { subtleColor, barBg } = useMemo(() => {
     return {
       subtleColor: isDark ? "#94a3b8" : "#64748b",
-      barBg: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)",
+      barBg: isDark ? "rgba(var(--spark-ink-rgb),0.15)" : "rgba(0,0,0,0.12)",
     };
   }, [isDark]);
 

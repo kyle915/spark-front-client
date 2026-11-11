@@ -268,7 +268,7 @@ const Inner: React.FC = () => {
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
-                        "rgba(255,255,255,0.02)")
+                        "rgba(var(--spark-ink-rgb),0.02)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")

@@ -1104,7 +1104,7 @@ const SparkRequestInner: React.FC = () => {
                     style={{ background: "transparent" }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
-                        "rgba(242,243,238,0.06)")
+                        "rgba(var(--spark-accent-rgb),0.06)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -1203,11 +1203,11 @@ const SparkRequestInner: React.FC = () => {
                             letterSpacing: "0.14em",
                             background: selected
                               ? "var(--spark-lime, #f2f3ee)"
-                              : "rgba(255,255,255,0.04)",
-                            color: selected ? "#0a0d09" : "rgba(255,255,255,0.7)",
+                              : "rgba(var(--spark-ink-rgb),0.04)",
+                            color: selected ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.7)",
                             border: selected
                               ? "1px solid var(--spark-lime, #f2f3ee)"
-                              : "1px solid rgba(255,255,255,0.1)",
+                              : "1px solid rgba(var(--spark-ink-rgb),0.1)",
                           }}
                         >
                           {p.label}
@@ -1464,7 +1464,7 @@ const SparkRequestInner: React.FC = () => {
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
-                                  "rgba(242,243,238,0.08)";
+                                  "rgba(var(--spark-accent-rgb),0.08)";
                               }}
                               onMouseLeave={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
@@ -1531,7 +1531,7 @@ const SparkRequestInner: React.FC = () => {
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
-                                  "rgba(242,243,238,0.08)";
+                                  "rgba(var(--spark-accent-rgb),0.08)";
                               }}
                               onMouseLeave={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
@@ -1583,8 +1583,8 @@ const SparkRequestInner: React.FC = () => {
             <div
               className="rounded-xl p-3 space-y-2"
               style={{
-                background: "rgba(242,243,238,0.06)",
-                border: "1px solid rgba(242,243,238,0.25)",
+                background: "rgba(var(--spark-accent-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
               }}
             >
               <p
@@ -1753,13 +1753,13 @@ const SparkRequestInner: React.FC = () => {
                     className="aspect-square rounded-xl relative overflow-hidden transition"
                     style={{
                       background: on
-                        ? "rgba(242,243,238,0.10)"
-                        : "rgba(255,255,255,0.025)",
+                        ? "rgba(var(--spark-accent-rgb),0.10)"
+                        : "rgba(var(--spark-ink-rgb),0.025)",
                       border: on
                         ? "2px solid var(--spark-lime)"
                         : "1px solid var(--spark-border)",
                       boxShadow: on
-                        ? "0 0 18px rgba(242,243,238,0.25)"
+                        ? "0 0 18px rgba(var(--spark-accent-rgb),0.25)"
                         : "none",
                     }}
                     title={p.name}
@@ -1793,7 +1793,7 @@ const SparkRequestInner: React.FC = () => {
                         className="absolute top-1 right-1 w-5 h-5 rounded-full grid place-items-center font-bold"
                         style={{
                           background: "var(--spark-lime)",
-                          color: "#0a0d09",
+                          color: "var(--spark-on-accent)",
                           fontSize: 12,
                         }}
                       >
@@ -1914,10 +1914,10 @@ const SparkRequestInner: React.FC = () => {
               className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow: !canSubmit
                   ? "none"
-                  : "0 0 24px rgba(242,243,238,0.35)",
+                  : "0 0 24px rgba(var(--spark-accent-rgb),0.35)",
                 opacity: !canSubmit ? 0.5 : 1,
               }}
             >

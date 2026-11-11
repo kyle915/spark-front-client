@@ -38,7 +38,7 @@ const fmt = (n: number) => n.toLocaleString();
 
 const ACTIVATION_BADGE_COLOR: Record<string, string> = {
   retail: "var(--spark-orange)",
-  onprem: "rgba(255,255,255,0.65)",
+  onprem: "rgba(var(--spark-ink-rgb),0.65)",
   event: "var(--spark-sky)",
 };
 
@@ -386,15 +386,15 @@ const PulseCard: React.FC<{
             {mix.map((b) => {
               const active = b.count > 0;
               const color = active
-                ? (ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(255,255,255,0.45)")
-                : "rgba(255,255,255,0.35)";
+                ? (ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(var(--spark-ink-rgb),0.45)")
+                : "rgba(var(--spark-ink-rgb),0.35)";
               return (
                 <span
                   key={b.key}
                   className="display text-[11px] px-2 py-0.5 rounded-md inline-flex items-center gap-1.5"
                   style={{
                     color,
-                    background: "rgba(255,255,255,0.04)",
+                    background: "rgba(var(--spark-ink-rgb),0.04)",
                     border: `1px solid ${active ? `${color}55` : "var(--spark-border)"}`,
                     opacity: active ? 1 : 0.45,
                   }}
@@ -530,14 +530,14 @@ const PulseCard: React.FC<{
                     className="hidden sm:block h-1.5 rounded-full overflow-hidden"
                     style={{
                       width: 96,
-                      background: "rgba(255,255,255,0.06)",
+                      background: "rgba(var(--spark-ink-rgb),0.06)",
                     }}
                   >
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${pct}%`,
-                        background: "rgba(242,243,238,0.55)",
+                        background: "rgba(var(--spark-accent-rgb),0.55)",
                       }}
                     />
                   </div>

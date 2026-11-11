@@ -49,9 +49,9 @@ const overdueChipStyle = (
 ): { background: string; color: string; border: string; label: string } => {
   if (hoursOverdue == null) {
     return {
-      background: "rgba(255,255,255,0.05)",
+      background: "rgba(var(--spark-ink-rgb),0.05)",
       color: "var(--spark-text-meta)",
-      border: "1px solid rgba(255,255,255,0.15)",
+      border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
       label: "OVERDUE",
     };
   }
@@ -72,9 +72,9 @@ const overdueChipStyle = (
     };
   }
   return {
-    background: "rgba(242,243,238,0.08)",
+    background: "rgba(var(--spark-accent-rgb),0.08)",
     color: "var(--spark-lime)",
-    border: "1px solid rgba(242,243,238,0.25)",
+    border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
     label: `OVERDUE ${hoursOverdue}h`,
   };
 };
@@ -332,8 +332,8 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
         <div
           className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
           style={{
-            background: "rgba(242,243,238,0.08)",
-            border: "1px solid rgba(242,243,238,0.28)",
+            background: "rgba(var(--spark-accent-rgb),0.08)",
+            border: "1px solid rgba(var(--spark-accent-rgb),0.28)",
           }}
         >
           <span
@@ -348,7 +348,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
             onClick={() => void nudgeSelected()}
             disabled={isBulkNudging || isNudging || selectedBaCount === 0}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
             title={
               selectedBaCount === 0
                 ? "Selected events have no assigned BA to nudge"
@@ -478,7 +478,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
               <div
                 className="mt-3 rounded-xl divide-y"
                 style={{
-                  background: "rgba(255,255,255,0.025)",
+                  background: "rgba(var(--spark-ink-rgb),0.025)",
                   border: "1px solid var(--spark-border)",
                 }}
               >
@@ -547,7 +547,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                         style={{
                           background: "var(--spark-lime)",
-                          color: "#0a0d09",
+                          color: "var(--spark-on-accent)",
                         }}
                         title="Open the recap form pre-scoped to this BA + event"
                       >

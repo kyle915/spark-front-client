@@ -136,7 +136,7 @@ const Body: React.FC<Props> = ({ startDate, endDate, tenantId, ambassadorUuid, o
 export const TimesheetShiftRows: React.FC<Props> = (props) => (
   <div
     className="rounded-xl px-3 py-2 overflow-x-auto"
-    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--spark-border)" }}
+    style={{ background: "rgba(var(--spark-ink-rgb),0.03)", border: "1px solid var(--spark-border)" }}
   >
     <Suspense
       fallback={

@@ -11,7 +11,7 @@ import type { SetBrandGroupAccessMutation as SetBrandGroupAccessMutationType } f
 import { useAlertStore } from "@/store/alertStore";
 import type { BrandView } from "./useBrandView";
 
-const muted = "rgba(255,255,255,0.55)";
+const muted = "rgba(var(--spark-ink-rgb),0.55)";
 
 function SwitchInner({
   tenantId,

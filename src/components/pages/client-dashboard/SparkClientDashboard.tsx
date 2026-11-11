@@ -267,7 +267,7 @@ const WeekAheadPanel: React.FC<{
                   color:
                     horizonDays === d
                       ? "#0a0a0a"
-                      : "rgba(255,255,255,0.55)",
+                      : "rgba(var(--spark-ink-rgb),0.55)",
                   background:
                     horizonDays === d
                       ? "var(--spark-lime)"
@@ -287,7 +287,7 @@ const WeekAheadPanel: React.FC<{
               style={{
                 letterSpacing: "0.12em",
                 color: "var(--spark-lime)",
-                border: "1px solid rgba(242,243,238,0.35)",
+                border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
                 background: "transparent",
               }}
             >
@@ -334,12 +334,12 @@ const WeekAheadPanel: React.FC<{
                     background:
                       b.count > 0
                         ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.06)",
+                        : "rgba(var(--spark-ink-rgb),0.06)",
                     height: Math.max(8, heightPct) + "px",
                     minHeight: 8,
                     boxShadow:
                       b.count > 0
-                        ? "0 0 12px rgba(242,243,238,0.20)"
+                        ? "0 0 12px rgba(var(--spark-accent-rgb),0.20)"
                         : "none",
                   }}
                   title={`${b.count} event${b.count === 1 ? "" : "s"}`}
@@ -351,7 +351,7 @@ const WeekAheadPanel: React.FC<{
                       color:
                         b.count > 0
                           ? "var(--spark-text)"
-                          : "rgba(255,255,255,0.35)",
+                          : "rgba(var(--spark-ink-rgb),0.35)",
                     }}
                   >
                     {b.count}
@@ -406,14 +406,14 @@ const WeekAheadPanel: React.FC<{
                     style={{
                       letterSpacing: "0.14em",
                       color: row.quiet
-                        ? "rgba(255,255,255,0.45)"
+                        ? "rgba(var(--spark-ink-rgb),0.45)"
                         : "var(--spark-lime)",
                       background: row.quiet
                         ? "transparent"
-                        : "rgba(242,243,238,0.08)",
+                        : "rgba(var(--spark-accent-rgb),0.08)",
                       border: row.quiet
-                        ? "1px solid rgba(255,255,255,0.12)"
-                        : "1px solid rgba(242,243,238,0.25)",
+                        ? "1px solid rgba(var(--spark-ink-rgb),0.12)"
+                        : "1px solid rgba(var(--spark-accent-rgb),0.25)",
                     }}
                   >
                     {row.count} {row.count === 1 ? "EVENT" : "EVENTS"}
@@ -578,7 +578,7 @@ const ClientInner: React.FC = () => {
               style={{
                 color: active
                   ? "var(--spark-text)"
-                  : "rgba(255,255,255,0.55)",
+                  : "rgba(var(--spark-ink-rgb),0.55)",
                 borderBottom: active
                   ? "2px solid var(--spark-orange)"
                   : "2px solid transparent",

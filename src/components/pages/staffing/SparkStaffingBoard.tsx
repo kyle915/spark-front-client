@@ -155,7 +155,7 @@ export const BulkBaPicker: React.FC<{
                 className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left"
                 style={{ opacity: busy ? 0.5 : 1 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.05)")
+                  (e.currentTarget.style.background = "rgba(var(--spark-ink-rgb),0.05)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")
@@ -166,7 +166,7 @@ export const BulkBaPicker: React.FC<{
                   style={{
                     width: 28,
                     height: 28,
-                    background: "rgba(242,243,238,0.15)",
+                    background: "rgba(var(--spark-accent-rgb),0.15)",
                     color: "var(--spark-lime)",
                   }}
                 >
@@ -396,8 +396,8 @@ const Inner: React.FC<{
             letterSpacing: "0.14em",
             color: unstaffed > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
             background:
-              unstaffed > 0 ? "rgba(239,90,42,0.12)" : "rgba(242,243,238,0.1)",
-            border: `1px solid ${unstaffed > 0 ? "rgba(239,90,42,0.35)" : "rgba(242,243,238,0.3)"}`,
+              unstaffed > 0 ? "rgba(239,90,42,0.12)" : "rgba(var(--spark-accent-rgb),0.1)",
+            border: `1px solid ${unstaffed > 0 ? "rgba(239,90,42,0.35)" : "rgba(var(--spark-accent-rgb),0.3)"}`,
             padding: "3px 10px",
             borderRadius: 999,
           }}
@@ -419,9 +419,9 @@ const Inner: React.FC<{
           style={{
             letterSpacing: "0.1em",
             padding: "4px 12px",
-            color: bulkMode ? "#0a0d09" : "var(--spark-lime)",
+            color: bulkMode ? "var(--spark-on-accent)" : "var(--spark-lime)",
             background: bulkMode ? "var(--spark-lime)" : "transparent",
-            border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(242,243,238,0.35)"}`,
+            border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(var(--spark-accent-rgb),0.35)"}`,
           }}
         >
           {bulkMode ? "✕ EXIT BULK" : "⊕ BULK ASSIGN"}
@@ -466,7 +466,7 @@ const Inner: React.FC<{
           aria-pressed={unstaffedOnly}
           className="text-sm rounded-xl px-3 py-2 font-semibold"
           style={{
-            color: unstaffedOnly ? "#0a0d09" : "var(--spark-text)",
+            color: unstaffedOnly ? "var(--spark-on-accent)" : "var(--spark-text)",
             background: unstaffedOnly ? "var(--spark-orange)" : "transparent",
             border: `1px solid ${unstaffedOnly ? "var(--spark-orange)" : "var(--spark-border)"}`,
           }}
@@ -491,9 +491,9 @@ const Inner: React.FC<{
           style={{
             color: banner.ok ? "var(--spark-lime)" : "var(--spark-orange)",
             background: banner.ok
-              ? "rgba(242,243,238,0.1)"
+              ? "rgba(var(--spark-accent-rgb),0.1)"
               : "rgba(239,90,42,0.1)",
-            border: `1px solid ${banner.ok ? "rgba(242,243,238,0.3)" : "rgba(239,90,42,0.3)"}`,
+            border: `1px solid ${banner.ok ? "rgba(var(--spark-accent-rgb),0.3)" : "rgba(239,90,42,0.3)"}`,
           }}
         >
           {banner.text}
@@ -593,15 +593,15 @@ const Inner: React.FC<{
                             className="rounded-lg p-1.5"
                             style={{
                               background: isSel
-                                ? "rgba(242,243,238,0.18)"
+                                ? "rgba(var(--spark-accent-rgb),0.18)"
                                 : s.isStaffed
-                                  ? "rgba(242,243,238,0.06)"
+                                  ? "rgba(var(--spark-accent-rgb),0.06)"
                                   : "rgba(239,90,42,0.06)",
                               border: `1px solid ${
                                 isSel
                                   ? "var(--spark-lime)"
                                   : s.isStaffed
-                                    ? "rgba(242,243,238,0.2)"
+                                    ? "rgba(var(--spark-accent-rgb),0.2)"
                                     : "rgba(239,90,42,0.25)"
                               }`,
                             }}
@@ -654,21 +654,21 @@ const Inner: React.FC<{
                                     ? "#0a0d09"
                                     : "var(--spark-lime)"
                                   : s.isStaffed
-                                    ? "rgba(255,255,255,0.55)"
+                                    ? "rgba(var(--spark-ink-rgb),0.55)"
                                     : "var(--spark-lime)",
                                 background: bulkMode
                                   ? isSel
                                     ? "var(--spark-lime)"
-                                    : "rgba(242,243,238,0.1)"
+                                    : "rgba(var(--spark-accent-rgb),0.1)"
                                   : s.isStaffed
                                     ? "transparent"
-                                    : "rgba(242,243,238,0.1)",
+                                    : "rgba(var(--spark-accent-rgb),0.1)",
                                 border: `1px solid ${
                                   bulkMode
-                                    ? "rgba(242,243,238,0.4)"
+                                    ? "rgba(var(--spark-accent-rgb),0.4)"
                                     : s.isStaffed
                                       ? "var(--spark-border)"
-                                      : "rgba(242,243,238,0.3)"
+                                      : "rgba(var(--spark-accent-rgb),0.3)"
                                 }`,
                               }}
                             >
@@ -737,8 +737,8 @@ const Inner: React.FC<{
             className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold"
             style={{
               background:
-                selected.size === 0 ? "rgba(255,255,255,0.08)" : "var(--spark-lime)",
-              color: selected.size === 0 ? "rgba(255,255,255,0.4)" : "#0a0d09",
+                selected.size === 0 ? "rgba(var(--spark-ink-rgb),0.08)" : "var(--spark-lime)",
+              color: selected.size === 0 ? "rgba(var(--spark-ink-rgb),0.4)" : "var(--spark-on-accent)",
               border: "none",
               cursor: selected.size === 0 ? "default" : "pointer",
             }}

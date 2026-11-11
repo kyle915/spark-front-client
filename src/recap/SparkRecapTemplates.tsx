@@ -54,7 +54,7 @@ const fmtDate = (raw: string | null | undefined) => {
 // inputStyle used by the create-template builder so the two surfaces feel
 // like the same product.
 const fieldInputStyle: React.CSSProperties = {
-  background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+  background: "var(--spark-card-bg, rgba(var(--spark-ink-rgb),0.02))",
   border: "1px solid var(--spark-border)",
   borderRadius: 10,
   padding: "0.5rem 0.65rem",
@@ -216,7 +216,7 @@ const Inner: React.FC = () => {
           className="px-4 py-2 rounded-xl text-sm font-semibold"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
           }}
         >
           + New template
@@ -289,7 +289,7 @@ const Inner: React.FC = () => {
                         color:
                           fieldsList.length > 0
                             ? "var(--spark-text)"
-                            : "rgba(255,255,255,0.4)",
+                            : "rgba(var(--spark-ink-rgb),0.4)",
                       }}
                     >
                       {fieldsList.length || "—"}
@@ -317,7 +317,7 @@ const Inner: React.FC = () => {
                       background: "transparent",
                       color:
                         fieldsList.length === 0
-                          ? "rgba(255,255,255,0.35)"
+                          ? "rgba(var(--spark-ink-rgb),0.35)"
                           : "var(--spark-text)",
                       border: "1px solid var(--spark-border)",
                       cursor:
@@ -340,7 +340,7 @@ const Inner: React.FC = () => {
                     className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold"
                     style={{
                       background: "var(--spark-lime)",
-                      color: "#0a0d09",
+                      color: "var(--spark-on-accent)",
                       border: "1px solid var(--spark-lime)",
                     }}
                     title="Add, rename, reorder, or delete fields + sections"
@@ -721,10 +721,10 @@ const ManageFieldsModal: React.FC<{
             style={{
               letterSpacing: "0.14em",
               color: isUpdatingTemplate
-                ? "rgba(255,255,255,0.45)"
+                ? "rgba(var(--spark-ink-rgb),0.45)"
                 : sampledOn
                   ? "var(--spark-lime)"
-                  : "rgba(255,255,255,0.4)",
+                  : "rgba(var(--spark-ink-rgb),0.4)",
             }}
           >
             {isUpdatingTemplate ? "SAVING…" : sampledOn ? "● ON" : "○ OFF"}
@@ -813,7 +813,7 @@ const ManageFieldsModal: React.FC<{
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                       style={{
                         background: "var(--spark-orange, #ef5a2a)",
-                        color: "#0a0d09",
+                        color: "var(--spark-on-accent)",
                       }}
                     >
                       {isRemoving ? "Removing…" : "Confirm remove"}
@@ -875,7 +875,7 @@ const ManageFieldsModal: React.FC<{
                   key={s.id}
                   className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg"
                   style={{
-                    background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+                    background: "var(--spark-card-bg, rgba(var(--spark-ink-rgb),0.02))",
                     border: "1px solid var(--spark-border)",
                   }}
                 >
@@ -913,7 +913,7 @@ const ManageFieldsModal: React.FC<{
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                         style={{
                           background: "var(--spark-orange, #ef5a2a)",
-                          color: "#0a0d09",
+                          color: "var(--spark-on-accent)",
                         }}
                       >
                         {isDeletingSection ? "Deleting…" : "Confirm delete"}
@@ -927,7 +927,7 @@ const ManageFieldsModal: React.FC<{
                       style={{
                         background: "transparent",
                         color: hasFields
-                          ? "rgba(255,255,255,0.35)"
+                          ? "rgba(var(--spark-ink-rgb),0.35)"
                           : "rgba(239,90,42,0.9)",
                         border: hasFields
                           ? "1px solid var(--spark-border)"
@@ -1069,10 +1069,10 @@ const ManageFieldsModal: React.FC<{
               className="px-4 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow: addDisabled
                   ? "none"
-                  : "0 0 16px rgba(242,243,238,0.30)",
+                  : "0 0 16px rgba(var(--spark-accent-rgb),0.30)",
               }}
             >
               {isCreating ? "Adding…" : "+ Add field"}

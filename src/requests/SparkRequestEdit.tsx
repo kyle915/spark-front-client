@@ -277,7 +277,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             className="mono text-[10px] px-3 py-2 rounded-xl"
             style={{
               letterSpacing: "0.18em",
-              background: "rgba(255,255,255,0.04)",
+              background: "rgba(var(--spark-ink-rgb),0.04)",
               color: "var(--spark-text-secondary)",
               border: "1px solid var(--spark-border)",
             }}
@@ -538,8 +538,8 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                     className="mono text-[10px] px-2.5 py-1 rounded-md"
                     style={{
                       letterSpacing: "0.12em",
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(var(--spark-ink-rgb),0.04)",
+                      border: "1px solid rgba(var(--spark-ink-rgb),0.1)",
                       color: "var(--spark-text-secondary)",
                     }}
                   >
@@ -577,7 +577,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           className="px-5 py-3 rounded-xl text-sm font-semibold"
           style={{
             background: "var(--spark-lime)",
-            color: "#0a0d09",
+            color: "var(--spark-on-accent)",
             opacity: submitting ? 0.5 : 1,
           }}
         >

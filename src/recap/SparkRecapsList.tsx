@@ -294,7 +294,7 @@ const SlaHours: React.FC<{ since: string }> = ({ since }) => {
   const hours = ms / 3_600_000;
   const days = hours / 24;
   const label = hours < 24 ? `${Math.max(1, Math.round(hours))}h since event` : `${Math.round(days)}d since event`;
-  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "var(--spark-faint, rgba(255,255,255,0.38))";
+  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))";
   return (
     <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.12em", color }} title="Time since the activation — 3h is the sell, not 9 days.">
       {label}
@@ -323,7 +323,7 @@ const ghostBtn: React.CSSProperties = {
 };
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
-  color: "#0a0d09",
+  color: "var(--spark-on-accent)",
 };
 
 type LegacyRecapNode =
@@ -532,7 +532,7 @@ const RecapCard: React.FC<{
       className="absolute top-3 left-2 z-10 cursor-pointer"
       style={{
         background: "rgba(0,0,0,0.55)",
-        border: "1px solid rgba(255,255,255,0.25)",
+        border: "1px solid rgba(var(--spark-ink-rgb),0.25)",
         borderRadius: 6,
         padding: "4px 6px",
       }}
@@ -586,7 +586,7 @@ const RecapCard: React.FC<{
         style={{
           fontSize: 9,
           letterSpacing: "0.14em",
-          color: "var(--spark-muted, rgba(255,255,255,0.5))",
+          color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
         }}
       >
         R-{recap.uuid.slice(-4).toUpperCase()}
@@ -598,8 +598,8 @@ const RecapCard: React.FC<{
         style={
           emptyShell
             ? {
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(var(--spark-ink-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                 color: "var(--spark-text-secondary)",
               }
             : approved
@@ -609,7 +609,7 @@ const RecapCard: React.FC<{
                   // the "Approved by …" meta line under the card title.
                   background: "rgba(197,245,70,0.92)",
                   border: "1px solid rgba(197,245,70,1)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                 }
               : undefined
         }
@@ -649,7 +649,7 @@ const RecapCard: React.FC<{
         className="mono text-[10px] uppercase mt-1 truncate"
         style={{
           letterSpacing: "0.14em",
-          color: "var(--spark-muted, rgba(255,255,255,0.5))",
+          color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
         }}
       >
         {/* BA FIRST. "Who filed this" is the first thing ops asks of a
@@ -667,7 +667,7 @@ const RecapCard: React.FC<{
         className="mono text-[10px] mt-1"
         style={{
           letterSpacing: "0.12em",
-          color: emptyShell ? "var(--spark-muted, rgba(255,255,255,0.5))" : "var(--spark-muted, rgba(255,255,255,0.5))",
+          color: emptyShell ? "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" : "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
         }}
       >
         {completeness}
@@ -686,7 +686,7 @@ const RecapCard: React.FC<{
       {emptyShell ? (
         <p
           className="text-[12px] mt-1"
-          style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+          style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
         >
           BA clocked out — recap not filed
         </p>
@@ -729,7 +729,7 @@ const RecapCard: React.FC<{
             className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              background: "rgba(255,255,255,0.06)",
+              background: "rgba(var(--spark-ink-rgb),0.06)",
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text-secondary)",
             }}
@@ -749,7 +749,7 @@ const RecapCard: React.FC<{
             className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              background: "rgba(255,255,255,0.06)",
+              background: "rgba(var(--spark-ink-rgb),0.06)",
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text-secondary)",
             }}
@@ -921,7 +921,7 @@ const RecapCompactRow: React.FC<{
         ) : null}
         <p
           className="mono text-[10px] truncate"
-          style={{ letterSpacing: "0.12em", color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
         >
           {recap.retailerName && recap.retailerName !== "—"
             ? recap.retailerName
@@ -936,8 +936,8 @@ const RecapCompactRow: React.FC<{
         style={
           emptyShell
             ? {
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(var(--spark-ink-rgb),0.06)",
+                border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                 color: "var(--spark-text-secondary)",
               }
             : undefined
@@ -1877,7 +1877,7 @@ const RecapsListFetched: React.FC<{
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.16em",
-            color: "var(--spark-muted, rgba(255,255,255,0.5))",
+            color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
           }}
         >
           Loading more recaps…
@@ -1891,7 +1891,7 @@ const RecapsListFetched: React.FC<{
           </p>
           <p
             className="mono text-[11px] mt-2 break-words"
-            style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
+            style={{ color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))" }}
           >
             {loadMoreError.slice(0, 300)}
           </p>
@@ -1899,7 +1899,7 @@ const RecapsListFetched: React.FC<{
             type="button"
             onClick={() => void loadMore()}
             className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
           >
             Try again
           </button>
@@ -1914,7 +1914,7 @@ const RecapsListFetched: React.FC<{
       <>
       <div
         className="spark-card p-8 text-center text-sm"
-        style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+        style={{ color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
       >
         {emptyKind === "queue" ? (
           <>
@@ -1966,7 +1966,7 @@ const RecapsListFetched: React.FC<{
                   className="mono text-[10px] px-2.5 py-1.5 rounded-full font-semibold"
                   style={{
                     letterSpacing: "0.12em",
-                    color: "#0a0d09",
+                    color: "var(--spark-on-accent)",
                     background: "var(--spark-lime)",
                     border: "none",
                   }}
@@ -3291,7 +3291,7 @@ export default function SparkRecapsList() {
           className="sticky top-0 z-20 spark-sticky-filters flex flex-col"
           style={{
             background: "rgba(10, 11, 13, 0.94)",
-            border: "1px solid rgba(255,255,255,0.07)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.07)",
             borderRadius: 10,
           }}
         >
@@ -3340,7 +3340,7 @@ export default function SparkRecapsList() {
                       color:
                         pipelineKey === key
                           ? "var(--spark-lime)"
-                          : "rgba(255,255,255,0.65)",
+                          : "rgba(var(--spark-ink-rgb),0.65)",
                     }}
                   >
                     {label}
@@ -3358,7 +3358,7 @@ export default function SparkRecapsList() {
                 className="rounded-xl px-3 py-2 text-xs font-bold shrink-0"
                 style={{
                   // Primary action colour. Orange is reserved for warnings.
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   background: "var(--spark-lime)",
                   border: "1px solid var(--spark-lime)",
                   opacity: reviewNextBusy ? 0.6 : 1,
@@ -3423,7 +3423,7 @@ export default function SparkRecapsList() {
                           color:
                             density === key
                               ? "var(--spark-lime)"
-                              : "rgba(255,255,255,0.65)",
+                              : "rgba(var(--spark-ink-rgb),0.65)",
                         }}
                       >
                         {label}
@@ -3525,7 +3525,7 @@ export default function SparkRecapsList() {
                           color:
                             datePreset === p
                               ? "var(--spark-lime)"
-                              : "rgba(255,255,255,0.65)",
+                              : "rgba(var(--spark-ink-rgb),0.65)",
                         }}
                       >
                         {p === "all" ? "All" : p.toUpperCase()}
@@ -3588,7 +3588,7 @@ export default function SparkRecapsList() {
                     color:
                       density === key
                         ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.65)",
+                        : "rgba(var(--spark-ink-rgb),0.65)",
                   }}
                 >
                   {label}
@@ -3686,7 +3686,7 @@ export default function SparkRecapsList() {
                     color:
                       datePreset === p
                         ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.65)",
+                        : "rgba(var(--spark-ink-rgb),0.65)",
                   }}
                 >
                   {p === "all" ? "All dates" : p.toUpperCase()}
@@ -3787,7 +3787,7 @@ export default function SparkRecapsList() {
               <div className="flex items-center justify-between px-1 pb-1">
                 <span
                   className="mono text-[10px]"
-                  style={{ letterSpacing: "0.14em", color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
                 >
                   EXPORT / IMPORT
                 </span>
@@ -3852,7 +3852,7 @@ export default function SparkRecapsList() {
           <div
             className="flex items-center gap-2 overflow-x-auto pt-1 spark-scroll-fade"
             aria-label="Current recap filter context"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+            style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.07)" }}
           >
             <span
               className="mono text-[9px] font-bold shrink-0"
@@ -3891,7 +3891,7 @@ export default function SparkRecapsList() {
                 style={{
                   color: "var(--spark-text-secondary)",
                   background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
                 }}
               >
                 Clear
@@ -4025,7 +4025,7 @@ export default function SparkRecapsList() {
             title="From date (inclusive)"
             placeholder="From"
           />
-          <span style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))", fontSize: 12 }}>
+          <span style={{ color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))", fontSize: 12 }}>
             →
           </span>
           <input
@@ -4055,7 +4055,7 @@ export default function SparkRecapsList() {
               className="rounded-xl text-xs px-3 py-2"
               style={{
                 background: "transparent",
-                color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 border: "1px solid var(--spark-border)",
               }}
               title="Clear date range"
@@ -4126,7 +4126,7 @@ export default function SparkRecapsList() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "var(--spark-muted, rgba(255,255,255,0.5))",
+                color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
               }}
             >
               Showing {meta.loaded} of {Math.max(meta.total, meta.loaded)}
@@ -4176,7 +4176,7 @@ export default function SparkRecapsList() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "var(--spark-muted, rgba(255,255,255,0.5))",
+              color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
             }}
           >
             ✕ CLEAR
@@ -4264,7 +4264,7 @@ export default function SparkRecapsList() {
             className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
             title={
               selectedIds.size > CAMPAIGN_REPORT_MAX

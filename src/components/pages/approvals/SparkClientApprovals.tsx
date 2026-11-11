@@ -195,7 +195,7 @@ const ApprovalRow: React.FC<{
     <li
       className="spark-card p-4 flex items-center justify-between gap-4 flex-wrap"
       style={{
-        background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+        background: "var(--spark-card-bg, rgba(var(--spark-ink-rgb),0.02))",
         borderRadius: 14,
       }}
     >
@@ -218,8 +218,8 @@ const ApprovalRow: React.FC<{
           className="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center mono text-[10px] text-center px-1"
           style={{
             letterSpacing: "0.08em",
-            background: "rgba(255,255,255,0.04)",
-            border: "1px dashed rgba(255,255,255,0.18)",
+            background: "rgba(var(--spark-ink-rgb),0.04)",
+            border: "1px dashed rgba(var(--spark-ink-rgb),0.18)",
             color: "var(--spark-text-meta)",
           }}
         >
@@ -236,8 +236,8 @@ const ApprovalRow: React.FC<{
               style={{
                 letterSpacing: "0.12em",
                 color: "var(--spark-text-secondary)",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(var(--spark-ink-rgb),0.05)",
+                border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
               }}
             >
               {row.typeLabel.toUpperCase()}
@@ -275,10 +275,10 @@ const ApprovalRow: React.FC<{
           to={reviewTo}
           className="px-4 py-2 rounded-xl text-sm font-semibold transition"
           style={{
-            background: "rgba(255,255,255,0.06)",
+            background: "rgba(var(--spark-ink-rgb),0.06)",
             color: "var(--spark-text)",
             textDecoration: "none",
-            border: "1px solid rgba(255,255,255,0.14)",
+            border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
           }}
           title="Open this recap to review the details"
         >
@@ -294,7 +294,7 @@ const ApprovalRow: React.FC<{
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 border: "none",
                 opacity: inFlight ? 0.6 : 1,
                 cursor: inFlight ? "default" : "pointer",
@@ -311,7 +311,7 @@ const ApprovalRow: React.FC<{
               style={{
                 background: "transparent",
                 color: "var(--spark-text-secondary)",
-                border: "1px solid rgba(255,255,255,0.14)",
+                border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
                 cursor: inFlight ? "default" : "pointer",
               }}
             >
@@ -638,7 +638,7 @@ const ClientApprovalsMerged: React.FC<{
                 type="button"
                 onClick={runBulk}
                 className="px-3 py-1.5 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
               >
                 Yes, sign off
               </button>
@@ -790,7 +790,7 @@ const RequestApprovalRow: React.FC<{
     <li
       className="spark-card p-4"
       style={{
-        background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+        background: "var(--spark-card-bg, rgba(var(--spark-ink-rgb),0.02))",
         borderRadius: 14,
       }}
     >
@@ -811,11 +811,11 @@ const RequestApprovalRow: React.FC<{
                   letterSpacing: "0.14em",
                   background: breached
                     ? "rgba(239,90,42,0.16)"
-                    : "rgba(255,255,255,0.05)",
+                    : "rgba(var(--spark-ink-rgb),0.05)",
                   border: `1px solid ${
-                    breached ? "rgba(239,90,42,0.45)" : "rgba(255,255,255,0.12)"
+                    breached ? "rgba(239,90,42,0.45)" : "rgba(var(--spark-ink-rgb),0.12)"
                   }`,
-                  color: breached ? "var(--spark-orange)" : "rgba(255,255,255,0.6)",
+                  color: breached ? "var(--spark-orange)" : "rgba(var(--spark-ink-rgb),0.6)",
                 }}
               >
                 {age}
@@ -852,7 +852,7 @@ const RequestApprovalRow: React.FC<{
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   border: "none",
                 }}
               >
@@ -874,10 +874,10 @@ const RequestApprovalRow: React.FC<{
                 to={`/request/view/${row.uuid}`}
                 className="px-4 py-2 rounded-xl text-sm text-center"
                 style={{
-                  background: "rgba(255,255,255,0.06)",
+                  background: "rgba(var(--spark-ink-rgb),0.06)",
                   color: "var(--spark-text)",
                   textDecoration: "none",
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
                 }}
               >
                 View →
@@ -893,7 +893,7 @@ const RequestApprovalRow: React.FC<{
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   border: "none",
                   opacity: inFlight ? 0.6 : 1,
                 }}
@@ -909,7 +909,7 @@ const RequestApprovalRow: React.FC<{
                 style={{
                   background: "transparent",
                   color: "var(--spark-text-secondary)",
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
                 }}
               >
                 Cancel
@@ -925,9 +925,9 @@ const RequestApprovalRow: React.FC<{
                 rows={2}
                 className="text-sm rounded-lg p-2"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
+                  background: "rgba(var(--spark-ink-rgb),0.04)",
                   color: "var(--spark-text)",
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
                   width: 220,
                 }}
               />
@@ -938,7 +938,7 @@ const RequestApprovalRow: React.FC<{
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-orange)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   border: "none",
                   opacity: inFlight ? 0.6 : 1,
                 }}
@@ -953,7 +953,7 @@ const RequestApprovalRow: React.FC<{
                 style={{
                   background: "transparent",
                   color: "var(--spark-text-secondary)",
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
                 }}
               >
                 Cancel
@@ -1092,11 +1092,11 @@ export const ClientApprovalsBody: React.FC = () => {
             className="px-4 py-2 rounded-xl text-sm font-semibold transition"
             style={{
               background: tab === key ? "var(--spark-lime)" : "transparent",
-              color: tab === key ? "#0a0d09" : "var(--spark-text)",
+              color: tab === key ? "var(--spark-on-accent)" : "var(--spark-text)",
               border:
                 tab === key
                   ? "none"
-                  : "1px solid var(--spark-border, rgba(255,255,255,0.14))",
+                  : "1px solid var(--spark-border, rgba(var(--spark-ink-rgb),0.14))",
             }}
           >
             {label}

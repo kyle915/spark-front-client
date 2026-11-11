@@ -158,7 +158,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
               color:
                 ratio != null && ratio >= 1
                   ? "var(--spark-lime)"
-                  : "rgba(255,255,255,0.6)",
+                  : "rgba(var(--spark-ink-rgb),0.6)",
             }}
           >
             CONFIRMED {confirmed} / NEEDED {needed}
@@ -180,7 +180,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
       {ratio != null && (
         <div
           className="mb-4 h-1.5 w-full overflow-hidden rounded-full"
-          style={{ background: "rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
           aria-hidden
         >
           <div
@@ -216,9 +216,9 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                 onClick={onRowClick}
                 className="flex items-center gap-3 py-2.5"
                 style={{
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
+                  borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.04)",
                   cursor: locked ? "default" : "pointer",
-                  background: checked ? "rgba(242,243,238,0.06)" : "transparent",
+                  background: checked ? "rgba(var(--spark-accent-rgb),0.06)" : "transparent",
                   opacity: locked ? 0.55 : 1,
                 }}
               >
@@ -240,7 +240,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                   style={{
                     width: 32,
                     height: 32,
-                    background: "rgba(242,243,238,0.10)",
+                    background: "rgba(var(--spark-accent-rgb),0.10)",
                     color: "var(--spark-lime)",
                     fontSize: 12,
                   }}
@@ -277,8 +277,8 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                         style={{
                           letterSpacing: "0.16em",
                           color: "var(--spark-lime)",
-                          background: "rgba(242,243,238,0.10)",
-                          border: "1px solid rgba(242,243,238,0.30)",
+                          background: "rgba(var(--spark-accent-rgb),0.10)",
+                          border: "1px solid rgba(var(--spark-accent-rgb),0.30)",
                           padding: "1px 6px",
                           borderRadius: 999,
                         }}
@@ -314,7 +314,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                 color:
                   selectedCount > 0
                     ? "var(--spark-lime)"
-                    : "rgba(255,255,255,0.35)",
+                    : "rgba(var(--spark-ink-rgb),0.35)",
               }}
             >
               {selectedCount === 0
@@ -327,10 +327,10 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 boxShadow:
                   selectedCount > 0
-                    ? "0 0 16px rgba(242,243,238,0.35)"
+                    ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)"
                     : "none",
               }}
             >

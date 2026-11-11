@@ -139,7 +139,7 @@ const FieldRow: React.FC<{
   <div
     className="rounded-xl p-4"
     style={{
-      background: "rgba(255,255,255,0.025)",
+      background: "rgba(var(--spark-ink-rgb),0.025)",
       border: "1px solid var(--spark-border)",
     }}
   >
@@ -169,10 +169,10 @@ const FieldRow: React.FC<{
         className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer"
         style={{
           background: field.required
-            ? "rgba(242,243,238,0.10)"
+            ? "rgba(var(--spark-accent-rgb),0.10)"
             : "transparent",
-          border: `1px solid ${field.required ? "rgba(242,243,238,0.4)" : "var(--spark-border)"}`,
-          color: field.required ? "var(--spark-lime)" : "rgba(255,255,255,0.65)",
+          border: `1px solid ${field.required ? "rgba(var(--spark-accent-rgb),0.4)" : "var(--spark-border)"}`,
+          color: field.required ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.65)",
           fontSize: "0.75rem",
           fontFamily: "JetBrains Mono, monospace",
           letterSpacing: "0.14em",
@@ -530,7 +530,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="px-5 py-3 rounded-2xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity: busy ? 0.6 : 1,
             }}
           >
@@ -556,7 +556,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 className="px-5 py-3 rounded-2xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity: busy ? 0.6 : 1,
                 }}
               >
@@ -619,9 +619,9 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm"
                 style={{
                   background: draft.internal
-                    ? "rgba(242,243,238,0.10)"
-                    : "rgba(255,255,255,0.025)",
-                  border: `1px solid ${draft.internal ? "rgba(242,243,238,0.4)" : "var(--spark-border)"}`,
+                    ? "rgba(var(--spark-accent-rgb),0.10)"
+                    : "rgba(var(--spark-ink-rgb),0.025)",
+                  border: `1px solid ${draft.internal ? "rgba(var(--spark-accent-rgb),0.4)" : "var(--spark-border)"}`,
                 }}
               >
                 <input
@@ -639,7 +639,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 style={{
                   background: draft.external
                     ? "rgba(95,184,239,0.10)"
-                    : "rgba(255,255,255,0.025)",
+                    : "rgba(var(--spark-ink-rgb),0.025)",
                   border: `1px solid ${draft.external ? "rgba(95,184,239,0.4)" : "var(--spark-border)"}`,
                 }}
               >
@@ -735,7 +735,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
                 opacity: busy ? 0.6 : 1,
               }}
             >

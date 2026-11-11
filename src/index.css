@@ -430,6 +430,11 @@ code, kbd, samp, pre, .mono-code {
   --spark-sky: #5fb8ef;
   --spark-purple: #a08bd9;
   --spark-gold: #ffc400;
+  /* Channel tokens: every translucent "ink" (text, hairlines, washes) and
+     accent tint is built from these, so a second theme only swaps them. */
+  --spark-ink-rgb: 255, 255, 255;
+  --spark-accent-rgb: 242, 243, 238;
+  --spark-on-accent: #0a0d09;
   --spark-bg: #0A0B0D;
   --spark-surface: #141416;
   --spark-surface-2: #1a1a1d;
@@ -454,6 +459,57 @@ code, kbd, samp, pre, .mono-code {
   --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
   --font-stencil: 'Bungee', 'Impact', sans-serif;
+}
+
+/* === Light mode =========================================================
+   A modifier on spark-v2 (see src/theme/appearance.ts). Same tokens, light
+   values: ink flips to near-black, the quiet accent becomes ink, and the
+   daisyUI base colours follow so utility classes switch with it. */
+[data-theme="spark-v2"][data-spark-mode="light"] {
+  color-scheme: light;
+  --spark-ink-rgb: 20, 22, 15;
+  --spark-accent-rgb: 20, 22, 15;
+  --spark-on-accent: #ffffff;
+  --spark-lime: #14160f;
+  --spark-lime-dim: #3a3d33;
+  --spark-orange: #d2481b;
+  --spark-sky: #1f7fc0;
+  --spark-purple: #6b55b5;
+  --spark-gold: #9a7200;
+  --spark-bg: #f6f6f2;
+  --spark-surface: #ffffff;
+  --spark-surface-2: #f1f1ec;
+  --spark-border: #dcddd5;
+  --spark-text: #14160f;
+  --spark-text-secondary: rgba(20, 22, 15, 0.78);
+  --spark-text-meta: rgba(20, 22, 15, 0.64);
+  --spark-faint: rgba(20, 22, 15, 0.52);
+  --spark-muted: rgba(20, 22, 15, 0.66);
+  --spark-hairline: rgba(20, 22, 15, 0.1);
+  --spark-elev-1: 0 8px 24px rgba(20, 22, 15, 0.08);
+  --spark-elev-2: 0 18px 36px rgba(20, 22, 15, 0.1);
+  --spark-elev-3: 0 24px 48px rgba(20, 22, 15, 0.12);
+  --spark-toast-bg: #14160f;
+  --color-base-100: #ffffff;
+  --color-base-200: #f6f6f2;
+  --color-base-300: #ecece6;
+  --color-base-content: rgba(20, 22, 15, 0.92);
+  --color-primary: #14160f;
+  --color-primary-content: #ffffff;
+  --color-secondary: rgba(20, 22, 15, 0.06);
+  --color-secondary-content: rgba(20, 22, 15, 0.92);
+  --color-accent: #14160f;
+  --color-accent-content: #ffffff;
+  --color-neutral: #ecece6;
+  --color-neutral-content: rgba(20, 22, 15, 0.92);
+  --color-info: #1f7fc0;
+  --color-info-content: #ffffff;
+  --color-success: #14160f;
+  --color-success-content: #ffffff;
+  --color-warning: #c2571a;
+  --color-warning-content: #ffffff;
+  --color-error: #c9304c;
+  --color-error-content: #ffffff;
 }
 
 /* === Spark mesh — flat dark page shell (no radials, no dot grid) === */
@@ -493,7 +549,7 @@ body:has(.spark-login-page) {
 }
 .spark-login-form input.input:focus {
   border-color: #f2f3ee !important;
-  box-shadow: 0 0 0 3px rgba(242,243,238,0.18) !important;
+  box-shadow: 0 0 0 3px rgba(var(--spark-accent-rgb), 0.18) !important;
   background: rgba(245,242,236,0.16) !important;
 }
 .spark-login-form input.input:-webkit-autofill,
@@ -518,7 +574,7 @@ body:has(.spark-login-page) {
   font-family: var(--font-display, 'Space Grotesk', sans-serif) !important;
   font-weight: 700 !important;
   letter-spacing: -0.01em !important;
-  box-shadow: 0 0 24px rgba(242,243,238,0.25) !important;
+  box-shadow: 0 0 24px rgba(var(--spark-accent-rgb), 0.25) !important;
 }
 .spark-login-form .btn.btn-primary:hover {
   background: #C2DF4D !important;
@@ -533,11 +589,11 @@ body:has(.spark-login-page) {
   color: var(--spark-text, #f2f3ee);
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
 }
-.spark-input::placeholder { color: rgba(255, 255, 255, 0.4); }
-.spark-input:hover { border-color: rgba(242, 243, 238, 0.35); }
+.spark-input::placeholder { color: rgba(var(--spark-ink-rgb), 0.4); }
+.spark-input:hover { border-color: rgba(var(--spark-accent-rgb), 0.35); }
 .spark-input:focus {
-  border-color: rgba(242, 243, 238, 0.7);
-  box-shadow: 0 0 0 3px rgba(242, 243, 238, 0.28);
+  border-color: rgba(var(--spark-accent-rgb), 0.7);
+  box-shadow: 0 0 0 3px rgba(var(--spark-accent-rgb), 0.28);
   background: rgba(17, 20, 14, 0.95);
 }
 .spark-input::selection {
@@ -568,14 +624,14 @@ body:has(.spark-login-page) {
   position: relative;
 }
 .spark-card.hov:hover {
-  border-color: rgba(242, 243, 238, 0.22);
+  border-color: rgba(var(--spark-accent-rgb), 0.22);
 }
 
 /* === Shared page chrome (promoted from Plans Apple UX) === */
 .spark-page {
   --spark-page-gap: 1.75rem;
-  --spark-muted: rgba(255, 255, 255, 0.66);
-  --spark-faint: rgba(255, 255, 255, 0.52);
+  --spark-muted: rgba(var(--spark-ink-rgb), 0.66);
+  --spark-faint: rgba(var(--spark-ink-rgb), 0.52);
   max-width: 68rem;
   margin-inline: auto;
   display: flex;
@@ -597,13 +653,13 @@ body:has(.spark-login-page) {
   letter-spacing: -0.035em;
 }
 .spark-page-header .label-mini {
-  color: rgba(255, 255, 255, 0.32);
+  color: rgba(var(--spark-ink-rgb), 0.32);
   margin-bottom: 0.35rem;
 }
 .spark-page-header .spark-support {
   margin-top: 0.45rem;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(var(--spark-ink-rgb), 0.48);
   max-width: 32rem;
 }
 .spark-support {
@@ -651,7 +707,7 @@ body:has(.spark-login-page) {
 }
 .spark-btn-ghost:hover {
   color: var(--spark-text);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(var(--spark-ink-rgb), 0.2);
 }
 /* Soft X density — square-ui quieter shells + admin-kit filter chrome.
    Patterns only; no kit vendoring. */
@@ -661,7 +717,7 @@ body:has(.spark-login-page) {
   align-items: center;
   gap: 0.28rem 0.35rem;
   padding: 0.4rem 0.55rem;
-  background: rgba(255, 255, 255, 0.015);
+  background: rgba(var(--spark-ink-rgb), 0.015);
   border: 1px solid var(--spark-hairline, var(--spark-border));
   border-radius: var(--spark-radius-control, 8px);
 }
@@ -685,8 +741,8 @@ body:has(.spark-login-page) {
 .spark-filter-bar input.spark-filter-search:focus,
 .spark-filter-bar input.spark-filter-search:focus-visible,
 .spark-filter-bar select:focus-visible {
-  border-color: rgba(242, 243, 238, 0.7);
-  box-shadow: 0 0 0 2px rgba(242, 243, 238, 0.28);
+  border-color: rgba(var(--spark-accent-rgb), 0.7);
+  box-shadow: 0 0 0 2px rgba(var(--spark-accent-rgb), 0.28);
 }
 .spark-filter-bar .chip,
 .spark-filter-bar .pill-btn {
@@ -698,7 +754,7 @@ body:has(.spark-login-page) {
 .spark-filter-bar .chip:focus-visible,
 .spark-filter-bar .pill-btn:focus-visible,
 .spark-filter-bar button:focus-visible {
-  outline: 2px solid rgba(242, 243, 238, 0.7);
+  outline: 2px solid rgba(var(--spark-accent-rgb), 0.7);
   outline-offset: 2px;
 }
 
@@ -707,7 +763,7 @@ body:has(.spark-login-page) {
   padding: 0.45rem 0.55rem !important;
   gap: 0.4rem !important;
   border-radius: var(--spark-radius-control, 8px) !important;
-  border-color: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(var(--spark-ink-rgb), 0.07) !important;
   background: rgba(10, 13, 9, 0.9) !important;
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
@@ -730,19 +786,19 @@ body:has(.spark-login-page) {
 }
 .spark-tracker-shell {
   border-radius: 12px !important;
-  border-color: var(--spark-hairline, rgba(255, 255, 255, 0.08)) !important;
-  background: rgba(255, 255, 255, 0.015);
+  border-color: var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08)) !important;
+  background: rgba(var(--spark-ink-rgb), 0.015);
 }
 .spark-tracker-kpis .spark-card {
   border-radius: 10px;
-  border-color: var(--spark-hairline, rgba(255, 255, 255, 0.08));
-  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08));
+  background: rgba(var(--spark-ink-rgb), 0.02);
 }
 .spark-tracker-filters {
   padding: 0.3rem 0.4rem !important;
   gap: 0 !important;
   border-radius: 10px !important;
-  border: 1px solid var(--spark-hairline, rgba(255, 255, 255, 0.08)) !important;
+  border: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08)) !important;
   background: rgba(10, 11, 13, 0.92) !important;
 }
 .spark-tracker-filters .spark-filter-bar {
@@ -753,7 +809,7 @@ body:has(.spark-login-page) {
   border-radius: 0;
 }
 .spark-tracker-filters .spark-filter-bar + .spark-filter-bar {
-  border-top: 1px solid var(--spark-hairline, rgba(255, 255, 255, 0.07));
+  border-top: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.07));
   margin-top: 0.1rem;
   padding-top: 0.32rem;
 }
@@ -784,7 +840,7 @@ body:has(.spark-login-page) {
 .spark-tracker-table :where(th, td) {
   padding-block: 0.4rem !important;
   padding-inline: 0.55rem !important;
-  border-bottom-color: var(--spark-hairline, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom-color: var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08)) !important;
   vertical-align: top;
 }
 .spark-tracker-table thead th {
@@ -792,9 +848,9 @@ body:has(.spark-login-page) {
   letter-spacing: 0.14em;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--spark-muted, rgba(255, 255, 255, 0.5)) !important;
+  color: var(--spark-muted, rgba(var(--spark-ink-rgb), 0.5)) !important;
   background: var(--spark-surface-2, #0A0B0D) !important;
-  border-bottom: 1px solid var(--spark-hairline, rgba(255, 255, 255, 0.1)) !important;
+  border-bottom: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.1)) !important;
 }
 .spark-tracker-table .spark-table-sticky-bg {
   background: var(--spark-surface-2, #0A0B0D);
@@ -803,18 +859,18 @@ body:has(.spark-login-page) {
   background: #121316;
 }
 .spark-tracker-cell-muted {
-  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
 }
 .spark-tracker-cell-primary {
-  color: var(--spark-text, rgba(255, 255, 255, 0.92));
+  color: var(--spark-text, rgba(var(--spark-ink-rgb), 0.92));
 }
 .spark-tracker-group {
   letter-spacing: 0.14em;
   font-size: 0.625rem;
   color: var(--spark-lime, #f2f3ee);
-  background: rgba(242, 243, 238, 0.035);
-  border-top: 1px solid var(--spark-hairline, rgba(255, 255, 255, 0.08));
-  border-bottom: 1px solid var(--spark-hairline, rgba(255, 255, 255, 0.08));
+  background: rgba(var(--spark-accent-rgb), 0.035);
+  border-top: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08));
+  border-bottom: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08));
 }
 .spark-tracker-group-row td {
   padding-block: 0.35rem !important;
@@ -869,11 +925,11 @@ thead .spark-table-sticky-date {
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(var(--spark-ink-rgb), 0.4);
   padding: 0 4px 8px;
 }
 .spark-inset-group {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--spark-ink-rgb), 0.03);
   border: 1px solid var(--spark-border);
   border-radius: 16px;
   overflow: hidden;
@@ -884,13 +940,13 @@ thead .spark-table-sticky-date {
   min-height: 44px;
   padding: 6px 14px;
   gap: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--spark-ink-rgb), 0.06);
 }
 .spark-inset-row:first-child {
   border-top: none;
 }
 .spark-card-flat {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(var(--spark-ink-rgb), 0.025);
   border: 1px solid var(--spark-border);
   border-radius: var(--spark-radius-card, 14px);
 }
@@ -911,7 +967,7 @@ thead .spark-table-sticky-date {
   transition: border-color 0.2s ease;
 }
 .kpi.kpi-hover:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(var(--spark-ink-rgb), 0.16);
 }
 .kpi.kpi-glow {
   border-color: var(--spark-border);
@@ -923,9 +979,9 @@ thead .spark-table-sticky-date {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgba(242, 243, 238, 0.1);
+  background: rgba(var(--spark-accent-rgb), 0.1);
   color: var(--spark-lime);
-  border: 1px solid rgba(242, 243, 238, 0.25);
+  border: 1px solid rgba(var(--spark-accent-rgb), 0.25);
   font-size: 1rem;
 }
 .kpi-delta {
@@ -936,7 +992,7 @@ thead .spark-table-sticky-date {
   letter-spacing: 0.02em;
 }
 .kpi-delta.neg { color: var(--spark-orange); }
-.kpi-delta.muted { color: rgba(255, 255, 255, 0.45); }
+.kpi-delta.muted { color: rgba(var(--spark-ink-rgb), 0.45); }
 .kpi-value {
   font-weight: 700;
   font-size: 2.5rem;
@@ -946,7 +1002,7 @@ thead .spark-table-sticky-date {
   margin-top: 1rem;
 }
 .kpi-label {
-  color: var(--spark-text-secondary, rgba(255, 255, 255, 0.62));
+  color: var(--spark-text-secondary, rgba(var(--spark-ink-rgb), 0.62));
   font-size: 0.85rem;
   margin-top: 0.4rem;
 }
@@ -960,7 +1016,7 @@ thead .spark-table-sticky-date {
   gap: 12px;
 }
 .spark-bento-tile {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--spark-ink-rgb), 0.03);
   border: 1px solid var(--spark-border);
   border-radius: 14px;
   padding: 12px 14px;
@@ -1003,13 +1059,13 @@ thead .spark-table-sticky-date {
   font-size: 0.75rem;
   letter-spacing: -0.01em;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(var(--spark-ink-rgb), 0.45);
 }
 .spark-stat-hint {
   font-family: "Space Grotesk", system-ui, sans-serif;
   font-size: 0.7rem;
   letter-spacing: -0.005em;
-  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
   margin-top: 6px;
 }
 
@@ -1025,7 +1081,7 @@ thead .spark-table-sticky-date {
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(var(--spark-ink-rgb), 0.48);
   margin: 0;
   line-height: 1.25;
 }
@@ -1058,7 +1114,7 @@ thead .spark-table-sticky-date {
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(var(--spark-ink-rgb), 0.5);
 }
 .spark-kpi-delta.is-attention {
   color: var(--spark-orange);
@@ -1068,7 +1124,7 @@ thead .spark-table-sticky-date {
   font-size: 10px;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
-  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
   width: 1.6em;
   flex-shrink: 0;
 }
@@ -1087,14 +1143,14 @@ thead .spark-table-sticky-date {
   border-radius: 9999px;
   font-size: 0.78rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--spark-ink-rgb), 0.55);
   border: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: "Space Grotesk", sans-serif;
 }
-.pill-btn:hover { color: rgba(255, 255, 255, 0.85); }
+.pill-btn:hover { color: rgba(var(--spark-ink-rgb), 0.85); }
 .pill-btn.on {
   color: #0A0B0D;
   background: var(--spark-lime);
@@ -1108,7 +1164,7 @@ thead .spark-table-sticky-date {
   gap: 0.85rem;
   padding: 0.6rem 0.9rem;
   border-radius: 12px;
-  color: var(--spark-text-secondary, rgba(255, 255, 255, 0.62));
+  color: var(--spark-text-secondary, rgba(var(--spark-ink-rgb), 0.62));
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -1121,7 +1177,7 @@ thead .spark-table-sticky-date {
   text-decoration: none;
 }
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--spark-ink-rgb), 0.04);
   color: var(--spark-text);
 }
 .nav-item.active {
@@ -1162,7 +1218,7 @@ thead .spark-table-sticky-date {
   font-size: 0.7rem;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
   padding: 0.7rem 0.9rem 0.1rem;
 }
 
@@ -1478,14 +1534,14 @@ body { background: var(--spark-bg); }
 }
 .recap-upload-meta {
   letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--spark-ink-rgb), 0.55);
 }
 .recap-upload-meta.is-complete {
   color: #ff8a4c;
   font-weight: 700;
 }
 .recap-upload-row {
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(var(--spark-ink-rgb), 0.86);
   border-radius: 8px;
   padding: 6px 8px;
   border: 1px solid transparent;
@@ -1504,8 +1560,8 @@ body { background: var(--spark-bg); }
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background: rgba(var(--spark-ink-rgb), 0.08);
+  box-shadow: 0 0 0 1px rgba(var(--spark-ink-rgb), 0.2);
 }
 .recap-upload-row[data-state="done"] .recap-upload-thumb {
   box-shadow: 0 0 0 2px #ff8a4c;
@@ -1533,8 +1589,8 @@ body { background: var(--spark-bg); }
   background: #9f1239;
 }
 .recap-upload-row[data-state="uploading"] .recap-upload-status {
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.08);
+  color: rgba(var(--spark-ink-rgb), 0.72);
+  background: rgba(var(--spark-ink-rgb), 0.08);
 }
 .recap-doc .recap-upload-library.is-drag,
 .recap-doc .recap-upload-library.is-filled {
@@ -1657,7 +1713,7 @@ body { background: var(--spark-bg); }
 /* === Recap detail (Origin-style shell) === */
 .recap-detail-back {
   letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(var(--spark-ink-rgb), 0.45);
 }
 .recap-detail-chrome {
   display: flex;
@@ -1673,7 +1729,7 @@ body { background: var(--spark-bg); }
   padding: 0.2rem;
   border-radius: var(--spark-radius-control, 8px);
   border: 1px solid var(--spark-hairline, var(--spark-border));
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--spark-ink-rgb), 0.03);
   width: fit-content;
   max-width: 100%;
 }
@@ -1681,7 +1737,7 @@ body { background: var(--spark-bg); }
   appearance: none;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(var(--spark-ink-rgb), 0.55);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -1696,15 +1752,15 @@ body { background: var(--spark-bg); }
 }
 .recap-detail-tab:hover {
   color: var(--spark-text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--spark-ink-rgb), 0.05);
 }
 .recap-detail-tab.is-active {
   color: #0a0b0d;
   background: var(--spark-lime);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: 0 1px 0 rgba(var(--spark-ink-rgb), 0.12);
 }
 .recap-detail-tab:focus-visible {
-  outline: 2px solid rgba(242, 243, 238, 0.75);
+  outline: 2px solid rgba(var(--spark-accent-rgb), 0.75);
   outline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1720,7 +1776,7 @@ body { background: var(--spark-bg); }
   overflow: hidden;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.03),
+    rgba(var(--spark-ink-rgb), 0.03),
     rgba(10, 11, 13, 0.35)
   );
 }
@@ -1744,7 +1800,7 @@ body { background: var(--spark-bg); }
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(255, 255, 255, 0.12),
+    rgba(var(--spark-ink-rgb), 0.12),
     transparent
   );
 }
@@ -1759,8 +1815,8 @@ body { background: var(--spark-bg); }
   place-items: center;
   margin-bottom: 0.35rem;
   font-size: 0.7rem;
-  background: rgba(242, 243, 238, 0.1);
-  border: 1px solid rgba(242, 243, 238, 0.22);
+  background: rgba(var(--spark-accent-rgb), 0.1);
+  border: 1px solid rgba(var(--spark-accent-rgb), 0.22);
   color: var(--spark-lime);
 }
 .recap-kpi-label {
@@ -1768,7 +1824,7 @@ body { background: var(--spark-bg); }
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(var(--spark-ink-rgb), 0.48);
   font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
 }
 .recap-kpi-value {
@@ -1855,18 +1911,18 @@ body { background: var(--spark-bg); }
   display: grid;
   place-items: center;
   border-radius: 14px;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed rgba(var(--spark-ink-rgb), 0.12);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 55%),
+    linear-gradient(180deg, rgba(var(--spark-ink-rgb), 0.025), transparent 55%),
     repeating-linear-gradient(
       -12deg,
       transparent,
       transparent 10px,
-      rgba(255, 255, 255, 0.018) 10px,
-      rgba(255, 255, 255, 0.018) 11px
+      rgba(var(--spark-ink-rgb), 0.018) 10px,
+      rgba(var(--spark-ink-rgb), 0.018) 11px
     );
   font-family: "Space Grotesk", system-ui, sans-serif;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(var(--spark-ink-rgb), 0.45);
   font-size: 0.8125rem;
   text-align: center;
   padding: 1.25rem;
@@ -1882,7 +1938,7 @@ body { background: var(--spark-bg); }
   background: color-mix(in srgb, var(--spark-bg, #0a0b0d) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(var(--spark-ink-rgb), 0.06);
 }
 
 /* Desktop sidebar icon rail. Width stays 4.5rem so the page title in the
@@ -1924,7 +1980,7 @@ body { background: var(--spark-bg); }
   gap: 2px;
   margin-top: 0.45rem;
   padding-top: 0.45rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(var(--spark-ink-rgb), 0.08);
 }
 .spark-sidebar.is-collapsed .spark-rail-section:first-child {
   margin-top: 0;
@@ -1945,7 +2001,7 @@ body { background: var(--spark-bg); }
   border-radius: 10px;
 }
 .spark-sidebar.is-collapsed .nav-item.active {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--spark-ink-rgb), 0.04);
   color: var(--spark-text);
   box-shadow: none;
 }
@@ -1968,7 +2024,7 @@ body { background: var(--spark-bg); }
   transform: translateY(-50%);
   pointer-events: none;
   background: #0a0b0d;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(var(--spark-ink-rgb), 0.92);
   border: 1px solid var(--spark-border);
   border-radius: 6px;
   padding: 0.28rem 0.5rem;
@@ -2001,15 +2057,15 @@ body { background: var(--spark-bg); }
   text-transform: uppercase;
 }
 .spark-crumb-root {
-  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
   flex-shrink: 0;
 }
 .spark-crumb-sep {
-  color: rgba(255, 255, 255, 0.22);
+  color: rgba(var(--spark-ink-rgb), 0.22);
   flex-shrink: 0;
 }
 .spark-crumb-current {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(var(--spark-ink-rgb), 0.72);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2022,9 +2078,9 @@ body { background: var(--spark-bg); }
   border-radius: 12px;
   background: linear-gradient(
     100deg,
-    rgba(255, 255, 255, 0.05) 40%,
-    rgba(255, 255, 255, 0.11) 50%,
-    rgba(255, 255, 255, 0.05) 60%
+    rgba(var(--spark-ink-rgb), 0.05) 40%,
+    rgba(var(--spark-ink-rgb), 0.11) 50%,
+    rgba(var(--spark-ink-rgb), 0.05) 60%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
@@ -2041,7 +2097,7 @@ body { background: var(--spark-bg); }
    Focus rings for keyboard users; quieter row-action chrome; sheet hit targets.
    Do not adopt Untitled/Kibo/shadcn kits wholesale. */
 :root {
-  --spark-focus-ring: rgba(242, 243, 238, 0.72);
+  --spark-focus-ring: rgba(var(--spark-accent-rgb), 0.72);
   --spark-focus-offset: 2px;
   /* Native copy/paste highlight on dark ops — orange only chromatic. */
   --spark-selection-bg: rgba(239, 90, 42, 0.55);
@@ -2049,15 +2105,15 @@ body { background: var(--spark-bg); }
   /* Selected rows / chips on quiet near-black surfaces. */
   --spark-selected-row: rgba(239, 90, 42, 0.18);
   --spark-selected-row-hover: rgba(239, 90, 42, 0.26);
-  --spark-text-secondary: rgba(255, 255, 255, 0.76);
-  --spark-text-meta: rgba(255, 255, 255, 0.64);
-  --spark-faint: rgba(255, 255, 255, 0.52);
+  --spark-text-secondary: rgba(var(--spark-ink-rgb), 0.76);
+  --spark-text-meta: rgba(var(--spark-ink-rgb), 0.64);
+  --spark-faint: rgba(var(--spark-ink-rgb), 0.52);
   --spark-radius-control: 8px;
   --spark-radius-panel: 18px;
   --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);
   --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
   --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);
-  --spark-scrollbar-thumb: rgba(255, 255, 255, 0.28);
+  --spark-scrollbar-thumb: rgba(var(--spark-ink-rgb), 0.28);
   --spark-scrollbar-track: #0a0b0d;
 }
 
@@ -2130,7 +2186,7 @@ tr.spark-row-selected:hover,
 }
 
 .spark-popover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(var(--spark-ink-rgb), 0.1);
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.28),
     0 16px 40px rgba(0, 0, 0, 0.32);
@@ -2227,16 +2283,16 @@ tr:hover > td .spark-row-actions > a,
   width: 2.25rem;
   height: 0.25rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--spark-ink-rgb), 0.2);
   margin: 0.5rem auto 0.2rem;
 }
 .spark-sheet-header {
   padding: 0.35rem 1rem 0.65rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(var(--spark-ink-rgb), 0.07);
 }
 .spark-sheet-eyebrow {
   letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(var(--spark-ink-rgb), 0.45);
 }
 .spark-sheet-title {
   font-size: 1.125rem;
@@ -2248,9 +2304,9 @@ tr:hover > td .spark-row-actions > a,
   letter-spacing: 0.12em;
   min-width: var(--spark-hit, 44px);
   min-height: var(--spark-hit, 44px);
-  color: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  color: rgba(var(--spark-ink-rgb), 0.55);
+  border: 1px solid rgba(var(--spark-ink-rgb), 0.1);
+  background: rgba(var(--spark-ink-rgb), 0.03);
   transition:
     color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
     border-color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
@@ -2258,8 +2314,8 @@ tr:hover > td .spark-row-actions > a,
 }
 .spark-sheet-close:hover {
   color: var(--spark-text);
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(var(--spark-ink-rgb), 0.18);
+  background: rgba(var(--spark-ink-rgb), 0.05);
 }
 .spark-sheet-body {
   /* lf-field-client: clear the home indicator. Parallel PR also edits this file. */
@@ -2278,7 +2334,7 @@ tr:hover > td .spark-row-actions > a,
 }
 .recap-sticky-ops-label {
   letter-spacing: 0.16em;
-  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
 }
 .recap-sticky-ops-queue {
   border-right: 1px solid var(--spark-hairline, var(--spark-border));
@@ -2289,7 +2345,7 @@ tr:hover > td .spark-row-actions > a,
   border: 1px solid var(--spark-hairline, var(--spark-border));
 }
 .recap-sticky-ops-nav:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(var(--spark-ink-rgb), 0.22);
 }
 .recap-sticky-ops-nav:disabled {
   opacity: 0.4;
@@ -2297,7 +2353,7 @@ tr:hover > td .spark-row-actions > a,
 }
 .recap-sticky-ops-count {
   letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(var(--spark-ink-rgb), 0.7);
 }
 @keyframes spark-sheet-scrim-in {
   from {
@@ -2403,7 +2459,7 @@ main table tbody tr {
   transition: background-color 120ms ease;
 }
 main table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.035);
+  background-color: rgba(var(--spark-ink-rgb), 0.035);
 }
 main table td,
 main table th {

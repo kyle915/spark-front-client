@@ -212,7 +212,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
                 onClick={() => runBulk("confirm")}
                 disabled={busy}
                 className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-                style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
               >
                 Confirm {selectedList.length}
               </button>
@@ -253,8 +253,8 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
                     style={{
                       letterSpacing: "0.14em",
                       color: "var(--spark-lime)",
-                      background: "rgba(242,243,238,0.1)",
-                      border: "1px solid rgba(242,243,238,0.3)",
+                      background: "rgba(var(--spark-accent-rgb),0.1)",
+                      border: "1px solid rgba(var(--spark-accent-rgb),0.3)",
                       padding: "1px 6px",
                       borderRadius: 999,
                     }}
@@ -338,7 +338,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
                   onClick={() => onConfirm(r)}
                   disabled={busy}
                   className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-                  style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                  style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
                 >
                   Confirm
                 </button>
@@ -414,7 +414,7 @@ export default function SparkWalkups() {
                 tab === id
                   ? "2px solid var(--spark-lime)"
                   : "2px solid transparent",
-              color: tab === id ? "var(--spark-text)" : "rgba(255,255,255,0.45)",
+              color: tab === id ? "var(--spark-text)" : "rgba(var(--spark-ink-rgb),0.45)",
               fontWeight: tab === id ? 600 : 500,
               marginBottom: -1,
               paddingLeft: 0,
@@ -443,7 +443,7 @@ export default function SparkWalkups() {
                 className="px-4 py-2 rounded-full text-sm font-semibold"
                 style={{
                   background: filter === f ? "var(--spark-lime)" : "transparent",
-                  color: filter === f ? "#0a0d09" : "var(--spark-text)",
+                  color: filter === f ? "var(--spark-on-accent)" : "var(--spark-text)",
                   border:
                     filter === f ? "none" : "1px solid var(--spark-border)",
                 }}

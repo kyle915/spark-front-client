@@ -923,7 +923,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             className="mono text-[10px] px-3 py-2 rounded-xl"
             style={{
               letterSpacing: "0.18em",
-              background: "rgba(255,255,255,0.04)",
+              background: "rgba(var(--spark-ink-rgb),0.04)",
               color: "var(--spark-text-secondary)",
               border: "1px solid var(--spark-border)",
             }}
@@ -1000,7 +1000,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             className="px-4 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
               opacity: busy ? 0.5 : 1,
             }}
           >
@@ -1145,7 +1145,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             className="px-4 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
             title="Invite a brand ambassador to this shift — they'll get a push on their phone"
           >
@@ -1288,7 +1288,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 key={p.id}
                 className="rounded-xl overflow-hidden"
                 style={{
-                  background: "rgba(255,255,255,0.025)",
+                  background: "rgba(var(--spark-ink-rgb),0.025)",
                   border: "1px solid var(--spark-border)",
                 }}
               >
@@ -1302,7 +1302,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                   <div
                     className="w-full aspect-square grid place-items-center"
                     style={{
-                      background: "rgba(255,255,255,0.04)",
+                      background: "rgba(var(--spark-ink-rgb),0.04)",
                       color: "var(--spark-text-meta)",
                     }}
                   >
@@ -1543,7 +1543,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity: busy ? 0.5 : 1,
                 }}
               >
@@ -1611,7 +1611,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 color:
                   declineReason.trim().length < 8
                     ? "var(--spark-orange)"
-                    : "rgba(255,255,255,0.45)",
+                    : "rgba(var(--spark-ink-rgb),0.45)",
               }}
             >
               {declineReason.trim().length < 8
@@ -1635,7 +1635,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-orange)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                   opacity: busy || declineReason.trim().length < 8 ? 0.5 : 1,
                 }}
               >
@@ -1856,7 +1856,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                 className="h-32 relative overflow-hidden"
                 style={{
                   background:
-                    "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.10), transparent 70%)",
+                    "radial-gradient(circle at 50% 50%, rgba(var(--spark-accent-rgb),0.10), transparent 70%)",
                 }}
               >
                 {hero ? (
@@ -1890,9 +1890,9 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                       letterSpacing: "0.14em",
                       padding: "2px 6px",
                       borderRadius: 999,
-                      background: "rgba(242,243,238,0.15)",
+                      background: "rgba(var(--spark-accent-rgb),0.15)",
                       color: "var(--spark-lime)",
-                      border: "1px solid rgba(242,243,238,0.35)",
+                      border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
                     }}
                   >
                     ◉ {fileCount} FILE{fileCount === 1 ? "" : "S"}

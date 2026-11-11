@@ -642,7 +642,7 @@ export const CommandPalette: React.FC = () => {
         ) : null}
         <div
           style={{
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: "1px solid rgba(var(--spark-ink-rgb),0.06)",
           }}
         />
         <div
@@ -692,7 +692,7 @@ export const CommandPalette: React.FC = () => {
                           style={{
                             color: on
                               ? "rgba(239,90,42,0.85)"
-                              : "rgba(255,255,255,0.28)",
+                              : "rgba(var(--spark-ink-rgb),0.28)",
                           }}
                         >
                           {padIndex(i + 1)}
@@ -703,7 +703,7 @@ export const CommandPalette: React.FC = () => {
                           style={{
                             color: on
                               ? "var(--spark-orange)"
-                              : "rgba(255,255,255,0.55)",
+                              : "rgba(var(--spark-ink-rgb),0.55)",
                           }}
                         />
                         <div className="flex-1 min-w-0">
@@ -715,8 +715,8 @@ export const CommandPalette: React.FC = () => {
                             style={{
                               letterSpacing: "0.14em",
                               color: on
-                                ? "rgba(242,243,238,0.65)"
-                                : "rgba(255,255,255,0.4)",
+                                ? "rgba(var(--spark-accent-rgb),0.65)"
+                                : "rgba(var(--spark-ink-rgb),0.4)",
                             }}
                           >
                             {entry.hint.toUpperCase()}
@@ -744,8 +744,8 @@ export const CommandPalette: React.FC = () => {
         <div
           className="flex items-center justify-between px-4 py-2.5"
           style={{
-            borderTop: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(255,255,255,0.02)",
+            borderTop: "1px solid rgba(var(--spark-ink-rgb),0.06)",
+            background: "rgba(var(--spark-ink-rgb),0.02)",
           }}
         >
           <p

@@ -49,7 +49,7 @@ const accentForOverall = (overall: string): string =>
  * quietly. Each tone carries its solid `text` color (for the quote glyph / chip
  * label) plus matching rgba `bg` / `border` tints — explicit rgba literals,
  * the same way <TenantKpiCharts> and the client dashboard tint their bone pills
- * (e.g. `rgba(242,243,238,0.08)`), rather than alpha-suffixing a CSS var.
+ * (e.g. `rgba(var(--spark-accent-rgb),0.08)`), rather than alpha-suffixing a CSS var.
  */
 type TonePalette = { text: string; bg: string; border: string };
 
@@ -57,8 +57,8 @@ const TONE_PALETTE: Record<string, TonePalette> = {
   // bone #f2f3ee → 242,243,238
   positive: {
     text: "var(--spark-lime)",
-    bg: "rgba(242,243,238,0.10)",
-    border: "rgba(242,243,238,0.30)",
+    bg: "rgba(var(--spark-accent-rgb),0.10)",
+    border: "rgba(var(--spark-accent-rgb),0.30)",
   },
   // orange #ef5a2a → 239,90,42 (restrained, not an alarm red)
   negative: {
@@ -67,9 +67,9 @@ const TONE_PALETTE: Record<string, TonePalette> = {
     border: "rgba(239,90,42,0.32)",
   },
   neutral: {
-    text: "rgba(255,255,255,0.62)",
-    bg: "rgba(255,255,255,0.04)",
-    border: "rgba(255,255,255,0.14)",
+    text: "rgba(var(--spark-ink-rgb),0.62)",
+    bg: "rgba(var(--spark-ink-rgb),0.04)",
+    border: "rgba(var(--spark-ink-rgb),0.14)",
   },
 };
 
@@ -139,7 +139,7 @@ const QuoteBlock: React.FC<{ text: string; tone: string }> = ({
       className="rounded-r-lg pl-4 pr-3 py-2.5"
       style={{
         borderLeft: `3px solid ${pal.border}`,
-        background: "rgba(255,255,255,0.02)",
+        background: "rgba(var(--spark-ink-rgb),0.02)",
       }}
     >
       <p
@@ -232,7 +232,7 @@ const TenantSentimentCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </div>
         <div
           className="mt-2.5 h-1.5 w-full rounded-full overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
           role="progressbar"
           aria-valuenow={pct}
           aria-valuemin={0}

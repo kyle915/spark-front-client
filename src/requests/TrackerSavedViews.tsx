@@ -141,7 +141,7 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
           )}
           <div
             className="flex items-center gap-2 mt-2 pt-2"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.08)" }}
           >
             <input
               value={draftName}
@@ -153,8 +153,8 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
               className="flex-1 rounded-lg text-xs"
               style={{
                 padding: "6px 8px",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(var(--spark-ink-rgb),0.04)",
+                border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
                 color: "#fff",
               }}
             />
@@ -164,7 +164,7 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
               className="text-xs px-3 py-1.5 rounded-lg font-semibold"
               style={{
                 background: "var(--spark-lime, #f2f3ee)",
-                color: "#0a0d09",
+                color: "var(--spark-on-accent)",
               }}
             >
               Save

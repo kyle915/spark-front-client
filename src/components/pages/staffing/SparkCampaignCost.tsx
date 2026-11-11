@@ -127,7 +127,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                       className="mono text-[9px] mt-1"
                       style={{
                         letterSpacing: "0.06em",
-                        color: copied === r.tenantId ? "var(--spark-lime)" : "rgba(255,255,255,0.5)",
+                        color: copied === r.tenantId ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.5)",
                         background: "transparent",
                         border: "1px solid var(--spark-border)",
                         borderRadius: 999,
@@ -163,7 +163,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                     className="px-3 py-2 text-right font-semibold"
                     style={{
                       fontVariantNumeric: "tabular-nums",
-                      color: m == null ? "rgba(255,255,255,0.35)" : m >= 0 ? "var(--spark-lime)" : "var(--spark-orange)",
+                      color: m == null ? "rgba(var(--spark-ink-rgb),0.35)" : m >= 0 ? "var(--spark-lime)" : "var(--spark-orange)",
                     }}
                   >
                     {m == null ? "—" : money(m)}
@@ -183,7 +183,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                 className="px-3 py-2 text-right font-bold"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  color: totalRevenue > 0 ? (totalRevenue - report.totalCost >= 0 ? "var(--spark-lime)" : "var(--spark-orange)") : "rgba(255,255,255,0.35)",
+                  color: totalRevenue > 0 ? (totalRevenue - report.totalCost >= 0 ? "var(--spark-lime)" : "var(--spark-orange)") : "rgba(var(--spark-ink-rgb),0.35)",
                 }}
               >
                 {totalRevenue > 0 ? money(totalRevenue - report.totalCost) : "—"}

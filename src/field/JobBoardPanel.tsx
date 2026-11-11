@@ -92,7 +92,7 @@ const CANCEL_BOOKING = `
   }
 `;
 
-const MUTED = "rgba(255,255,255,0.45)";
+const MUTED = "rgba(var(--spark-ink-rgb),0.45)";
 const LIME = "var(--spark-lime, #f2f3ee)";
 const ORANGE = "var(--spark-orange, #ef5a2a)";
 
@@ -333,12 +333,12 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
           No upcoming plan gigs yet. A staffed plan lists here once its request is approved.
         </p>
       ) : (
-        <ul className="divide-y" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+        <ul className="divide-y" style={{ borderColor: "rgba(var(--spark-ink-rgb),0.08)" }}>
           {board.gigs.map((gig) => {
             const busy = busyGig === gig.id;
             const full = gig.spotsLeft <= 0 && gig.openShifts > 0;
             return (
-              <li key={gig.id} className="py-3 space-y-2" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+              <li key={gig.id} className="py-3 space-y-2" style={{ borderColor: "rgba(var(--spark-ink-rgb),0.08)" }}>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="min-w-[220px] flex-1">
                     <p className="font-semibold text-sm">
@@ -359,7 +359,7 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
                   <span
                     className="mono text-[11px] px-2 py-1 rounded"
                     style={{
-                      background: full ? "rgba(239,90,42,0.14)" : "rgba(242,243,238,0.12)",
+                      background: full ? "rgba(239,90,42,0.14)" : "rgba(var(--spark-accent-rgb),0.12)",
                       color: full ? ORANGE : LIME,
                     }}
                   >
@@ -382,7 +382,7 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
                   onSave={(value) => void saveGig(gig, { publicNotes: value })}
                 />
                 {gig.bookings.length ? (
-                  <ul className="space-y-1 pl-3" style={{ borderLeft: "2px solid rgba(242,243,238,0.35)" }}>
+                  <ul className="space-y-1 pl-3" style={{ borderLeft: "2px solid rgba(var(--spark-accent-rgb),0.35)" }}>
                     {gig.bookings.map((b) => (
                       <li key={b.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                         <span className="font-semibold">{b.name}</span>
@@ -426,12 +426,12 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
               shifts.
             </p>
           </div>
-          <ul className="divide-y" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <ul className="divide-y" style={{ borderColor: "rgba(var(--spark-ink-rgb),0.08)" }}>
             {board.pending.map((p) => (
               <li
                 key={p.id}
                 className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1"
-                style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                style={{ borderColor: "rgba(var(--spark-ink-rgb),0.08)" }}
               >
                 <div className="min-w-[220px] flex-1">
                   <p className="text-sm">

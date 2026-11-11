@@ -49,7 +49,7 @@ export default function ScorecardKpiCard({
           style={{
             color: hasActual
               ? "var(--spark-lime, #f2f3ee)"
-              : "rgba(255,255,255,0.35)",
+              : "rgba(var(--spark-ink-rgb),0.35)",
           }}
         >
           {loading ? "…" : fmtNum(kpi.logged)}
@@ -75,7 +75,7 @@ export default function ScorecardKpiCard({
         <div className="mt-3" aria-hidden>
           <div
             className="h-1.5 w-full rounded-full overflow-hidden"
-            style={{ background: "rgba(255,255,255,0.08)" }}
+            style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
           >
             <div
               className="h-full rounded-full transition-[width] duration-500"

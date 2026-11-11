@@ -96,7 +96,7 @@ export default function PlanResultsSheet({
           >
             <div
               className="grid grid-cols-[1fr_80px_90px] gap-2 px-3 py-2 text-[11px] uppercase tracking-wider opacity-55"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+              style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.07)" }}
             >
               <span>Metric</span>
               <span className="text-right">Planned</span>
@@ -108,7 +108,7 @@ export default function PlanResultsSheet({
                 <div
                   key={row.key}
                   className="px-3 py-2.5"
-                  style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+                  style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
                 >
                   <div className="grid grid-cols-[1fr_80px_90px] gap-2 items-baseline">
                     <span className="text-sm">{row.label}</span>
@@ -128,7 +128,7 @@ export default function PlanResultsSheet({
                     <div className="mt-1.5 flex items-center gap-2">
                       <div
                         className="h-1 flex-1 rounded-full overflow-hidden"
-                        style={{ background: "rgba(255,255,255,0.08)" }}
+                        style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
                       >
                         <div
                           className="h-full rounded-full"

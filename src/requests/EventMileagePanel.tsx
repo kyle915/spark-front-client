@@ -93,10 +93,10 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
           className="px-3 py-1.5 rounded-md text-xs font-semibold transition"
           style={{
             background: enabled ? "var(--spark-lime, #f2f3ee)" : "transparent",
-            color: enabled ? "#0a0d09" : "rgba(255,255,255,0.7)",
+            color: enabled ? "var(--spark-on-accent)" : "rgba(var(--spark-ink-rgb),0.7)",
             border: enabled
               ? "1px solid var(--spark-lime, #f2f3ee)"
-              : "1px solid rgba(255,255,255,0.2)",
+              : "1px solid rgba(var(--spark-ink-rgb),0.2)",
             opacity: saving ? 0.6 : 1,
           }}
         >
@@ -114,8 +114,8 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
             onChange={(e) => setRate(e.target.value)}
             className="w-20 px-2 py-1 rounded-md text-xs"
             style={{
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              background: "rgba(var(--spark-ink-rgb),0.05)",
+              border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
               color: "#fff",
             }}
           />
@@ -129,8 +129,8 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               disabled={saving}
               className="ml-1 px-2.5 py-1 rounded-md text-xs"
               style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(var(--spark-ink-rgb),0.08)",
+                border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                 color: "#fff",
                 opacity: saving ? 0.6 : 1,
               }}
@@ -157,7 +157,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               <tr
                 style={{
                   color: "var(--spark-text-meta)",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.1)",
                 }}
               >
                 <th className="text-left py-2 pr-3 font-normal">Ambassador</th>
@@ -170,7 +170,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               {sessions.map((s) => (
                 <tr
                   key={s.uuid}
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+                  style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
                 >
                   <td className="py-2 pr-3 font-semibold">
                     {s.ambassadorName ?? "—"}
@@ -192,7 +192,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+              <tr style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.15)" }}>
                 <td
                   className="py-2 pr-3 font-semibold"
                   colSpan={2}

@@ -184,7 +184,7 @@ const Inner: React.FC = () => {
                     className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_1fr] gap-3 px-4 py-3 text-sm w-full text-left transition"
                     style={{
                       background: "transparent",
-                      borderTop: "1px solid rgba(255,255,255,0.04)",
+                      borderTop: "1px solid rgba(var(--spark-ink-rgb),0.04)",
                       color: "inherit",
                       cursor: "pointer",
                     }}

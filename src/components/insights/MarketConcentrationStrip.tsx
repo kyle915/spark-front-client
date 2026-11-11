@@ -94,7 +94,7 @@ const Inner: React.FC<{
             }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition"
             style={{
-              background: "rgba(255,255,255,0.03)",
+              background: "rgba(var(--spark-ink-rgb),0.03)",
               border: "1px solid var(--spark-border)",
             }}
           >
