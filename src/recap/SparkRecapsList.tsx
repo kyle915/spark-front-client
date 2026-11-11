@@ -628,7 +628,7 @@ const RecapCard: React.FC<{
       </span>
       {recap.isThirdParty ? (
         <span className="absolute bottom-2 left-2">
-          <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
+          <ThirdPartyRecapBadge onPhoto notInTotals={recap.excludeFromAggregates} />
         </span>
       ) : recap.sourceLabel ? (
         <span className="absolute bottom-2 left-2">
