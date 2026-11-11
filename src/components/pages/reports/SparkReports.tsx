@@ -3,6 +3,7 @@ import useStickyState from "@/hooks/useStickyState";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
 import RecapFieldTotalsSection from "./RecapFieldTotalsSection";
+import FieldEfficiencySection from "./FieldEfficiencySection";
 import ProgramShareControl from "./ProgramShareControl";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
@@ -913,6 +914,15 @@ export default function SparkReports() {
         {/* Everything the recaps collected, beyond the headline KPIs. */}
         {tenantId ? (
           <RecapFieldTotalsSection
+            tenantId={tenantId}
+            startDate={startYmd}
+            endDate={endYmd}
+          />
+        ) : null}
+
+        {/* Which stores, days and times produce the most per staffed hour. */}
+        {tenantId ? (
+          <FieldEfficiencySection
             tenantId={tenantId}
             startDate={startYmd}
             endDate={endYmd}

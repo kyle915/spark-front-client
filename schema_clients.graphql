@@ -1421,6 +1421,12 @@ type CampaignCostRow {
   spend: Float!
   totalCost: Float!
   eventsMissingRates: Int!
+  samples: Int!
+  engagements: Int!
+  unitsSold: Int!
+  costPerSample: Float
+  costPerEngagement: Float
+  costPerUnitSold: Float
 }
 
 type CampaignReport {
@@ -5392,6 +5398,7 @@ type Mutation {
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
+  issueCheckinCode(input: IssueCheckinCodeInput!): IssueCheckinCodeResponse!
   setProgramShareEnabled(input: SetProgramShareEnabledInput!): SetProgramShareEnabledResponse!
   setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
@@ -6149,6 +6156,7 @@ type Query {
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   myReportSubscription(tenantId: ID = null): Boolean!
+  tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   programShareLink(tenantId: ID = null): ProgramShareLink!
@@ -7923,6 +7931,38 @@ type PhotoGalleryPage {
   photos: [GalleryPhoto!]!
   categories: [String!]!
   states: [String!]!
+}
+
+type EfficiencyRow {
+  label: String!
+  recaps: Int!
+  sampled: Int!
+  sold: Int!
+  hours: Float!
+  samplesPerHour: Float
+  unitsPerHour: Float
+}
+
+type FieldEfficiency {
+  total: EfficiencyRow!
+  byWeekday: [EfficiencyRow!]!
+  byDaypart: [EfficiencyRow!]!
+  topStores: [EfficiencyRow!]!
+  recapsWithoutHours: Int!
+}
+
+input IssueCheckinCodeInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+}
+
+type IssueCheckinCodeResponse {
+  success: Boolean!
+  message: String!
+  code: String
+  url: String
+  created: Boolean!
+  clientMutationId: ID
 }
 
 input SetMyReportSubscriptionInput {

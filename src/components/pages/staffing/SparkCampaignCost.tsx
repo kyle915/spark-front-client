@@ -89,10 +89,10 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 820 }}>
+        <table className="w-full text-sm" style={{ borderCollapse: "collapse", minWidth: 980 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
-              {["Campaign", "Events", "Hours", "Labor", "Spend", "Cost", "Revenue", "Margin"].map((h, i) => (
+              {["Campaign", "Events", "Hours", "Labor", "Spend", "Cost", "Per sample", "Per sale", "Revenue", "Margin"].map((h, i) => (
                 <th
                   key={h}
                   className="mono text-[10px] px-3 py-2"
@@ -143,6 +143,31 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                   <td className="px-3 py-2 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>{money(r.laborCost)}</td>
                   <td className="px-3 py-2 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>{money(r.spend)}</td>
                   <td className="px-3 py-2 text-right font-semibold" style={{ fontVariantNumeric: "tabular-nums" }}>{money(r.totalCost)}</td>
+                  <td
+                    className="px-3 py-2 text-right"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                    title={
+                      r.costPerSample != null
+                        ? `${money(r.totalCost)} ÷ ${r.samples.toLocaleString("en-US")} samples` +
+                          (r.costPerEngagement != null
+                            ? ` · ${money(r.costPerEngagement)} per engagement`
+                            : "")
+                        : "No samples recorded on approved recaps in this range"
+                    }
+                  >
+                    {r.costPerSample != null ? money(r.costPerSample) : "—"}
+                  </td>
+                  <td
+                    className="px-3 py-2 text-right"
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                    title={
+                      r.costPerUnitSold != null
+                        ? `${money(r.totalCost)} ÷ ${r.unitsSold.toLocaleString("en-US")} units sold`
+                        : "No units sold recorded on approved recaps in this range"
+                    }
+                  >
+                    {r.costPerUnitSold != null ? money(r.costPerUnitSold) : "—"}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     <input
                       type="number"
@@ -178,6 +203,8 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
               <td className="px-3 py-2 text-right font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{money(report.totalLabor)}</td>
               <td className="px-3 py-2 text-right font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{money(report.totalSpend)}</td>
               <td className="px-3 py-2 text-right font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{money(report.totalCost)}</td>
+              <td />
+              <td />
               <td className="px-3 py-2 text-right font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{totalRevenue > 0 ? money(totalRevenue) : "—"}</td>
               <td
                 className="px-3 py-2 text-right font-bold"

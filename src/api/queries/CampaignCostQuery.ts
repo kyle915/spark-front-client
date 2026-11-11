@@ -23,6 +23,12 @@ export const CampaignCostQuery = graphql`
         spend
         totalCost
         eventsMissingRates
+        samples
+        engagements
+        unitsSold
+        costPerSample
+        costPerEngagement
+        costPerUnitSold
       }
     }
   }

@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { SetupChecklistQuery } from "@/api/queries/SetupChecklistQuery";
 import type { SetupChecklistQuery as QueryType } from "@api/queries/__generated__/SetupChecklistQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import IssueCheckinLinkButton from "./IssueCheckinLinkButton";
 import {
   buildSetupSteps,
   setupDismissKey,
@@ -25,10 +26,12 @@ const Body: React.FC<{ tenantId: string; onDismiss: () => void }> = ({
   onDismiss,
 }) => {
   const { user } = useAuthStore();
+  // Bumped after a check-in link is issued so the step ticks off.
+  const [refetchKey, setRefetchKey] = useState(0);
   const data = useLazyLoadQuery<QueryType>(
     SetupChecklistQuery,
     { tenantId, userUuid: user?.uuid ?? null },
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refetchKey },
   );
   const any = (c: { edges: ReadonlyArray<unknown> } | null | undefined) =>
     (c?.edges?.length ?? 0) > 0;
@@ -132,6 +135,9 @@ const Body: React.FC<{ tenantId: string; onDismiss: () => void }> = ({
               <Link to={s.to} className="text-sm underline shrink-0">
                 {s.action}
               </Link>
+            ) : null}
+            {!s.done && s.key === "hasCheckinLink" ? (
+              <IssueCheckinLinkButton tenantId={tenantId} onIssued={() => setRefetchKey((k) => k + 1)} />
             ) : null}
           </li>
         ))}
