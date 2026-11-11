@@ -6149,6 +6149,7 @@ type Query {
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   myReportSubscription(tenantId: ID = null): Boolean!
+  tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   programShareLink(tenantId: ID = null): ProgramShareLink!
   myNotificationPreferences: [NotificationPreferenceItem!]!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
@@ -7890,6 +7891,20 @@ type SetProgramShareEnabledResponse {
   enabled: Boolean!
   token: String
   clientMutationId: ID
+}
+
+type RecapFieldTotal {
+  label: String!
+  kind: String!
+  total: Float!
+  average: Float!
+  recaps: Int!
+  isPercent: Boolean!
+}
+
+type RecapFieldTotalSection {
+  section: String!
+  fields: [RecapFieldTotal!]!
 }
 
 input SetMyReportSubscriptionInput {
