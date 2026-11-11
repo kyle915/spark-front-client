@@ -16,6 +16,7 @@ import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import StandingCheckinLink from "./StandingCheckinLink";
+import CheckinIssuesCard from "./CheckinIssuesCard";
 import ClockLinks from "./ClockLinks";
 
 /**
@@ -429,6 +430,7 @@ export default function SparkWalkups() {
       {tab === "codes" ? (
         <Suspense fallback={null}>
           <StandingCheckinLink />
+          <CheckinIssuesCard />
         </Suspense>
       ) : tab === "clock" ? (
         <ClockLinks />

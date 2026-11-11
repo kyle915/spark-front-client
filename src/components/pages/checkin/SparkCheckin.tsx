@@ -1,4 +1,5 @@
 import { timedFetch } from "./timedFetch";
+import { reportFieldIssue } from "./fieldIssues";
 import CheckinStepBar from "./CheckinStepBar";
 import { checkinSteps } from "./checkinSteps";
 import MyShiftsCard from "./MyShiftsCard";
@@ -1009,6 +1010,13 @@ function CheckedInFlow({
       },
     });
     if (result === "rejected") {
+      reportFieldIssue({
+        origin: apiOrigin(),
+        code,
+        kind: "punch_not_saved",
+        detail: "queued clock-in refused",
+        session: token,
+      });
       setQueuedClock(readPendingClock(code));
       setLostPunch(readLostPunch(code));
       await onRefresh();
@@ -1041,6 +1049,13 @@ function CheckedInFlow({
       },
     });
     if (result === "rejected") {
+      reportFieldIssue({
+        origin: apiOrigin(),
+        code,
+        kind: "punch_not_saved",
+        detail: "queued clock-out refused",
+        session: token,
+      });
       setQueuedClockOut(readPendingClockOut(code));
       setLostPunch(readLostPunch(code));
     }
@@ -1263,7 +1278,16 @@ function CheckedInFlow({
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => void withCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-        () => void withCoords({}),
+        (geoErr) => {
+          reportFieldIssue({
+            origin: apiOrigin(),
+            code,
+            kind: geoErr?.code === 1 ? "gps_denied" : "gps_timeout",
+            detail: `clock ${kind}`,
+            session: token,
+          });
+          void withCoords({});
+        },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
       );
     } else {
