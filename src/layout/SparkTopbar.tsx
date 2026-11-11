@@ -423,6 +423,8 @@ export const SparkTopbar: React.FC = () => {
               >
                 Keyboard shortcuts
               </button>
+              {/* Staff only while light mode is being checked page by page. */}
+              {canToggleRole ? (
               <button
                 type="button"
                 role="menuitem"
@@ -440,6 +442,7 @@ export const SparkTopbar: React.FC = () => {
                   {readAppearance() === "light" ? "Light" : "Dark"}
                 </span>
               </button>
+              ) : null}
               <Suspense fallback={null}>
                 <PublicLinkMenuItem onDone={() => setMenuOpen(false)} />
               </Suspense>
