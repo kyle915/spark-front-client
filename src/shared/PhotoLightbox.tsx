@@ -9,11 +9,14 @@ export type PhotoLightboxItem = {
   caption?: string;
 };
 
+// The lightbox always sits on its own dark scrim, in either appearance, so
+// its colours are fixed light-on-dark. Theme tokens flip to dark ink in light
+// mode, which made the arrows and close button black-on-black.
 const C = {
-  text: "var(--spark-text, #f2f3ee)",
-  lime: "var(--spark-lime, #f2f3ee)",
-  border: "var(--spark-border, #1f2418)",
-  surface: "var(--spark-surface, #11140e)",
+  text: "#f2f3ee",
+  lime: "#f2f3ee",
+  border: "rgba(255,255,255,0.32)",
+  surface: "#11140e",
   muted: "rgba(255,255,255,0.55)",
   faint: "rgba(255,255,255,0.4)",
 } as const;
