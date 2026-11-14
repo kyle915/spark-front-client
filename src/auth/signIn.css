@@ -1,6 +1,7 @@
 /* Sign-in page. Its own fixed palette: this page renders before anyone is
    signed in, so it neither depends on nor writes the app's theme tokens.
-   Three layouts share the form; `?v=` picks one while the design is chosen. */
+   One quiet column: the Ignite mark up top, the Spark wordmark, a line on what
+   Spark is, and the form. */
 .signin-page {
   --si-bg: #f6f6f2;
   --si-surface: #ffffff;
@@ -104,7 +105,7 @@
 .signin-shift {
   font-size: 14px;
   color: var(--si-ink-2);
-  margin: 24px 0 0;
+  margin: 28px 0 0;
   padding-top: 16px;
   border-top: 1px solid var(--si-line);
 }
@@ -114,157 +115,54 @@
 .signin-mark { display: block; line-height: 0; }
 .signin-mark img, .signin-wordmark { max-width: 100%; }
 
-/* ---------- shared brand pieces ---------- */
-.signin-head {
-  font-family: var(--font-display, sans-serif);
-  font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -0.035em;
-  margin: 0;
-  text-wrap: balance;
+/* ---------- the page ---------- */
+.signin-page { display: flex; flex-direction: column; }
+.signin-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px clamp(20px, 4vw, 40px);
 }
-.signin-sub { margin: 16px 0 0; max-width: 40ch; font-size: 17px; line-height: 1.5; }
-.signin-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; margin: 0; }
+.signin-home { display: inline-flex; line-height: 0; border-radius: 4px; }
+/* The Ignite mark ships white-on-transparent; on this light page it is inked. */
+.signin-home img { height: 30px; width: auto; filter: brightness(0); }
+.signin-top-link { font-size: 14px; color: var(--si-ink-2); text-decoration: none; }
+.signin-top-link:hover { color: var(--si-ink); text-decoration: underline; text-underline-offset: 4px; }
+.signin-home:focus-visible,
+.signin-top-link:focus-visible { outline: 2px solid var(--si-ink); outline-offset: 4px; }
+
+.signin-col {
+  flex: 1;
+  width: 100%;
+  max-width: 448px;
+  margin: 0 auto;
+  padding: clamp(8px, 2vh, 32px) 24px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  animation: signin-rise 0.6s var(--si-ease) both;
+}
+.signin-mark { margin: 0 0 20px -6px; }
+.signin-about { margin: 0 0 28px; font-size: 17px; line-height: 1.5; color: var(--si-ink-2); max-width: 38ch; text-wrap: pretty; }
+.signin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 16px;
+  margin: 28px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--si-line);
+}
 .signin-stat dd {
   margin: 0;
   font-family: var(--font-display, sans-serif);
   font-weight: 700;
-  font-size: 28px;
+  font-size: 22px;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.signin-stat dt { font-size: 13px; margin-top: 2px; }
-
-/* The example run sheet. Rules, not boxes. */
-.signin-glimpse { font-size: 14px; border-top: 1px solid currentColor; }
-.signin-glimpse-head,
-.signin-glimpse-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; }
-.signin-glimpse-head { font-size: 13px; }
-.signin-glimpse-head span:first-child { font-weight: 600; }
-.signin-glimpse-where { display: flex; flex-direction: column; min-width: 0; }
-.signin-glimpse-store { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.signin-glimpse-place { font-size: 13px; }
-.signin-glimpse-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  animation: signin-state-in 0.45s var(--si-ease) both;
-}
-.signin-glimpse-state i { width: 8px; height: 8px; border-radius: 999px; border: 1.5px solid currentColor; opacity: 0.6; }
-.signin-glimpse-state.is-on_clock i,
-.signin-glimpse-state.is-recapped i { opacity: 1; background: currentColor; }
-@keyframes signin-state-in {
-  from { opacity: 0; clip-path: inset(0 100% 0 0); }
-  to { opacity: 1; clip-path: inset(0 0 0 0); }
-}
-
-/* =====================================================================
-   A. Poster: one near-black field. The wordmark is the page; sign-in is
-   a sheet of paper laid on it.
-   ===================================================================== */
-.signin-poster {
-  background: var(--si-dark);
-  color: var(--si-paper);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto;
-  gap: 32px;
-  padding: 28px 20px 24px;
-}
-.signin-poster .signin-wordmark { height: clamp(88px, 15vw, 210px); width: auto; display: block; }
-.signin-poster .signin-head { font-size: clamp(34px, 5.2vw, 76px); margin-top: clamp(20px, 3vw, 44px); max-width: 11ch; }
-.signin-poster .signin-sub { color: var(--si-paper-2); }
-.signin-poster-sheet {
-  background: var(--si-bg);
-  color: var(--si-ink);
-  border-radius: 14px;
-  padding: 28px 24px;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-}
-.signin-poster-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px 40px;
-  padding-top: 20px;
-  border-top: 1px solid var(--si-rule-dark);
-}
-.signin-poster-strip .signin-stats { flex: 1 1 360px; max-width: 560px; }
-.signin-poster-strip .signin-stat dt { color: var(--si-paper-3); }
-.signin-poster-strip .signin-foot { color: var(--si-paper-3); }
-@media (min-width: 1024px) {
-  .signin-poster {
-    grid-template-columns: minmax(0, 1.25fr) minmax(360px, 440px);
-    grid-template-rows: 1fr auto;
-    align-items: center;
-    column-gap: clamp(40px, 6vw, 96px);
-    padding: 44px clamp(40px, 5vw, 80px) 32px;
-  }
-  .signin-poster-brand { align-self: start; padding-top: 4px; }
-  .signin-poster-sheet { padding: 36px 34px; justify-self: end; }
-  .signin-poster-strip { grid-column: 1 / -1; }
-}
-.signin-poster-brand,
-.signin-poster-sheet { animation: signin-rise 0.7s var(--si-ease) both; }
-.signin-poster-sheet { animation-delay: 0.12s; }
-
-/* =====================================================================
-   B. Run sheet: a light page. Sign in on the left; on the right, what
-   Spark keeps track of, set like the day's run sheet.
-   ===================================================================== */
-.signin-runsheet { display: grid; grid-template-columns: minmax(0, 1fr); }
-.signin-runsheet-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 36px 24px 28px;
-  width: 100%;
-  max-width: 472px;
-  margin: 0 auto;
-}
-.signin-runsheet-form .signin-mark { margin-bottom: 40px; }
-.signin-runsheet-form .signin-foot { margin-top: 28px; }
-.signin-runsheet-sheet { display: none; }
-@media (min-width: 1024px) {
-  .signin-runsheet { grid-template-columns: minmax(420px, 0.9fr) minmax(0, 1.1fr); }
-  .signin-runsheet-form { justify-content: center; padding: 56px 48px; margin: 0 0 0 auto; }
-  .signin-runsheet-sheet {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 36px;
-    padding: 56px clamp(40px, 6vw, 96px);
-    border-left: 1px solid var(--si-line);
-    background: var(--si-surface);
-  }
-  .signin-runsheet-sheet .signin-head { font-size: clamp(40px, 4.4vw, 68px); max-width: 11ch; }
-  .signin-runsheet-sheet .signin-sub { color: var(--si-ink-2); }
-  .signin-runsheet-sheet .signin-glimpse { max-width: 520px; border-top-color: var(--si-ink); }
-  .signin-runsheet-sheet .signin-glimpse-row { border-top: 1px solid var(--si-line); }
-  .signin-runsheet-sheet .signin-glimpse-head span:last-child,
-  .signin-runsheet-sheet .signin-glimpse-place { color: var(--si-ink-3); }
-  .signin-runsheet-sheet .signin-glimpse-state { color: var(--si-ink-2); }
-  .signin-runsheet-sheet .signin-glimpse-state.is-on_clock,
-  .signin-runsheet-sheet .signin-glimpse-state.is-recapped { color: var(--si-ink); }
-  .signin-runsheet-sheet .signin-stats { max-width: 520px; padding-top: 20px; border-top: 1px solid var(--si-ink); }
-  .signin-runsheet-sheet .signin-stat dt { color: var(--si-ink-3); }
-}
-.signin-runsheet-form { animation: signin-rise 0.6s var(--si-ease) both; }
-
-/* =====================================================================
-   C. Quiet: the wordmark and the form. Nothing else.
-   ===================================================================== */
-.signin-quiet { display: grid; place-items: center; padding: 40px 24px; }
-.signin-quiet-col { width: 100%; max-width: 400px; display: flex; flex-direction: column; }
-.signin-quiet-col .signin-mark { margin: 0 0 44px -4px; }
-.signin-quiet-facts { margin: 28px 0 10px; font-size: 13px; color: var(--si-ink-3); }
-.signin-quiet-col { animation: signin-rise 0.6s var(--si-ease) both; }
+.signin-stat dt { font-size: 13px; color: var(--si-ink-3); margin-top: 2px; }
+.signin-page > .signin-foot { justify-content: center; padding: 0 24px 24px; }
 
 @keyframes signin-rise {
   from { opacity: 0; transform: translateY(12px); }

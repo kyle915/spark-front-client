@@ -7,9 +7,7 @@ import { requestMagicLink } from "@/auth/MagicLinkButton";
 import { SparkMark } from "@/recap/SparkMark";
 import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
-import SignInGlimpse from "./SignInGlimpse";
 import StatFigure from "./StatFigure";
-import { signInVariant } from "./signInVariant";
 import "./signIn.css";
 
 /**
@@ -80,7 +78,6 @@ const Login = () => {
     }
   };
 
-  const variant = signInVariant(window.location.search);
   const year = new Date().getFullYear();
 
   const form = (
@@ -203,72 +200,35 @@ const Login = () => {
     </dl>
   );
 
-  const pitch = (
-    <>
-      <h2 className="signin-head">Manage your field team.</h2>
-      <p className="signin-sub">
-        Live dashboards. GPS clock-ins. Auto-generated recaps. One platform, every
-        program.
-      </p>
-    </>
-  );
-
-  // One field of near-black: the wordmark is the page, sign-in is a sheet on it.
-  if (variant === "poster") {
-    return (
-      <div className="signin-page signin-poster">
-        <div className="signin-poster-brand">
-          <img className="signin-wordmark" src="/legal/spark-logo-white.png" alt="Spark by Ignite" />
-          <div>{pitch}</div>
-        </div>
-        <main className="signin-poster-sheet">
-          {form}
-          {shiftNote}
-        </main>
-        <div className="signin-poster-strip">
-          {stats}
-          {foot}
-        </div>
-      </div>
-    );
-  }
-
-  // A light page read like the day's run sheet: sign in on the left, what
-  // Spark tracks on the right, drawn with rules instead of boxes.
-  if (variant === "runsheet") {
-    return (
-      <div className="signin-page signin-runsheet">
-        <main className="signin-runsheet-form">
-          <span className="signin-mark">
-            <SparkMark height={64} />
-          </span>
-          {form}
-          {shiftNote}
-          {foot}
-        </main>
-        <aside className="signin-runsheet-sheet" aria-label="About Spark">
-          {pitch}
-          <SignInGlimpse />
-          {stats}
-        </aside>
-      </div>
-    );
-  }
-
-  // Nothing but the wordmark and the form.
   return (
-    <div className="signin-page signin-quiet">
-      <main className="signin-quiet-col">
+    <div className="signin-page">
+      <header className="signin-top">
+        <a
+          className="signin-home"
+          href="https://www.igniteproductions.co"
+          aria-label="Ignite Productions home"
+        >
+          <img src="/legal/ignite-full-white.png" alt="Ignite Productions" />
+        </a>
+        <a className="signin-top-link" href="https://www.igniteproductions.co">
+          igniteproductions.co
+        </a>
+      </header>
+
+      <main className="signin-col">
         <span className="signin-mark">
-          <SparkMark height={96} />
+          <SparkMark height={88} />
         </span>
+        <p className="signin-about">
+          Spark is where Ignite runs field marketing: staffing, live clock-ins, recaps
+          and photos, and reporting for every program.
+        </p>
         {form}
         {shiftNote}
-        <p className="signin-quiet-facts">
-          257K+ ambassadors. 50 states. 48-hour rush staffing.
-        </p>
-        {foot}
+        {stats}
       </main>
+
+      {foot}
     </div>
   );
 };
