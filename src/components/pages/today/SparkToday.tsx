@@ -370,8 +370,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                           }}
                         >
                           {p.freshnessMin === 0
-                            ? "JUST NOW"
-                            : `${p.freshnessMin} MIN AGO`}
+                            ? "Just now"
+                            : `${p.freshnessMin} min ago`}
                         </p>
                       </div>
                     </InfoWindow>
@@ -436,8 +436,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             }}
           >
             {pings.length > 0
-              ? `${pings.length} BA${pings.length === 1 ? "" : "S"} LIVE`
-              : "ON THE GROUND"}
+              ? `${pings.length} live now`
+              : "On the ground"}
           </span>
           <span
             className="inline-flex items-center gap-2 text-[11px]"
@@ -498,14 +498,14 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 className="mono text-xs ml-2"
                 style={{ color: "var(--spark-text-meta)" }}
               >
-                {shifts.length} EVENT{shifts.length === 1 ? "" : "S"}
+                {shifts.length} event{shifts.length === 1 ? "" : "s"}
               </span>
             </h3>
             <p
               className="mono text-[10px] mt-1"
               style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
             >
-              {clockSummary.clockedIn} CLOCKED IN · {clockSummary.clockedOut} OUT ·{" "}
+              {clockSummary.clockedIn} clocked in · {clockSummary.clockedOut} out ·{" "}
               <span
                 style={{
                   color:
@@ -514,7 +514,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       : "rgba(var(--spark-ink-rgb),0.55)",
                 }}
               >
-                {clockSummary.noShows} NO-SHOW{clockSummary.noShows === 1 ? "" : "S"}
+                {clockSummary.noShows} no-show{clockSummary.noShows === 1 ? "" : "s"}
               </span>
             </p>
           </div>
@@ -525,7 +525,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               className="mono text-[10px] shrink-0"
               style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
             >
-              ON THE CLOCK
+              On the Clock
             </button>
           ) : null}
         </div>
@@ -621,7 +621,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                               color: "var(--spark-lime)",
                             }}
                           >
-                            BA · {liveBaNames.join(", ")}
+                            {liveBaNames.join(", ")}
                           </p>
                         )}
                   </div>
@@ -649,9 +649,8 @@ export default function SparkToday() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl spark-fade-in">
+      <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
         <SparkPageHeader
-          eyebrow="LIVE · TODAY"
           title={isClient ? "Today's activations." : "Today, on the ground."}
           support="Every event on today's board, who is clocked in, clocked out, or a no-show, and their GPS. Punch edits stay on On the Clock."
         />

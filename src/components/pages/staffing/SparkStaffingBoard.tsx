@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
+import StaffingRoster from "./StaffingRoster";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassadorMutation";
@@ -250,6 +251,7 @@ const Inner: React.FC<{
   // makes the scope visible ("All clients" by default).
   const [brandFilter, setBrandFilter] = useState("");
   const [unstaffedOnly, setUnstaffedOnly] = useState(false);
+  const [view, setView] = useState<"venue" | "person">("venue");
   const [venueQuery, setVenueQuery] = useState("");
   const brands = useMemo(
     () =>
@@ -403,17 +405,18 @@ const Inner: React.FC<{
           }}
         >
           {unstaffed > 0
-            ? `${unstaffed} SHIFT${unstaffed === 1 ? "" : "S"} UNSTAFFED`
-            : "ALL SHIFTS STAFFED ✓"}
+            ? `${unstaffed} shift${unstaffed === 1 ? "" : "s"} unstaffed`
+            : "All shifts staffed"}
         </span>
         <span
           className="mono text-[11px]"
           style={{ color: "var(--spark-text-meta)", letterSpacing: "0.1em" }}
         >
-          {shifts.length} SHIFT{shifts.length === 1 ? "" : "S"}{" "}
-          {filtersActive ? `SHOWN · ${allShifts.length} THIS WEEK` : "THIS WEEK"}
+          {shifts.length} shift{shifts.length === 1 ? "" : "s"}{" "}
+          {filtersActive ? `shown · ${allShifts.length} this week` : "this week"}
         </span>
         <button
+          hidden={view === "person"}
           onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
           className="mono text-[11px] ml-auto rounded-full"
           style={{
@@ -424,11 +427,30 @@ const Inner: React.FC<{
             border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(var(--spark-accent-rgb),0.35)"}`,
           }}
         >
-          {bulkMode ? "✕ EXIT BULK" : "⊕ BULK ASSIGN"}
+          {bulkMode ? "Exit bulk assign" : "Bulk assign"}
         </button>
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <div className="spark-viewswitch" role="group" aria-label="Board view">
+          <button
+            type="button"
+            aria-pressed={view === "venue"}
+            onClick={() => setView("venue")}
+          >
+            By venue
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === "person"}
+            onClick={() => {
+              exitBulk();
+              setView("person");
+            }}
+          >
+            By person
+          </button>
+        </div>
         <select
           value={brandFilter}
           onChange={(e) => setBrandFilter(e.target.value)}
@@ -516,6 +538,17 @@ const Inner: React.FC<{
             ? "No shifts match these filters."
             : "No shifts scheduled this week."}
         </p>
+      ) : view === "person" ? (
+        <StaffingRoster
+          days={days}
+          shifts={shifts}
+          showBrand={!brandFilter}
+          venueOf={(s) => venueLabel(s.store, s.eventName)}
+          hoursOf={(s) =>
+            [fmtTime(s.startTime), fmtTime(s.endTime)].filter(Boolean).join("–")
+          }
+          onOpen={openAssign}
+        />
       ) : (
         <div className="overflow-x-auto">
           <div style={{ minWidth: 900, paddingBottom: bulkMode ? 72 : 0 }}>
@@ -531,7 +564,7 @@ const Inner: React.FC<{
                 className="mono text-[10px] px-3 py-2"
                 style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
               >
-                VENUE
+                Venue
               </div>
               {days.map((d) => (
                 <div
@@ -674,11 +707,11 @@ const Inner: React.FC<{
                             >
                               {bulkMode
                                 ? isSel
-                                  ? "✓ SELECTED"
-                                  : "SELECT"
+                                  ? "Selected"
+                                  : "Select"
                                 : s.assigned.length === 0
-                                  ? "+ ASSIGN"
-                                  : "+ ADD"}
+                                  ? "Assign"
+                                  : "Add"}
                             </button>
                             {!bulkMode && s.assigned.length === 0 ? (
                               <button
@@ -695,7 +728,7 @@ const Inner: React.FC<{
                                 }}
                                 title="Book the crew who worked this venue last time"
                               >
-                                {rebookingId === s.eventId ? "…" : "↻ LAST CREW"}
+                                {rebookingId === s.eventId ? "…" : "Last crew"}
                               </button>
                             ) : null}
                           </div>
@@ -802,13 +835,7 @@ export default function SparkStaffingBoard() {
   }, [weekStart]);
 
   return (
-    <div className="p-5 md:p-8">
-      <p
-        className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
-      >
-        WORKSPACE
-      </p>
+    <div className="p-5 md:p-8 spark-scale">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
         <div>
           <h1 className="display text-2xl font-bold">Staffing Board</h1>

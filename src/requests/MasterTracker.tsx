@@ -95,11 +95,11 @@ const STATUS_CHIP: Record<string, string> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  done: "DONE",
-  scheduled: "SCHEDULED",
-  approved: "APPROVED",
-  queue: "QUEUE FOR IGNITE",
-  pending: "PENDING",
+  done: "Done",
+  scheduled: "Scheduled",
+  approved: "Approved",
+  queue: "Queue for Ignite",
+  pending: "Pending",
 };
 
 // Friendly export labels for the two-value schedulingStatus metadata.
@@ -502,7 +502,7 @@ const TrackerTable: React.FC<{
             {visibleRows.map((r, rowIdx) => {
               const slug = r.statusSlug.toLowerCase();
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
-              const label = STATUS_LABEL[slug] ?? r.statusSlug.toUpperCase();
+              const label = STATUS_LABEL[slug] ?? r.statusSlug;
               const prev = rowIdx > 0 ? visibleRows[rowIdx - 1] : null;
               const thisDate = r.date.slice(0, 10);
               const showDateHeader =
@@ -521,7 +521,7 @@ const TrackerTable: React.FC<{
                     <div
                       className="px-3 py-1.5 mono spark-tracker-group"
                     >
-                      {groupHeading.toUpperCase()}
+                      {groupHeading}
                     </div>
                   ) : null}
                   <button
@@ -584,19 +584,19 @@ const TrackerTable: React.FC<{
               ) : null}
               <th className="spark-table-sticky-date">DATE</th>
               <th className="spark-table-sticky-bg" title="Requested demo / event window">
-                REQUESTED
+                Requested
               </th>
-              <th className="spark-table-sticky-bg">STATUS</th>
-              <th className="spark-table-sticky-bg">MARKET</th>
-              <th className="spark-table-sticky-bg">VENUE</th>
+              <th className="spark-table-sticky-bg">Status</th>
+              <th className="spark-table-sticky-bg">Market</th>
+              <th className="spark-table-sticky-bg">Venue</th>
               <th className="spark-table-sticky-bg spark-table-hide-sm">
-                ADDRESS
+                Address
               </th>
-              <th className="spark-table-sticky-bg">TYPE</th>
-              <th className="text-right spark-table-sticky-bg">CONSUMERS</th>
-              <th className="text-right spark-table-sticky-bg">1ST-TIME</th>
-              <th className="spark-table-sticky-bg">RECAP</th>
-              <th className="spark-table-sticky-bg">NOTES</th>
+              <th className="spark-table-sticky-bg">Type</th>
+              <th className="text-right spark-table-sticky-bg">Consumers</th>
+              <th className="text-right spark-table-sticky-bg">First-time</th>
+              <th className="spark-table-sticky-bg">Recap</th>
+              <th className="spark-table-sticky-bg">Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -631,14 +631,14 @@ const TrackerTable: React.FC<{
               const headerEl = showGroupHeader ? (
                 <tr key={`hdr-${rowIdx}`} className="spark-tracker-group-row">
                   <td colSpan={colCount} className="mono spark-tracker-group">
-                    {groupHeading.toUpperCase()}
+                    {groupHeading}
                   </td>
                 </tr>
               ) : null;
               const slug = r.statusSlug.toLowerCase();
               const isDone = slug === "done";
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
-              const label = STATUS_LABEL[slug] ?? r.statusSlug.toUpperCase();
+              const label = STATUS_LABEL[slug] ?? r.statusSlug;
               const isExpanded = expanded.has(r.uuid);
               const toggleExpand = (e: React.MouseEvent) => {
                 e.stopPropagation();
@@ -761,7 +761,7 @@ const TrackerTable: React.FC<{
                               opacity: approvingId === r.uuid ? 0.6 : 1,
                             }}
                           >
-                            {approvingId === r.uuid ? "APPROVING…" : "APPROVE"}
+                            {approvingId === r.uuid ? "Approving…" : "Approve"}
                           </button>
                         ))}
                     </div>
@@ -828,7 +828,7 @@ const TrackerTable: React.FC<{
                         style={{ display: "inline-flex" }}
                         title={r.openShiftsTooltip || "A booked shift was dropped and is open to claim"}
                       >
-                        ⚡ {r.openShiftsOpen} OPEN SHIFT{r.openShiftsOpen > 1 ? "S" : ""}
+                        {r.openShiftsOpen} open shift{r.openShiftsOpen > 1 ? "s" : ""}
                       </span>
                     ) : r.openShiftsTotal > 0 ? (
                       <span
@@ -878,7 +878,7 @@ const TrackerTable: React.FC<{
                         className="chip chip-lime chip-sm"
                         title={`${r.recapCount} recap${r.recapCount === 1 ? "" : "s"} submitted`}
                       >
-                        ● {r.recapCount} RECAP{r.recapCount === 1 ? "" : "S"}
+                        {r.recapCount} recap{r.recapCount === 1 ? "" : "s"}
                       </span>
                     ) : r.recapStatus === "due" ? (
                       <span className="chip chip-orange chip-sm" title="Activation scheduled, no recap filed yet">
@@ -1518,7 +1518,7 @@ const MasterTrackerInner: React.FC<{
             className="mono text-[10px]"
             style={{ letterSpacing: "0.16em", color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))" }}
           >
-            {loadingMore ? "LOADING MORE…" : "SCROLL FOR MORE"}
+            {loadingMore ? "Loading more…" : "Scroll for more"}
           </p>
         </div>
       )}
@@ -2003,11 +2003,10 @@ export default function MasterTracker() {
 
   return (
     <Layout>
-      <div className="spark-page spark-page-wide spark-tracker-page spark-fade-in">
+      <div className="spark-page spark-page-wide spark-tracker-page spark-fade-in spark-scale">
         <SparkPageHeader
           className="spark-tracker-header"
           titleClassName="text-3xl md:text-4xl font-bold"
-          eyebrow={isClient ? "YOUR EVENTS" : "ALL EVENTS · ONE TABLE"}
           title={isClient ? "My requests." : "Master tracker."}
           support={
             isClient
@@ -2091,7 +2090,7 @@ export default function MasterTracker() {
 
         <div className="sticky top-0 z-20 flex flex-col spark-sticky-filters spark-tracker-filters">
         <SparkFilterBar
-          label="STATUS"
+          label="Status"
           search={
             <input
               value={search}
@@ -2166,9 +2165,9 @@ export default function MasterTracker() {
           })}
         </SparkFilterBar>
 
-        <SparkFilterBar label="REFINE">
+        <SparkFilterBar label="Refine">
           <FilterSelect
-            label="WHEN"
+            label="When"
             value={dateRange}
             onChange={(v) => updateDateRangeFilter(v as TrackerDateRange)}
             options={[
@@ -2190,7 +2189,7 @@ export default function MasterTracker() {
             ]}
           />
           <FilterSelect
-            label="MARKET"
+            label="Market"
             value={marketFilter}
             onChange={updateMarketFilter}
             options={[
@@ -2204,7 +2203,7 @@ export default function MasterTracker() {
             onChange={setPlanFilter}
           />
           <FilterSelect
-            label="STAFFING"
+            label="Staffing"
             value={schedulingFilter}
             onChange={setSchedulingFilter}
             options={[
@@ -2216,7 +2215,7 @@ export default function MasterTracker() {
             ]}
           />
           <FilterSelect
-            label="SORT"
+            label="Sort"
             value={sortMode}
             onChange={(v) =>
               setSortMode(v as "date-desc" | "date-asc" | "venue" | "status")
@@ -2291,7 +2290,7 @@ export default function MasterTracker() {
                   color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
                 }}
               >
-                {torchProgram ? "PLANS" : "ALL PLANS"}
+                {torchProgram ? "Plans" : "All plans"}
               </Link>
               <button
                 type="button"
@@ -2311,7 +2310,7 @@ export default function MasterTracker() {
         {/* Totals strip — shadcn-admin-style KPI lockup under filters */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 spark-tracker-kpis">
           <div className="spark-card p-3">
-            <p className="label-mini">SCHEDULED</p>
+            <p className="label-mini">Scheduled</p>
             <p
               className="tab-num text-2xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
@@ -2333,7 +2332,7 @@ export default function MasterTracker() {
             </p>
           </div>
           <div className="spark-card p-3">
-            <p className="label-mini">CONSUMERS</p>
+            <p className="label-mini">Consumers</p>
             <p className="tab-num text-2xl font-bold mt-1">
               {tenantId ? (
                 <Suspense
@@ -2357,7 +2356,7 @@ export default function MasterTracker() {
             </p>
           </div>
           <div className="spark-card p-3">
-            <p className="label-mini">FIRST-TIME</p>
+            <p className="label-mini">First-time</p>
             <p className="tab-num text-2xl font-bold mt-1">
               {tenantId ? (
                 <Suspense
@@ -2381,7 +2380,7 @@ export default function MasterTracker() {
             </p>
           </div>
           <div className="spark-card p-3">
-            <p className="label-mini">PRODUCTS PURCHASED</p>
+            <p className="label-mini">Products purchased</p>
             <p className="tab-num text-2xl font-bold mt-1">
               {tenantId ? (
                 <Suspense
