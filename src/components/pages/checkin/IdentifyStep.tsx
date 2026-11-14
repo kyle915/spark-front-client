@@ -4,7 +4,13 @@ import {
   useState,
 } from "react";
 import { reportFieldIssue } from "./fieldIssues";
-import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
+import {
+  looksLikeAddress,
+  matchingStores,
+  newLocationNote,
+  storeNameForPicker,
+  type StoreSuggestion,
+} from "./storeSuggestions";
 import {
   decideStoreProximity,
   geocodeStoreAddress,
@@ -98,9 +104,14 @@ import {
 function CheckinStoreSuggestions({
   hits,
   onPick,
+  typed,
+  onKeepTyped,
 }: {
   hits: StoreSuggestion[];
   onPick: (store: StoreSuggestion) => void;
+  /** What the person typed; with `onKeepTyped`, offered as "not listed". */
+  typed?: string;
+  onKeepTyped?: () => void;
 }) {
   if (hits.length === 0) return null;
   return (
@@ -144,6 +155,33 @@ function CheckinStoreSuggestions({
           </button>
         );
       })}
+      {/* The list is a shortcut, never the only way in. */}
+      {typed && onKeepTyped && looksLikeAddress(typed) ? (
+        <button
+          type="button"
+          role="option"
+          aria-selected={false}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            onKeepTyped();
+          }}
+          style={{
+            display: "block",
+            width: "100%",
+            textAlign: "left",
+            padding: "10px 12px",
+            background: "#fafaf9",
+            border: 0,
+            borderTop: "1px solid rgba(0,0,0,0.06)",
+            cursor: "pointer",
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#14181a" }}>
+            Not listed. Use what I typed
+          </div>
+          <div style={{ color: "#44403c", fontSize: 12, marginTop: 2 }}>{typed.trim()}</div>
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -980,7 +1018,7 @@ export default function IdentifyStep({
           <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
             {atVenue
               ? "Use the venue's address — anyone else working this event today lands on the same one."
-              : "Type the store name or address. Picking it from the list keeps you on the same event as anyone else working there today."}
+              : "Type the store's name or address. If it shows in the list, tap it. If it doesn't, type the full address and continue: new locations are fine."}
           </p>
           <input
             style={input}
@@ -996,7 +1034,17 @@ export default function IdentifyStep({
             }}
           />
           {storeSuggestField === "address" ? (
-            <CheckinStoreSuggestions hits={addressHits} onPick={chooseStore} />
+            <CheckinStoreSuggestions
+              hits={addressHits}
+              onPick={chooseStore}
+              typed={address}
+              onKeepTyped={() => setStoreSuggestField(null)}
+            />
+          ) : null}
+          {newLocationNote(address, addressHits) ? (
+            <p style={{ color: "#3f5c12", fontSize: 13, margin: "6px 0 10px" }}>
+              {newLocationNote(address, addressHits)}
+            </p>
           ) : null}
           {/* The phone already knows where it is — typing a street address
               one-handed in a parking lot is the worst part of this form. */}
