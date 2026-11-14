@@ -772,8 +772,8 @@ const Inner: React.FC<{
                       key={p.uuid}
                       className={
                         idx % 2 === 1
-                          ? "transition-colors bg-white/[0.04] hover:bg-white/[0.09]"
-                          : "transition-colors hover:bg-white/[0.09]"
+                          ? "transition-colors spark-zebra spark-row-hover"
+                          : "transition-colors spark-row-hover"
                       }
                       style={{ borderBottom: "1px solid var(--spark-border)" }}
                     >
@@ -1712,7 +1712,7 @@ const BulkResults: React.FC<{
   const pillFor = (status: string) => {
     switch (status) {
       case "invited":
-        return { label: "INVITED", bg: "var(--spark-lime)", fg: "#0a0d09" };
+        return { label: "INVITED", bg: "var(--spark-lime)", fg: "var(--spark-on-accent)" };
       case "existing":
         return { label: "LINKED", bg: "rgba(59,123,219,0.2)", fg: "#7db3ff" };
       case "invalid":

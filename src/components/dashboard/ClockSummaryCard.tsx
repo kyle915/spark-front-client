@@ -54,9 +54,7 @@ const fmtClock = (iso: string | null | undefined): string => {
 };
 
 const label: React.CSSProperties = {
-  fontSize: 11,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
+  fontSize: 12,
   color: "var(--spark-text-meta)",
 };
 const muted = "rgba(var(--spark-ink-rgb),0.55)";

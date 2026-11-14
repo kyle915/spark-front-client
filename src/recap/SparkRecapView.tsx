@@ -62,6 +62,8 @@ import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generat
 import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
 import type { CreateProductMutation as CreateProductMutationType } from "@/api/mutations/__generated__/CreateProductMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
+import useBaLabel from "@/hooks/useBaLabel";
+import { fmtRecapTime as fmtTime } from "./fmtRecapTime";
 import RateBaControl from "@/components/RateBaControl";
 import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh, recapVideoPlayUrl } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
@@ -120,15 +122,6 @@ const fmtDate = (raw: string | null | undefined) => {
   } catch {
     return raw;
   }
-};
-
-const fmtTime = (raw: string | null | undefined) => {
-  if (!raw) return "";
-  const [h, m] = raw.split(":");
-  const hh = parseInt(h ?? "0", 10);
-  const ampm = hh >= 12 ? "PM" : "AM";
-  const h12 = ((hh + 11) % 12) + 1;
-  return m && m !== "00" ? `${h12}:${m} ${ampm}` : `${h12} ${ampm}`;
 };
 
 const initials = (full: string) =>
@@ -455,6 +448,8 @@ const SparkRecapInner: React.FC<{
   const [commitDelete, isDeleting] =
     useMutation<DeleteRecapMutationType>(DeleteRecapMutation);
   const { isAdmin, isClient } = useSparkRole();
+  // Brand clients see "First L." — never an ambassador's full name.
+  const baLabel = useBaLabel();
   const environment = useRelayEnvironment();
   const { tenantId: authTenantId } = useAuthStore();
   const [isZipping, setIsZipping] = useState(false);
@@ -2443,8 +2438,10 @@ const SparkRecapInner: React.FC<{
                     color: "var(--recap-muted, #5c6154)",
                   }}
                 >
-                  — {ambassadors[0].user.firstName?.toUpperCase() ?? ""}{" "}
-                  {ambassadors[0].user.lastName?.toUpperCase() ?? ""}
+                  —{" "}
+                  {baLabel(
+                    `${ambassadors[0].user.firstName ?? ""} ${ambassadors[0].user.lastName ?? ""}`.trim(),
+                  ).toUpperCase()}
                 </p>
               ) : recap.externalBaName ? (
                 <p
@@ -2454,7 +2451,7 @@ const SparkRecapInner: React.FC<{
                     color: "var(--recap-muted, #5c6154)",
                   }}
                 >
-                  — {recap.externalBaName.toUpperCase()} (EXTERNAL)
+                  — {baLabel(recap.externalBaName).toUpperCase()} (EXTERNAL)
                 </p>
               ) : null}
             </div>
@@ -2482,11 +2479,11 @@ const SparkRecapInner: React.FC<{
                     opacity: 0.55,
                   }}
                 >
-                  {initials(recap.externalBaName)}
+                  {initials(baLabel(recap.externalBaName))}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">
-                    {recap.externalBaName}
+                    {baLabel(recap.externalBaName)}
                   </p>
                   <p
                     className="mono text-[10px] mt-0.5 inline-block px-1.5 py-0.5 rounded"
@@ -2510,7 +2507,9 @@ const SparkRecapInner: React.FC<{
               </p>
             ) : (
               ambassadors.map((a) => {
-                const fullName = `${a?.user?.firstName ?? ""} ${a?.user?.lastName ?? ""}`.trim();
+                const fullName = baLabel(
+                  `${a?.user?.firstName ?? ""} ${a?.user?.lastName ?? ""}`.trim(),
+                );
                 const baId = a?.id ?? "";
                 const overridden = baId ? ratingOverrides[baId] : undefined;
                 const shownRating =

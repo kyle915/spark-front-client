@@ -168,7 +168,8 @@ export default function FormDatePicker<T extends FieldValues>({
                     e.stopPropagation();
                     field.onChange("");
                   }}
-                  className="rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                  className="rounded-md p-1 transition-colors spark-row-hover"
+                  style={{ color: "var(--spark-text-meta, rgba(255,255,255,0.5))" }}
                 >
                   <XMarkIcon className="w-4 h-4" />
                 </button>
@@ -240,7 +241,8 @@ export default function FormDatePicker<T extends FieldValues>({
             <div className="mt-2 flex justify-between border-t border-white/10 pt-2">
               <button
                 type="button"
-                className="rounded-lg px-2 py-1 text-sm text-white/70 hover:bg-white/5 hover:text-white"
+                className="rounded-lg px-2 py-1 text-sm spark-row-hover"
+                style={{ color: "var(--spark-text-secondary, rgba(255,255,255,0.7))" }}
                 onClick={() => {
                   const minimumDate = getMinimumDate();
                   const targetDate = minimumDate ?? new Date();

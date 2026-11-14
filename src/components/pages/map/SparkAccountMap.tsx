@@ -818,7 +818,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                         <div
                           style={{
                             fontFamily: "Space Grotesk, sans-serif",
-                            color: "var(--spark-on-accent)",
+                            color: "#14160f",
                             minWidth: 240,
                             maxWidth: 280,
                           }}
@@ -918,7 +918,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                               }}
                               style={{
                                 background: "#f2f3ee",
-                                color: "var(--spark-on-accent)",
+                                color: "#14160f",
                                 border: "none",
                                 padding: "10px 14px",
                                 borderRadius: 10,
@@ -947,9 +947,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 style={{
                                   flex: 1,
                                   background: "transparent",
-                                  color: "var(--spark-on-accent)",
+                                  color: "#14160f",
                                   border:
-                                    "1px solid rgba(var(--spark-bg-rgb),0.2)",
+                                    "1px solid rgba(20,22,15,0.2)",
                                   padding: "6px 8px",
                                   borderRadius: 8,
                                   fontFamily:
@@ -971,9 +971,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 rel="noreferrer"
                                 style={{
                                   background: "transparent",
-                                  color: "var(--spark-on-accent)",
+                                  color: "#14160f",
                                   border:
-                                    "1px solid rgba(var(--spark-bg-rgb),0.2)",
+                                    "1px solid rgba(20,22,15,0.2)",
                                   padding: "6px 10px",
                                   borderRadius: 8,
                                   fontFamily:

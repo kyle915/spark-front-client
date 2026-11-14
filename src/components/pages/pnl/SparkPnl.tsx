@@ -36,7 +36,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 8,
   background: "rgba(var(--spark-ink-rgb),0.04)",
   border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
-  color: "#fff",
+  color: "var(--spark-text)",
   colorScheme: "dark",
 };
 

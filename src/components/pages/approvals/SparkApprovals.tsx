@@ -159,8 +159,8 @@ const ApprovalRow: React.FC<{
           : focused
             ? "cursor-pointer transition-colors bg-[rgba(95,184,239,0.08)]"
             : zebra
-              ? "cursor-pointer transition-colors bg-white/[0.035] hover:bg-white/[0.08]"
-              : "cursor-pointer transition-colors hover:bg-white/[0.08]"
+              ? "cursor-pointer transition-colors spark-zebra spark-row-hover"
+              : "cursor-pointer transition-colors spark-row-hover"
       }
       style={{
         borderBottom: "1px solid var(--spark-border)",

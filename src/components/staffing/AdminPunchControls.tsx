@@ -207,7 +207,7 @@ const AdminPunchControls: React.FC<Props> = ({
           style={{
             background: "rgba(var(--spark-ink-rgb),0.06)",
             border: "1px solid var(--spark-border)",
-            color: "#fff",
+            color: "var(--spark-text)",
           }}
         />
         <input
@@ -219,7 +219,7 @@ const AdminPunchControls: React.FC<Props> = ({
           style={{
             background: "rgba(var(--spark-ink-rgb),0.06)",
             border: "1px solid var(--spark-border)",
-            color: "#fff",
+            color: "var(--spark-text)",
           }}
         />
         <div className="flex gap-1.5">

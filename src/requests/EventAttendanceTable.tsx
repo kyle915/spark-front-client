@@ -43,7 +43,7 @@ const Cell: React.FC<{
   const href = mapsHref(coords);
   return (
     <span>
-      <span style={{ color: label === "—" ? "rgba(var(--spark-ink-rgb),0.35)" : "#fff" }}>
+      <span style={{ color: label === "—" ? "rgba(var(--spark-ink-rgb),0.35)" : "var(--spark-text)" }}>
         {label}
       </span>
       {href && (

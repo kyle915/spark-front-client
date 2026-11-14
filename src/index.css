@@ -980,6 +980,17 @@ thead .spark-table-sticky-date {
   }
 }
 
+/* Table zebra stripe + row hover that read in both appearances. The ink
+   channel flips (white in dark, near-black in light), where Tailwind's
+   bg-white/[…] washes vanished on a light surface. The white fallback keeps
+   the old look on public pages that never load the Spark tokens. */
+.spark-zebra {
+  background: rgba(var(--spark-ink-rgb, 255, 255, 255), 0.025);
+}
+.spark-row-hover:hover {
+  background: rgba(var(--spark-ink-rgb, 255, 255, 255), 0.06);
+}
+
 /* iOS Settings-style grouped inset — Recaps compact + Jump groups */
 .spark-inset-label {
   font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
@@ -1334,6 +1345,11 @@ thead .spark-table-sticky-date {
   letter-spacing: 0;
   text-transform: none;
   color: var(--spark-text-meta);
+}
+.spark-scale .spark-inset-label {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .spark-scale .chip {
   font-size: 12px;

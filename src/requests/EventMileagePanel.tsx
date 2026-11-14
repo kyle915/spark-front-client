@@ -116,7 +116,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
             style={{
               background: "rgba(var(--spark-ink-rgb),0.05)",
               border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
-              color: "#fff",
+              color: "var(--spark-text)",
             }}
           />
           <span style={{ color: "var(--spark-text-meta)", fontSize: 12 }}>
@@ -131,7 +131,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               style={{
                 background: "rgba(var(--spark-ink-rgb),0.08)",
                 border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
-                color: "#fff",
+                color: "var(--spark-text)",
                 opacity: saving ? 0.6 : 1,
               }}
             >

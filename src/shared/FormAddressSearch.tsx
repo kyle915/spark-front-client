@@ -139,7 +139,7 @@ const FormAddressSearch = <T extends FieldValues>({
               <button
                 key={`${result.lat}-${result.lng}-${idx}`}
                 type="button"
-                className="w-full px-4 py-2 text-left hover:bg-white/5"
+                className="w-full px-4 py-2 text-left spark-row-hover"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(result)}
               >

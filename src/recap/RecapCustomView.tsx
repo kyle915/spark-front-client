@@ -115,6 +115,7 @@ import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import useSparkRole from "@/hooks/useSparkRole";
+import useBaLabel from "@/hooks/useBaLabel";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
 import { RecapDocument } from "@/recap/RecapDocument";
@@ -497,6 +498,8 @@ const RecapCustomViewInner = ({
   const { uuid } = useParams();
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
+  // Brand clients see "First L." — never an ambassador's full name.
+  const baLabel = useBaLabel();
   const environment = useRelayEnvironment();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -2032,8 +2035,14 @@ const RecapCustomViewInner = ({
                       </div>
                       <div>
                         <p className="font-medium">
-                          {recap.ambassador?.user?.firstName}{" "}
-                          {recap.ambassador?.user?.lastName}
+                          {baLabel(
+                            [
+                              recap.ambassador?.user?.firstName,
+                              recap.ambassador?.user?.lastName,
+                            ]
+                              .filter(Boolean)
+                              .join(" "),
+                          )}
                         </p>
                         <p className="text-sm" style={muted}>
                           {recap.isThirdParty
@@ -2051,7 +2060,7 @@ const RecapCustomViewInner = ({
                         {recap.externalBaName[0]}
                       </div>
                       <div>
-                        <p className="font-medium">{recap.externalBaName}</p>
+                        <p className="font-medium">{baLabel(recap.externalBaName)}</p>
                         <p className="text-sm" style={muted}>
                           {recap.isThirdParty
                             ? "3rd-party agency"

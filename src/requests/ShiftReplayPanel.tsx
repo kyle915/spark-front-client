@@ -296,7 +296,7 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
                 <div
                   style={{
                     fontFamily: "Space Grotesk, sans-serif",
-                    color: "var(--spark-on-accent)",
+                    color: "#14160f",
                     minWidth: 160,
                   }}
                 >

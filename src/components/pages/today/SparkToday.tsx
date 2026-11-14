@@ -351,7 +351,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       <div
                         style={{
                           fontFamily: "Space Grotesk, sans-serif",
-                          color: "var(--spark-on-accent)",
+                          color: "#14160f",
                           minWidth: 180,
                         }}
                       >
@@ -361,12 +361,10 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                         </p>
                         <p
                           style={{
-                            fontSize: 10,
+                            fontSize: 12,
                             fontFamily: "JetBrains Mono, monospace",
-                            letterSpacing: "0.14em",
                             opacity: 0.7,
                             marginTop: 4,
-                            textTransform: "uppercase",
                           }}
                         >
                           {p.freshnessMin === 0
@@ -389,7 +387,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       <div
                         style={{
                           fontFamily: "Space Grotesk, sans-serif",
-                          color: "var(--spark-on-accent)",
+                          color: "#14160f",
                           minWidth: 180,
                         }}
                       >
@@ -400,12 +398,10 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                         </p>
                         <p
                           style={{
-                            fontSize: 10,
+                            fontSize: 12,
                             fontFamily: "JetBrains Mono, monospace",
-                            letterSpacing: "0.14em",
                             opacity: 0.7,
                             marginTop: 4,
-                            textTransform: "uppercase",
                           }}
                         >
                           {s.startTime} – {s.endTime}

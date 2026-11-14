@@ -680,7 +680,7 @@ const Inner: React.FC<{
                                 padding: "3px 0",
                                 color: bulkMode
                                   ? isSel
-                                    ? "#0a0d09"
+                                    ? "var(--spark-on-accent)"
                                     : "var(--spark-lime)"
                                   : s.isStaffed
                                     ? "rgba(var(--spark-ink-rgb),0.55)"

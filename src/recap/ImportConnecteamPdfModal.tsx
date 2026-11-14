@@ -569,9 +569,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     style={{
                       padding: "8px 10px",
                       borderRadius: 8,
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#fff",
+                      background: "rgba(var(--spark-ink-rgb),0.04)",
+                      border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                      color: "var(--spark-text)",
                     }}
                   />
                   {eventId && (
@@ -584,8 +584,8 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                       }}
                       className="text-xs px-2 py-1 rounded"
                       style={{
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.18)",
+                        background: "rgba(var(--spark-ink-rgb),0.06)",
+                        border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                         color: "var(--spark-text-secondary)",
                       }}
                     >
@@ -599,7 +599,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     className="mt-2 rounded-lg overflow-y-auto transition-opacity"
                     style={{
                       maxHeight: 220,
-                      border: "1px solid rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(var(--spark-ink-rgb),0.08)",
                       opacity: isSearchStale ? 0.5 : 1,
                     }}
                   >
@@ -642,10 +642,10 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                               setTitle((t) => (t.trim() ? t : picked));
                               setSearch(picked);
                             }}
-                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition hover:bg-white/5"
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition spark-row-hover"
                             style={{
                               background: "transparent",
-                              borderBottom: "1px solid rgba(255,255,255,0.04)",
+                              borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.04)",
                             }}
                           >
                             <span className="min-w-0">
@@ -709,7 +709,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                         setShowCreate(true);
                         if (!cName) setCName(search.trim());
                       }}
-                      className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm transition hover:bg-white/5"
+                      className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm transition spark-row-hover"
                       style={{
                         border: "1px dashed rgba(242,243,238,0.4)",
                         color: "var(--spark-lime, #f2f3ee)",
@@ -741,9 +741,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                         style={{
                           padding: "8px 10px",
                           borderRadius: 8,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          color: "#fff",
+                          background: "rgba(var(--spark-ink-rgb),0.04)",
+                          border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                          color: "var(--spark-text)",
                         }}
                       />
                       <div className="grid grid-cols-2 gap-2">
@@ -754,9 +754,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                             colorScheme: "dark",
                           }}
                         />
@@ -767,9 +767,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                           }}
                         />
                       </div>
@@ -781,9 +781,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                             colorScheme: "dark",
                           }}
                         />
@@ -794,9 +794,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                             colorScheme: "dark",
                           }}
                         />
@@ -808,9 +808,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                           }}
                         >
                           {timezones.map((t) => (
@@ -830,9 +830,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                           }}
                         >
                           {eventTypes.map((t) => (
@@ -861,9 +861,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{
                             padding: "8px 10px",
                             borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.12)",
-                            color: "#fff",
+                            background: "rgba(var(--spark-ink-rgb),0.04)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                            color: "var(--spark-text)",
                           }}
                         >
                           {requestTypes.map((t) => (
@@ -888,7 +888,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           className="px-3 py-1.5 rounded-lg text-xs"
                           style={{
                             background: "transparent",
-                            border: "1px solid rgba(255,255,255,0.18)",
+                            border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                             color: "var(--spark-text-secondary)",
                           }}
                           onClick={() => setShowCreate(false)}
@@ -901,7 +901,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
                           style={{
                             background: "var(--spark-lime, #f2f3ee)",
-                            color: "#0a0d09",
+                            color: "var(--spark-on-accent)",
                           }}
                           onClick={onCreateEvent}
                         >
@@ -932,11 +932,11 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                   style={{
                     padding: "8px 10px",
                     borderRadius: 8,
-                    background: "rgba(255,255,255,0.04)",
+                    background: "rgba(var(--spark-ink-rgb),0.04)",
                     border: templateId
                       ? "1px solid rgba(242,243,238,0.4)"
                       : "1px solid rgba(255,200,80,0.5)",
-                    color: "#fff",
+                    color: "var(--spark-text)",
                   }}
                 >
                   <option value="">— Select client template —</option>
@@ -1023,9 +1023,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                   style={{
                     padding: "8px 10px",
                     borderRadius: 8,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
+                    background: "rgba(var(--spark-ink-rgb),0.04)",
+                    border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+                    color: "var(--spark-text)",
                   }}
                 />
               </div>
@@ -1041,7 +1041,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
             className="px-4 py-2 rounded-lg text-sm"
             style={{
               background: "transparent",
-              border: "1px solid rgba(255,255,255,0.18)",
+              border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
               color: "var(--spark-text-secondary)",
             }}
             onClick={onClose}
@@ -1060,7 +1060,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
             }
             style={{
               background: "var(--spark-lime, #f2f3ee)",
-              color: "#0a0d09",
+              color: "var(--spark-on-accent)",
             }}
             onClick={onSubmit}
           >
