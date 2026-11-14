@@ -748,6 +748,11 @@ export default function IdentifyStep({
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
       </div>
       <input style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone"} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+      {recapOnly ? null : (
+        <p style={{ fontSize: 12, lineHeight: 1.4, margin: "-2px 0 0", color: "var(--spark-text-meta)" }}>
+          Ignite may text this number about your shift and recap. Reply STOP to opt out.
+        </p>
+      )}
       <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
       {openShift ? (
