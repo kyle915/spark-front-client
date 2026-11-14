@@ -31,21 +31,30 @@
 }
 .signin-form {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  background: var(--si-surface);
+  border: 1px solid var(--si-line);
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 1px 2px rgba(20, 22, 15, 0.04), 0 12px 32px rgba(20, 22, 15, 0.06);
 }
-.signin-mark { align-self: flex-start; line-height: 0; }
+@media (max-width: 480px) {
+  .signin-form { padding: 24px 20px; }
+}
+.signin-mark { line-height: 0; margin-bottom: 28px; }
+.signin-mark img { max-width: 78vw; }
 .signin-title {
   font-family: var(--font-display, sans-serif);
   font-weight: 700;
-  font-size: 30px;
+  font-size: 28px;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  margin: 20px 0 4px;
+  margin: 0;
 }
-.signin-lede { font-size: 15px; color: var(--si-ink-2); margin: 0 0 8px; }
+.signin-lede { font-size: 15px; color: var(--si-ink-2); margin: -8px 0 4px; }
 
 .signin-field { display: flex; flex-direction: column; gap: 6px; }
 .signin-label { font-size: 14px; font-weight: 600; }
@@ -56,7 +65,7 @@
   padding: 0 14px;
   font-size: 16px; /* 16px stops iOS zooming the page on focus */
   color: var(--si-ink);
-  background: var(--si-surface);
+  background: var(--si-bg);
   border: 1px solid var(--si-line);
   border-radius: 8px;
 }
@@ -107,10 +116,20 @@
   font-size: 14px;
   line-height: 1.5;
   color: var(--si-ink-2);
-  background: var(--si-surface);
+  background: var(--si-bg);
   border: 1px solid var(--si-line);
   border-radius: 8px;
   padding: 12px 14px;
+  margin: 0;
+}
+.signin-shift {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 16px;
+  background: transparent;
+  border: 0;
+  padding: 0 4px;
+  text-align: center;
 }
 .signin-note strong { color: var(--si-ink); }
 .signin-error { font-size: 14px; color: var(--si-flag); }
@@ -141,12 +160,12 @@
 @media (min-width: 1024px) {
   .signin-brand { display: flex; }
 }
-.signin-brand-logo { height: 40px; width: auto; align-self: flex-start; }
+.signin-brand-logo { height: clamp(72px, 9vw, 132px); width: auto; align-self: flex-start; }
 .signin-brand-kicker { font-size: 14px; color: rgba(242, 243, 238, 0.66); margin: 0 0 14px; }
 .signin-brand-head {
   font-family: var(--font-display, sans-serif);
   font-weight: 700;
-  font-size: clamp(36px, 3.6vw, 56px);
+  font-size: clamp(40px, 4.4vw, 68px);
   line-height: 1.04;
   letter-spacing: -0.03em;
   margin: 0;
@@ -186,3 +205,9 @@
 }
 .signin-brand-foot img { height: 20px; width: auto; }
 .signin-brand-by { display: flex; align-items: center; gap: 10px; }
+
+/* Beside the brand panel the wordmark is already large on the dark side;
+   two of them next to each other would be one too many. */
+@media (min-width: 1024px) {
+  .signin-mark { display: none; }
+}

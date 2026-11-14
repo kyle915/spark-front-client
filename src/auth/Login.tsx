@@ -80,11 +80,12 @@ const Login = () => {
   return (
     <div className="signin-page">
       <main className="signin-form-side">
+        <span className="signin-mark">
+          <SparkMark height={84} />
+        </span>
         <form className="signin-form" onSubmit={submit} noValidate>
-          <span className="signin-mark">
-            <SparkMark height={28} />
-          </span>
           <h1 className="signin-title">Sign in</h1>
+          <p className="signin-lede">Enter your email and we will send you a link.</p>
 
           {sentTo ? (
             <>
@@ -170,11 +171,11 @@ const Login = () => {
             </>
           )}
 
-          <p className="signin-note">
-            <strong>Working a shift?</strong> You do not need to sign in. Use the
-            check-in link from your text or email.
-          </p>
         </form>
+        <p className="signin-note signin-shift">
+          <strong>Working a shift?</strong> You do not need to sign in. Use the
+          check-in link from your text or email.
+        </p>
 
         <footer className="signin-foot">
           <span>© {new Date().getFullYear()} Ignite Productions LLC</span>
@@ -184,7 +185,7 @@ const Login = () => {
       </main>
 
       <aside className="signin-brand" aria-label="About Spark">
-        <img className="signin-brand-logo" src="/legal/spark-logo-full.png" alt="Spark by Ignite" />
+        <img className="signin-brand-logo" src="/legal/spark-logo-white.png" alt="" />
         <div>
           <p className="signin-brand-kicker">The command center for field marketing</p>
           <h2 className="signin-brand-head">Manage your field team.</h2>
