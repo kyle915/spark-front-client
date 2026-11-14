@@ -90,9 +90,8 @@ function DashboardInner() {
     : "";
 
   return (
-    <div className="space-y-5 lg:space-y-6 max-w-7xl">
+    <div className="space-y-5 lg:space-y-6 max-w-7xl spark-scale">
       <SparkPageHeader
-        eyebrow="OPS"
         title="Dashboard"
         support="Due recaps, clock, what needs you — then program performance."
         action={
