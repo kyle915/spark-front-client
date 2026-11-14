@@ -4999,6 +4999,25 @@ type LiveBoardBA {
   pendingApproval: Boolean!
 }
 
+"""One staffed row of a staffing sheet, beside what Spark has booked."""
+type SheetShiftRow {
+  uuid: ID!
+  day: String!
+  startText: String!
+  endText: String!
+  storeName: String!
+  address: String!
+  baName: String!
+  brandName: String!
+  sourceLabel: String!
+  sheetUrl: String!
+  match: String!
+  eventUuid: String
+  bookedNames: [String!]!
+  agrees: Boolean
+  syncedAt: String!
+}
+
 type LiveBoardShift {
   eventUuid: String!
   eventName: String!
@@ -6152,6 +6171,10 @@ type Query {
   staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   clientLiveToken(tenantId: ID!): String!
   liveShiftBoard(date: String = null, tenantId: ID = null): [LiveBoardShift!]!
+  """
+  Who the staffing sheets have on each shift for `date` (default today), beside Spark's bookings. Ignite staff only. Read-only.
+  """
+  sheetShifts(date: String = null, tenantId: ID = null): [SheetShiftRow!]!
   eventConfirmationFormOptions(tenantId: ID!): EventConfirmationFormOptions!
   upcomingShiftsForConfirmation(tenantId: ID!): [ConfirmationShiftOption!]!
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
