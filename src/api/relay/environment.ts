@@ -1,6 +1,11 @@
 import { Environment, Network, RecordSource, Store } from "relay-runtime";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import {
+  isSettledMutation,
+  scheduleCountsRefresh,
+  startCountsHeartbeat,
+} from "./countsRefresh";
 import type {
   RequestParameters,
   Variables,
@@ -119,7 +124,17 @@ async function fetchGraphQL(
 }
 
 function fetchRelay(params: RequestParameters, variables: Variables) {
-  return fetchGraphQL(params, variables);
+  const pending = fetchGraphQL(params, variables);
+  // Anything that changed data may have changed a count somewhere: re-read
+  // the shared counts so badges, tabs and tiles match without a reload.
+  void pending
+    .then((response) => {
+      if (isSettledMutation(params, response)) scheduleCountsRefresh(environment);
+    })
+    .catch(() => {
+      /* the caller handles the failure; nothing to refresh */
+    });
+  return pending;
 }
 
 const environment = new Environment({
@@ -132,5 +147,7 @@ const environment = new Environment({
     return null;
   },
 });
+
+startCountsHeartbeat(environment);
 
 export default environment;
