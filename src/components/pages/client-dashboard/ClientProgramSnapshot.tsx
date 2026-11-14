@@ -7,6 +7,7 @@ import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@ap
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { thumbUrl } from "@/utils/thumb";
+import { periodChange } from "./periodChange";
 
 const ymd = (d: Date) => {
   const y = d.getFullYear();
@@ -17,6 +18,9 @@ const ymd = (d: Date) => {
 
 const fmtNum = (v: number | null | undefined) =>
   typeof v === "number" ? v.toLocaleString() : "—";
+const fmtPct = (v: number) => `${v.toFixed(0)}%`;
+
+const DAYS = 30;
 
 /**
  * "Your program, last 30 days" — the first thing a brand user sees on Home:
@@ -25,11 +29,21 @@ const fmtNum = (v: number | null | undefined) =>
  * happened?" before "what's scheduled?".
  */
 export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const { startDate, endDate } = useMemo(() => {
+  const { startDate, endDate, priorStart, priorEnd } = useMemo(() => {
     const end = new Date();
     const start = new Date(end);
-    start.setDate(end.getDate() - 30);
-    return { startDate: ymd(start), endDate: ymd(end) };
+    start.setDate(end.getDate() - DAYS);
+    // The window before it: the same length, ending the day before `start`.
+    const beforeEnd = new Date(start);
+    beforeEnd.setDate(start.getDate() - 1);
+    const beforeStart = new Date(beforeEnd);
+    beforeStart.setDate(beforeEnd.getDate() - DAYS);
+    return {
+      startDate: ymd(start),
+      endDate: ymd(end),
+      priorStart: ymd(beforeStart),
+      priorEnd: ymd(beforeEnd),
+    };
   }, []);
 
   const filters: DashboardFilters = useMemo(
@@ -44,6 +58,30 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
   );
   const { dashboard } = useEventDashboardData(tenantId, filters, 0);
   const m = dashboard.metrics;
+
+  const priorFilters: DashboardFilters = useMemo(
+    () => ({
+      distributorIds: [],
+      rmmAsignedId: null,
+      quarter: null,
+      startDate: priorStart,
+      endDate: priorEnd,
+    }),
+    [priorStart, priorEnd],
+  );
+  const prior = useEventDashboardData(tenantId, priorFilters, 0).dashboard.metrics;
+  const against = (
+    current: number | null | undefined,
+    previous: number | null | undefined,
+    format: (n: number) => string,
+  ) =>
+    periodChange({
+      current,
+      previous,
+      previousEvents: prior.totalEvents,
+      format,
+      days: DAYS,
+    });
 
   const photoData = useLazyLoadQuery<ReportsFieldPhotosQueryType>(
     ReportsFieldPhotosQuery,
@@ -75,22 +113,24 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
 
   // Each figure reads as the end of the heading's sentence: "Your program
   // in the last 30 days — 1,445 consumers sampled".
-  const tiles: { key: string; value: string; says: string }[] = [
+  const tiles: { key: string; value: string; says: string; change: string | null }[] = [
     {
       key: "events",
       value: fmtNum(m.totalEvents),
       says: m.totalEvents === 1 ? "event run" : "events run",
+      change: against(m.totalEvents, prior.totalEvents, fmtNum),
     },
     {
       key: "sampled",
       value: fmtNum(m.consumersSampled),
       says: m.consumersSampled === 1 ? "consumer sampled" : "consumers sampled",
+      change: against(m.consumersSampled, prior.consumersSampled, fmtNum),
     },
     {
       key: "intent",
-      value:
-        typeof m.purchaseIntent === "number" ? `${m.purchaseIntent.toFixed(0)}%` : "—",
+      value: typeof m.purchaseIntent === "number" ? fmtPct(m.purchaseIntent) : "—",
       says: "said they'd buy",
+      change: against(m.purchaseIntent, prior.purchaseIntent, fmtPct),
     },
   ];
 
@@ -112,7 +152,10 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
       <dl className="spark-says mt-5">
         {tiles.map((t) => (
           <div key={t.key} className="spark-says-item">
-            <dt className="spark-says-words">{t.says}</dt>
+            <dt className="spark-says-words">
+              {t.says}
+              {t.change ? <span className="spark-says-change">{t.change}</span> : null}
+            </dt>
             <dd className="spark-says-figure tab-num">{t.value}</dd>
           </div>
         ))}
