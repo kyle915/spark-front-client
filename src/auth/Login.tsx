@@ -8,6 +8,7 @@ import { SparkMark } from "@/recap/SparkMark";
 import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
 import SignInGlimpse from "./SignInGlimpse";
+import StatFigure from "./StatFigure";
 import "./signIn.css";
 
 /**
@@ -82,7 +83,7 @@ const Login = () => {
     <div className="signin-page">
       <main className="signin-form-side">
         <span className="signin-mark">
-          <SparkMark height={84} />
+          <SparkMark height={72} />
         </span>
         <form className="signin-form" onSubmit={submit} noValidate>
           <h1 className="signin-title">Sign in</h1>
@@ -198,9 +199,11 @@ const Login = () => {
         </div>
         <div>
           <dl className="signin-stats">
-            {STATS.map(([value, label]) => (
+            {STATS.map(([value, label], i) => (
               <div className="signin-stat" key={label}>
-                <dd>{value}</dd>
+                <dd>
+                  <StatFigure value={value} delayMs={250 + i * 120} />
+                </dd>
                 <dt>{label}</dt>
               </div>
             ))}
