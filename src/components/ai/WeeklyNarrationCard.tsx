@@ -77,13 +77,29 @@ function formatWeek(start: string, end: string): string {
   return `${startLabel} – ${endLabel}`;
 }
 
-const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+/** A summary of a week that ended more than `days` ago is old news. */
+export function narrationIsStale(weekEnd: string, now: Date, days = 14): boolean {
+  const end = new Date(`${weekEnd}T12:00:00`).getTime();
+  if (!Number.isFinite(end)) return true;
+  return now.getTime() - end > days * 86_400_000;
+}
+
+const WeeklyNarrationBody: React.FC<{ tenantId: string; forClient?: boolean }> = ({
+  tenantId,
+  forClient = false,
+}) => {
   const data = useLazyLoadQuery<TenantWeeklyNarrationQueryType>(
     TenantWeeklyNarrationQuery,
     { tenantId },
     { fetchPolicy: "store-or-network" },
   );
   const narration = data.tenantWeeklyNarration;
+
+  // A brand user gets a summary only when there is a recent one: no "waiting
+  // on the weekly job", and not a paragraph about a week over a fortnight old.
+  if (forClient && (!narration || narrationIsStale(narration.weekEnd, new Date()))) {
+    return null;
+  }
 
   return (
     <div className="spark-card p-6 lg:p-8" style={{ borderRadius: 22 }}>
@@ -92,15 +108,15 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           className="display text-lg lg:text-xl font-bold"
           style={{ letterSpacing: "-0.02em" }}
         >
-          Weekly narration
+          {forClient ? "Last week in summary" : "Weekly narration"}
         </h2>
         <p
-          className="mono text-[10px]"
-          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
+          className="text-[12px]"
+          style={{ color: "var(--spark-text-meta)" }}
         >
           {narration
-            ? `WEEK OF ${formatWeek(narration.weekStart, narration.weekEnd).toUpperCase()}`
-            : "WAITING ON THE WEEKLY JOB"}
+            ? `Week of ${formatWeek(narration.weekStart, narration.weekEnd)}`
+            : "Waiting on the weekly job"}
         </p>
       </div>
       {narration ? (
@@ -132,6 +148,7 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             >
               Tracker this week
             </Link>
+            {forClient ? null : (
             <Link
               to="/recaps/list?status=needs_review"
               className="px-3 py-2 rounded-xl text-sm font-semibold"
@@ -142,12 +159,11 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             >
               Needs review
             </Link>
+            )}
           </div>
-          <p
-            className="mono text-[10px] mt-4"
-            style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
-          >
-            {narration.filedRecaps} FILED RECAPS · NUMBERS FROM INSIGHT BUCKETS
+          <p className="text-[12px] mt-4" style={{ color: "var(--spark-text-meta)" }}>
+            Based on {narration.filedRecaps}{" "}
+            {narration.filedRecaps === 1 ? "recap" : "recaps"} filed that week.
           </p>
         </>
       ) : (
@@ -159,12 +175,15 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   );
 };
 
-const WeeklyNarrationCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const WeeklyNarrationCard: React.FC<{ tenantId: string; forClient?: boolean }> = ({
+  tenantId,
+  forClient = false,
+}) => {
   if (!tenantId) return null;
   return (
     <ErrorBoundary fallback={null}>
       <Suspense fallback={null}>
-        <WeeklyNarrationBody tenantId={tenantId} />
+        <WeeklyNarrationBody tenantId={tenantId} forClient={forClient} />
       </Suspense>
     </ErrorBoundary>
   );

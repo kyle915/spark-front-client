@@ -110,9 +110,7 @@ const WeekAheadPanel: React.FC<{
   onHorizonDays: (days: AheadHorizon) => void;
   dateWindow: { startDate: string; endDate: string };
   torch: boolean;
-  onOpenApprovals: () => void;
-  onOpenPerformance: () => void;
-}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow, onOpenApprovals, onOpenPerformance }) => {
+}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow }) => {
   const navigate = useNavigate();
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
@@ -252,8 +250,8 @@ const WeekAheadPanel: React.FC<{
       <div className="spark-card spark-stat-band">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <p className="spark-kpi-label">
-            {horizonDays}-day forward ·{" "}
-            <CountReel value={totalThisWeek} /> events
+            Coming up in the next {horizonDays} days ·{" "}
+            <CountReel value={totalThisWeek} /> {totalThisWeek === 1 ? "event" : "events"}
           </p>
           <div className="flex items-center gap-1">
             {([7, 30, 90] as AheadHorizon[]).map((d) => (
@@ -261,9 +259,8 @@ const WeekAheadPanel: React.FC<{
                 key={d}
                 type="button"
                 onClick={() => onHorizonDays(d)}
-                className="mono text-[9px] px-2 py-1 rounded-lg"
+                className="text-[12px] px-2 py-1 rounded-lg"
                 style={{
-                  letterSpacing: "0.12em",
                   color:
                     horizonDays === d
                       ? "var(--spark-selected-ink)"
@@ -275,7 +272,7 @@ const WeekAheadPanel: React.FC<{
                   border: "1px solid var(--spark-border)",
                 }}
               >
-                {d}D
+                {d} days
               </button>
             ))}
             <button
@@ -283,15 +280,14 @@ const WeekAheadPanel: React.FC<{
               onClick={() =>
                 navigate(`/requests/list?when=${trackerWhen}`)
               }
-              className="mono text-[9px] px-2 py-1 rounded-lg ml-1"
+              className="text-[12px] px-2 py-1 rounded-lg ml-1"
               style={{
-                letterSpacing: "0.12em",
                 color: "var(--spark-lime)",
                 border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
                 background: "transparent",
               }}
             >
-              TRACKER →
+              Open tracker
             </button>
           </div>
         </div>
@@ -305,7 +301,9 @@ const WeekAheadPanel: React.FC<{
           }`}
         >
           {aheadBuckets.map((b) => {
-            const heightPct = (b.count / maxWeekCount) * 100;
+            // A slim bar up to 56px tall. Scaled to the busiest week, so one
+            // event in the only busy week no longer paints a solid block.
+            const barHeight = b.count > 0 ? Math.max(6, (b.count / maxWeekCount) * 56) : 3;
             return (
               <button
                 key={b.key}
@@ -329,21 +327,22 @@ const WeekAheadPanel: React.FC<{
                 style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
               >
                 <div
-                  className="rounded-md self-stretch"
-                  style={{
-                    background:
-                      b.count > 0
-                        ? "var(--spark-lime)"
-                        : "rgba(var(--spark-ink-rgb),0.06)",
-                    height: Math.max(8, heightPct) + "px",
-                    minHeight: 8,
-                    boxShadow:
-                      b.count > 0
-                        ? "0 0 12px rgba(var(--spark-accent-rgb),0.20)"
-                        : "none",
-                  }}
+                  className="flex items-end justify-center"
+                  style={{ height: 56 }}
                   title={`${b.count} event${b.count === 1 ? "" : "s"}`}
-                />
+                >
+                  <div
+                    style={{
+                      width: "min(44px, 60%)",
+                      height: barHeight,
+                      borderRadius: 4,
+                      background:
+                        b.count > 0
+                          ? "rgba(var(--spark-ink-rgb),0.82)"
+                          : "rgba(var(--spark-ink-rgb),0.12)",
+                    }}
+                  />
+                </div>
                 <div className="text-center">
                   <p
                     className="tab-num text-sm font-bold"
@@ -356,14 +355,8 @@ const WeekAheadPanel: React.FC<{
                   >
                     {b.count}
                   </p>
-                  <p
-                    className="mono text-[9px]"
-                    style={{
-                      letterSpacing: "0.12em",
-                      color: "var(--spark-text-meta)",
-                    }}
-                  >
-                    {b.label.toUpperCase()}
+                  <p className="text-[12px]" style={{ color: "var(--spark-text-meta)" }}>
+                    {b.label}
                   </p>
                 </div>
               </button>
@@ -372,19 +365,15 @@ const WeekAheadPanel: React.FC<{
         </div>
       </div>
 
-      {/* Top retailers + quick links */}
-      <div className="grid lg:grid-cols-2 gap-3">
+      {/* Top retailers — only when something is scheduled. An empty card
+          (and the old Quick links card beside it, which repeated the
+          sidebar) took a third of the screen to say nothing. */}
+      {topRetailers.length === 0 ? null : (
         <div className="spark-card spark-stat-band">
           <p className="spark-kpi-label mb-3">
             Top retailers · next {horizonDays} days
           </p>
-          {topRetailers.length === 0 ? (
-            <SparkEmptyState
-              className="border-0 bg-transparent py-4"
-              title="Nothing scheduled"
-              body="No events in this window."
-            />
-          ) : (
+          {(
             <ul className="space-y-2">
               {topRetailers.map((row) => (
                 <li
@@ -416,59 +405,14 @@ const WeekAheadPanel: React.FC<{
                         : "1px solid rgba(var(--spark-accent-rgb),0.25)",
                     }}
                   >
-                    {row.count} {row.count === 1 ? "EVENT" : "EVENTS"}
+                    {row.count} {row.count === 1 ? "event" : "events"}
                   </span>
                 </li>
               ))}
             </ul>
           )}
         </div>
-
-        <div className="spark-card spark-stat-band">
-          <p className="spark-kpi-label mb-3">Quick links</p>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { label: "Approvals", onClick: onOpenApprovals },
-                { label: "Performance", onClick: onOpenPerformance },
-                {
-                  label: "Tracker this week",
-                  onClick: () => {
-                    const today = startOfDay(new Date());
-                    const weekday = today.getDay();
-                    const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
-                    const start = new Date(today);
-                    start.setDate(today.getDate() + mondayOffset);
-                    const end = new Date(start);
-                    end.setDate(start.getDate() + 6);
-                    navigate(
-                      `/requests/list?when=custom&from=${isoDay(start)}&to=${isoDay(end)}`,
-                    );
-                  },
-                },
-                {
-                  label: "Recaps · Needs review",
-                  onClick: () => navigate("/recaps/list?status=needs_review"),
-                },
-              ] as { label: string; onClick: () => void }[]
-            ).map((link) => (
-              <button
-                key={link.label}
-                type="button"
-                onClick={link.onClick}
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                {link.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
     </>
   );
 };
@@ -516,7 +460,7 @@ const ClientInner: React.FC = () => {
 
 
   return (
-    <div className="space-y-6 max-w-7xl spark-fade-in">
+    <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
       <div className="flex items-start gap-3">
         <TenantLogo
           variant="header"
@@ -697,13 +641,11 @@ const ClientInner: React.FC = () => {
             onHorizonDays={setHorizonDays}
             dateWindow={dateWindow}
             torch={torch}
-            onOpenApprovals={() => setApprovalsOpen(true)}
-            onOpenPerformance={() => switchTab("performance")}
           />
         </Suspense>
       )}
 
-      {tenantId ? <WeeklyNarrationCard tenantId={tenantId} /> : null}
+      {tenantId ? <WeeklyNarrationCard tenantId={tenantId} forClient /> : null}
 
       </>)}
 
