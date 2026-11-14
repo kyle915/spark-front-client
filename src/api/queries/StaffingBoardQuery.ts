@@ -14,6 +14,8 @@ export const StaffingBoardQuery = graphql`
       date
       startTime
       endTime
+      startLocal
+      endLocal
       address
       store
       requestUuid

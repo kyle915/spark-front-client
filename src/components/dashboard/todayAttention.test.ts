@@ -180,3 +180,72 @@ describe("attentionRows", () => {
     expect(rows[5].subject).toBe("1 request in the next 7 days");
   });
 });
+
+describe("registered, not clocked in", () => {
+  const NOW = new Date("2026-11-14T17:32:00Z");
+  const base = { yesterday: [], staleRequests: 0, unscheduledRequests: 0, now: NOW };
+  const registered = (minutesAgo: number, over: Partial<BoardAssignee> = {}) =>
+    ba({
+      registeredAt: new Date(NOW.getTime() - minutesAgo * 60_000).toISOString(),
+      ...over,
+    });
+
+  it("flags someone who registered over ten minutes ago with no clock-in", () => {
+    const rows = attentionRows({
+      ...base,
+      today: [shift({ eventUuid: "cw", startTime: "", assigned: [registered(30)] })],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].key).toBe("notin:cw:ba-1");
+    expect(rows[0].reason).toMatch(/^Registered .+, not clocked in$/);
+    expect(rows[0].to).toBe("/live-board");
+  });
+
+  it("says so when Clock in was pressed and nothing was saved", () => {
+    const rows = attentionRows({
+      ...base,
+      today: [
+        shift({
+          startTime: "",
+          lastClockInTapAt: "2026-11-14T16:45:00Z",
+          assigned: [registered(47)],
+        }),
+      ],
+    });
+    expect(rows[0].reason).toMatch(/^Pressed Clock in at .+, nothing saved$/);
+  });
+
+  it("stays quiet inside the grace, once clocked in, for old bookings and before the start", () => {
+    const quiet = (today: BoardShift[]) => attentionRows({ ...base, today });
+    expect(quiet([shift({ startTime: "", assigned: [registered(5)] })])).toEqual([]);
+    expect(
+      quiet([
+        shift({
+          startTime: "",
+          assigned: [registered(30, { clockInAt: "2026-11-14T17:05:00Z", status: "clocked_in" })],
+        }),
+      ]),
+    ).toEqual([]);
+    // Booked three days ago by staff: not someone standing in a store.
+    expect(quiet([shift({ startTime: "", assigned: [registered(3 * 24 * 60)] })])).toEqual([]);
+    // Registered early for a shift that has not started yet.
+    expect(
+      quiet([
+        shift({
+          startTime: "2026-11-14T12:00:00",
+          startInstant: "2026-11-14T19:00:00Z",
+          assigned: [registered(30)],
+        }),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("does not double up with a no-show row", () => {
+    const rows = attentionRows({
+      ...base,
+      today: [shift({ assigned: [registered(90, { status: "no_show" })] })],
+    });
+    expect(rows.map((r) => r.key)).toEqual(["noshow:ev-1:ba-1"]);
+  });
+});
+

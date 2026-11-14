@@ -4997,6 +4997,8 @@ type LiveBoardBA {
   locationSource: String
   accuracyMeters: Float
   pendingApproval: Boolean!
+  registeredAt: String
+  bookingSource: String
 }
 
 """One staffed row of a staffing sheet, beside what Spark has booked."""
@@ -5025,6 +5027,8 @@ type LiveBoardShift {
   date: String
   startTime: String
   endTime: String
+  startLocal: String
+  endLocal: String
   address: String
   store: String
   requestUuid: String
@@ -5032,6 +5036,7 @@ type LiveBoardShift {
   onClock: Int!
   noShows: Int!
   pendingApproval: Int!
+  lastClockInTapAt: String
 }
 
 """
@@ -8247,6 +8252,8 @@ type StaffingBoardShift {
   date: String
   startTime: String
   endTime: String
+  startLocal: String
+  endLocal: String
   address: String
   store: String
   requestUuid: String

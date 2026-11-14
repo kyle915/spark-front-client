@@ -14,6 +14,8 @@ export type BoardAssignee = {
   clockInAt: string | null;
   clockOutAt: string | null;
   pendingApproval: boolean;
+  /** When the booking was made (for a walk-up: when they entered their details). */
+  registeredAt?: string | null;
 };
 
 export type BoardShift = {
@@ -21,8 +23,13 @@ export type BoardShift = {
   eventName: string;
   brandName: string;
   store: string;
+  /** Start as wall-clock time at the venue when the server sends it; else the instant. */
   startTime: string;
   endTime: string;
+  /** The start as an instant, for "has it started" — never for display. */
+  startInstant?: string | null;
+  /** Last time Clock in was pressed on the check-in page, saved or not. */
+  lastClockInTapAt?: string | null;
   assigned: ReadonlyArray<BoardAssignee>;
 };
 
@@ -158,13 +165,20 @@ const plural = (n: number, one: string, many: string): string =>
  * punches (they block payroll), today's no-shows, today's unbooked shifts,
  * walk-ups waiting for approval, then the request queues.
  */
+/** How long after registering before "not clocked in" is worth a row. */
+export const REGISTERED_GRACE_MS = 10 * 60_000;
+/** Older bookings are staff scheduling ahead, not someone standing in a store. */
+const REGISTERED_WINDOW_MS = 12 * 3_600_000;
+
 export function attentionRows(input: {
   today: ReadonlyArray<BoardShift>;
   yesterday: ReadonlyArray<BoardShift>;
   staleRequests: number;
   unscheduledRequests: number;
+  now?: Date;
 }): AttentionRow[] {
   const rows: AttentionRow[] = [];
+  const now = (input.now ?? new Date()).getTime();
 
   for (const s of input.yesterday) {
     for (const a of s.assigned) {
@@ -180,6 +194,32 @@ export function attentionRows(input: {
           to: "/timesheet",
         });
       }
+    }
+  }
+
+  // Registered on the check-in page (or booked today) and still no clock-in
+  // ten minutes on. If Clock in was pressed and nothing saved, say so: that
+  // is a different conversation from "they haven't tapped it".
+  for (const s of input.today) {
+    const startAt = s.startInstant ? new Date(s.startInstant).getTime() : NaN;
+    if (!isNaN(startAt) && startAt > now) continue; // not due yet
+    for (const a of s.assigned) {
+      if (a.clockInAt || isNoShow(a.status) || !a.registeredAt) continue;
+      const since = now - new Date(a.registeredAt).getTime();
+      if (isNaN(since) || since < REGISTERED_GRACE_MS || since > REGISTERED_WINDOW_MS) {
+        continue;
+      }
+      const pressed = punchTime(s.lastClockInTapAt);
+      const registered = punchTime(a.registeredAt);
+      rows.push({
+        key: `notin:${s.eventUuid}:${a.ambassadorUuid}`,
+        subject: named(a),
+        context: place(s),
+        reason: pressed
+          ? `Pressed Clock in at ${pressed}, nothing saved`
+          : `Registered ${registered}, not clocked in`,
+        to: "/live-board",
+      });
     }
   }
 
