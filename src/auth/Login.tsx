@@ -7,7 +7,6 @@ import { requestMagicLink } from "@/auth/MagicLinkButton";
 import { SparkMark } from "@/recap/SparkMark";
 import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
-import StatFigure from "./StatFigure";
 import "./signIn.css";
 
 /**
@@ -17,12 +16,6 @@ import "./signIn.css";
  * is one tap away, and Google sits below. The page carries its own colours
  * (signIn.css) and writes nothing onto <html> that the app then has to undo.
  */
-
-const STATS: ReadonlyArray<readonly [string, string]> = [
-  ["257K+", "ambassadors"],
-  ["50", "states"],
-  ["48 hr", "rush staffing"],
-];
 
 const Login = () => {
   const navigate = useNavigate();
@@ -187,19 +180,6 @@ const Login = () => {
     </footer>
   );
 
-  const stats = (
-    <dl className="signin-stats">
-      {STATS.map(([value, label], i) => (
-        <div className="signin-stat" key={label}>
-          <dd>
-            <StatFigure value={value} delayMs={250 + i * 120} />
-          </dd>
-          <dt>{label}</dt>
-        </div>
-      ))}
-    </dl>
-  );
-
   return (
     <div className="signin-page">
       <header className="signin-top">
@@ -210,22 +190,18 @@ const Login = () => {
         >
           <img src="/legal/ignite-full-white.png" alt="Ignite Productions" />
         </a>
-        <a className="signin-top-link" href="https://www.igniteproductions.co">
-          igniteproductions.co
-        </a>
       </header>
 
       <main className="signin-col">
-        <span className="signin-mark">
-          <SparkMark height={88} />
-        </span>
-        <p className="signin-about">
-          Spark is the platform Ignite uses to run your field marketing programs, from
-          booking the team to the recap that lands in your inbox.
-        </p>
-        {form}
-        {shiftNote}
-        {stats}
+        <div className="signin-intro">
+          <span className="signin-mark">
+            <SparkMark height={88} />
+          </span>
+        </div>
+        <div className="signin-entry">
+          {form}
+          {shiftNote}
+        </div>
       </main>
 
       {foot}
