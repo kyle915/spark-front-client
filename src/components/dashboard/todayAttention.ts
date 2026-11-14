@@ -45,16 +45,37 @@ export type AttentionRow = {
   to: string;
 };
 
-/** "4 PM" / "4:30 PM" from "16:30" or a full venue-local datetime. */
-export function shiftTime(raw: string | null | undefined): string {
-  if (!raw) return "";
-  const match = String(raw).match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
-  if (!match) return "";
-  const hh = parseInt(match[1], 10);
-  const mm = match[2];
+const WALL_CLOCK = /(?:T|\s|^)(\d{1,2}):(\d{2})/;
+// An instant: an ISO stamp that says which zone it is in ("…Z", "…+00:00").
+const HAS_ZONE = /(?:[zZ]|[+-]\d{2}:?\d{2})$/;
+
+const clock = (hh: number, mm: string): string => {
   const ampm = hh >= 12 ? "PM" : "AM";
   const h12 = ((hh + 11) % 12) + 1;
   return mm === "00" ? `${h12} ${ampm}` : `${h12}:${mm} ${ampm}`;
+};
+
+/**
+ * "4 PM" / "4:30 PM".
+ *
+ * A value with no zone ("16:30", "2026-11-14T16:30:00") is already the
+ * venue's wall-clock time and is printed as written. A value WITH a zone is
+ * an instant: its digits are UTC's (or some other zone's), not the venue's,
+ * so it is converted — to the viewer's clock, the best available without
+ * the venue's zone. Reading the digits of "23:00:00+00:00" as "11 PM" is
+ * the bug this guards against.
+ */
+export function shiftTime(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const text = String(raw).trim();
+  if (HAS_ZONE.test(text)) {
+    const d = new Date(text);
+    if (isNaN(d.getTime())) return "";
+    return clock(d.getHours(), String(d.getMinutes()).padStart(2, "0"));
+  }
+  const match = text.match(WALL_CLOCK);
+  if (!match) return "";
+  return clock(parseInt(match[1], 10), match[2]);
 }
 
 /** Clock time in the viewer's zone, from an ISO stamp. */
@@ -65,8 +86,14 @@ export function punchTime(iso: string | null | undefined): string {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-const minutesOfDay = (raw: string): number => {
-  const match = String(raw).match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
+/** Sort key: real instants order by time; wall-clock values by time of day. */
+const startOrder = (raw: string): number => {
+  const text = String(raw ?? "").trim();
+  if (HAS_ZONE.test(text)) {
+    const t = new Date(text).getTime();
+    return isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+  }
+  const match = text.match(WALL_CLOCK);
   if (!match) return Number.MAX_SAFE_INTEGER;
   return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
 };
@@ -106,7 +133,7 @@ export function startsTodayRows(
   opts: { showBrand: boolean },
 ): StartsTodayRow[] {
   return [...shifts]
-    .sort((a, b) => minutesOfDay(a.startTime) - minutesOfDay(b.startTime))
+    .sort((a, b) => startOrder(a.startTime) - startOrder(b.startTime))
     .map((s) => {
       const unbooked = s.assigned.length === 0;
       const who = unbooked ? "No ambassador booked" : assigneeLine(s.assigned);

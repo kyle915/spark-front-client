@@ -34,9 +34,34 @@ describe("shiftTime", () => {
     expect(shiftTime("2026-10-30T09:30:00")).toBe("9:30 AM");
     expect(shiftTime("")).toBe("");
   });
+
+  it("converts an instant instead of reading its UTC digits", () => {
+    // 23:00 UTC is not "11 PM" at the venue or for the viewer.
+    const iso = "2026-11-14T23:00:00+00:00";
+    const local = new Date(iso);
+    const hh = local.getHours();
+    const expected = `${((hh + 11) % 12) + 1}${
+      local.getMinutes() ? `:${String(local.getMinutes()).padStart(2, "0")}` : ""
+    } ${hh >= 12 ? "PM" : "AM"}`;
+    expect(shiftTime(iso)).toBe(expected);
+    expect(shiftTime("2026-11-14T23:00:00Z")).toBe(expected);
+  });
 });
 
 describe("startsTodayRows", () => {
+  it("orders instants by time, not by their UTC hour", () => {
+    // 01:00Z on the 15th is later than 23:00Z on the 14th.
+    const rows = startsTodayRows(
+      [
+        shift({ eventUuid: "late", startTime: "2026-11-15T01:00:00+00:00" }),
+        shift({ eventUuid: "early", startTime: "2026-11-14T23:00:00+00:00" }),
+      ],
+      { showBrand: false },
+    );
+    expect(rows.map((r) => r.key)).toEqual(["early", "late"]);
+  });
+
+
   it("orders by start time and names the ambassador's state", () => {
     const rows = startsTodayRows(
       [
