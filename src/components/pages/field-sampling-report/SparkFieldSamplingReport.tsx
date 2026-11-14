@@ -79,7 +79,7 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 8,
   background: "rgba(var(--spark-ink-rgb),0.04)",
   border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
-  color: "#fff",
+  color: "var(--spark-text)",
   colorScheme: "dark",
 };
 
@@ -270,7 +270,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             key={p.key}
             type="button"
             onClick={() => applyPreset(p.weeks)}
-            className="text-xs px-2.5 py-1 rounded-full transition hover:bg-white/5"
+            className="text-xs px-2.5 py-1 rounded-full transition spark-row-hover"
             style={{ border: "1px solid rgba(var(--spark-ink-rgb),0.14)", color: "var(--spark-text-secondary)" }}
           >
             {p.label}

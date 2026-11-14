@@ -41,9 +41,9 @@ const lastFullMonth = (): { start: string; end: string } => {
 const inputStyle: React.CSSProperties = {
   padding: "8px 10px",
   borderRadius: 8,
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  color: "#fff",
+  background: "rgba(var(--spark-ink-rgb),0.04)",
+  border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
+  color: "var(--spark-text)",
   colorScheme: "dark",
 };
 
@@ -110,11 +110,11 @@ export const ExportReceiptsButton: React.FC<Props> = ({
     variant === "primary"
       ? {
           background: "var(--spark-lime, #f2f3ee)",
-          color: "#0a0d09",
+          color: "var(--spark-on-accent)",
         }
       : {
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.14)",
+          background: "rgba(var(--spark-ink-rgb),0.04)",
+          border: "1px solid rgba(var(--spark-ink-rgb),0.14)",
           color: "var(--spark-text)",
         };
 
@@ -199,7 +199,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
                 className="px-4 py-2 rounded-lg text-sm"
                 style={{
                   background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.18)",
+                  border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                   color: "var(--spark-text-secondary)",
                 }}
                 onClick={() => setOpen(false)}
@@ -212,7 +212,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
                 className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
                 style={{
                   background: "var(--spark-lime, #f2f3ee)",
-                  color: "#0a0d09",
+                  color: "var(--spark-on-accent)",
                 }}
                 onClick={onExport}
               >

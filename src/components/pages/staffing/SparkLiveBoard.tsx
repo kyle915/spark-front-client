@@ -25,7 +25,10 @@ const STATUS: Record<
   string,
   { label: string; fg: string; bg: string; border: string }
 > = {
-  clocked_in: { label: "On the clock", fg: "#0a0d09", bg: "var(--spark-lime)", border: "var(--spark-lime)" },
+  // `fg` is drawn straight on the page surface (status dot + label) — `bg` is
+  // not applied — so it has to be the accent itself, which flips with the
+  // appearance, not the on-accent ink.
+  clocked_in: { label: "On the clock", fg: "var(--spark-lime)", bg: "var(--spark-lime)", border: "var(--spark-lime)" },
   clocked_out: { label: "Done", fg: "var(--spark-sky, #6db3f2)", bg: "rgba(109,179,242,0.12)", border: "rgba(109,179,242,0.4)" },
   no_show: { label: "No-show", fg: "var(--spark-orange)", bg: "rgba(239,90,42,0.14)", border: "rgba(239,90,42,0.5)" },
   missed: { label: "Missed", fg: "var(--spark-orange)", bg: "rgba(239,90,42,0.1)", border: "rgba(239,90,42,0.35)" },

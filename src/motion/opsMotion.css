@@ -272,7 +272,7 @@
 
 .spark-overlay-action-primary {
   background: var(--spark-lime);
-  color: #0a0d09;
+  color: var(--spark-on-accent);
 }
 
 .spark-overlay-action-danger {

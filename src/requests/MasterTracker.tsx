@@ -671,8 +671,8 @@ const TrackerTable: React.FC<{
                     selected
                       ? "spark-row-selected cursor-pointer transition-colors"
                       : zebra
-                        ? "cursor-pointer transition-colors bg-white/[0.025] hover:bg-white/[0.07]"
-                        : "cursor-pointer transition-colors hover:bg-white/[0.07]"
+                        ? "cursor-pointer transition-colors spark-zebra spark-row-hover"
+                        : "cursor-pointer transition-colors spark-row-hover"
                   }
                   onClick={onClick}
                 >
@@ -2541,7 +2541,11 @@ export default function MasterTracker() {
             eventDate={assignBaSource.eventDate}
             eventAddress={assignBaSource.eventAddress}
             onClose={() => setAssignBaSource(null)}
-            onInvited={() => setAssignBaSource(null)}
+            onInvited={() => {
+              setAssignBaSource(null);
+              // Refetch so the row shows the newly assigned BA.
+              setRefetchTick((t) => t + 1);
+            }}
           />
         </Suspense>
       )}
@@ -2554,7 +2558,10 @@ export default function MasterTracker() {
           eventId={postBoardSource.eventId}
           eventName={postBoardSource.eventName}
           onClose={() => setPostBoardSource(null)}
-          onPosted={() => setPostBoardSource(null)}
+          onPosted={() => {
+            setPostBoardSource(null);
+            setRefetchTick((t) => t + 1);
+          }}
         />
       )}
 

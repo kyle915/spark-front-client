@@ -111,7 +111,7 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
             views.map((w) => (
               <div
                 key={w.name}
-                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5"
+                className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg spark-row-hover"
               >
                 <button
                   type="button"
