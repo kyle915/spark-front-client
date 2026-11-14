@@ -501,6 +501,11 @@ code, kbd, samp, pre, .mono-code {
   --spark-elev-2: 0 18px 36px rgba(20, 22, 15, 0.1);
   --spark-elev-3: 0 24px 48px rgba(20, 22, 15, 0.12);
   --spark-toast-bg: #14160f;
+  /* The toast stays a dark slab in light mode, so its text cannot use the
+     page's ink (near-black here): it was dark on dark and read as blank. */
+  --spark-toast-ink: #f2f3ee;
+  --spark-toast-ink-soft: rgba(242, 243, 238, 0.72);
+  --spark-toast-warn: #ff8a5c;
   /* Sticky table column: an opaque hover tone that matches the row, a
      lighter edge shadow, and white filter fields instead of a dark wash. */
   --spark-sticky-bg: #f3f3ef;
