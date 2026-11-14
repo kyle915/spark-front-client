@@ -9,6 +9,7 @@ import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
 import SignInGlimpse from "./SignInGlimpse";
 import StatFigure from "./StatFigure";
+import { signInVariant } from "./signInVariant";
 import "./signIn.css";
 
 /**
@@ -79,12 +80,10 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className="signin-page">
-      <main className="signin-form-side">
-        <span className="signin-mark">
-          <SparkMark height={72} />
-        </span>
+  const variant = signInVariant(window.location.search);
+  const year = new Date().getFullYear();
+
+  const form = (
         <form className="signin-form" onSubmit={submit} noValidate>
           <h1 className="signin-title">Sign in</h1>
           <p className="signin-lede">Enter your email and we will send you a link.</p>
@@ -174,49 +173,102 @@ const Login = () => {
           )}
 
         </form>
-        <p className="signin-note signin-shift">
-          <strong>Working a shift?</strong> You do not need to sign in. Use the
-          check-in link from your text or email.
-        </p>
+  );
 
-        <footer className="signin-foot">
-          <span>© {new Date().getFullYear()} Ignite Productions LLC</span>
-          <Link to="/privacy-policy">Privacy</Link>
-          <Link to="/terms-of-service">Terms</Link>
-        </footer>
-      </main>
+  const shiftNote = (
+    <p className="signin-shift">
+      <strong>Working a shift?</strong> You do not need to sign in. Use the check-in
+      link from your text or email.
+    </p>
+  );
 
-      <aside className="signin-brand" aria-label="About Spark">
-        <img className="signin-brand-logo" src="/legal/spark-logo-white.png" alt="" />
-        <div>
-          <p className="signin-brand-kicker">The command center for field marketing</p>
-          <h2 className="signin-brand-head">Manage your field team.</h2>
-          <p className="signin-brand-sub">
-            Live dashboards. GPS clock-ins. Auto-generated recaps. One platform, every
-            program.
-          </p>
+  const foot = (
+    <footer className="signin-foot">
+      <span>© {year} Ignite Productions LLC</span>
+      <Link to="/privacy-policy">Privacy</Link>
+      <Link to="/terms-of-service">Terms</Link>
+    </footer>
+  );
+
+  const stats = (
+    <dl className="signin-stats">
+      {STATS.map(([value, label], i) => (
+        <div className="signin-stat" key={label}>
+          <dd>
+            <StatFigure value={value} delayMs={250 + i * 120} />
+          </dd>
+          <dt>{label}</dt>
+        </div>
+      ))}
+    </dl>
+  );
+
+  const pitch = (
+    <>
+      <h2 className="signin-head">Manage your field team.</h2>
+      <p className="signin-sub">
+        Live dashboards. GPS clock-ins. Auto-generated recaps. One platform, every
+        program.
+      </p>
+    </>
+  );
+
+  // One field of near-black: the wordmark is the page, sign-in is a sheet on it.
+  if (variant === "poster") {
+    return (
+      <div className="signin-page signin-poster">
+        <div className="signin-poster-brand">
+          <img className="signin-wordmark" src="/legal/spark-logo-white.png" alt="Spark by Ignite" />
+          <div>{pitch}</div>
+        </div>
+        <main className="signin-poster-sheet">
+          {form}
+          {shiftNote}
+        </main>
+        <div className="signin-poster-strip">
+          {stats}
+          {foot}
+        </div>
+      </div>
+    );
+  }
+
+  // A light page read like the day's run sheet: sign in on the left, what
+  // Spark tracks on the right, drawn with rules instead of boxes.
+  if (variant === "runsheet") {
+    return (
+      <div className="signin-page signin-runsheet">
+        <main className="signin-runsheet-form">
+          <span className="signin-mark">
+            <SparkMark height={64} />
+          </span>
+          {form}
+          {shiftNote}
+          {foot}
+        </main>
+        <aside className="signin-runsheet-sheet" aria-label="About Spark">
+          {pitch}
           <SignInGlimpse />
-        </div>
-        <div>
-          <dl className="signin-stats">
-            {STATS.map(([value, label], i) => (
-              <div className="signin-stat" key={label}>
-                <dd>
-                  <StatFigure value={value} delayMs={250 + i * 120} />
-                </dd>
-                <dt>{label}</dt>
-              </div>
-            ))}
-          </dl>
-          <div className="signin-brand-foot" style={{ marginTop: 28 }}>
-            <span className="signin-brand-by">
-              Powered by
-              <img src="/legal/ignite-full-white.png" alt="Ignite Productions" />
-            </span>
-            <span>Veteran-owned</span>
-          </div>
-        </div>
-      </aside>
+          {stats}
+        </aside>
+      </div>
+    );
+  }
+
+  // Nothing but the wordmark and the form.
+  return (
+    <div className="signin-page signin-quiet">
+      <main className="signin-quiet-col">
+        <span className="signin-mark">
+          <SparkMark height={96} />
+        </span>
+        {form}
+        {shiftNote}
+        <p className="signin-quiet-facts">
+          257K+ ambassadors. 50 states. 48-hour rush staffing.
+        </p>
+        {foot}
+      </main>
     </div>
   );
 };
