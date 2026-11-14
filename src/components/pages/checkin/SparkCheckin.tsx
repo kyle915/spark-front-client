@@ -1186,6 +1186,15 @@ function CheckedInFlow({
     setBusy(kind);
     if (kind === "in") setInPhase("pending");
     const tappedAt = new Date().toISOString();
+    // Evidence that the button was pressed, sent before anything can fail.
+    // If the punch itself never lands, staff can still see the attempt.
+    reportFieldIssue({
+      origin: apiOrigin(),
+      code,
+      kind: "punch_tapped",
+      detail: `clock ${kind} ${tappedAt}`,
+      session: token,
+    });
     // Second shift (or any new punch after a filed recap): never reuse a
     // leftover offline queue — that idempotency key can no-op the clock-in
     // and leave the BA stuck on "You're all set".
@@ -1866,22 +1875,48 @@ function CheckedInFlow({
             <div style={{ color: "#44403c", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 1 }}>
               Time clock
             </div>
-            <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
+            {/* The one line an ambassador must never misread: whether the
+                clock-in was saved, and at what time. */}
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                marginTop: 2,
+                color:
+                  effectiveClock === "not_started" && !pastDay ? "#a8340f" : "#1c1917",
+              }}
+            >
               {effectiveClock === "clocked_in"
-                ? hasRecap
-                  ? "On the clock · ready to clock out"
-                  : "On the clock · recap still open"
+                ? clockInAt
+                  ? `Clocked in at ${fmtTime(clockInAt)}`
+                  : "Clocked in"
                 : effectiveClock === "clocked_out"
                   ? "Clocked out"
-                  : "Not started"}
+                  : pastDay
+                    ? "Not started"
+                    : "You are not clocked in yet"}
             </div>
+            {effectiveClock === "clocked_in" ? (
+              <div style={{ color: "#44403c", fontSize: 13, marginTop: 2 }}>
+                {queuedClock
+                  ? "Saved on this phone. It will send when you're back online."
+                  : hasRecap
+                    ? "Your hours are running. Clock out when you finish."
+                    : "Your hours are running. Your recap is still open."}
+              </div>
+            ) : null}
+            {effectiveClock === "not_started" && !pastDay ? (
+              <div style={{ color: "#44403c", fontSize: 13, marginTop: 2 }}>
+                Tap Clock in when you arrive. Your hours start then.
+              </div>
+            ) : null}
             {ctx.event?.date ? (
               <div style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 2 }}>
                 {fmtDay(ctx.event.date)}
                 {ctx.event.address ? ` · ${ctx.event.address}` : ""}
               </div>
             ) : null}
-            {clockInAt ? (
+            {clockInAt && effectiveClock !== "clocked_in" ? (
               <div style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 2 }}>
                 In {fmtTime(clockInAt)}
                 {ctx.session?.clock.clockOutAt ? ` · Out ${fmtTime(ctx.session.clock.clockOutAt)}` : ""}
@@ -1892,14 +1927,21 @@ function CheckedInFlow({
               </div>
             ) : null}
           </div>
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 999,
-              background: effectiveClock === "clocked_in" ? accent : "rgba(0,0,0,0.2)",
-            }}
-          />
+          {effectiveClock === "clocked_in" ? (
+            <span
+              style={{
+                flexShrink: 0,
+                padding: "4px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                background: accent,
+                color: "#0a0d09",
+              }}
+            >
+              On the clock
+            </span>
+          ) : null}
         </div>
         {clockState === "clocked_in" &&
         (ctx.event?.storeManagerName || ctx.event?.storeManagerPhone) ? (
