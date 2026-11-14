@@ -90,7 +90,19 @@
 .signin-or { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--si-ink-3); }
 .signin-or::before,
 .signin-or::after { content: ""; flex: 1; height: 1px; background: var(--si-line); }
-.signin-google { display: flex; justify-content: flex-start; min-height: 44px; }
+/* Google draws its button in a frame with a white background. On this
+   off-white page that showed as a white box around the pill, so the button
+   sits on a white row the same size and shape as the email field. */
+.signin-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  background: var(--si-surface);
+  border: 1px solid var(--si-field-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
 .signin-note {
   font-size: 14px;
   color: var(--si-ink-2);
