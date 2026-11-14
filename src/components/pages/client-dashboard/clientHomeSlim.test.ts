@@ -29,8 +29,8 @@ describe("client home stays slim", () => {
     expect(dash).not.toContain('"HIDE"');
     expect(dash).not.toContain('"SHOW"');
     expect(dash).toContain("NEEDS YOU");
-    expect(dash).toContain("Tracker this week");
-    expect(dash).toContain("Recaps · Needs review");
+    // The Quick links card repeated the sidebar and was removed (Nov 2026).
+    expect(dash).not.toContain(">Quick links<");
     expect(dash).toContain("<SparkSheet");
     expect(dash).toContain("<InsightsBody embedded omitNarration />");
     expect(insights).toContain("rangePills");

@@ -99,12 +99,22 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
         .map((n) => ({ n, src: pickFieldPhoto(n.customRecapFiles) }))
         // Never a receipt or product-spend photo; such recaps are skipped.
         .filter((x): x is { n: typeof x.n; src: string } => Boolean(x.src))
-        .slice(0, 6)
         .map(({ n, src }) => ({
           uuid: String(n.uuid),
           url: thumbUrl(src, 800) || src,
           label: [n.eventRetailer, n.eventState].filter(Boolean).join(", "),
-        })),
+        }))
+        .reduce<{ uuid: string; url: string; label: string }[][]>(
+          // Two ambassadors at one booth file near-identical photos. Show
+          // one photo per place first; repeats only fill leftover slots.
+          ([fresh, repeats], photo) => {
+            const seen = fresh.some((p) => p.label && p.label === photo.label);
+            return seen ? [fresh, [...repeats, photo]] : [[...fresh, photo], repeats];
+          },
+          [[], []],
+        )
+        .flat()
+        .slice(0, 6),
     [photoData],
   );
 
