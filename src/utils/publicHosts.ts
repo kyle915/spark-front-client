@@ -133,3 +133,25 @@ export function isPublicFieldPath(pathname: string): boolean {
     /^\/jobs\/[^/]+/.test(pathname)
   );
 }
+
+/**
+ * Where a check-in link opened on the admin host should go instead.
+ *
+ * Ambassadors belong on the client host: what the page saves on the phone
+ * (their session, a clock-in queued while offline, a recap draft) is kept
+ * per host, so a shift started on one host is invisible on the other.
+ *
+ * Returns null — stay put — off the admin host, off a check-in path, or
+ * when this phone already holds check-in data on the admin host: moving
+ * that person now would strand whatever they have saved here.
+ */
+export function checkinRedirectTarget(
+  loc: { hostname: string; pathname: string; search: string; hash: string },
+  storedKeys: ReadonlyArray<string>,
+): string | null {
+  if (loc.hostname !== new URL(ADMIN_ORIGIN).hostname) return null;
+  if (!/^\/checkin(\/|$)/.test(loc.pathname)) return null;
+  if (storedKeys.some((key) => key.includes("spark.checkin"))) return null;
+  return `${CLIENT_ORIGIN}${loc.pathname}${loc.search}${loc.hash}`;
+}
+

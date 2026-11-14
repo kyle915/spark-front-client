@@ -17,7 +17,10 @@ export type FieldIssueKind =
   | "request_timeout"
   | "punch_not_saved"
   | "storage_unavailable"
-  | "recap_submit_failed";
+  | "recap_submit_failed"
+  // Not a failure: the ambassador pressed Clock in / Clock out. Recorded so
+  // an attempt that never lands still leaves a trace.
+  | "punch_tapped";
 
 /** Same kind + detail is reported at most once per page life. */
 const sent = new Set<string>();

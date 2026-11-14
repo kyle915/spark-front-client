@@ -15,6 +15,7 @@ import {
   recapShareOrigin,
   sparkFormUrl,
   resolvePublicFormLink,
+  checkinRedirectTarget,
 } from "./publicHosts";
 
 const originalWindow = globalThis.window;
@@ -180,3 +181,47 @@ describe("receipt / invoice / live / admin request URLs", () => {
     );
   });
 });
+
+describe("checkinRedirectTarget", () => {
+  const at = (hostname: string, pathname: string, search = "", hash = "") => ({
+    hostname,
+    pathname,
+    search,
+    hash,
+  });
+
+  it("moves a check-in link on the admin host to the client host, path intact", () => {
+    expect(
+      checkinRedirectTarget(
+        at("admin.igniteproductions.co", "/checkin/BD-AQRACD", "?gig=7", "#recap"),
+        [],
+      ),
+    ).toBe("https://client.igniteproductions.co/checkin/BD-AQRACD?gig=7#recap");
+  });
+
+  it("stays put when this phone already has a shift saved on the admin host", () => {
+    expect(
+      checkinRedirectTarget(at("admin.igniteproductions.co", "/checkin/BD-AQRACD"), [
+        "@spark.appearance",
+        "@spark.checkin.pendingClock/BD-AQRACD",
+      ]),
+    ).toBeNull();
+    expect(
+      checkinRedirectTarget(at("admin.igniteproductions.co", "/checkin/BD-AQRACD"), [
+        "spark.checkin.BD-AQRACD",
+      ]),
+    ).toBeNull();
+  });
+
+  it("leaves staff pages, the client host and localhost alone", () => {
+    expect(checkinRedirectTarget(at("admin.igniteproductions.co", "/today"), [])).toBeNull();
+    expect(
+      checkinRedirectTarget(at("admin.igniteproductions.co", "/checkins-report"), []),
+    ).toBeNull();
+    expect(
+      checkinRedirectTarget(at("client.igniteproductions.co", "/checkin/BD-AQRACD"), []),
+    ).toBeNull();
+    expect(checkinRedirectTarget(at("localhost", "/checkin/BD-AQRACD"), [])).toBeNull();
+  });
+});
+
