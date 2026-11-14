@@ -65,7 +65,7 @@ type NavItem = {
   label: string;
   Icon: React.ComponentType<{ className?: string; size?: number }>;
   to?: string;
-  chip?: { text: string; tone: ChipTone; blink?: boolean };
+  chip?: { text: string; tone: ChipTone; /** Spoken form, when the number alone is not enough. */ label?: string };
   stub?: boolean;
   adminOnly?: boolean;
   // Optional alternate label for the client view.
@@ -332,20 +332,20 @@ const isActive = (path: string | undefined, pathname: string) => {
   return pathname === path || pathname.startsWith(path + "/");
 };
 
-const chipClass = (tone: ChipTone): string => {
+// Sidebar counts are solid pills, in the manner of an app-icon badge: one
+// strong colour for "needs someone", a quiet fill for a plain count. They do
+// not blink; a filled mark is already the loudest thing in the column.
+const badgeClass = (tone: ChipTone): string => {
   switch (tone) {
     case "orange":
-      return "chip chip-orange";
-    case "sky":
-      return "chip chip-sky";
-    case "purple":
-      return "chip chip-purple";
     case "gold":
-      return "chip chip-gold";
+      return "nav-badge--alert";
     case "muted":
-      return "chip chip-muted";
+    case "sky":
+    case "purple":
+      return "nav-badge--count";
     default:
-      return "chip chip-lime";
+      return "nav-badge--new";
   }
 };
 
@@ -434,7 +434,8 @@ const NavRow: React.FC<{
       <span className="truncate spark-sidebar-label">{label}</span>
       {item.chip && (
         <span
-          className={`${chipClass(item.chip.tone)} nav-badge ${item.chip.blink ? "spark-blink" : ""}`}
+          className={`nav-badge ${badgeClass(item.chip.tone)}`}
+          aria-label={item.chip.label}
         >
           {item.chip.text}
         </span>
@@ -514,19 +515,17 @@ const SidebarNav: React.FC<{
           // so the sidebar doesn't scream just because requests exist.
           text: String(counts.approvals),
           tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
-          blink: counts.approvalsSlaBreach > 0,
         };
       if (it.to === "/recaps/list" && !isClient && counts.recapsNeedsReview > 0)
         chip = {
           text: String(counts.recapsNeedsReview),
           tone: "gold",
-          blink: counts.recapsNeedsReview > 10,
         };
       if (it.to === "/recaps/missing" && counts.recapsDue > 0)
         chip = {
-          text: `${counts.recapsDue} DUE`,
+          text: String(counts.recapsDue),
+          label: `${counts.recapsDue} recaps due`,
           tone: "orange",
-          blink: counts.recapsDue > 5,
         };
       if (it.to === "/walkups" && counts.pendingWalkups > 0)
         chip = {
@@ -534,7 +533,6 @@ const SidebarNav: React.FC<{
           // alarm); pulse only when the pile grows past a handful.
           text: String(counts.pendingWalkups),
           tone: "gold",
-          blink: counts.pendingWalkups > 5,
         };
       if (it.to === "/alerts" && counts.alertsUnread > 0)
         chip = { text: String(counts.alertsUnread), tone: "orange" };

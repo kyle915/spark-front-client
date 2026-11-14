@@ -1726,14 +1726,30 @@ thead .spark-table-sticky-date {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.95rem;
 }
+/* Sidebar counts: solid pills, like an app-icon badge. No outline, no blink. */
 .nav-badge {
   margin-left: auto;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
-  padding: 0.2rem 0.45rem;
-  border-radius: 4px;
+  flex: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
+/* Needs someone. The sidebar is dark in both appearances, so these are fixed. */
+.nav-badge--alert { background: #ef5a2a; color: #ffffff; }
+/* Something new to read. */
+.nav-badge--new { background: #f2f3ee; color: #14160f; }
+/* A plain count. */
+.nav-badge--count { background: rgba(242, 243, 238, 0.14); color: rgba(242, 243, 238, 0.86); font-weight: 600; }
 .nav-section {
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.7rem;
