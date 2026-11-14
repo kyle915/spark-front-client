@@ -582,7 +582,7 @@ const TrackerTable: React.FC<{
               {selectionEnabled ? (
                 <th className="w-10 spark-table-sticky-bg" aria-label="Select" />
               ) : null}
-              <th className="spark-table-sticky-date">DATE</th>
+              <th className="spark-table-sticky-date">Date</th>
               <th className="spark-table-sticky-bg" title="Requested demo / event window">
                 Requested
               </th>
