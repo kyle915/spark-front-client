@@ -2,16 +2,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAlertStore, type Alert } from "@store/alertStore";
 
 const TONE: Record<Alert["type"], { border: string; accent: string }> = {
-  success: { border: "rgba(var(--spark-accent-rgb),0.35)", accent: "var(--spark-lime)" },
+  success: { border: "rgba(var(--spark-accent-rgb),0.35)", accent: "var(--spark-toast-ink, var(--spark-lime))" },
   error: {
     border: "rgba(239,90,42,0.45)",
-    accent: "var(--spark-orange, #ef5a2a)",
+    accent: "var(--spark-toast-warn, var(--spark-orange, #ef5a2a))",
   },
   warning: {
     border: "rgba(239,90,42,0.35)",
-    accent: "var(--spark-orange, #ef5a2a)",
+    accent: "var(--spark-toast-warn, var(--spark-orange, #ef5a2a))",
   },
-  info: { border: "var(--spark-border)", accent: "rgba(var(--spark-ink-rgb),0.65)" },
+  info: { border: "var(--spark-border)", accent: "var(--spark-toast-ink-soft, rgba(var(--spark-ink-rgb),0.65))" },
 };
 
 /**
@@ -42,7 +42,7 @@ export default function Alert() {
                 border: `1px solid ${tone.border}`,
                 backdropFilter: "saturate(180%) blur(16px)",
                 WebkitBackdropFilter: "saturate(180%) blur(16px)",
-                color: "var(--spark-text, #f2f3ee)",
+                color: "var(--spark-toast-ink, var(--spark-text, #f2f3ee))",
                 boxShadow: "0 12px 32px rgba(0,0,0,0.4)",
                 cursor: alert.undoable ? "default" : "pointer",
               }}
@@ -54,7 +54,7 @@ export default function Alert() {
                     type="button"
                     onClick={() => undo(alert.id)}
                     className="shrink-0 underline"
-                    style={{ color: "var(--spark-text, #f2f3ee)" }}
+                    style={{ color: "var(--spark-toast-ink, var(--spark-text, #f2f3ee))" }}
                   >
                     Undo
                   </button>
@@ -72,7 +72,7 @@ export default function Alert() {
                   style={{
                     height: 2,
                     transformOrigin: "left",
-                    background: "var(--spark-text-meta, rgba(var(--spark-ink-rgb),0.64))",
+                    background: "var(--spark-toast-ink-soft, var(--spark-text-meta, rgba(var(--spark-ink-rgb),0.64)))",
                   }}
                 />
               ) : null}
