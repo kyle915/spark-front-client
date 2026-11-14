@@ -23,17 +23,17 @@ type BA = Shift["assigned"][number];
 
 const STATUS: Record<
   string,
-  { label: string; fg: string; bg: string; border: string }
+  { label: string; fg: string }
 > = {
-  // `fg` is drawn straight on the page surface (status dot + label) — `bg` is
-  // not applied — so it has to be the accent itself, which flips with the
-  // appearance, not the on-accent ink.
-  clocked_in: { label: "On the clock", fg: "var(--spark-lime)", bg: "var(--spark-lime)", border: "var(--spark-lime)" },
-  clocked_out: { label: "Done", fg: "var(--spark-sky, #6db3f2)", bg: "rgba(109,179,242,0.12)", border: "rgba(109,179,242,0.4)" },
-  no_show: { label: "No-show", fg: "var(--spark-orange)", bg: "rgba(239,90,42,0.14)", border: "rgba(239,90,42,0.5)" },
-  missed: { label: "Missed", fg: "var(--spark-orange)", bg: "rgba(239,90,42,0.1)", border: "rgba(239,90,42,0.35)" },
-  awaiting: { label: "Not in yet", fg: "var(--spark-gold)", bg: "rgba(255,196,0,0.12)", border: "rgba(255,196,0,0.45)" },
-  upcoming: { label: "Upcoming", fg: "rgba(var(--spark-ink-rgb),0.6)", bg: "rgba(var(--spark-ink-rgb),0.05)", border: "var(--spark-border)" },
+  // `fg` is drawn straight on the page surface (status dot + label), so it
+  // has to be the accent itself, which flips with the appearance, not the
+  // on-accent ink.
+  clocked_in: { label: "On the clock", fg: "var(--spark-lime)" },
+  clocked_out: { label: "Done", fg: "var(--spark-sky, #6db3f2)" },
+  no_show: { label: "No-show", fg: "var(--spark-orange)" },
+  missed: { label: "Missed", fg: "var(--spark-orange)" },
+  awaiting: { label: "Not in yet", fg: "var(--spark-gold)" },
+  upcoming: { label: "Upcoming", fg: "rgba(var(--spark-ink-rgb),0.6)" },
 };
 
 const fmtTime = (iso: string | null | undefined): string => {

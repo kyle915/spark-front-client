@@ -238,7 +238,7 @@ export default function FormDatePicker<T extends FieldValues>({
             </calendar-date>
 
             {/* Footer actions */}
-            <div className="mt-2 flex justify-between border-t border-white/10 pt-2">
+            <div className="mt-2 flex justify-between border-t spark-divider pt-2">
               <button
                 type="button"
                 className="rounded-lg px-2 py-1 text-sm spark-row-hover"
@@ -261,7 +261,7 @@ export default function FormDatePicker<T extends FieldValues>({
 
               <button
                 type="button"
-                className="rounded-lg px-2 py-1 text-sm text-[#ff5470] hover:bg-white/5"
+                className="rounded-lg px-2 py-1 text-sm text-[#ff5470] spark-row-hover"
                 onClick={() => {
                   field.onChange("");
                 }}

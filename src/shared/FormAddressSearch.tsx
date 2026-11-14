@@ -145,7 +145,7 @@ const FormAddressSearch = <T extends FieldValues>({
               >
                 <p className="text-sm font-semibold">{result.label}</p>
                 {result.description && (
-                  <p className="text-xs text-white/55">
+                  <p className="text-xs spark-text-soft">
                     {result.description}
                   </p>
                 )}

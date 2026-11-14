@@ -90,6 +90,7 @@ import {
   type ActionPhase,
 } from "@/motion/opsMotion";
 import { formatDate, parseLocaleNumber } from "@/utils";
+import { formatInstantDate } from "@/utils/formatInstantDate";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import { thumbUrl } from "@/utils/thumb";
 import {
@@ -2106,7 +2107,8 @@ const RecapCustomViewInner = ({
                     ],
                     [
                       "Submitted At",
-                      formatDate(recap.submittedAt ?? recap.createdAt ?? null),
+                      // An instant, not a calendar day: convert, don't slice.
+                      formatInstantDate(recap.submittedAt ?? recap.createdAt ?? null),
                     ],
                   ] as [string, string | null | undefined][]
                 )

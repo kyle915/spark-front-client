@@ -92,7 +92,7 @@ describe("leftoverCheckin", () => {
     // with its helper copy and the existing start-another handler.
     expect(src.match(/\{CHECK_IN_SOMEWHERE_ELSE\}/g)).toHaveLength(1);
     const standalone = src.slice(src.indexOf("{CHECK_IN_ANOTHER_GIG_HINT}"));
-    expect(standalone).toContain("onClick={() => onStartAnother()}");
+    expect(standalone).toContain("onClick={() => requestStartAnother()}");
     expect(standalone).toContain("{CHECK_IN_SOMEWHERE_ELSE}");
   });
 

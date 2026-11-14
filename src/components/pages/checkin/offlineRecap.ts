@@ -113,7 +113,58 @@ export type PendingRecap = {
     fieldValues: { customFieldId: string; value: string }[];
     productSamples: { productId: string; quantity: number }[];
   }[];
+  /** Set when the server refused this recap for good (see
+   *  classifyRecapResponse). The answers and photos stay on the device, but
+   *  nothing retries until the BA taps Try again or edits and resubmits. */
+  rejected?: RecapRejection;
 };
+
+export type RecapRejection = { status: number; message: string; at: number };
+
+export type RecapSendOutcome = "sent" | "transient" | "permanent";
+
+/**
+ * What a recap POST response means for the queue.
+ *
+ * - sent: filed, or the server already has it (409 / `already`).
+ * - transient: no answer, a timeout, a rate limit or a server fault. Worth
+ *   trying again on the next tick, as before.
+ * - permanent: the server read the recap and said no (4xx other than 408 /
+ *   429, or a 2xx carrying `success: false`). The same bytes will get the
+ *   same answer, so retrying every tick only hides the problem from the BA.
+ */
+export function classifyRecapResponse(res: {
+  ok: boolean;
+  status: number;
+  already?: boolean;
+}): RecapSendOutcome {
+  if (res.ok || res.already || res.status === 409) return "sent";
+  if (isOfflineClockFailure({ status: res.status })) return "transient";
+  if (res.status >= 400 && res.status < 500) return "permanent";
+  if (res.status >= 200 && res.status < 300) return "permanent";
+  return "transient";
+}
+
+export const NO_PHOTOS_SENT_MESSAGE =
+  "None of the photos for this recap could be uploaded from this phone";
+
+/** Copy for a recap the server refused. Nothing here is lost: say so. */
+export function rejectedRecapBanner(rejection: RecapRejection): string {
+  const reason = rejection.message.trim().replace(/[.!\s]+$/, "");
+  return (
+    (reason
+      ? `This recap could not be sent: ${reason}. `
+      : "This recap could not be sent. ") +
+    "Your answers are saved on this phone. Tap to try again or contact Ignite."
+  );
+}
+
+/** The right line for a queued recap: still waiting to send, or refused. */
+export function pendingRecapBanner(pending: PendingRecap): string {
+  return pending.rejected
+    ? rejectedRecapBanner(pending.rejected)
+    : offlineRecapBanner(pending.submittedAt);
+}
 
 export type PhotoBlobStore = {
   put(id: string, file: File): Promise<void>;
@@ -349,7 +400,47 @@ export async function enqueueRecap(
   return pending;
 }
 
-export type RecapFlushResult = "none" | "flushed" | "retry" | "already";
+export type RecapFlushResult = "none" | "flushed" | "retry" | "already" | "rejected";
+
+function markRecapRejected(
+  pending: PendingRecap,
+  rejection: { status: number; message?: string },
+  storage: StorageLike,
+): void {
+  writePendingRecap(
+    {
+      ...pending,
+      rejected: {
+        status: rejection.status,
+        message: String(rejection.message ?? "").trim(),
+        at: Date.now(),
+      },
+    },
+    storage,
+  );
+}
+
+/**
+ * The BA tapped Try again on a refused recap: lift the hold so the next
+ * flush posts it again, and give photos that were given up on a fresh run.
+ * Returns the row as it now stands (null if there is nothing queued).
+ */
+export function clearRecapRejection(
+  code: string,
+  storage: StorageLike = liveStorage(),
+): PendingRecap | null {
+  const pending = readPendingRecap(code, storage);
+  if (!pending || !pending.rejected) return pending;
+  const rest: PendingRecap = { ...pending };
+  delete rest.rejected;
+  return writePendingRecap(
+    {
+      ...rest,
+      files: rest.files.map((f) => (f.blobName ? f : { ...f, attempts: 0 })),
+    },
+    storage,
+  );
+}
 
 const UPLOAD_NAME_EXT = new Set([
   "jpg",
@@ -491,6 +582,7 @@ export async function flushPendingRecap(
       ok: boolean;
       status: number;
       already?: boolean;
+      message?: string;
     }>;
     putPhoto: (file: File, token: string) => Promise<{ blobName: string }>;
   },
@@ -517,6 +609,8 @@ async function flushRecapOnce(
 ): Promise<RecapFlushResult> {
   const pending = readPendingRecap(args.code, storage);
   if (!pending) return "none";
+  // Refused for good: held on the device until the BA asks for another try.
+  if (pending.rejected) return "rejected";
 
   const files = pending.files.map((f) => ({ ...f }));
   for (const file of files) {
@@ -545,7 +639,13 @@ async function flushRecapOnce(
   }
 
   const uploaded = files.filter((f) => f.blobName);
-  if (uploaded.length === 0) return "retry";
+  if (uploaded.length === 0) {
+    // Every photo is either given up on or no longer on this device, so no
+    // later tick can change the answer. This used to "retry" silently
+    // forever without making a single request.
+    markRecapRejected({ ...pending, files }, { status: 0, message: NO_PHOTOS_SENT_MESSAGE }, storage);
+    return "rejected";
+  }
 
   try {
     const res = await args.postRecap({
@@ -578,10 +678,15 @@ async function flushRecapOnce(
       clearPendingRecap(args.code, storage);
       return res.already ? "already" : "flushed";
     }
-    if (isOfflineClockFailure({ status: res.status })) return "retry";
+    if (classifyRecapResponse(res) === "permanent") {
+      // Keep everything (answers, photos, draft) and stop the loop. The page
+      // shows why, with a way to try again.
+      markRecapRejected({ ...pending, files }, res, storage);
+      return "rejected";
+    }
     return "retry";
-  } catch (error) {
-    if (isOfflineClockFailure({ error })) return "retry";
+  } catch {
+    // Thrown = the request never got an answer. Always worth another try.
     return "retry";
   }
 }

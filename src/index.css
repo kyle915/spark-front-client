@@ -995,6 +995,21 @@ thead .spark-table-sticky-date {
 .spark-row-hover:hover {
   background: rgba(var(--spark-ink-rgb, 255, 255, 255), 0.06);
 }
+/* Same idea for hairlines and quiet text that were Tailwind border-white/…
+   and text-white/…: invisible on a light surface. Each keeps its old white
+   value as the fallback for public pages without the Spark tokens. */
+.spark-divider {
+  border-color: rgba(var(--spark-ink-rgb, 255, 255, 255), 0.1);
+}
+.spark-divider-faint {
+  border-color: rgba(var(--spark-ink-rgb, 255, 255, 255), 0.05);
+}
+.spark-text-soft {
+  color: var(--spark-text-meta, rgba(255, 255, 255, 0.55));
+}
+.spark-text-soft-hover:hover {
+  color: var(--spark-text, #fff);
+}
 
 /* iOS Settings-style grouped inset — Recaps compact + Jump groups */
 .spark-inset-label {

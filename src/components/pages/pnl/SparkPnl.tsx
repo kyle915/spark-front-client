@@ -4,6 +4,7 @@ import Layout from "@/layout/Layout";
 import { EventPnlQuery } from "@/api/queries/EventPnlQuery";
 import type { EventPnlQuery as EventPnlQueryType } from "@api/queries/__generated__/EventPnlQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 /**
  * P&L — the cost side of every activation, finally in one place.
@@ -31,14 +32,15 @@ const money = (v: number) =>
     maximumFractionDigits: 0,
   });
 
-const inputStyle: React.CSSProperties = {
+// A function so the colour scheme is read at render, not at import.
+const inputStyle = (): React.CSSProperties => ({
   padding: "8px 10px",
   borderRadius: 8,
   background: "rgba(var(--spark-ink-rgb),0.04)",
   border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
   color: "var(--spark-text)",
-  colorScheme: "dark",
-};
+  colorScheme: inputColorScheme(),
+});
 
 const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
   tenantId,
@@ -282,14 +284,14 @@ const SparkPnl: React.FC = () => {
             type="date"
             value={start}
             onChange={(e) => setStart(e.target.value)}
-            style={inputStyle}
+            style={inputStyle()}
           />
           <span style={{ color: "var(--spark-text-meta)" }}>→</span>
           <input
             type="date"
             value={end}
             onChange={(e) => setEnd(e.target.value)}
-            style={inputStyle}
+            style={inputStyle()}
           />
         </div>
         {tenantId ? (

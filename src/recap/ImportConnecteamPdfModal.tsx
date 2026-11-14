@@ -31,6 +31,7 @@ import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { buildDateTimeWithOffset } from "@/utils";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 /**
  * Drop a Connecteam-exported recap PDF onto a Spark event and turn it
@@ -757,7 +758,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                             background: "rgba(var(--spark-ink-rgb),0.04)",
                             border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
                             color: "var(--spark-text)",
-                            colorScheme: "dark",
+                            colorScheme: inputColorScheme(),
                           }}
                         />
                         <input
@@ -784,7 +785,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                             background: "rgba(var(--spark-ink-rgb),0.04)",
                             border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
                             color: "var(--spark-text)",
-                            colorScheme: "dark",
+                            colorScheme: inputColorScheme(),
                           }}
                         />
                         <input
@@ -797,7 +798,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                             background: "rgba(var(--spark-ink-rgb),0.04)",
                             border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
                             color: "var(--spark-text)",
-                            colorScheme: "dark",
+                            colorScheme: inputColorScheme(),
                           }}
                         />
                         <select

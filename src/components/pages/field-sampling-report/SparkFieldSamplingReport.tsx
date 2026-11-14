@@ -11,6 +11,7 @@ import { TenantFieldSamplingReportQuery } from "@/api/queries/TenantFieldSamplin
 import type { TenantFieldSamplingReportQuery as TenantFieldSamplingReportQueryType } from "@api/queries/__generated__/TenantFieldSamplingReportQuery.graphql";
 import { GenerateFieldSamplingCalloutSummaryMutation } from "@/api/mutations/GenerateFieldSamplingCalloutSummaryMutation";
 import type { GenerateFieldSamplingCalloutSummaryMutation as GenerateFieldSamplingCalloutSummaryMutationType } from "@api/mutations/__generated__/GenerateFieldSamplingCalloutSummaryMutation.graphql";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 /**
  * Field Sampling Report — a consolidated rollup for tenants running a
@@ -74,14 +75,15 @@ const PRESETS: { key: string; label: string; weeks: number }[] = [
   { key: "8w", label: "Last 8 weeks", weeks: 8 },
 ];
 
-const inputStyle: React.CSSProperties = {
+// A function so the colour scheme is read at render, not at import.
+const inputStyle = (): React.CSSProperties => ({
   padding: "6px 8px",
   borderRadius: 8,
   background: "rgba(var(--spark-ink-rgb),0.04)",
   border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
   color: "var(--spark-text)",
-  colorScheme: "dark",
-};
+  colorScheme: inputColorScheme(),
+});
 
 const eyebrow: React.CSSProperties = {
   letterSpacing: "0.18em",
@@ -285,7 +287,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           max={endDate}
           onChange={(e) => setStartDate(e.target.value)}
           className="text-xs"
-          style={inputStyle}
+          style={inputStyle()}
         />
         <span style={dimmer}>–</span>
         <input
@@ -294,13 +296,13 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           min={startDate}
           onChange={(e) => setEndDate(e.target.value)}
           className="text-xs"
-          style={inputStyle}
+          style={inputStyle()}
         />
         <select
           value={market ?? ""}
           onChange={(e) => setMarket(e.target.value || null)}
           className="text-xs ml-auto"
-          style={inputStyle}
+          style={inputStyle()}
         >
           <option value="">All markets</option>
           {markets.map((m) => (
@@ -314,7 +316,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             value={effectiveEventTypeId ?? ""}
             onChange={(e) => setEventTypeOverride(e.target.value || null)}
             className="text-xs"
-            style={inputStyle}
+            style={inputStyle()}
           >
             <option value="">All event types</option>
             {eventTypes.map((t) => (

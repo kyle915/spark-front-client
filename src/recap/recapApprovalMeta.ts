@@ -1,4 +1,5 @@
-import { formatDate, formatLocalDateTime } from "@/utils";
+import { formatLocalDateTime } from "@/utils";
+import { formatInstantDate } from "@/utils/formatInstantDate";
 
 export type RecapApprover = {
   firstName?: string | null;
@@ -25,7 +26,10 @@ export function recapApprovalMeta(
   if (!approved) return null;
   const who = recapApproverName(approver);
   const when = approvedAt
-    ? `${formatDate(approvedAt)} ${formatLocalDateTime(approvedAt)}`.trim()
+    ? // Both halves in the viewer's zone. The date used to be sliced from
+      // the UTC string while the time was converted, so an evening approval
+      // read as tomorrow's date beside today's time.
+      `${formatInstantDate(approvedAt)} ${formatLocalDateTime(approvedAt)}`.trim()
     : null;
   if (who && when) return `Approved by ${who} · ${when}`;
   if (who) return `Approved by ${who}`;

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  classifyRecapResponse,
   clearPendingRecap,
+  clearRecapRejection,
   enqueueRecap,
   flushPendingRecap,
   memoryPhotoStore,
@@ -10,6 +12,8 @@ import {
   PhotoUploadTimeoutError,
   putCheckinPhoto,
   readPendingRecap,
+  rejectedRecapBanner,
+  pendingRecapBanner,
   writePendingRecap,
   type PendingRecap,
 } from "./offlineRecap";
@@ -688,6 +692,235 @@ describe("queued recap with a photo that fails to upload", () => {
       );
     expect(await run()).toBe("retry");
     expect(await run()).toBe("retry");
+    expect(await run()).toBe("flushed");
+  });
+});
+
+describe("classifyRecapResponse", () => {
+  it("treats a filed or already-filed recap as sent", () => {
+    expect(classifyRecapResponse({ ok: true, status: 200 })).toBe("sent");
+    expect(classifyRecapResponse({ ok: false, status: 200, already: true })).toBe("sent");
+    expect(classifyRecapResponse({ ok: false, status: 409 })).toBe("sent");
+  });
+
+  it("keeps retrying when there was no answer, a timeout, a rate limit or a server fault", () => {
+    for (const status of [0, 408, 429, 500, 502, 503, 504]) {
+      expect(classifyRecapResponse({ ok: false, status })).toBe("transient");
+    }
+  });
+
+  it("stops on a 4xx the server will repeat", () => {
+    for (const status of [400, 401, 403, 404, 410, 413, 422]) {
+      expect(classifyRecapResponse({ ok: false, status })).toBe("permanent");
+    }
+  });
+
+  it("stops when a 200 carries success: false", () => {
+    expect(classifyRecapResponse({ ok: false, status: 200 })).toBe("permanent");
+  });
+});
+
+describe("rejectedRecapBanner", () => {
+  it("gives the server's reason and says nothing was lost", () => {
+    expect(
+      rejectedRecapBanner({ status: 400, message: "Add at least one photo of your event.", at: 1 }),
+    ).toBe(
+      "This recap could not be sent: Add at least one photo of your event. " +
+        "Your answers are saved on this phone. Tap to try again or contact Ignite.",
+    );
+  });
+
+  it("still reads as a sentence with no reason", () => {
+    expect(rejectedRecapBanner({ status: 422, message: "", at: 1 })).toBe(
+      "This recap could not be sent. Your answers are saved on this phone. " +
+        "Tap to try again or contact Ignite.",
+    );
+  });
+});
+
+describe("queued recap the server refuses for good", () => {
+  const seed = async (
+    storage: MemoryStorage,
+    photos: ReturnType<typeof memoryPhotoStore>,
+    files: PendingRecap["files"] = [
+      { id: "p1", blobName: "blob-1", category: null, filename: "a.jpg", contentType: "image/jpeg" },
+    ],
+  ) =>
+    enqueueRecap(
+      {
+        code: "RJ-1",
+        token: "tok",
+        fieldValues: [{ customFieldId: "f1", value: "12 samples" }],
+        files,
+        productSamples: [],
+        totalEngagements: null,
+        nowMs: THREE_PM_MS,
+        photoFiles: { p1: sampleFile() },
+      },
+      storage,
+      photos,
+    );
+
+  it("stops retrying, keeps the answers and photos, and records why", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    const queued = await seed(storage, photos);
+    let posts = 0;
+    const run = () =>
+      flushPendingRecap(
+        {
+          code: "RJ-1",
+          postRecap: async () => {
+            posts += 1;
+            return { ok: false, status: 400, message: "No check-in found for that date." };
+          },
+          putPhoto: async () => ({ blobName: "x" }),
+        },
+        storage,
+        photos,
+      );
+    expect(await run()).toBe("rejected");
+    // Later ticks do not hit the server again.
+    expect(await run()).toBe("rejected");
+    expect(await run()).toBe("rejected");
+    expect(posts).toBe(1);
+
+    const held = readPendingRecap("RJ-1", storage);
+    expect(held?.id).toBe(queued.id);
+    expect(held?.fieldValues).toEqual([{ customFieldId: "f1", value: "12 samples" }]);
+    expect(held?.rejected?.status).toBe(400);
+    expect(held?.rejected?.message).toBe("No check-in found for that date.");
+    expect(await photos.get("p1")).not.toBeNull();
+    expect(pendingRecapBanner(held as PendingRecap)).toContain("No check-in found for that date");
+  });
+
+  it("keeps retrying a server fault exactly as before", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await seed(storage, photos);
+    let posts = 0;
+    const run = (status: number) =>
+      flushPendingRecap(
+        {
+          code: "RJ-1",
+          postRecap: async () => {
+            posts += 1;
+            return { ok: false, status };
+          },
+          putPhoto: async () => ({ blobName: "x" }),
+        },
+        storage,
+        photos,
+      );
+    expect(await run(500)).toBe("retry");
+    expect(await run(503)).toBe("retry");
+    expect(await run(429)).toBe("retry");
+    expect(await run(408)).toBe("retry");
+    expect(posts).toBe(4);
+    expect(readPendingRecap("RJ-1", storage)?.rejected).toBeUndefined();
+  });
+
+  it("sends again with the same idempotency key after Try again", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    const queued = await seed(storage, photos);
+    const keys: unknown[] = [];
+    let accept = false;
+    const run = () =>
+      flushPendingRecap(
+        {
+          code: "RJ-1",
+          postRecap: async (body) => {
+            keys.push(body.idempotencyKey);
+            return accept ? { ok: true, status: 200 } : { ok: false, status: 422, message: "nope" };
+          },
+          putPhoto: async () => ({ blobName: "x" }),
+        },
+        storage,
+        photos,
+      );
+    expect(await run()).toBe("rejected");
+    accept = true;
+    expect(clearRecapRejection("RJ-1", storage)?.rejected).toBeUndefined();
+    expect(await run()).toBe("flushed");
+    expect(keys).toEqual([queued.id, queued.id]);
+    expect(readPendingRecap("RJ-1", storage)).toBeNull();
+  });
+
+  it("re-queuing the edited recap lifts the hold", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    const queued = await seed(storage, photos);
+    await flushPendingRecap(
+      {
+        code: "RJ-1",
+        postRecap: async () => ({ ok: false, status: 400, message: "fix it" }),
+        putPhoto: async () => ({ blobName: "x" }),
+      },
+      storage,
+      photos,
+    );
+    const again = await seed(storage, photos);
+    expect(again.id).toBe(queued.id);
+    expect(readPendingRecap("RJ-1", storage)?.rejected).toBeUndefined();
+  });
+
+  it("stops, without posting, when no photo can ever be uploaded", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    // Queued with a photo whose bytes never made it into device storage.
+    await enqueueRecap(
+      {
+        code: "RJ-1",
+        token: "tok",
+        fieldValues: [],
+        files: [
+          { id: "gone", blobName: null, category: null, filename: "a.jpg", contentType: "image/jpeg" },
+        ],
+        productSamples: [],
+        totalEngagements: null,
+        nowMs: THREE_PM_MS,
+      },
+      storage,
+      photos,
+    );
+    let posts = 0;
+    const result = await flushPendingRecap(
+      {
+        code: "RJ-1",
+        postRecap: async () => {
+          posts += 1;
+          return { ok: true, status: 200 };
+        },
+        putPhoto: async () => ({ blobName: "x" }),
+      },
+      storage,
+      photos,
+    );
+    expect(result).toBe("rejected");
+    expect(posts).toBe(0);
+    expect(readPendingRecap("RJ-1", storage)?.rejected?.status).toBe(0);
+  });
+
+  it("Try again gives photos that were given up on a fresh run", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await seed(storage, photos, [
+      { id: "p1", blobName: null, category: null, filename: "a.jpg", contentType: "image/jpeg", attempts: 3 },
+    ]);
+    const run = () =>
+      flushPendingRecap(
+        {
+          code: "RJ-1",
+          postRecap: async () => ({ ok: true, status: 200 }),
+          putPhoto: async () => ({ blobName: "blob-now" }),
+        },
+        storage,
+        photos,
+      );
+    expect(await run()).toBe("rejected");
+    clearRecapRejection("RJ-1", storage);
+    expect(readPendingRecap("RJ-1", storage)?.files[0].attempts).toBe(0);
     expect(await run()).toBe("flushed");
   });
 });

@@ -49,7 +49,7 @@ const FormInputPassword = <T extends FieldValues>({
                         />
                         <button
                             type="button"
-                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/55 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2f3ee]"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 spark-text-soft spark-text-soft-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f2f3ee]"
                             onClick={() => setShowPassword((prev) => !prev)}
                             aria-label={showPassword ? "Hide password" : "Show password"}
                         >
