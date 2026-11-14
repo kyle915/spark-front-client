@@ -153,24 +153,6 @@
   animation: signin-rise 0.6s var(--si-ease) both;
 }
 .signin-mark { margin: 0 0 20px -6px; }
-.signin-about { margin: 0 0 28px; font-size: 17px; line-height: 1.5; color: var(--si-ink-2); max-width: 38ch; text-wrap: pretty; }
-.signin-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 16px;
-  margin: 28px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--si-line);
-}
-.signin-stat dd {
-  margin: 0;
-  font-family: var(--font-display, sans-serif);
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.signin-stat dt { font-size: 13px; color: var(--si-ink-3); margin-top: 2px; }
 .signin-page > .signin-foot { justify-content: center; padding: 0 24px 24px; }
 
 @keyframes signin-rise {
@@ -181,42 +163,22 @@
   .signin-page *, .signin-page { animation: none !important; transition: none !important; }
 }
 
-/* Phones and narrow windows: one column, and the figures sit last. */
+/* Phones and narrow windows: one column. */
 .signin-intro, .signin-entry { display: contents; }
-.signin-intro .signin-stats { order: 3; }
 
-/* Desktop: the same content, set across the page. What Spark is on the
-   left at reading size; signing in on the right. No panels, no boxes. */
+/* Desktop: the wordmark on the left, signing in on the right. Nothing else:
+   Spark is invite only, so the page does not need to explain itself. */
 @media (min-width: 1100px) {
   .signin-col {
-    max-width: 1320px;
+    max-width: 1240px;
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(360px, 420px);
+    grid-template-columns: minmax(0, 1.2fr) minmax(360px, 420px);
     align-items: center;
-    column-gap: clamp(48px, 6vw, 112px);
+    column-gap: clamp(48px, 7vw, 128px);
     padding: 8px clamp(32px, 4vw, 64px) 24px;
   }
   .signin-intro, .signin-entry { display: flex; flex-direction: column; }
-  .signin-mark { margin: 0 0 28px -10px; }
-  .signin-mark img { height: clamp(140px, 13vw, 200px) !important; }
-  .signin-about {
-    margin: 0;
-    max-width: 24ch;
-    font-family: var(--font-display, sans-serif);
-    font-size: clamp(28px, 2.5vw, 38px);
-    font-weight: 600;
-    line-height: 1.18;
-    letter-spacing: -0.025em;
-    color: var(--si-ink);
-    text-wrap: balance;
-  }
-  .signin-intro .signin-stats {
-    order: 0;
-    margin-top: 40px;
-    padding-top: 20px;
-    max-width: 520px;
-    border-top-color: var(--si-ink);
-  }
-  .signin-stat dd { font-size: 30px; }
+  .signin-mark { margin: 0 0 0 -12px; }
+  .signin-mark img { height: clamp(180px, 20vw, 320px) !important; }
   .signin-shift { margin-top: 24px; }
 }
