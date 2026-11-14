@@ -1412,8 +1412,14 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         .filter((e): e is NonNullable<typeof e> => Boolean(e))
         .map((ev) => (
           <div key={String(ev.uuid)} className="space-y-4">
-            <ShiftReplayPanel eventUuid={String(ev.uuid)} />
-            <EventAttendanceTable eventUuid={String(ev.uuid)} />
+            {/* Ignite staff only: an ambassador's route, full name, punch
+                coordinates and the punch editor are never shown to a brand. */}
+            {role.isClient ? null : (
+              <>
+                <ShiftReplayPanel eventUuid={String(ev.uuid)} />
+                <EventAttendanceTable eventUuid={String(ev.uuid)} />
+              </>
+            )}
             {role.isAdmin && <EventMileagePanel eventUuid={String(ev.uuid)} />}
             {role.isAdmin && <WalkupCodePanel eventUuid={String(ev.uuid)} />}
           </div>

@@ -1303,9 +1303,15 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         </div>
       )}
 
-      {/* GPS trail */}
-      <ShiftReplayPanel eventUuid={String(event.uuid)} />
-      <EventAttendanceTable eventUuid={String(event.uuid)} />
+      {/* GPS trail and punches: Ignite staff only. A brand user never sees
+          an ambassador's route, full name, punch coordinates or the punch
+          editor. */}
+      {role.isClient ? null : (
+        <>
+          <ShiftReplayPanel eventUuid={String(event.uuid)} />
+          <EventAttendanceTable eventUuid={String(event.uuid)} />
+        </>
+      )}
       {role.isAdmin && <EventMileagePanel eventUuid={String(event.uuid)} />}
       {role.isAdmin && requestUuid ? (
         <RequestActivityTimeline requestUuid={String(requestUuid)} />
