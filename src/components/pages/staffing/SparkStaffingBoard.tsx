@@ -403,15 +403,15 @@ const Inner: React.FC<{
           }}
         >
           {unstaffed > 0
-            ? `${unstaffed} SHIFT${unstaffed === 1 ? "" : "S"} UNSTAFFED`
-            : "ALL SHIFTS STAFFED ✓"}
+            ? `${unstaffed} shift${unstaffed === 1 ? "" : "s"} unstaffed`
+            : "All shifts staffed"}
         </span>
         <span
           className="mono text-[11px]"
           style={{ color: "var(--spark-text-meta)", letterSpacing: "0.1em" }}
         >
-          {shifts.length} SHIFT{shifts.length === 1 ? "" : "S"}{" "}
-          {filtersActive ? `SHOWN · ${allShifts.length} THIS WEEK` : "THIS WEEK"}
+          {shifts.length} shift{shifts.length === 1 ? "" : "s"}{" "}
+          {filtersActive ? `shown · ${allShifts.length} this week` : "this week"}
         </span>
         <button
           onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
@@ -424,7 +424,7 @@ const Inner: React.FC<{
             border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(var(--spark-accent-rgb),0.35)"}`,
           }}
         >
-          {bulkMode ? "✕ EXIT BULK" : "⊕ BULK ASSIGN"}
+          {bulkMode ? "Exit bulk assign" : "Bulk assign"}
         </button>
       </div>
 
@@ -531,7 +531,7 @@ const Inner: React.FC<{
                 className="mono text-[10px] px-3 py-2"
                 style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
               >
-                VENUE
+                Venue
               </div>
               {days.map((d) => (
                 <div
@@ -674,11 +674,11 @@ const Inner: React.FC<{
                             >
                               {bulkMode
                                 ? isSel
-                                  ? "✓ SELECTED"
-                                  : "SELECT"
+                                  ? "Selected"
+                                  : "Select"
                                 : s.assigned.length === 0
-                                  ? "+ ASSIGN"
-                                  : "+ ADD"}
+                                  ? "Assign"
+                                  : "Add"}
                             </button>
                             {!bulkMode && s.assigned.length === 0 ? (
                               <button
@@ -695,7 +695,7 @@ const Inner: React.FC<{
                                 }}
                                 title="Book the crew who worked this venue last time"
                               >
-                                {rebookingId === s.eventId ? "…" : "↻ LAST CREW"}
+                                {rebookingId === s.eventId ? "…" : "Last crew"}
                               </button>
                             ) : null}
                           </div>
@@ -802,13 +802,7 @@ export default function SparkStaffingBoard() {
   }, [weekStart]);
 
   return (
-    <div className="p-5 md:p-8">
-      <p
-        className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
-      >
-        WORKSPACE
-      </p>
+    <div className="p-5 md:p-8 spark-scale">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
         <div>
           <h1 className="display text-2xl font-bold">Staffing Board</h1>
