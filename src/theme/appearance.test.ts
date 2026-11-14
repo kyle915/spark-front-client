@@ -1,59 +1,54 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  APPEARANCE_ATTR,
-  applyAppearance,
-  isLightMode,
-  readAppearance,
-  setAppearance,
-} from "./appearance";
+import { beforeEach, describe, expect, it } from "vitest";
+import { APPEARANCE_ATTR, holdAppearance } from "./appearance";
 
-// No DOM in this test run: stand in the three globals the module touches.
-beforeEach(() => {
-  const store = new Map<string, string>();
-  const attrs = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
-    getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => void store.set(k, v),
-    removeItem: (k: string) => void store.delete(k),
-  });
-  vi.stubGlobal("document", {
+// No DOM in this test run: stand in for <html> and localStorage.
+const attrs = new Map<string, string>();
+const saved = new Map<string, string>();
+Object.assign(globalThis, {
+  document: {
     documentElement: {
+      setAttribute: (k: string, v: string) => attrs.set(k, v),
+      removeAttribute: (k: string) => attrs.delete(k),
       getAttribute: (k: string) => attrs.get(k) ?? null,
-      setAttribute: (k: string, v: string) => void attrs.set(k, v),
-      removeAttribute: (k: string) => void attrs.delete(k),
-      hasAttribute: (k: string) => attrs.has(k),
     },
-  });
-  vi.stubGlobal("window", { dispatchEvent: () => true });
-  vi.stubGlobal("Event", class {});
+  },
+  localStorage: {
+    getItem: (k: string) => saved.get(k) ?? null,
+    setItem: (k: string, v: string) => saved.set(k, v),
+    clear: () => saved.clear(),
+  },
 });
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+const mode = () => document.documentElement.getAttribute(APPEARANCE_ATTR);
 
-describe("appearance", () => {
-  it("defaults to light until someone chooses", () => {
-    expect(readAppearance()).toBe("light");
+describe("holdAppearance", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.removeAttribute(APPEARANCE_ATTR);
   });
 
-  it("remembers and applies light", () => {
-    setAppearance("light");
-    expect(readAppearance()).toBe("light");
-    expect(document.documentElement.getAttribute(APPEARANCE_ATTR)).toBe("light");
-    expect(isLightMode()).toBe(true);
+  it("stays light when the old shell leaves after the new one arrived", () => {
+    const signInShell = holdAppearance();
+    const nextShell = holdAppearance();
+    signInShell();
+    expect(mode()).toBe("light");
+    nextShell();
+    expect(mode()).toBeNull();
   });
 
-  it("choosing dark is remembered and removes the light attribute", () => {
-    setAppearance("light");
-    setAppearance("dark");
-    expect(readAppearance()).toBe("dark");
-    expect(document.documentElement.hasAttribute(APPEARANCE_ATTR)).toBe(false);
+  it("ignores a second release from the same shell", () => {
+    const a = holdAppearance();
+    const b = holdAppearance();
+    a();
+    a();
+    expect(mode()).toBe("light");
+    b();
   });
 
-  it("applyAppearance does not persist", () => {
-    setAppearance("dark");
-    applyAppearance("light");
-    expect(readAppearance()).toBe("dark");
+  it("keeps an explicit dark choice", () => {
+    localStorage.setItem("@spark.appearance", "dark");
+    const release = holdAppearance();
+    expect(mode()).toBeNull();
+    release();
   });
 });

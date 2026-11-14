@@ -18,6 +18,7 @@ import { themes } from "@/utils";
 import {
   buildThemeDefaults,
   applyCssVariables,
+  clearCssVariables,
 } from "@/utils/tenantThemeConfig";
 type FormData = {
   username: string;
@@ -45,6 +46,11 @@ const Login = () => {
     document.documentElement.setAttribute("data-theme", themeName);
     localStorage.setItem("@color-scheme", colorScheme);
     localStorage.setItem("@theme", themeName);
+
+    // These are written inline on <html>, where they outrank the stylesheet.
+    // Left behind after sign-in they kept the app's page background and text
+    // dark while its light mode was on, until a full reload.
+    return () => clearCssVariables(cssVars);
   }, [colorScheme]);
 
   // const handleSwitch = () => {

@@ -33,6 +33,34 @@ export const applyAppearance = (mode: Appearance): void => {
   else root.removeAttribute(APPEARANCE_ATTR);
 };
 
+let shells = 0;
+
+/**
+ * The signed-in shell is on screen: apply this browser's appearance until the
+ * returned function is called.
+ *
+ * Counted, because two shells overlap for a moment at sign-in and when
+ * switching between the admin and client views. The outgoing shell used to
+ * reset the page to dark after the incoming one had already applied light,
+ * leaving a dark page with "Light" selected until the setting was toggled.
+ */
+export const holdAppearance = (): (() => void) => {
+  shells += 1;
+  applyAppearance(readAppearance());
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    shells -= 1;
+    if (shells <= 0) {
+      shells = 0;
+      applyAppearance("dark");
+    } else {
+      applyAppearance(readAppearance());
+    }
+  };
+};
+
 export const setAppearance = (mode: Appearance): void => {
   try {
     localStorage.setItem(KEY, mode);
