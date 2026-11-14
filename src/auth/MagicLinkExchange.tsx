@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import { playArrival } from "@/auth/arrivalSweep";
 
 /**
  * Spark v2 — Magic-link sign-in exchange.
@@ -65,7 +66,7 @@ export default function MagicLinkExchange() {
         }
         await socialLogin(result.token, result.refreshToken ?? "");
         const next = search.get("next") || "/";
-        navigate(next, { replace: true });
+        void playArrival(() => navigate(next, { replace: true }));
       } catch (e) {
         setError((e as Error).message);
       }
