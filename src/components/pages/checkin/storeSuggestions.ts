@@ -35,3 +35,25 @@ export function storeNameForPicker(store: StoreSuggestion): string {
   if (address && name.toLowerCase().includes(address.toLowerCase())) return "";
   return name;
 }
+
+/** Typed text that reads like a street address: a number, then a street. */
+export function looksLikeAddress(query: string): boolean {
+  return /\d{1,6}\s+\S*[A-Za-z]{2,}/.test(query.trim());
+}
+
+/**
+ * What to tell someone who typed an address the list doesn't know.
+ *
+ * A store we have never heard of is normal — ambassadors work new accounts
+ * all the time, and staff map them afterwards. Saying nothing made people
+ * think the address had been refused, so they picked a listed store that
+ * was not where they were standing.
+ */
+export function newLocationNote(
+  query: string,
+  hits: readonly StoreSuggestion[],
+): string | null {
+  if (hits.length > 0 || !looksLikeAddress(query)) return null;
+  return "New location. That's fine: continue and your shift is logged at this address.";
+}
+
