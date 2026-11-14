@@ -660,8 +660,10 @@ const Inner: React.FC<{
                                     background: a.isApproved
                                       ? "var(--spark-lime)"
                                       : "rgba(255,196,0,0.2)",
+                                    // The fill flips with the appearance (ink in
+                                    // light, off-white in dark); so must the text.
                                     color: a.isApproved
-                                      ? "#0a0d09"
+                                      ? "var(--spark-on-accent)"
                                       : "var(--spark-gold)",
                                     border: a.isApproved
                                       ? "none"
