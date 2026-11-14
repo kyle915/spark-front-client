@@ -6,6 +6,7 @@ import type { ExportExpenseReceiptsMutation as ExportExpenseReceiptsMutationType
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 /**
  * Month-end expense receipts export — drop-in button + modal, mirroring
@@ -38,14 +39,15 @@ const lastFullMonth = (): { start: string; end: string } => {
   return { start: isoLocal(startOfPrev), end: isoLocal(endOfPrev) };
 };
 
-const inputStyle: React.CSSProperties = {
+// A function so the colour scheme is read at render, not at import.
+const inputStyle = (): React.CSSProperties => ({
   padding: "8px 10px",
   borderRadius: 8,
   background: "rgba(var(--spark-ink-rgb),0.04)",
   border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
   color: "var(--spark-text)",
-  colorScheme: "dark",
-};
+  colorScheme: inputColorScheme(),
+});
 
 type Props = {
   variant?: "primary" | "ghost";
@@ -168,7 +170,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
                     value={start}
                     onChange={(e) => setStart(e.target.value)}
                     className="w-full"
-                    style={inputStyle}
+                    style={inputStyle()}
                   />
                 </div>
                 <div>
@@ -178,7 +180,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
                     value={end}
                     onChange={(e) => setEnd(e.target.value)}
                     className="w-full"
-                    style={inputStyle}
+                    style={inputStyle()}
                   />
                 </div>
               </div>

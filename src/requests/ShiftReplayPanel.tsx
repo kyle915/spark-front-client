@@ -201,10 +201,11 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
             mapId="spark-v2-shift-replay"
             styles={
               [
-                { elementType: "geometry", stylers: [{ color: "var(--spark-on-accent)" }] },
+                // Literal colours: Google Maps cannot resolve a CSS variable.
+                { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
                 {
                   elementType: "labels.text.stroke",
-                  stylers: [{ color: "var(--spark-on-accent)" }],
+                  stylers: [{ color: "#0a0d09" }],
                 },
                 {
                   elementType: "labels.text.fill",

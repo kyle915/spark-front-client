@@ -97,9 +97,12 @@ type MapStyleRule = {
   stylers: Array<Record<string, string | number>>;
 };
 
+// Google Maps reads these as literal colours; a CSS variable is not a colour
+// to it and the rule is dropped. #0a0d09 is the base of this dark map style
+// (every other rule here is a dark literal), in both appearances.
 const DARK_MAP_STYLE: MapStyleRule[] = [
-  { elementType: "geometry", stylers: [{ color: "var(--spark-on-accent)" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "var(--spark-on-accent)" }] },
+  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
   {
     featureType: "administrative.locality",

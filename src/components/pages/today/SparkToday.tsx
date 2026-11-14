@@ -274,8 +274,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               mapId="spark-v2-today"
               styles={
                 [
-                  { elementType: "geometry", stylers: [{ color: "var(--spark-on-accent)" }] },
-                  { elementType: "labels.text.stroke", stylers: [{ color: "var(--spark-on-accent)" }] },
+                  // Literal colours: Google Maps cannot resolve a CSS variable.
+                  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
+                  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
                   { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
                   { featureType: "road", elementType: "geometry", stylers: [{ color: "#1f2418" }] },
                   { featureType: "water", elementType: "geometry", stylers: [{ color: "#050605" }] },

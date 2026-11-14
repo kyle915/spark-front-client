@@ -43,6 +43,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { kindColor, kindLabel } from "@/lib/academy";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 /**
  * A required-reading row, sourced from the backend `academyModulesAdmin`
@@ -1981,7 +1982,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                     background: "transparent",
                     color: "var(--spark-text)",
                     border: "1px solid var(--spark-border)",
-                    colorScheme: "dark",
+                    colorScheme: inputColorScheme(),
                   }}
                 />
                 <button

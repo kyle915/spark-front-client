@@ -76,10 +76,17 @@ import {
 } from "./offlineClock";
 import {
   clearPendingRecap,
+  clearRecapRejection,
   offlineRecapBanner,
   readPendingRecap,
+  rejectedRecapBanner,
   type PendingRecap,
 } from "./offlineRecap";
+import {
+  hasUnsentWork,
+  readUnsentWork,
+  unsentWorkMessage,
+} from "./unsentWork";
 import {
   clearPendingMileage,
   enqueueMileage,
@@ -567,22 +574,36 @@ export default function SparkCheckin() {
   // reusable. Dropping the session token returns them to the store + date
   // step for a fresh event; their NAME is kept (see IDENTITY_KEY) so a repeat
   // BA only answers "which store, what day".
-  const startAnother = useCallback(() => {
+  //
+  // Returns false, and changes nothing, while a clock-in, clock-out, mileage
+  // claim or recap is still waiting to send. This used to clear those queues,
+  // so work saved with no bars was deleted by the next "Check in somewhere
+  // else". The queues are one slot per link, so they cannot follow the BA
+  // into the next check-in; the switch waits for them instead.
+  const startAnother = useCallback((): boolean => {
+    const unsent = readUnsentWork(code);
+    if (hasUnsentWork(unsent)) return false;
     resumeAttempted.current = true;
     try {
       window.localStorage.removeItem(storeKey);
       clearChosenShiftDate(code);
       clearPendingClock(code);
-      clearPendingRecap(code);
       clearPendingMileage(code);
       clearCachedContext(code);
-      if (token) clearDraft(code, token);
+      // A recap the server refused is not retrying, so it does not hold the
+      // BA here, but it is the only copy of those answers: leave it (and its
+      // draft) on the phone for Try again / Ignite.
+      if (!unsent.rejectedRecap) {
+        clearPendingRecap(code);
+        if (token) clearDraft(code, token);
+      }
     } catch {
       /* private mode — clearing state below is enough for this session */
     }
     setToken(null);
     setCtx(null);
     setLoadErr(null);
+    return true;
   }, [storeKey, code, token]);
 
   const accent = ctx?.brand.primaryColor || FALLBACK_ACCENT;
@@ -772,7 +793,8 @@ function CheckedInFlow({
   ctx: Context;
   accent: string;
   clockState: Clock["state"];
-  onStartAnother: () => void;
+  /** False = nothing changed: something is still waiting to send. */
+  onStartAnother: () => boolean;
   hasRecap: boolean;
   onRefresh: () => Promise<void>;
   onPriorRecapOpen: (open: boolean) => void;
@@ -948,8 +970,56 @@ function CheckedInFlow({
       timeoutMs ?? CLOCK_FETCH_TIMEOUT_MS,
     );
 
+  // A refused recap from an earlier check-in on this link can still be on
+  // the phone (see startAnother). It is not this shift's recap to edit.
+  const ownQueuedRecap = queuedRecap && queuedRecap.token === token ? queuedRecap : null;
+  // Set when a switch was refused because something is still unsent. The
+  // notice is derived from the live queue state, so it clears itself the
+  // moment the last item sends.
+  const [switchAsked, setSwitchAsked] = useState<"" | "switch stores" | "try again">("");
+  const switchBlockedMsg = switchAsked
+    ? unsentWorkMessage(
+        {
+          clockIn: Boolean(queuedClock),
+          clockOut: Boolean(queuedClockOut),
+          mileage: Boolean(queuedMileage),
+          recap: Boolean(queuedRecap && !queuedRecap.rejected),
+          rejectedRecap: Boolean(queuedRecap?.rejected),
+        },
+        switchAsked,
+      )
+    : null;
+  const switchNotice = switchBlockedMsg ? (
+    <p role="alert" style={{ ...errText, color: "#92400e", fontSize: 14, lineHeight: 1.4 }}>
+      {switchBlockedMsg}
+    </p>
+  ) : null;
+  /** True (and says why on screen) when leaving this check-in must wait. */
+  const blockIfUnsent = (then: "switch stores" | "try again" = "switch stores"): boolean => {
+    if (!hasUnsentWork(readUnsentWork(code))) return false;
+    // Re-read the queues: fresh objects re-run the flush effect below, so
+    // the wait is as short as the signal allows.
+    setQueuedClock(readPendingClock(code));
+    setQueuedClockOut(readPendingClockOut(code));
+    setQueuedMileage(readPendingMileage(code));
+    setQueuedRecap(readPendingRecap(code));
+    setSwitchAsked(then);
+    return true;
+  };
+  const requestStartAnother = (): boolean => {
+    if (blockIfUnsent()) return false;
+    if (onStartAnother()) return true;
+    // Something was queued between the two reads: say so rather than
+    // leaving a button that appears to do nothing.
+    blockIfUnsent();
+    return false;
+  };
+
   const clearClockIn = async () => {
     setMsg(null);
+    // Before the server call: clearing the clock and then refusing to leave
+    // would strand them half way.
+    if (blockIfUnsent("try again")) return;
     setClearing(true);
     const mustClose = effectiveClock === "clocked_in";
     try {
@@ -966,7 +1036,10 @@ function CheckedInFlow({
         return;
       }
     }
-    onStartAnother();
+    if (!onStartAnother()) {
+      blockIfUnsent("try again");
+      setClearing(false);
+    }
   };
 
   const queueOfflineIn = (coords: { latitude?: number; longitude?: number }, tappedAt: string) => {
@@ -1096,12 +1169,23 @@ function CheckedInFlow({
 
   const tryFlushRecap = useCallback(async () => {
     const result = await flushQueuedRecap(code);
+    if (result === "rejected") {
+      const refused = readPendingRecap(code);
+      reportFieldIssue({
+        origin: apiOrigin(),
+        code,
+        kind: "recap_submit_failed",
+        detail: `queued recap refused (${refused?.rejected?.status ?? "?"})`,
+        session: token,
+      });
+      setQueuedRecap(refused);
+    }
     if (result === "flushed" || result === "already") {
       setQueuedRecap(readPendingRecap(code));
       await onRefresh();
     }
     return result;
-  }, [code, onRefresh]);
+  }, [code, token, onRefresh]);
 
   useEffect(() => {
     if (!queuedClock && !queuedClockOut && !queuedRecap && !queuedMileage) return;
@@ -1110,7 +1194,9 @@ function CheckedInFlow({
         if (queuedClock) await tryFlushPending();
         if (queuedClockOut) await tryFlushClockOut();
         if (queuedMileage) await tryFlushMileage();
-        if (queuedRecap) await tryFlushRecap();
+        // A refused recap waits for the BA's Try again; flushing it here
+        // would only re-read the same refusal on every tick.
+        if (queuedRecap && !queuedRecap.rejected) await tryFlushRecap();
       })();
     };
     const onOnline = () => run();
@@ -1532,8 +1618,10 @@ function CheckedInFlow({
             setShowRecap(false);
             return;
           }
-          if (ctx.recapOnly && !hasRecap) onStartAnother();
-          else setShowRecap(false);
+          if (ctx.recapOnly && !hasRecap) {
+            // Blocked (a saved recap is still sending): just close the form.
+            if (!requestStartAnother()) setShowRecap(false);
+          } else setShowRecap(false);
         }}
         onSubmitted={async () => {
           setShowRecap(false);
@@ -1630,6 +1718,7 @@ function CheckedInFlow({
           }}
           disabled={clearing || busy !== ""}
           onClick={() => {
+            if (blockIfUnsent("try again")) return;
             writePastRecapIntent(code);
             void clearClockIn();
           }}
@@ -1637,6 +1726,7 @@ function CheckedInFlow({
           {FORGOT_PAST_RECAP_CTA}
         </button>
         {msg ? <p style={errText}>{msg}</p> : null}
+        {switchNotice}
       </div>
     );
   }
@@ -1730,7 +1820,7 @@ function CheckedInFlow({
               </>
             )}
             <button
-              onClick={onStartAnother}
+              onClick={() => requestStartAnother()}
               style={{ ...secondaryBtn, marginTop: 10, width: "100%" }}
             >
               {ctx.recapOnly
@@ -1742,6 +1832,7 @@ function CheckedInFlow({
             <button
               type="button"
               onClick={() => {
+                if (blockIfUnsent()) return;
                 writePastRecapIntent(code);
                 onStartAnother();
               }}
@@ -1761,6 +1852,7 @@ function CheckedInFlow({
               {FORGOT_PAST_RECAP_CTA}
             </button>
             {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
+            {switchNotice}
           </>
         ) : null}
       </div>
@@ -1776,7 +1868,7 @@ function CheckedInFlow({
       <>
           {effectiveClock === "not_started" && !leftover && pastDay ? (
             <button style={fit(primaryBtn(accent))} onClick={() => openRecap(false)}>
-              {queuedRecap
+              {ownQueuedRecap
                 ? "Edit saved recap"
                 : draftWaiting
                   ? "Continue your recap"
@@ -1805,7 +1897,7 @@ function CheckedInFlow({
           {effectiveClock === "clocked_in" && !hasRecap ? (
             <>
               <button style={fit(primaryBtn(accent))} onClick={() => openRecap(false)}>
-                {queuedRecap
+                {ownQueuedRecap
                   ? "Edit saved recap"
                   : draftWaiting
                     ? "Continue your recap"
@@ -2050,10 +2142,46 @@ function CheckedInFlow({
             {offlineMileageBanner()}
           </p>
         ) : null}
-        {queuedRecap ? (
+        {queuedRecap && !queuedRecap.rejected ? (
           <p style={{ ...errText, color: "#92400e" }}>
             {offlineRecapBanner(queuedRecap.submittedAt)}
           </p>
+        ) : null}
+        {queuedRecap?.rejected ? (
+          <div
+            role="alert"
+            style={{
+              marginTop: 12,
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #b91c1c",
+              background: "#fef2f2",
+              color: "#7f1d1d",
+              fontSize: 14,
+              lineHeight: 1.4,
+            }}
+          >
+            {rejectedRecapBanner(queuedRecap.rejected)}
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  // Lifts the hold; the fresh row re-runs the flush effect.
+                  setQueuedRecap(clearRecapRejection(code));
+                }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #b91c1c",
+                  color: "#7f1d1d",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  fontSize: 13,
+                }}
+              >
+                Try again
+              </button>
+            </div>
+          </div>
         ) : null}
         {msg && !queuedClock && !queuedClockOut && !queuedMileage && !queuedRecap ? (
           <p style={errText}>{msg}</p>
@@ -2062,6 +2190,8 @@ function CheckedInFlow({
 
       {/* The BA's own recent shifts: hours + review / approved / paid. */}
       <MyShiftsCard code={code} token={token} />
+
+      {switchNotice}
 
       {/* Another gig — deliberately outside the Time Clock card so it cannot
           be mistaken for an action on this shift. Same start-another flow as
@@ -2082,7 +2212,7 @@ function CheckedInFlow({
               fontWeight: 700,
               background: "#fff",
             }}
-            onClick={() => onStartAnother()}
+            onClick={() => requestStartAnother()}
           >
             {CHECK_IN_SOMEWHERE_ELSE}
           </button>
@@ -2093,7 +2223,7 @@ function CheckedInFlow({
           above instead of this link. */}
       {ctx.mode === "tenant" && !leftover && (clockState === "clocked_in" || clockState === "not_started") ? (
         <button
-          onClick={() => onStartAnother()}
+          onClick={() => requestStartAnother()}
           style={{
             background: "none",
             border: "none",

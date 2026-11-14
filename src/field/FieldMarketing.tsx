@@ -961,7 +961,7 @@ export default function FieldMarketing() {
                   return (
                     <tr
                       key={row.id}
-                      className="border-b border-white/5 hover:bg-white/[0.03]"
+                      className="border-b spark-divider-faint spark-row-hover"
                     >
                       <td className="px-3 py-2">
                         {isDraft ? (

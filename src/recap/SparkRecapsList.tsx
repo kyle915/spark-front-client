@@ -111,6 +111,7 @@ import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
 import { useRecapReviewFlags } from "./useRecapReviewFlags";
 import type { ReviewFlagSummary } from "./reviewCheckDisplay";
 import { useRecapTypeCounts } from "./useRecapTypeCounts";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -4056,7 +4057,7 @@ export default function SparkRecapsList() {
               color: "var(--spark-text)",
               maxWidth: 160,
               outline: "none",
-              colorScheme: "dark",
+              colorScheme: inputColorScheme(),
             }}
             title="From date (inclusive)"
             placeholder="From"
@@ -4076,7 +4077,7 @@ export default function SparkRecapsList() {
               color: "var(--spark-text)",
               maxWidth: 160,
               outline: "none",
-              colorScheme: "dark",
+              colorScheme: inputColorScheme(),
             }}
             title="To date (inclusive)"
             placeholder="To"

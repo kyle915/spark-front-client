@@ -14,6 +14,7 @@ import type {
   CustomRecapRow,
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
+import { formatInstantDate } from "@/utils/formatInstantDate";
 
 const getRecapState = (row: RecapRow) =>
   row.eventState ??
@@ -278,7 +279,9 @@ export const createCustomRecapColumns = (): Column<CustomRecapRow>[] => [
   {
     key: "submittedAt",
     label: "Submitted At",
-    render: (_value, row) => formatDate(row.submittedAt ?? row.createdAt ?? null),
+    // An instant stamped in UTC: convert to the viewer's day, don't slice.
+    render: (_value, row) =>
+      formatInstantDate(row.submittedAt ?? row.createdAt ?? null),
   },
 ];
 

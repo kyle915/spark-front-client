@@ -113,8 +113,9 @@ import {
   readPendingClock,
 } from "./offlineClock";
 import {
+  clearRecapRejection,
   enqueueRecap,
-  offlineRecapBanner,
+  pendingRecapBanner,
   putCheckinPhoto,
   NO_SIGNAL_PHOTO_MESSAGE,
   readPendingRecap,
@@ -1073,6 +1074,10 @@ export default function RecapForm({
       submittedRef.current = true;
       for (const id of [...retryTimers.current.keys()]) cancelAutoRetry(id);
       clearDraft(code, token);
+      // This submit just went through. If the queued copy of the same recap
+      // had been refused earlier, lift that hold so the queue can settle
+      // (the server answers "already") instead of showing a stale failure.
+      if (existing && existing.token === token) clearRecapRejection(code);
       // "Submit without N photos" used to throw those photos away for good.
       // The recap is in; keep the unfinished photos on this device and send
       // them after it — the server adds photos to the same recap. Not done
@@ -1162,7 +1167,7 @@ export default function RecapForm({
       ) : null}
       {pendingRecap ? (
         <p style={{ ...errText, color: "#92400e", margin: 0 }}>
-          {offlineRecapBanner(pendingRecap.submittedAt)}
+          {pendingRecapBanner(pendingRecap)}
         </p>
       ) : null}
       {payableMiles != null && Number.isFinite(payableMiles) ? (

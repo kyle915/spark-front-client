@@ -4,6 +4,7 @@ import { TenantMetroBreakdownQuery } from "@/api/queries/TenantMetroBreakdownQue
 import type { TenantMetroBreakdownQuery as TenantMetroBreakdownQueryType } from "@api/queries/__generated__/TenantMetroBreakdownQuery.graphql";
 import { EventTypeQuery } from "@/api/queries/EventTypeQuery";
 import type { EventTypeQuery as EventTypeQueryType } from "@api/queries/__generated__/EventTypeQuery.graphql";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 /**
  * Week-by-metro-market breakdown table for tenants whose events follow the
@@ -234,7 +235,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
             background: "rgba(var(--spark-ink-rgb),0.04)",
             border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
             color: "var(--spark-text)",
-            colorScheme: "dark",
+            colorScheme: inputColorScheme(),
           }}
         />
         <span style={{ color: "var(--spark-text-meta)" }}>–</span>
@@ -250,7 +251,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
             background: "rgba(var(--spark-ink-rgb),0.04)",
             border: "1px solid rgba(var(--spark-ink-rgb),0.12)",
             color: "var(--spark-text)",
-            colorScheme: "dark",
+            colorScheme: inputColorScheme(),
           }}
         />
         {eventTypes.length > 1 && (

@@ -39,6 +39,7 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { inkRgba, accentRgba, accentHex, surfaceHex } from "@/theme/chartInk";
+import { inputColorScheme } from "@/theme/inputColorScheme";
 
 ChartJS.register(
   CategoryScale,
@@ -820,7 +821,7 @@ export default function SparkReports() {
                   background: "transparent",
                   color: "var(--spark-text)",
                   border: "1px solid var(--spark-border)",
-                  colorScheme: "dark",
+                  colorScheme: inputColorScheme(),
                 }}
               />
               <span style={{ color: "var(--spark-text-meta)" }}>to</span>
@@ -835,7 +836,7 @@ export default function SparkReports() {
                   background: "transparent",
                   color: "var(--spark-text)",
                   border: "1px solid var(--spark-border)",
-                  colorScheme: "dark",
+                  colorScheme: inputColorScheme(),
                 }}
               />
               {customIncomplete && (
