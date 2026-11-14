@@ -5,6 +5,9 @@ import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
 import { useRequestAttentionCounts } from "@/components/pages/dashboard-event/AttentionEngine";
 import { useAuthStore } from "@/store/authStore";
+import { SheetShiftsQuery } from "@/api/queries/SheetShiftsQuery";
+import type { SheetShiftsQuery as SheetShiftsQueryType } from "@api/queries/__generated__/SheetShiftsQuery.graphql";
+import { sheetRows } from "./sheetStaffing";
 import {
   attentionRows,
   startsTodayRows,
@@ -151,6 +154,50 @@ const NeedsAttention: React.FC<{ rows: AttentionRow[] }> = ({ rows }) => (
     )}
   </Panel>
 );
+
+/**
+ * Who the Google staffing sheets have on today's shifts, and whether Spark's
+ * booking agrees. Spark only reads the sheets; each row opens its sheet row.
+ * Renders nothing when the sheets have nobody on today.
+ */
+export const OnTheSheets: React.FC<{ tenantId: string | null }> = ({ tenantId }) => {
+  const data = useLazyLoadQuery<SheetShiftsQueryType>(
+    SheetShiftsQuery,
+    { tenantId },
+    { fetchPolicy: "store-and-network" },
+  );
+  const rows = useMemo(
+    () => sheetRows(data?.sheetShifts ?? [], { showBrand: !tenantId }),
+    [data, tenantId],
+  );
+  if (rows.length === 0) return null;
+  const SHEET_SHOWN = 8;
+  return (
+    <Panel title="On the sheets today" count={rows.length}>
+      {rows.slice(0, SHEET_SHOWN).map((r) => (
+        <a
+          key={r.key}
+          href={r.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="spark-panel-row spark-panel-row--reason"
+          title="Open this row in the sheet"
+        >
+          <span className="spark-panel-row-main">
+            <span className="spark-panel-row-title">{r.title}</span>
+            <span className="spark-panel-row-sub">{r.detail}</span>
+          </span>
+          <span className={`spark-panel-row-aside${r.flagged ? " is-flagged" : ""}`}>
+            {r.verdict}
+          </span>
+        </a>
+      ))}
+      {rows.length > SHEET_SHOWN ? (
+        <p className="spark-panel-empty">{rows.length - SHEET_SHOWN} more not shown.</p>
+      ) : null}
+    </Panel>
+  );
+};
 
 const StaffPanels: React.FC<{ tenantId: string | null }> = ({ tenantId }) => {
   const yesterday = useMemo(() => {

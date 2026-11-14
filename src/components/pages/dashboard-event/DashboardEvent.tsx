@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import Layout from "@/layout/Layout";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
-import TodayAttentionPanels from "@/components/dashboard/TodayAttentionPanels";
+import TodayAttentionPanels, { OnTheSheets } from "@/components/dashboard/TodayAttentionPanels";
 import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
 import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
@@ -163,6 +164,14 @@ function DashboardInner() {
           <Suspense fallback={null}>
             <TodayAttentionPanels staff={!isClient} />
           </Suspense>
+
+          {isAdmin ? (
+            <ErrorBoundary fallback={null}>
+              <Suspense fallback={null}>
+                <OnTheSheets tenantId={tenantId || null} />
+              </Suspense>
+            </ErrorBoundary>
+          ) : null}
 
           {!isClient && (
             <Suspense fallback={null}>
