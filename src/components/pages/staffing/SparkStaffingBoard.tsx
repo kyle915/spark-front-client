@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
+import StaffingRoster from "./StaffingRoster";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassadorMutation";
@@ -250,6 +251,7 @@ const Inner: React.FC<{
   // makes the scope visible ("All clients" by default).
   const [brandFilter, setBrandFilter] = useState("");
   const [unstaffedOnly, setUnstaffedOnly] = useState(false);
+  const [view, setView] = useState<"venue" | "person">("venue");
   const [venueQuery, setVenueQuery] = useState("");
   const brands = useMemo(
     () =>
@@ -414,6 +416,7 @@ const Inner: React.FC<{
           {filtersActive ? `shown · ${allShifts.length} this week` : "this week"}
         </span>
         <button
+          hidden={view === "person"}
           onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
           className="mono text-[11px] ml-auto rounded-full"
           style={{
@@ -429,6 +432,25 @@ const Inner: React.FC<{
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <div className="spark-viewswitch" role="group" aria-label="Board view">
+          <button
+            type="button"
+            aria-pressed={view === "venue"}
+            onClick={() => setView("venue")}
+          >
+            By venue
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === "person"}
+            onClick={() => {
+              exitBulk();
+              setView("person");
+            }}
+          >
+            By person
+          </button>
+        </div>
         <select
           value={brandFilter}
           onChange={(e) => setBrandFilter(e.target.value)}
@@ -516,6 +538,17 @@ const Inner: React.FC<{
             ? "No shifts match these filters."
             : "No shifts scheduled this week."}
         </p>
+      ) : view === "person" ? (
+        <StaffingRoster
+          days={days}
+          shifts={shifts}
+          showBrand={!brandFilter}
+          venueOf={(s) => venueLabel(s.store, s.eventName)}
+          hoursOf={(s) =>
+            [fmtTime(s.startTime), fmtTime(s.endTime)].filter(Boolean).join("–")
+          }
+          onOpen={openAssign}
+        />
       ) : (
         <div className="overflow-x-auto">
           <div style={{ minWidth: 900, paddingBottom: bulkMode ? 72 : 0 }}>
