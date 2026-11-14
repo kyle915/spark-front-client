@@ -1294,6 +1294,12 @@ thead .spark-table-sticky-date {
   line-height: 1.35;
   color: var(--spark-text-secondary);
 }
+.spark-says-change {
+  display: block;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--spark-text-meta);
+}
 @media (min-width: 640px) {
   .spark-says {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1305,6 +1311,15 @@ thead .spark-table-sticky-date {
     align-items: flex-start;
     gap: 0.25rem;
   }
+}
+
+/* The number of things waiting behind a tab, after its label. */
+.spark-tab-count {
+  margin-left: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--spark-flag-ink);
 }
 
 /* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */

@@ -15,6 +15,7 @@ import type { WalkupMutationsBulkRejectMutation as BulkRejectType } from "@api/m
 import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SidebarTabCount from "@/shared/SidebarTabCount";
 import StandingCheckinLink from "./StandingCheckinLink";
 import CheckinIssuesCard from "./CheckinIssuesCard";
 import ClockLinks from "./ClockLinks";
@@ -423,6 +424,7 @@ export default function SparkWalkups() {
             }}
           >
             {label}
+            {id === "queue" ? <SidebarTabCount pick="pendingWalkups" /> : null}
           </button>
         ))}
       </div>

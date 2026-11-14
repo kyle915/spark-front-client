@@ -36,6 +36,8 @@ import { useAlertStore } from "@/store/alertStore";
 import useBaLabel from "@/hooks/useBaLabel";
 import useSparkRole from "@/hooks/useSparkRole";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SidebarTabCount from "@/shared/SidebarTabCount";
+import { recapRowStatus } from "./recapRowStatus";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
@@ -52,7 +54,6 @@ import { StatusMorph } from "@/motion/StatusMorph";
 import {
   dispatchOpenJump,
   holdActionSuccess,
-  recapReviewStatus,
   type ActionPhase,
 } from "@/motion/opsMotion";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
@@ -480,7 +481,15 @@ const RecapCard: React.FC<{
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
-  const statusText = emptyShell ? "Not filed" : recapReviewStatus(approved);
+  const { isClient } = useSparkRole();
+  const status = recapRowStatus({
+    emptyShell,
+    approved,
+    sharedAt: recap.sharedAt,
+    archivedAt: recap.archivedAt,
+    isClient,
+  });
+  const statusText = status.text;
   const convValue = conversionStr(recap, "—");
   const convLive = convValue !== "—";
   const completeness = emptyShell
@@ -597,16 +606,16 @@ const RecapCard: React.FC<{
       </span>
       <span
         className={`absolute top-2 right-2 chip ${
-          emptyShell ? "" : approved ? "" : "chip-orange"
+          status.tone === "attention" ? "chip-orange" : ""
         }`}
         style={
-          emptyShell
+          status.tone === "neutral"
             ? {
                 background: "rgba(var(--spark-ink-rgb),0.06)",
                 border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
                 color: "var(--spark-text-secondary)",
               }
-            : approved
+            : status.tone === "done"
               ? {
                   // Reminted chip-lime is off-white outline — unreadable as
                   // "approved" on busy hero photos. Match the green used by
@@ -844,7 +853,15 @@ const RecapCompactRow: React.FC<{
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
-  const statusText = emptyShell ? "Not filed" : recapReviewStatus(approved);
+  const { isClient } = useSparkRole();
+  const status = recapRowStatus({
+    emptyShell,
+    approved,
+    sharedAt: recap.sharedAt,
+    archivedAt: recap.archivedAt,
+    isClient,
+  });
+  const statusText = status.text;
   return (
     <div
       className="spark-inset-row relative"
@@ -941,10 +958,14 @@ const RecapCompactRow: React.FC<{
       </div>
       <span
         className={`relative z-10 chip chip-sm shrink-0 ${
-          emptyShell ? "" : approved ? "chip-lime" : "chip-orange"
+          status.tone === "neutral"
+            ? ""
+            : status.tone === "done"
+              ? "chip-lime"
+              : "chip-orange"
         }`}
         style={
-          emptyShell
+          status.tone === "neutral"
             ? {
                 background: "rgba(var(--spark-ink-rgb),0.06)",
                 border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
@@ -3354,6 +3375,9 @@ export default function SparkRecapsList() {
                     }}
                   >
                     {label}
+                    {key === "needs_review" ? (
+                      <SidebarTabCount pick="recapsNeedsReview" />
+                    ) : null}
                   </button>
                 ))}
               </div>
