@@ -129,6 +129,15 @@ export const GetCustomRecapQuery = graphql`
       coActivation {
         brandNames
       }
+      # Spark's suggested retailer when the event has none. Staff only.
+      retailerProposal {
+        id
+        name
+        confidence
+        sourceLabel
+        reason
+        isNewRetailer
+      }
       typedStoreName
       typedStoreAddress
       storeMappingStatus

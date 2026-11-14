@@ -17,6 +17,10 @@ export const ApproveCustomRecapMutation = graphql`
         uuid
         name
         approved
+        eventRetailer
+        retailerProposal {
+          id
+        }
         approvedAt
         approvedBy {
           firstName

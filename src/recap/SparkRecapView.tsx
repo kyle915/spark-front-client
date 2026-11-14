@@ -32,6 +32,7 @@ import type { AddRecapFileMutation as AddRecapFileMutationType } from "@/api/mut
 import { UpdateRecapMutation } from "@/api/mutations/UpdateRecapMutation";
 import type { UpdateRecapMutation as UpdateRecapMutationType } from "@/api/mutations/__generated__/UpdateRecapMutation.graphql";
 import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
+import { RetailerSuggestion, tickedByDefault } from "./RetailerSuggestion";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@/api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { ArchiveRecapMutation } from "@/api/mutations/ArchiveRecapMutation";
 import type { ArchiveRecapMutation as ArchiveRecapMutationType } from "@/api/mutations/__generated__/ArchiveRecapMutation.graphql";
@@ -845,6 +846,14 @@ const SparkRecapInner: React.FC<{
   // After success, return to the list with a forced network refetch —
   // Relay updates the Recap node but not the Needs review connection, so
   // store-or-network would keep the row in the queue until a hard refresh.
+  // Spark's suggested store, when the event has none. null = follow the
+  // default for this suggestion (ticked unless it is only a guess).
+  const retailerProposal = recap.retailerProposal ?? null;
+  const [acceptStoreChoice, setAcceptStoreChoice] = useState<boolean | null>(null);
+  const acceptStoreOnApprove = retailerProposal
+    ? (acceptStoreChoice ?? tickedByDefault(retailerProposal))
+    : false;
+
   const setApproved = (approved: boolean, advanceToNext = false) => {
     if (isApproving || approvePhase !== "idle") return;
     if (approved) setApprovePhase("pending");
@@ -860,7 +869,13 @@ const SparkRecapInner: React.FC<{
       ]);
     }
     commitApprove({
-      variables: { input: { id: recap.id, approved } },
+      variables: {
+        input: {
+          id: recap.id,
+          approved,
+          acceptRetailerProposal: (approved && acceptStoreOnApprove) || null,
+        },
+      },
       onCompleted: (res) => {
         if (res.approveRecap?.success) {
           markRecapReviewedInQueue(uuid, { approved });
@@ -1299,6 +1314,16 @@ const SparkRecapInner: React.FC<{
       {/* Quality check — server-computed review aid for the approver. Legacy
           recap → isCustom={false}. Self-degrades to nothing on failure;
           wrapped in Suspense for the initial load. */}
+      {!isClient && retailerProposal ? (
+        <RetailerSuggestion
+          key={retailerProposal.id}
+          recapId={recap.id}
+          proposal={retailerProposal}
+          acceptOnApprove={acceptStoreOnApprove}
+          onAcceptOnApproveChange={setAcceptStoreChoice}
+          approved={Boolean(recap.approved)}
+        />
+      ) : null}
       {!isClient && (
       <Suspense fallback={null}>
         <RecapQualityPanel recapId={recap.id} isCustom={false} />

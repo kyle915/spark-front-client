@@ -116,6 +116,7 @@ import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import useSparkRole from "@/hooks/useSparkRole";
+import { RetailerSuggestion, tickedByDefault } from "./RetailerSuggestion";
 import useBaLabel from "@/hooks/useBaLabel";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
@@ -1044,6 +1045,14 @@ const RecapCustomViewInner = ({
   // (with the PDF). Then return to the list with a forced network refetch
   // so Needs review drops the row (connection cache stays stale otherwise),
   // or advance to the next unapproved recap in the review queue.
+  // Spark's suggested store, when the event has none. null = follow the
+  // default for this suggestion (ticked unless it is only a guess).
+  const retailerProposal = recap?.retailerProposal ?? null;
+  const [acceptStoreChoice, setAcceptStoreChoice] = useState<boolean | null>(null);
+  const acceptStoreOnApprove = retailerProposal
+    ? (acceptStoreChoice ?? tickedByDefault(retailerProposal))
+    : false;
+
   const handleApprove = useCallback(
     (advanceToNext = false) => {
       if (!recap?.id || approvePhase !== "idle") return;
@@ -1060,7 +1069,13 @@ const RecapCustomViewInner = ({
         ]);
       }
       commitApprove({
-        variables: { input: { id: recap.id as string, approved: true } },
+        variables: {
+          input: {
+            id: recap.id as string,
+            approved: true,
+            acceptRetailerProposal: acceptStoreOnApprove || null,
+          },
+        },
         onCompleted: (res) => {
           const payload = res.approveCustomRecap;
           if (payload?.success) {
@@ -1101,6 +1116,7 @@ const RecapCustomViewInner = ({
       commitApprove,
       showAlert,
       approvePhase,
+      acceptStoreOnApprove,
       goToQueueRecap,
       navigate,
       searchParams,
@@ -1932,6 +1948,17 @@ const RecapCustomViewInner = ({
           </Suspense>
           )}
           {!isClient && <RecapPhotoReusePanel recapId={recap.id} isCustom />}
+
+          {!isClient && retailerProposal && !recap.isThirdParty ? (
+            <RetailerSuggestion
+              key={retailerProposal.id}
+              recapId={recap.id}
+              proposal={retailerProposal}
+              acceptOnApprove={acceptStoreOnApprove}
+              onAcceptOnApproveChange={setAcceptStoreChoice}
+              approved={Boolean(recap.approved)}
+            />
+          ) : null}
 
           {!isClient && recap.isThirdParty ? (
             <Suspense fallback={null}>

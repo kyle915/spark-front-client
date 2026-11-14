@@ -904,6 +904,7 @@ input ApproveCustomRecapInput {
   clientMutationId: ID = null
   id: ID!
   approved: Boolean!
+  acceptRetailerProposal: Boolean = null
 }
 
 input ApproveEventInput {
@@ -923,6 +924,7 @@ input ApproveRecapInput {
   clientMutationId: ID = null
   id: ID!
   approved: Boolean!
+  acceptRetailerProposal: Boolean = null
 }
 
 input ApproveRequestInput {
@@ -2987,6 +2989,7 @@ type CustomRecap implements Node {
   eventDate: String
   eventAddress: String
   eventVenue: String
+  retailerProposal: RetailerProposalType
   eventRetailer: String
   eventCity: String
   eventState: String
@@ -3012,6 +3015,24 @@ type CustomRecapDetailResponse {
   message: String!
   clientMutationId: ID
   customRecap: CustomRecap
+}
+
+"""Spark's suggested retailer for an event that has none. Staff only."""
+type RetailerProposalType {
+  id: ID!
+  name: String!
+  confidence: String!
+  source: String!
+  sourceLabel: String!
+  reason: String!
+  isNewRetailer: Boolean!
+}
+
+type RetailerProposalResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  retailerName: String
 }
 
 """
@@ -5142,6 +5163,13 @@ input ManageAmbassadorJobAssignmentInput {
   statusId: ID = null
 }
 
+input DecideRetailerProposalInput {
+  clientMutationId: ID = null
+  proposalId: ID!
+  accept: Boolean!
+  retailerName: String = null
+}
+
 input MapCustomRecapStoreInput {
   clientMutationId: ID = null
   id: ID!
@@ -5401,6 +5429,7 @@ type Mutation {
   unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
   archiveCustomRecap(input: ArchiveCustomRecapInput!): CustomRecapDetailResponse!
   unarchiveCustomRecap(input: UnarchiveCustomRecapInput!): CustomRecapDetailResponse!
+  decideRetailerProposal(input: DecideRetailerProposalInput!): RetailerProposalResponse!
   mapCustomRecapStore(input: MapCustomRecapStoreInput!): CustomRecapDetailResponse!
   bulkApproveRecaps(input: BulkApproveRecapsInput!): BulkRecapsResponse!
   markRecapsShared(input: MarkRecapsSharedInput!): BulkRecapsResponse!
@@ -6692,6 +6721,7 @@ type Recap implements Node {
   requestStoreManagers: [RequestStoreManager!]!
   shareToken: String!
   eventDate: String
+  retailerProposal: RetailerProposalType
   eventRetailer: String
   eventState: String
   requestUuid: String
