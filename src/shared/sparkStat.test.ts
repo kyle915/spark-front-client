@@ -374,12 +374,21 @@ describe("attentionSnapshotKpis", () => {
 });
 
 describe("todayGroundKpis", () => {
-  it("oranges live BAs and limes mapped", () => {
-    expect(todayGroundKpis({ events: 4, liveBas: 2, mapped: 3 })).toEqual([
+  it("names the three tiles and oranges only a real gap", () => {
+    expect(todayGroundKpis({ events: 4, onClock: 2, notClockedIn: 1 })).toEqual([
       { label: "Events", value: "4", count: 4 },
-      { label: "Live BAs", value: "2", count: 2, tone: "orange" },
-      { label: "Mapped", value: "3", count: 3, tone: "lime" },
+      { label: "On the clock", value: "2", count: 2 },
+      { label: "Not clocked in yet", value: "1", count: 1, tone: "orange" },
     ]);
+  });
+
+  it("shows a plain zero when everyone due is in", () => {
+    expect(todayGroundKpis({ events: 4, onClock: 3, notClockedIn: 0 })[2]).toEqual({
+      label: "Not clocked in yet",
+      value: "0",
+      count: 0,
+      tone: "default",
+    });
   });
 });
 

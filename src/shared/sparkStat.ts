@@ -318,25 +318,26 @@ export function recapListKpis(input: {
   ];
 }
 
-/** Today map + roster — events / live pings / mapped venues. */
+/** Today map + roster: events, who is on the clock, and who should be. */
 export function todayGroundKpis(input: {
   events: number;
-  liveBas: number;
-  mapped: number;
+  /** Ambassadors clocked in right now. */
+  onClock: number;
+  /** Events that have started with someone booked and nobody clocked in. */
+  notClockedIn: number;
 }): SparkStatItem[] {
   return [
     { label: "Events", value: input.events.toLocaleString(), count: input.events },
     {
-      label: "Live BAs",
-      value: input.liveBas.toLocaleString(),
-      count: input.liveBas,
-      tone: input.liveBas > 0 ? "orange" : "default",
+      label: "On the clock",
+      value: input.onClock.toLocaleString(),
+      count: input.onClock,
     },
     {
-      label: "Mapped",
-      value: input.mapped.toLocaleString(),
-      count: input.mapped,
-      tone: "lime",
+      label: "Not clocked in yet",
+      value: input.notClockedIn.toLocaleString(),
+      count: input.notClockedIn,
+      tone: input.notClockedIn > 0 ? "orange" : "default",
     },
   ];
 }
