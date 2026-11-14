@@ -1,232 +1,234 @@
-import { useEffect, useState } from "react";
-import AuthForm from "@auth/components/AuthForm";
-import RegisterForm from "@auth/components/RegisterForm";
-// Removed the 3.5 MB background.png import — it added ~700 KB of
-// unnecessary blocking weight to the cold-load on /login and isn't
-// part of the Spark v2 chrome. CSS gradient below renders identically.
-import { useForm } from "react-hook-form";
-import { useAlertStore } from "@store/alertStore";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
+import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@store/authStore";
-import { register } from "@api/auth/register";
-import MagicLinkButton from "@/auth/MagicLinkButton";
-import SparkLoginCreative from "@/auth/SparkLoginCreative";
+import { GoogleButton } from "@auth/components/GoogleButton";
+import { requestMagicLink } from "@/auth/MagicLinkButton";
 import { SparkMark } from "@/recap/SparkMark";
-import type { RegisterFormFields } from "@/types/auth";
-import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import { themes } from "@/utils";
-import {
-  buildThemeDefaults,
-  applyCssVariables,
-  clearCssVariables,
-} from "@/utils/tenantThemeConfig";
-type FormData = {
-  username: string;
-  password: string;
-};
+import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
+import StatFigure from "./StatFigure";
+import "./signIn.css";
+
+/**
+ * Sign in. A light form beside a dark brand panel.
+ *
+ * The easiest way in leads: type an email, get a one-click link. A password
+ * is one tap away, and Google sits below. The page carries its own colours
+ * (signIn.css) and writes nothing onto <html> that the app then has to undo.
+ */
+
+const STATS: ReadonlyArray<readonly [string, string]> = [
+  ["257K+", "ambassadors"],
+  ["50", "states"],
+  ["48 hr", "rush staffing"],
+];
 
 const Login = () => {
-  const currentYear = new Date().getFullYear();
   const navigate = useNavigate();
   const { login, loading } = useAuthStore();
   const { showAlert } = useAlertStore();
-  const [isLogin] = useState(true);
-  const [fade] = useState(true);
-  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
-    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
-  );
+  const [mode, setMode] = useState<SignInMode>("link");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
-    const cssVars = buildThemeDefaults(colorScheme);
-    const themeName = themes[colorScheme];
-
-    applyCssVariables(cssVars);
-
-    document.documentElement.setAttribute("color-scheme", colorScheme);
-    document.documentElement.setAttribute("data-theme", themeName);
-    localStorage.setItem("@color-scheme", colorScheme);
-    localStorage.setItem("@theme", themeName);
-
-    // These are written inline on <html>, where they outrank the stylesheet.
-    // Left behind after sign-in they kept the app's page background and text
-    // dark while its light mode was on, until a full reload.
-    return () => clearCssVariables(cssVars);
-  }, [colorScheme]);
-
-  // const handleSwitch = () => {
-  //   setFade(false);
-  //   setTimeout(() => {
-  //     setIsLogin(!isLogin);
-  //     setFade(true);
-  //   }, 200);
-  // };
-
-  const { control, handleSubmit } = useForm<FormData>({
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  const { control: controlRegister, handleSubmit: handleSubmitRegister } =
-    useForm<RegisterFormFields>({
-      defaultValues: {
-        firstName: "",
-        email: "",
-        password1: "",
-        password2: "",
-        termsAccepted: false,
-      },
-    });
-
-  const onSubmit = async (data: FormData) => {
+    // Select the stylesheet's Spark theme (the app reads these two keys on
+    // start-up). No inline colours: those used to follow people into the app.
+    document.documentElement.setAttribute("color-scheme", "dark");
+    document.documentElement.setAttribute("data-theme", themes.dark);
     try {
-      await login(data.username, data.password);
-      navigate("/");
-      showAlert("Login successful", "success");
+      localStorage.setItem("@color-scheme", "dark");
+      localStorage.setItem("@theme", themes.dark);
+    } catch {
+      /* private mode: the attributes above still apply for this visit */
+    }
+  }, []);
+
+  const busy = sending || loading;
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const blocked = blockedReason(mode, email, password);
+    setProblem(blocked);
+    if (blocked || busy) return;
+
+    if (mode === "password") {
+      try {
+        await login(email.trim(), password);
+        navigate("/");
+      } catch (error: unknown) {
+        setProblem(error instanceof Error ? error.message : String(error));
+      }
+      return;
+    }
+
+    setSending(true);
+    try {
+      await requestMagicLink(email);
+      setSentTo(email.trim());
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      showAlert(message, "error");
+      showAlert(`Could not send the link: ${message}`, "error");
+    } finally {
+      setSending(false);
     }
   };
 
-  const onRegister = async (data: RegisterFormFields) => {
-    try {
-      await register(data);
-      navigate("/");
-      showAlert("Register successful", "success");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      showAlert(message, "error");
-    }
-  };
+  const year = new Date().getFullYear();
+
+  const form = (
+        <form className="signin-form" onSubmit={submit} noValidate>
+          <h1 className="signin-title">Sign in</h1>
+          <p className="signin-lede">Enter your email and we will send you a link.</p>
+
+          {sentTo ? (
+            <>
+              <p className="signin-note" role="status">
+                <strong>Check your inbox.</strong> If {sentTo} has a Spark account, a
+                sign-in link is on its way. It works for 30 minutes.
+              </p>
+              <button
+                type="button"
+                className="signin-link signin-center"
+                onClick={() => setSentTo(null)}
+              >
+                Use a different email
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="signin-field">
+                <label className="signin-label" htmlFor="signin-email">
+                  Email
+                </label>
+                <input
+                  id="signin-email"
+                  className="signin-input"
+                  type="email"
+                  name="username"
+                  autoComplete="username"
+                  inputMode="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              {mode === "password" ? (
+                <div className="signin-field">
+                  <div className="signin-label-row">
+                    <label className="signin-label" htmlFor="signin-password">
+                      Password
+                    </label>
+                    <Link to="/forgot-password" className="signin-link">
+                      Forgot it?
+                    </Link>
+                  </div>
+                  <input
+                    id="signin-password"
+                    className="signin-input"
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              ) : null}
+
+              {problem ? (
+                <p className="signin-error" role="alert">
+                  {problem}
+                </p>
+              ) : null}
+
+              <button type="submit" className="signin-primary" disabled={busy}>
+                {primaryLabel(mode, busy)}
+              </button>
+
+              <button
+                type="button"
+                className="signin-link signin-center"
+                onClick={() => {
+                  setProblem(null);
+                  setMode(mode === "link" ? "password" : "link");
+                }}
+              >
+                {mode === "link" ? "Use a password instead" : "Email me a link instead"}
+              </button>
+
+              <div className="signin-or">or</div>
+              <div className="signin-google">
+                <GoogleButton isLogin />
+              </div>
+            </>
+          )}
+
+        </form>
+  );
+
+  const shiftNote = (
+    <p className="signin-shift">
+      <strong>Working a shift?</strong> You do not need to sign in. Use the check-in
+      link from your text or email.
+    </p>
+  );
+
+  const foot = (
+    <footer className="signin-foot">
+      <span>© {year} Ignite Productions LLC</span>
+      <Link to="/privacy-policy">Privacy</Link>
+      <Link to="/terms-of-service">Terms</Link>
+    </footer>
+  );
+
+  const stats = (
+    <dl className="signin-stats">
+      {STATS.map(([value, label], i) => (
+        <div className="signin-stat" key={label}>
+          <dd>
+            <StatFigure value={value} delayMs={250 + i * 120} />
+          </dd>
+          <dt>{label}</dt>
+        </div>
+      ))}
+    </dl>
+  );
 
   return (
-    <div
-      className="spark-login-page h-dvh w-full overflow-hidden flex"
-      style={{
-        background:
-          "radial-gradient(circle at 20% 10%, rgba(242,243,238,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0A0B0D",
-      }}
-    >
-      <div
-        className="flex flex-col lg:flex-row w-full h-full overflow-hidden"
-        style={{ background: "#0A0B0D" }}
-      >
-        <div
-          className="spark-login-form flex flex-col justify-center items-center w-full lg:w-1/2 px-8 sm:px-12 md:px-16 py-10 overflow-y-auto transition-all duration-300 ease-in-out"
-          style={{
-            background: "#0A0B0D",
-            color: "#F5F2EC",
-          }}
+    <div className="signin-page">
+      <header className="signin-top">
+        <a
+          className="signin-home"
+          href="https://www.igniteproductions.co"
+          aria-label="Ignite Productions home"
         >
-          <div
-            key={isLogin ? "login" : "signup"}
-            className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${fade ? "opacity-100" : "opacity-0"
-              }`}
-          >
-            <SparkMark height={20} className="mx-auto" onDark />
-            <h1
-              style={{
-                fontFamily: "var(--font-display, sans-serif)",
-                fontWeight: 700,
-                fontSize: 28,
-                letterSpacing: "-0.03em",
-                color: "#F5F2EC",
-                textAlign: "center",
-                marginTop: 6,
-                marginBottom: 20,
-              }}
-            >
-              {isLogin ? "Sign in." : "Create your account."}
-            </h1>
-            {isLogin ? (
-              <>
-                <AuthForm
-                  control={control}
-                  handleSubmit={handleSubmit}
-                  onSubmit={onSubmit}
-                  loading={loading}
-                />
-                <MagicLinkButton />
-              </>
-            ) : (
-              <RegisterForm
-                control={controlRegister}
-                handleSubmit={handleSubmitRegister}
-                onSubmit={onRegister}
-              />
-            )}
+          <img src="/legal/ignite-full-white.png" alt="Ignite Productions" />
+        </a>
+        <a className="signin-top-link" href="https://www.igniteproductions.co">
+          igniteproductions.co
+        </a>
+      </header>
 
-            {/* <div className="text-center text-sm mt-6">
-              {isLogin ? (
-                <>
-                  Not registered yet?{" "}
-                  <button
-                    type="button"
-                    onClick={handleSwitch}
-                    className="text-primary font-semibold hover:text-secondary transition-colors"
-                  >
-                    Create an Account
-                  </button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={handleSwitch}
-                    className="text-primary font-semibold hover:text-secondary transition-colors"
-                  >
-                    Sign in
-                  </button>
-                </>
-              )}
+      <main className="signin-col">
+        <span className="signin-mark">
+          <SparkMark height={88} />
+        </span>
+        <p className="signin-about">
+          Spark is the platform Ignite uses to run your field marketing programs, from
+          booking the team to the recap that lands in your inbox.
+        </p>
+        {form}
+        {shiftNote}
+        {stats}
+      </main>
 
-            </div> */}
-          
-            <div className="mt-10 text-center space-y-2">
-              <p
-                style={{
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                  color: "rgba(245,242,236,0.4)",
-                }}
-              >
-                © {currentYear} IGNITE PRODUCTIONS LLC
-              </p>
-              <div
-                className="flex items-center justify-center gap-3"
-                style={{
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                }}
-              >
-                <Link to="/privacy-policy" style={{ color: "rgba(245,242,236,0.55)" }}>
-                  PRIVACY
-                </Link>
-                <span style={{ color: "rgba(245,242,236,0.3)" }} aria-hidden="true">
-                  ·
-                </span>
-                <Link to="/terms-of-service" style={{ color: "rgba(245,242,236,0.55)" }}>
-                  TERMS
-                </Link>
-              </div>
-            </div>
-           
-          </div>
-        </div>
-
-        {/* Right panel — verbatim port of the Spark Login Creative
-            handoff (Option C: word-morph hero). Same animation
-            primitives, copy, type, layout. */}
-        <SparkLoginCreative
-          colorScheme={colorScheme}
-          onColorScheme={setColorScheme}
-        />
-      </div>
+      {foot}
     </div>
   );
 };

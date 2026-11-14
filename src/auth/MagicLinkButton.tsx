@@ -9,6 +9,30 @@ import { useAlertStore } from "@/store/alertStore";
  * enumeration generic success regardless of whether the email is in
  * the DB.
  */
+/** Ask the server to email a one-click sign-in link. Resolves whether or not
+ *  the address has an account (the server never says which). */
+export async function requestMagicLink(email: string): Promise<void> {
+  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: `
+        mutation RequestMagicLink($input: RequestMagicLinkInput!) {
+          requestMagicLink(input: $input) {
+            success
+            message
+          }
+        }
+      `,
+      variables: { input: { email: email.trim() } },
+    }),
+  });
+  const json = await res.json();
+  if (json.errors?.length) {
+    throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+  }
+}
+
 export default function MagicLinkButton({
   defaultOpen = false,
 }: {
