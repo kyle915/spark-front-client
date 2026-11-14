@@ -173,3 +173,13 @@ export function applyCssVariables(vars: CssVariablesMap) {
     root.style.setProperty(key, value);
   });
 }
+
+/** Undo `applyCssVariables`: take those inline values back off <html>, so the
+ *  stylesheet (and the signed-in app's light or dark mode) decides again. */
+export function clearCssVariables(vars: CssVariablesMap) {
+  const root = document.documentElement;
+
+  Object.keys(vars).forEach((key) => {
+    root.style.removeProperty(key);
+  });
+}
