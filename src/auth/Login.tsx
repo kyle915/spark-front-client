@@ -7,6 +7,7 @@ import { requestMagicLink } from "@/auth/MagicLinkButton";
 import { SparkMark } from "@/recap/SparkMark";
 import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
+import { playArrival } from "./arrivalSweep";
 import "./signIn.css";
 
 /**
@@ -52,7 +53,7 @@ const Login = () => {
     if (mode === "password") {
       try {
         await login(email.trim(), password);
-        navigate("/");
+        void playArrival(() => navigate("/"));
       } catch (error: unknown) {
         setProblem(error instanceof Error ? error.message : String(error));
       }

@@ -3,6 +3,7 @@ import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@store/authStore";
 import { useNavigate } from "react-router";
 import { useState } from "react";
+import { playArrival } from "@/auth/arrivalSweep";
 
 interface GoogleButtonProps {
   isLogin?: boolean;
@@ -63,8 +64,7 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
       const payload = result?.data?.socialAuthGoogle;
       if (payload?.success && payload.token) {
         await socialLogin(payload.token, payload.refreshToken);
-        showAlert("Login successful", "success");
-        navigate("/");
+        void playArrival(() => navigate("/"));
         return;
       }
       showAlert(
