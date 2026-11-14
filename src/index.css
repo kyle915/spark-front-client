@@ -1130,6 +1130,183 @@ thead .spark-table-sticky-date {
   margin-top: 6px;
 }
 
+/* Dashboard twin panels: what starts today beside what needs someone.
+   One line per item, the reason in words on the right. */
+.spark-twin {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .spark-twin {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.spark-panel {
+  padding: 0;
+  overflow: hidden;
+}
+.spark-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0.75rem;
+}
+.spark-panel-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--spark-text);
+}
+.spark-panel-count {
+  margin-left: 0.5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--spark-text-meta);
+}
+.spark-panel-link {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  color: var(--spark-text-secondary);
+  text-decoration: none;
+}
+.spark-panel-link:hover {
+  color: var(--spark-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.spark-panel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 1rem;
+  min-height: var(--spark-hit, 44px);
+  padding: 0.6rem 1.25rem;
+  border-top: 1px solid var(--spark-hairline);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease-out;
+}
+.spark-panel-row:hover {
+  background: rgba(var(--spark-ink-rgb), 0.04);
+}
+.spark-panel-row:focus-visible,
+.spark-panel-link:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: -2px;
+}
+.spark-panel-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.spark-panel-row-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spark-panel-row-sub {
+  font-size: 0.78125rem;
+  line-height: 1.35;
+  color: var(--spark-text-meta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spark-panel-row-aside {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  color: var(--spark-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+.spark-panel-row-sub.is-flagged,
+.spark-panel-row-aside.is-flagged {
+  color: var(--spark-flag-ink);
+}
+.spark-panel-more {
+  font-size: 0.8125rem;
+  color: var(--spark-text-secondary);
+}
+.spark-panel-empty {
+  margin: 0;
+  padding: 0.75rem 1.25rem 1rem;
+  border-top: 1px solid var(--spark-hairline);
+  font-size: 0.875rem;
+  color: var(--spark-text-meta);
+}
+.spark-panel-empty a {
+  color: var(--spark-text-secondary);
+  text-underline-offset: 3px;
+}
+/* Narrow: a reason is a sentence, so it gets its own line under the name. */
+@media (max-width: 520px) {
+  .spark-panel-row--reason {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .spark-panel-row--reason .spark-panel-row-aside {
+    text-align: left;
+    white-space: normal;
+  }
+}
+
+/* Figure plus the words that finish its sentence ("1,445 consumers
+   sampled"). A row per figure on a phone, three across from 640px. */
+.spark-says {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 0;
+}
+.spark-says-item {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.spark-says-figure {
+  margin: 0;
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4.5vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+/* Phone rows: a fixed figure column so the words line up down the card. */
+@media (max-width: 639.98px) {
+  .spark-says-figure {
+    min-width: 5.5rem;
+  }
+}
+.spark-says-words {
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: var(--spark-text-secondary);
+}
+@media (min-width: 640px) {
+  .spark-says {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  .spark-says-item {
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
 /* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
 .spark-kpi-lockup {
   display: flex;

@@ -3,10 +3,10 @@ import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
-import AttentionEngine from "./AttentionEngine";
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
+import TodayAttentionPanels from "@/components/dashboard/TodayAttentionPanels";
 import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
 import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
@@ -161,6 +161,10 @@ function DashboardInner() {
             <TodaysSnapshot />
           </Suspense>
 
+          <Suspense fallback={null}>
+            <TodayAttentionPanels staff={!isClient} />
+          </Suspense>
+
           {!isClient && (
             <Suspense fallback={null}>
               <StaffingGlanceCard />
@@ -172,10 +176,6 @@ function DashboardInner() {
               <ClockSummaryCard />
             </Suspense>
           )}
-
-          <Suspense fallback={null}>
-            <AttentionEngine />
-          </Suspense>
         </>
       )}
 
