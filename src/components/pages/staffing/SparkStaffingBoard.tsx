@@ -3,6 +3,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
 import StaffingRoster from "./StaffingRoster";
+import { shiftTime } from "@/components/dashboard/todayAttention";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassadorMutation";
@@ -36,15 +37,6 @@ const ymd = (d: Date): string => {
 const shiftDayKey = (iso: string | null | undefined): string | null => {
   if (!iso) return null;
   return String(iso).slice(0, 10);
-};
-
-const fmtTime = (iso: string | null | undefined): string => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d
-    .toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-    .replace(":00", "");
 };
 
 const initials = (name: string): string =>
@@ -545,7 +537,9 @@ const Inner: React.FC<{
           showBrand={!brandFilter}
           venueOf={(s) => venueLabel(s.store, s.eventName)}
           hoursOf={(s) =>
-            [fmtTime(s.startTime), fmtTime(s.endTime)].filter(Boolean).join("–")
+            [shiftTime(s.startLocal ?? s.startTime), shiftTime(s.endLocal ?? s.endTime)]
+              .filter(Boolean)
+              .join("–")
           }
           onOpen={openAssign}
         />
@@ -644,8 +638,8 @@ const Inner: React.FC<{
                                 className="mono text-[9px] mb-1"
                                 style={{ color: "var(--spark-text-meta)" }}
                               >
-                                {fmtTime(s.startTime)}
-                                {s.endTime ? `–${fmtTime(s.endTime)}` : ""}
+                                {shiftTime(s.startLocal ?? s.startTime)}
+                                {s.endTime ? `–${shiftTime(s.endLocal ?? s.endTime)}` : ""}
                               </p>
                             ) : null}
                             <div className="flex flex-wrap gap-1 mb-1">

@@ -42,8 +42,11 @@ const toShifts = (
       eventName: row.eventName ?? "",
       brandName: row.brandName ?? "",
       store: row.store ?? "",
-      startTime: row.startTime ?? "",
-      endTime: row.endTime ?? "",
+      // Venue wall-clock when the server sends it; the instant otherwise.
+      startTime: row.startLocal ?? row.startTime ?? "",
+      endTime: row.endLocal ?? row.endTime ?? "",
+      startInstant: row.startTime ?? null,
+      lastClockInTapAt: row.lastClockInTapAt ?? null,
       assigned: (row.assigned ?? [])
         .filter((a): a is NonNullable<typeof a> => Boolean(a))
         .map((a) => ({
@@ -53,6 +56,7 @@ const toShifts = (
           clockInAt: a.clockInAt ?? null,
           clockOutAt: a.clockOutAt ?? null,
           pendingApproval: Boolean(a.pendingApproval),
+          registeredAt: a.registeredAt ?? null,
         })),
     }));
 

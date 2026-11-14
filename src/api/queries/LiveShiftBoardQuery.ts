@@ -13,6 +13,9 @@ export const LiveShiftBoardQuery = graphql`
       date
       startTime
       endTime
+      startLocal
+      endLocal
+      lastClockInTapAt
       address
       store
       requestUuid
@@ -31,6 +34,8 @@ export const LiveShiftBoardQuery = graphql`
         locationAt
         locationSource
         pendingApproval
+        registeredAt
+        bookingSource
       }
     }
   }

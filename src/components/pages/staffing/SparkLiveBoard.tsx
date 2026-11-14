@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { shiftTime } from "@/components/dashboard/todayAttention";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
@@ -290,8 +291,8 @@ const Inner: React.FC<{
                     style={{ letterSpacing: "0.1em", color: "var(--spark-text-meta)" }}
                   >
                     {s.brandName}
-                    {s.startTime ? ` · ${fmtTime(s.startTime)}` : ""}
-                    {s.endTime ? `–${fmtTime(s.endTime)}` : ""}
+                    {s.startTime ? ` · ${shiftTime(s.startLocal ?? s.startTime)}` : ""}
+                    {s.endTime ? `–${shiftTime(s.endLocal ?? s.endTime)}` : ""}
                   </p>
                 </div>
               </div>
