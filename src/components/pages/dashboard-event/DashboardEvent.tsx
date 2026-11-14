@@ -91,7 +91,8 @@ function DashboardInner() {
     : "";
 
   return (
-    <div className="space-y-5 lg:space-y-6 max-w-7xl spark-scale">
+    <div className="spark-dash spark-scale">
+      <div className="spark-dash-top space-y-5 lg:space-y-6">
       <SparkPageHeader
         title="Dashboard"
         support="Due recaps, clock, what needs you — then program performance."
@@ -164,7 +165,17 @@ function DashboardInner() {
           <Suspense fallback={null}>
             <TodayAttentionPanels staff={!isClient} />
           </Suspense>
+        </>
+      )}
+      </>
+      )}
+      </div>
 
+      {/* Today's working detail. Below the panels on a laptop; a second
+          column beside the whole page on a wide monitor, where the page
+          used to leave the right third of the screen empty. */}
+      {comparing || program === "field" || isClient ? null : (
+        <div className="spark-dash-rail space-y-5 lg:space-y-6">
           {isAdmin ? (
             <ErrorBoundary fallback={null}>
               <Suspense fallback={null}>
@@ -172,25 +183,21 @@ function DashboardInner() {
               </Suspense>
             </ErrorBoundary>
           ) : null}
-
-          {!isClient && (
-            <Suspense fallback={null}>
-              <StaffingGlanceCard />
-            </Suspense>
-          )}
-
-          {!isClient && (
-            <Suspense fallback={null}>
-              <ClockSummaryCard />
-            </Suspense>
-          )}
-        </>
+          <Suspense fallback={null}>
+            <StaffingGlanceCard />
+          </Suspense>
+          <Suspense fallback={null}>
+            <ClockSummaryCard />
+          </Suspense>
+        </div>
       )}
 
-      <Suspense fallback={<DashboardSkeleton />}>
-        <InsightsBody embedded />
-      </Suspense>
-      </>
+      {comparing ? null : (
+        <div className="spark-dash-rest">
+          <Suspense fallback={<DashboardSkeleton />}>
+            <InsightsBody embedded />
+          </Suspense>
+        </div>
       )}
     </div>
   );

@@ -1364,6 +1364,14 @@ thead .spark-table-sticky-date {
 .spark-scale .text-\[15px\] {
   font-size: 14px;
 }
+/* Tracker column headers: the table's own rule sets 10px capitals. */
+.spark-scale .spark-tracker-table thead th {
+  font-size: 12px !important;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+  color: var(--spark-text-meta) !important;
+}
 .spark-scale .rounded-md,
 .spark-scale .rounded-lg {
   border-radius: var(--spark-radius-control);
@@ -1503,6 +1511,44 @@ thead .spark-table-sticky-date {
 .spark-viewswitch button[aria-pressed="true"] {
   color: var(--spark-selected-ink);
   background: var(--spark-selected-bg);
+}
+
+/* Dashboard page frame. One column up to a laptop; from 1720px the
+   working detail (sheets, staffing, time clock) moves into a second
+   column beside the page. */
+.spark-dash {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 1.5rem;
+  max-width: 80rem;
+}
+.spark-dash > * {
+  min-width: 0;
+}
+.spark-dash-rail:empty {
+  display: none;
+}
+@media (min-width: 1720px) {
+  .spark-dash {
+    max-width: none;
+    grid-template-columns: minmax(0, 80rem) minmax(340px, 440px);
+    grid-template-areas:
+      "top rail"
+      "rest rail";
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+  .spark-dash-top {
+    grid-area: top;
+  }
+  .spark-dash-rest {
+    grid-area: rest;
+  }
+  .spark-dash-rail {
+    grid-area: rail;
+    /* Line the first card up with the first card on the left, under the title. */
+    padding-top: 4.75rem;
+  }
 }
 
 /* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
