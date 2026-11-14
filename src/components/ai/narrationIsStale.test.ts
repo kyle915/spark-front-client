@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { narrationIsStale } from "./WeeklyNarrationCard";
+import { narrationIsStale } from "./narrationIsStale";
 
 describe("narrationIsStale", () => {
   const now = new Date("2026-11-14T18:00:00Z");

@@ -4,6 +4,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantWeeklyNarrationQuery } from "@/api/queries/TenantWeeklyNarrationQuery";
 import type { TenantWeeklyNarrationQuery as TenantWeeklyNarrationQueryType } from "@api/queries/__generated__/TenantWeeklyNarrationQuery.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { narrationIsStale } from "./narrationIsStale";
 
 const MARKET_SKIP = new Set([
   "THE",
@@ -75,13 +76,6 @@ function formatWeek(start: string, end: string): string {
     day: "numeric",
   });
   return `${startLabel} – ${endLabel}`;
-}
-
-/** A summary of a week that ended more than `days` ago is old news. */
-export function narrationIsStale(weekEnd: string, now: Date, days = 14): boolean {
-  const end = new Date(`${weekEnd}T12:00:00`).getTime();
-  if (!Number.isFinite(end)) return true;
-  return now.getTime() - end > days * 86_400_000;
 }
 
 const WeeklyNarrationBody: React.FC<{ tenantId: string; forClient?: boolean }> = ({
