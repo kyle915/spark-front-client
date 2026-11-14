@@ -139,10 +139,7 @@
 .signin-home { display: inline-flex; line-height: 0; border-radius: 4px; }
 /* The Ignite mark ships white-on-transparent; on this light page it is inked. */
 .signin-home img { height: 30px; width: auto; filter: brightness(0); }
-.signin-top-link { font-size: 14px; color: var(--si-ink-2); text-decoration: none; }
-.signin-top-link:hover { color: var(--si-ink); text-decoration: underline; text-underline-offset: 4px; }
-.signin-home:focus-visible,
-.signin-top-link:focus-visible { outline: 2px solid var(--si-ink); outline-offset: 4px; }
+.signin-home:focus-visible { outline: 2px solid var(--si-ink); outline-offset: 4px; }
 
 .signin-col {
   flex: 1;

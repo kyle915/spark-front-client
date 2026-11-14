@@ -210,9 +210,6 @@ const Login = () => {
         >
           <img src="/legal/ignite-full-white.png" alt="Ignite Productions" />
         </a>
-        <a className="signin-top-link" href="https://www.igniteproductions.co">
-          igniteproductions.co
-        </a>
       </header>
 
       <main className="signin-col">
