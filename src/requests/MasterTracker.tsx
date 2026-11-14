@@ -423,7 +423,7 @@ const TrackerTable: React.FC<{
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const colCount = selectionEnabled ? 12 : 11;
+  const colCount = selectionEnabled ? 6 : 5;
 
   // Inline request approval from the Tracker (clients + admins). Backend
   // `approveRequest` enforces tenant membership + blocks BAs (same as the
@@ -575,26 +575,18 @@ const TrackerTable: React.FC<{
             Tabler density + hairlines live in .spark-tracker-table CSS. */}
         <table
           className="table table-sm table-pin-rows spark-tracker-table w-full"
-          style={{ minWidth: 1200 }}
+          style={{ minWidth: 860 }}
         >
           <thead>
             <tr className="text-left mono">
               {selectionEnabled ? (
                 <th className="w-10 spark-table-sticky-bg" aria-label="Select" />
               ) : null}
-              <th className="spark-table-sticky-date">Date</th>
-              <th className="spark-table-sticky-bg" title="Requested demo / event window">
-                Requested
+              <th className="spark-table-sticky-date" title="Event date and requested hours">
+                When
               </th>
-              <th className="spark-table-sticky-bg">Status</th>
-              <th className="spark-table-sticky-bg">Market</th>
               <th className="spark-table-sticky-bg">Venue</th>
-              <th className="spark-table-sticky-bg spark-table-hide-sm">
-                Address
-              </th>
-              <th className="spark-table-sticky-bg">Type</th>
-              <th className="text-right spark-table-sticky-bg">Consumers</th>
-              <th className="text-right spark-table-sticky-bg">First-time</th>
+              <th className="spark-table-sticky-bg">Status</th>
               <th className="spark-table-sticky-bg">Recap</th>
               <th className="spark-table-sticky-bg">Notes</th>
             </tr>
@@ -636,7 +628,6 @@ const TrackerTable: React.FC<{
                 </tr>
               ) : null;
               const slug = r.statusSlug.toLowerCase();
-              const isDone = slug === "done";
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
               const label = STATUS_LABEL[slug] ?? r.statusSlug;
               const isExpanded = expanded.has(r.uuid);
@@ -703,24 +694,112 @@ const TrackerTable: React.FC<{
                       />
                     </td>
                   ) : null}
-                  <td className="align-top spark-table-sticky-date">
-                    <p className="text-[13px] leading-tight">{r.dateLabel}</p>
-                  </td>
-                  <td className="align-top whitespace-nowrap">
+                  <td className="align-top spark-table-sticky-date whitespace-nowrap">
+                    <p className="text-[13px] leading-tight spark-tracker-cell-primary">
+                      {r.dateLabel}
+                    </p>
                     {r.timeLabel ? (
                       <p
-                        className="mono text-[12px] leading-tight spark-tracker-cell-primary tracking-[0.04em]"
+                        className="text-[12px] leading-tight mt-0.5 spark-tracker-cell-muted tab-num"
                         title="Requested start–end"
                       >
                         {r.timeLabel}
                       </p>
-                    ) : (
-                      <span className="spark-tracker-cell-muted">—</span>
-                    )}
+                    ) : null}
                   </td>
                   <td>
+                    <span className="font-semibold text-[13px] leading-tight spark-tracker-cell-primary">
+                      {r.venue}
+                    </span>
+                    {r.market || r.address ? (
+                      <span
+                        className="block text-[12px] mt-0.5 spark-tracker-cell-muted truncate max-w-[420px]"
+                        title={[r.market, r.address].filter(Boolean).join(" · ")}
+                      >
+                        {[r.market, r.address].filter(Boolean).join(" · ")}
+                      </span>
+                    ) : null}
+                    <span
+                      className="block text-[10px] mt-0.5 spark-tracker-cell-muted tracking-wide"
+                      style={{ fontVariantNumeric: "tabular-nums" }}
+                      title="Request number — search the tracker by this (e.g. REQ-925)"
+                    >
+                      REQ-{reqCodeOf(r.id)}
+                    </span>
+                    {r.planName ? (
+                      <span
+                        className="block mono text-[9px] mt-0.5 truncate max-w-[160px] spark-tracker-cell-muted tracking-[0.1em]"
+                        title={`Plan: ${r.planName}`}
+                      >
+                        ▸ {r.planName}
+                      </span>
+                    ) : null}
+                    {r.schedulingStatus === "needs_scheduling" ? (
+                      <span
+                        className="chip chip-gold chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Ignite still needs to schedule this with the account"
+                      >
+                        Needs scheduling
+                      </span>
+                    ) : r.schedulingStatus === "already_scheduled" ? (
+                      <span
+                        className="chip chip-muted chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Already scheduled with the account"
+                      >
+                        Scheduled with account
+                      </span>
+                    ) : null}
+                    {r.isNonActiveProductRequired === true ? (
+                      <span
+                        className="chip chip-gold chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Is Non-Active Product Required?"
+                      >
+                        Non-active required
+                      </span>
+                    ) : r.isNonActiveProductRequired === false ? (
+                      <span
+                        className="chip chip-muted chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Is Non-Active Product Required?"
+                      >
+                        No non-active
+                      </span>
+                    ) : null}
+                    {r.openShiftsOpen > 0 ? (
+                      <span
+                        className="chip chip-gold chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title={r.openShiftsTooltip || "A booked shift was dropped and is open to claim"}
+                      >
+                        {r.openShiftsOpen} open shift{r.openShiftsOpen > 1 ? "s" : ""}
+                      </span>
+                    ) : r.openShiftsTotal > 0 ? (
+                      <span
+                        className="chip chip-muted chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title={r.openShiftsTooltip}
+                      >
+                        Swapped
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="align-top">
                     <div className="flex flex-col items-start gap-0.5">
                       <span className={`${chipClass} chip-sm`}>{label}</span>
+                      {r.type ? (
+                        <span className="text-[12px] spark-tracker-cell-muted">{r.type}</span>
+                      ) : null}
+                      {r.skus.length > 0 ? (
+                        <span
+                          className="text-[12px] line-clamp-1 max-w-[220px] spark-tracker-cell-muted"
+                          title={r.skus.join(", ")}
+                        >
+                          {r.skus.join(", ")}
+                        </span>
+                      ) : null}
                       {r.assignedBa > 0 ? (
                         <span
                           className={
@@ -731,15 +810,16 @@ const TrackerTable: React.FC<{
                           style={{ display: "inline-flex" }}
                           title={`${r.confirmedBa} confirmed of ${r.assignedBa} assigned`}
                         >
-                          👤 {r.assignedBa}
-                          {r.confirmedBa >= r.assignedBa ? " ✓" : ""}
+                          {r.confirmedBa >= r.assignedBa
+                            ? `${r.assignedBa} confirmed`
+                            : `${r.confirmedBa} of ${r.assignedBa} confirmed`}
                         </span>
                       ) : null}
                       {(r.statusSlug === "pending" ||
                         r.statusSlug === "queue") &&
                         (approvedIds.has(r.uuid) ? (
                           <span className="chip chip-purple chip-sm">
-                            APPROVED
+                            Approved
                           </span>
                         ) : (
                           <button
@@ -766,112 +846,6 @@ const TrackerTable: React.FC<{
                         ))}
                     </div>
                   </td>
-                  <td className="spark-tracker-cell-muted text-[12px]">
-                    {r.market}
-                  </td>
-                  <td>
-                    <span className="font-semibold text-[13px] leading-tight spark-tracker-cell-primary">
-                      {r.venue}
-                    </span>
-                    <span
-                      className="block text-[10px] mt-0.5 spark-tracker-cell-muted tracking-wide"
-                      style={{ fontVariantNumeric: "tabular-nums" }}
-                      title="Request number — search the tracker by this (e.g. REQ-925)"
-                    >
-                      REQ-{reqCodeOf(r.id)}
-                    </span>
-                    {r.planName ? (
-                      <span
-                        className="block mono text-[9px] mt-0.5 truncate max-w-[160px] spark-tracker-cell-muted tracking-[0.1em]"
-                        title={`Plan: ${r.planName}`}
-                      >
-                        ▸ {r.planName}
-                      </span>
-                    ) : null}
-                    {r.schedulingStatus === "needs_scheduling" ? (
-                      <span
-                        className="chip chip-gold chip-sm mt-1"
-                        style={{ display: "inline-flex" }}
-                        title="Ignite still needs to schedule this with the account"
-                      >
-                        ◷ NEEDS SCHEDULING
-                      </span>
-                    ) : r.schedulingStatus === "already_scheduled" ? (
-                      <span
-                        className="chip chip-muted chip-sm mt-1"
-                        style={{ display: "inline-flex" }}
-                        title="Already scheduled with the account"
-                      >
-                        ✓ SCHEDULED
-                      </span>
-                    ) : null}
-                    {r.isNonActiveProductRequired === true ? (
-                      <span
-                        className="chip chip-gold chip-sm mt-1"
-                        style={{ display: "inline-flex" }}
-                        title="Is Non-Active Product Required?"
-                      >
-                        NON-ACTIVE REQUIRED
-                      </span>
-                    ) : r.isNonActiveProductRequired === false ? (
-                      <span
-                        className="chip chip-muted chip-sm mt-1"
-                        style={{ display: "inline-flex" }}
-                        title="Is Non-Active Product Required?"
-                      >
-                        NO NON-ACTIVE
-                      </span>
-                    ) : null}
-                    {r.openShiftsOpen > 0 ? (
-                      <span
-                        className="chip chip-gold chip-sm mt-1"
-                        style={{ display: "inline-flex" }}
-                        title={r.openShiftsTooltip || "A booked shift was dropped and is open to claim"}
-                      >
-                        {r.openShiftsOpen} open shift{r.openShiftsOpen > 1 ? "s" : ""}
-                      </span>
-                    ) : r.openShiftsTotal > 0 ? (
-                      <span
-                        className="chip chip-muted chip-sm mt-1"
-                        style={{ display: "inline-flex" }}
-                        title={r.openShiftsTooltip}
-                      >
-                        ⇄ SWAPPED
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="text-[12px] max-w-[280px] spark-table-hide-sm spark-tracker-cell-muted">
-                    <span className="line-clamp-2">{r.address || "—"}</span>
-                  </td>
-                  <td className="text-xs spark-tracker-cell-muted">
-                    {r.type}
-                    {r.skus.length > 0 ? (
-                      <span
-                        className="block mt-0.5 text-[10px] line-clamp-2 spark-tracker-cell-muted"
-                        title={r.skus.join(", ")}
-                      >
-                        {r.skus.join(", ")}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td
-                    className="text-right tab-num spark-tracker-cell-muted"
-                    style={{
-                      color: isDone ? "var(--spark-text)" : undefined,
-                    }}
-                  >
-                    {isDone ? "—" : "—"}
-                  </td>
-                  <td
-                    className="text-right tab-num"
-                    style={{
-                      color: isDone
-                        ? "var(--spark-lime)"
-                        : "var(--spark-text-meta, rgba(var(--spark-ink-rgb),0.3))",
-                    }}
-                  >
-                    —
-                  </td>
                   <td className="whitespace-nowrap">
                     {r.recapStatus === "submitted" ? (
                       <span
@@ -882,7 +856,7 @@ const TrackerTable: React.FC<{
                       </span>
                     ) : r.recapStatus === "due" ? (
                       <span className="chip chip-orange chip-sm" title="Activation scheduled, no recap filed yet">
-                        ◌ DUE
+                        Recap due
                       </span>
                     ) : (
                       <span className="mono text-[10px] tracking-[0.14em] spark-tracker-cell-muted">
