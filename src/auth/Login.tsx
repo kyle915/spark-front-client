@@ -220,8 +220,8 @@ const Login = () => {
           <SparkMark height={88} />
         </span>
         <p className="signin-about">
-          Spark is where Ignite runs field marketing: staffing, live clock-ins, recaps
-          and photos, and reporting for every program.
+          Spark is the platform Ignite uses to run your field marketing programs, from
+          booking the team to the recap that lands in your inbox.
         </p>
         {form}
         {shiftNote}
