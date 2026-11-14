@@ -8,7 +8,7 @@ import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
 import { MobileNavProvider, useMobileNav } from "./MobileNavContext";
-import { applyAppearance, readAppearance } from "@/theme/appearance";
+import { applyAppearance, holdAppearance, readAppearance } from "@/theme/appearance";
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -34,10 +34,12 @@ function LayoutChromeInner({ children }: LayoutProps) {
 
   // Light mode applies only while the signed-in shell is on screen; public
   // pages and the ambassador check-in keep their own styling.
+  useEffect(() => holdAppearance(), []);
+  // Belt and braces: if anything cleared it while this shell is up, the next
+  // page change puts it back.
   useEffect(() => {
     applyAppearance(readAppearance());
-    return () => applyAppearance("dark");
-  }, []);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-[100dvh] bg-base-200 text-base-content spark-mesh">
