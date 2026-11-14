@@ -73,27 +73,33 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
   const hasActivity = (m.totalEvents ?? 0) > 0 || photos.length > 0;
   if (!hasActivity) return null;
 
-  const tiles: { label: string; value: string }[] = [
-    { label: "Events", value: fmtNum(m.totalEvents) },
-    { label: "Consumers sampled", value: fmtNum(m.consumersSampled) },
+  // Each figure reads as the end of the heading's sentence: "Your program
+  // in the last 30 days — 1,445 consumers sampled".
+  const tiles: { key: string; value: string; says: string }[] = [
     {
-      label: "Said they'd buy",
+      key: "events",
+      value: fmtNum(m.totalEvents),
+      says: m.totalEvents === 1 ? "event run" : "events run",
+    },
+    {
+      key: "sampled",
+      value: fmtNum(m.consumersSampled),
+      says: m.consumersSampled === 1 ? "consumer sampled" : "consumers sampled",
+    },
+    {
+      key: "intent",
       value:
         typeof m.purchaseIntent === "number" ? `${m.purchaseIntent.toFixed(0)}%` : "—",
+      says: "said they'd buy",
     },
   ];
 
   return (
     <section className="spark-card p-5 sm:p-6" aria-label="Your program in the last 30 days">
       <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
-          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-            Last 30 days
-          </p>
-          <h2 className="text-xl sm:text-2xl font-semibold" style={{ letterSpacing: "-0.02em" }}>
-            Your program at a glance
-          </h2>
-        </div>
+        <h2 className="text-xl sm:text-2xl font-semibold" style={{ letterSpacing: "-0.02em" }}>
+          Your program in the last 30 days
+        </h2>
         <Link
           to="/reports"
           className="px-4 py-2 rounded-xl text-sm font-semibold"
@@ -103,21 +109,14 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
         </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 sm:gap-6 mt-5">
+      <dl className="spark-says mt-5">
         {tiles.map((t) => (
-          <div key={t.label} className="min-w-0">
-            <p
-              className="tab-num font-bold truncate"
-              style={{ fontSize: "clamp(1.6rem, 4.5vw, 2.75rem)", lineHeight: 1.05 }}
-            >
-              {t.value}
-            </p>
-            <p className="text-sm mt-1" style={{ color: "var(--spark-text-secondary)" }}>
-              {t.label}
-            </p>
+          <div key={t.key} className="spark-says-item">
+            <dt className="spark-says-words">{t.says}</dt>
+            <dd className="spark-says-figure tab-num">{t.value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
 
       {photos.length > 0 ? (
         <>
