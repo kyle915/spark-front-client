@@ -7,6 +7,7 @@ import { requestMagicLink } from "@/auth/MagicLinkButton";
 import { SparkMark } from "@/recap/SparkMark";
 import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
+import SignInGlimpse from "./SignInGlimpse";
 import "./signIn.css";
 
 /**
@@ -193,6 +194,7 @@ const Login = () => {
             Live dashboards. GPS clock-ins. Auto-generated recaps. One platform, every
             program.
           </p>
+          <SignInGlimpse />
         </div>
         <div>
           <dl className="signin-stats">

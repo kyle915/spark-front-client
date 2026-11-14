@@ -152,15 +152,15 @@
   display: none;
   background: var(--si-dark);
   color: var(--si-paper);
-  padding: 48px 56px;
+  padding: 40px 56px;
   flex-direction: column;
   justify-content: space-between;
-  gap: 40px;
+  gap: 24px;
 }
 @media (min-width: 1024px) {
   .signin-brand { display: flex; }
 }
-.signin-brand-logo { height: clamp(72px, 9vw, 132px); width: auto; align-self: flex-start; }
+.signin-brand-logo { height: clamp(72px, 8vw, 116px); width: auto; align-self: flex-start; }
 .signin-brand-kicker { font-size: 14px; color: rgba(242, 243, 238, 0.66); margin: 0 0 14px; }
 .signin-brand-head {
   font-family: var(--font-display, sans-serif);
@@ -210,4 +210,78 @@
    two of them next to each other would be one too many. */
 @media (min-width: 1024px) {
   .signin-mark { display: none; }
+}
+
+/* A small moving picture of the product: shifts going from booked, to on
+   the clock, to recapped. The only motion on the page besides the entrance. */
+.signin-glimpse {
+  margin-top: 24px;
+  max-width: 460px;
+  border: 1px solid rgba(242, 243, 238, 0.16);
+  border-radius: 14px;
+  background: rgba(242, 243, 238, 0.04);
+  font-size: 14px;
+}
+.signin-glimpse-head,
+.signin-glimpse-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+}
+.signin-glimpse-head {
+  font-size: 13px;
+  color: rgba(242, 243, 238, 0.6);
+  border-bottom: 1px solid rgba(242, 243, 238, 0.12);
+}
+.signin-glimpse-head span:first-child { color: var(--si-paper); font-weight: 600; }
+.signin-glimpse-row + .signin-glimpse-row { border-top: 1px solid rgba(242, 243, 238, 0.08); }
+.signin-glimpse-where { display: flex; flex-direction: column; min-width: 0; }
+.signin-glimpse-store { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.signin-glimpse-place { font-size: 13px; color: rgba(242, 243, 238, 0.6); }
+.signin-glimpse-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(242, 243, 238, 0.72);
+  animation: signin-state-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.signin-glimpse-state i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(242, 243, 238, 0.5);
+}
+.signin-glimpse-state.is-on_clock { color: var(--si-paper); }
+.signin-glimpse-state.is-on_clock i { background: #c4d82e; border-color: #c4d82e; }
+.signin-glimpse-state.is-recapped { color: var(--si-paper); }
+.signin-glimpse-state.is-recapped i { background: var(--si-paper); border-color: var(--si-paper); }
+@keyframes signin-state-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Entrance: the page settles in once, form first. */
+.signin-form,
+.signin-brand > * {
+  animation: signin-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.signin-brand > *:nth-child(2) { animation-delay: 0.08s; }
+.signin-brand > *:nth-child(3) { animation-delay: 0.16s; }
+@keyframes signin-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .signin-form,
+  .signin-brand > *,
+  .signin-glimpse-state { animation: none; }
+}
+/* Short screens: the figures matter more than the illustration. */
+@media (max-height: 820px) {
+  .signin-glimpse { display: none; }
 }
