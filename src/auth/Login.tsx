@@ -216,16 +216,20 @@ const Login = () => {
       </header>
 
       <main className="signin-col">
-        <span className="signin-mark">
-          <SparkMark height={88} />
-        </span>
-        <p className="signin-about">
-          Spark is the platform Ignite uses to run your field marketing programs, from
-          booking the team to the recap that lands in your inbox.
-        </p>
-        {form}
-        {shiftNote}
-        {stats}
+        <div className="signin-intro">
+          <span className="signin-mark">
+            <SparkMark height={88} />
+          </span>
+          <p className="signin-about">
+            Spark is the platform Ignite uses to run your field marketing programs, from
+            booking the team to the recap that lands in your inbox.
+          </p>
+          {stats}
+        </div>
+        <div className="signin-entry">
+          {form}
+          {shiftNote}
+        </div>
       </main>
 
       {foot}
