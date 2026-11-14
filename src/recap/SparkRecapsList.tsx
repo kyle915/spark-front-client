@@ -581,7 +581,7 @@ const RecapCard: React.FC<{
         />
       ) : recap.heroImage && heroFailed ? (
         <div className="absolute inset-0 grid place-items-center">
-          <span className="chip chip-orange">PHOTO FAIL</span>
+          <span className="chip chip-orange">Photo failed</span>
         </div>
       ) : (
         <div className="absolute inset-0 grid place-items-center">
@@ -919,7 +919,7 @@ const RecapCompactRow: React.FC<{
           />
         ) : recap.heroImage && heroFailed ? (
           <span className="chip chip-orange absolute inset-0 grid place-items-center text-[8px]">
-            PHOTO FAIL
+            Photo failed
           </span>
         ) : (
           <span className="grid place-items-center w-full h-full text-base" aria-hidden>
@@ -3182,19 +3182,22 @@ export default function SparkRecapsList() {
 
   const pipelineKey =
     statusFilter === "draft" ? "needs_review" : statusFilter;
-  const statusWord = recapListStatusWord(isClient, pipelineKey);
+  // "NEEDS REVIEW" → "Needs review": the page reads in sentence case.
+  const statusWordRaw = recapListStatusWord(isClient, pipelineKey);
+  const statusWord =
+    statusWordRaw.charAt(0) + statusWordRaw.slice(1).toLowerCase();
   const windowLabel =
     !dateFrom && !dateTo
-      ? `${statusWord} · ALL TIME`
+      ? `${statusWord} · all time`
       : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
-        ? `${statusWord} · 30D`
+        ? `${statusWord} · last 30 days`
         : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
-          ? `${statusWord} · 90D`
+          ? `${statusWord} · last 90 days`
           : dateFrom && dateTo
             ? `${statusWord} · ${dateFrom} → ${dateTo}`
             : dateFrom
-              ? `${statusWord} · FROM ${dateFrom}`
-              : `${statusWord} · TO ${dateTo}`;
+              ? `${statusWord} · from ${dateFrom}`
+              : `${statusWord} · to ${dateTo}`;
   const isQueueDefault =
     !isClient &&
     (statusFilter === "needs_review" || statusFilter === "draft") &&
@@ -3294,9 +3297,8 @@ export default function SparkRecapsList() {
 
   return (
     <Layout>
-      <div className="space-y-3 max-w-7xl spark-fade-in">
+      <div className="space-y-3 max-w-7xl spark-fade-in spark-scale">
         <SparkPageHeader
-          eyebrow={`RECAPS · ${windowLabel}`}
           title="Recaps"
           titleClassName="text-3xl md:text-4xl font-bold"
           support={
@@ -3328,7 +3330,7 @@ export default function SparkRecapsList() {
         >
           <div className="flex flex-wrap gap-2 items-center">
             <div className="min-w-[120px] mr-1 shrink-0">
-              <p className="label-mini">TOTAL</p>
+              <p className="label-mini">Total</p>
               <p
                 className="tab-num text-2xl font-bold leading-none mt-0.5"
                 style={{ color: "var(--spark-lime)" }}
@@ -3562,7 +3564,7 @@ export default function SparkRecapsList() {
                               : "rgba(var(--spark-ink-rgb),0.65)",
                         }}
                       >
-                        {p === "all" ? "All" : p.toUpperCase()}
+                        {p === "all" ? "All" : `${parseInt(p, 10)} days`}
                       </button>
                     ))}
                   </div>
@@ -3723,7 +3725,7 @@ export default function SparkRecapsList() {
                         : "rgba(var(--spark-ink-rgb),0.65)",
                   }}
                 >
-                  {p === "all" ? "All dates" : p.toUpperCase()}
+                  {p === "all" ? "All dates" : `${parseInt(p, 10)} days`}
                 </button>
               ))}
             </div>
@@ -3889,10 +3891,10 @@ export default function SparkRecapsList() {
             style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.07)" }}
           >
             <span
-              className="mono text-[9px] font-bold shrink-0"
-              style={{ letterSpacing: "0.14em", color: "#ef5a2a" }}
+              className="text-[12px] shrink-0"
+              style={{ color: "var(--spark-text-meta)" }}
             >
-              VIEW
+              Showing
             </span>
             <span className="text-[11px] font-semibold whitespace-nowrap">
               {windowLabel}
@@ -3901,7 +3903,7 @@ export default function SparkRecapsList() {
               className="mono text-[9px] shrink-0"
               style={{ color: "var(--spark-text-meta)" }}
             >
-              {meta.filteredTotal} MATCHING
+              {meta.filteredTotal} matching
             </span>
             {filterChips.map((chip) => (
               <span

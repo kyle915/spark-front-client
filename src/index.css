@@ -1322,6 +1322,58 @@ thead .spark-table-sticky-date {
   color: var(--spark-flag-ink);
 }
 
+/* === Type and shape scale — stage 1: Dashboard and Recaps ==============
+   Fewer decisions on a screen: nothing set smaller than 12px, labels in
+   sentence case with no letter-spacing, and two corner radii plus the pill.
+   Scoped to pages that opt in with .spark-scale so the change can be judged
+   on two screens first. When it rolls out everywhere these rules move onto
+   the base classes (.label-mini, .chip, …) and the scope class goes away.
+   The !important beats inline letter-spacing on legacy mono labels. */
+.spark-scale .label-mini {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--spark-text-meta);
+}
+.spark-scale .chip {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+  padding: 0.125rem 0.55rem;
+}
+.spark-scale .chip-sm {
+  font-size: 12px;
+  letter-spacing: 0;
+  padding: 0.05rem 0.45rem;
+}
+.spark-scale .mono {
+  letter-spacing: 0 !important;
+}
+.spark-scale .uppercase {
+  text-transform: none;
+}
+.spark-scale .text-\[8px\],
+.spark-scale .text-\[9px\],
+.spark-scale .text-\[10px\],
+.spark-scale .text-\[11px\] {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.spark-scale .text-\[13px\],
+.spark-scale .text-\[15px\] {
+  font-size: 14px;
+}
+.spark-scale .rounded-md,
+.spark-scale .rounded-lg {
+  border-radius: var(--spark-radius-control);
+}
+.spark-scale .rounded-xl,
+.spark-scale .rounded-2xl,
+.spark-scale .rounded-3xl {
+  border-radius: var(--spark-radius-card);
+}
+
 /* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
 .spark-kpi-lockup {
   display: flex;

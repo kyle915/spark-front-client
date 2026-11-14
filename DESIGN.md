@@ -2,6 +2,21 @@
 
 This file restates tokens already in `src/index.css` (spark-v2) so coding agents stay on-brand. **Do not restyle the product from this file.** Recaps, Jump, and Today are an ops console, not a marketing site.
 
+## Appearance
+
+**Light is the default** (`src/theme/appearance.ts`); dark is a per-browser choice in the account menu. Every token below has a light and a dark value in `src/index.css`. Where this file says "near-black" or "dark ops", read it as the dark appearance, not the default. Design and check new work in light first, then dark.
+
+## Type and shape scale (stage 1: Dashboard and Recaps)
+
+Pages that opt in with `.spark-scale` follow a small fixed scale:
+
+- **Type:** nothing smaller than 12px. 12px for labels and meta, 14px for body, the existing figure classes for numbers, the page title for titles.
+- **Labels:** sentence case, no letter-spacing. No all-caps micro-labels, and no eyebrow line above a page title.
+- **Text colour:** `--spark-text`, `--spark-text-secondary`, `--spark-text-meta` only. Orange (`--spark-flag-ink` for text) only for things that need someone.
+- **Corners:** `--spark-radius-control` (8px), `--spark-radius-card` (14px), or a full pill.
+
+New work on any page should follow this scale. When it has rolled out everywhere, the rules move onto the base classes and `.spark-scale` is removed.
+
 ## Tokens (already shipped)
 
 | Token | Value | CSS |
