@@ -15,6 +15,7 @@ import {
   isRecapBodyTab,
   type RecapDetailTab,
 } from "@/recap/RecapDetailShell";
+import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -504,6 +505,8 @@ const SparkRecapInner: React.FC<{
   );
 
   const recap = data?.recap;
+  // Deep link opened under another client → switch to the recap's own.
+  useAdoptRecordTenant(recap?.event?.tenant, "recap");
   const lastEditedNote = editedNote(recap?.metricEdits);
   const fileCategoryTenantId =
     recap?.event?.tenant?.id ?? recap?.event?.tenantId ?? "0";

@@ -218,6 +218,12 @@ export const EventUuidQuery = graphql`
         updatedAt
       }
       tenantId
+      # The event's client — SparkEventView switches the app to it when a
+      # deep link opens the event while another client is selected.
+      tenant {
+        id
+        uuid
+      }
       eventType {
         id
         uuid
