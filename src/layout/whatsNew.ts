@@ -42,6 +42,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Account map: staff see a ranked list of where to sample next, with the reason for each store.",
       "A recap form worded differently from Spark's standard numbers can now be matched to them by our team, so the dashboard shows the number instead of a dash.",
       "When a recap is held for review, the reviewer sees one line saying why and what to check first.",
+      "A store typed in different ways (HEB, H-E-B) can be combined, so reports count it once.",
+      "Requests sent by email or in a sheet can be read into the request form by Ignite staff, who check each one before it is submitted.",
     ],
   },
   {

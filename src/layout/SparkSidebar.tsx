@@ -289,6 +289,8 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Locations (Towns)", Icon: MapPin, to: "/catalogs/locations/list" },
       { label: "Retailers", Icon: Store, to: "/catalogs/retailers/list" },
+      // One store typed several ways, combined for reports. Staff only.
+      { label: "Store names", Icon: ListChecks, to: "/catalogs/store-names" },
       { label: "Distributors", Icon: Truck, to: "/catalogs/distributors/list" },
       { label: "Event Types", Icon: CalendarRange, to: "/catalogs/event-types/list" },
       { label: "Product Types", Icon: Tags, to: "/catalogs/product-types/list" },
