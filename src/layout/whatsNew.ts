@@ -7,6 +7,22 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-15",
+    date: "November 15, 2026",
+    title: "Maps, charts and a simpler sign-in",
+    items: [
+      "Sign-in is one short form with a Google button. The pages for resetting a password match it.",
+      "Today has a map with a pin for every event, coloured by where the shift stands. Click a pin for the address and directions.",
+      "Dashboards chart consumers sampled per week. Reports break the same count down by store, state and product, and the charts add up to the number at the top.",
+      "Purchase intent now reads as a share of the people who were asked.",
+      "Charts across Spark share one plainer style, in light and dark.",
+      "A recap with no store comes with a suggested store, which staff can accept while approving it.",
+      "Menu counts are small steady badges instead of flashing dots.",
+      "Ambassadors get a text before a shift, and a reminder when a recap is still missing.",
+      "Someone who clocks in after the scheduled end is no longer clocked out right away.",
+    ],
+  },
+  {
     id: "2026-11-11",
     date: "November 11, 2026",
     title: "Your emails, your call",
