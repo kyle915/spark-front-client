@@ -25,7 +25,7 @@ export function RecapDetailBackLink({
   children: ReactNode;
 }) {
   const className =
-    "recap-detail-back mono text-[11px] transition hover:opacity-90";
+    "recap-detail-back mono text-xs transition hover:opacity-90";
   if (to) {
     return (
       <Link to={to} className={className}>

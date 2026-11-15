@@ -1044,7 +1044,11 @@ const SparkRecapInner: React.FC<{
   };
 
   return (
-    <div className={`space-y-6 max-w-7xl${!isClient ? " pb-24" : ""}`}>
+    <div
+      className={`space-y-6 max-w-7xl recap-min-type${
+        !isClient ? " recap-sticky-ops-pad" : ""
+      }`}
+    >
       <RecapDetailBackLink onClick={() => navigate(backToListUrl)}>
         ← Recaps
         {recap.name ? ` / ${recap.name}` : ""}
@@ -1064,7 +1068,7 @@ const SparkRecapInner: React.FC<{
               <span
                 className="mono"
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: "0.16em",
                   padding: "0.2rem 0.55rem",
                   borderRadius: 6,
@@ -1150,7 +1154,7 @@ const SparkRecapInner: React.FC<{
                   },
                 });
               }}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
@@ -1213,7 +1217,7 @@ const SparkRecapInner: React.FC<{
                   setIsZipping(false);
                 }
               }}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
@@ -1229,6 +1233,7 @@ const SparkRecapInner: React.FC<{
             {!isClient && fileCategoryTenantId !== "0" ? (
               <AskAiButton
                 tenantId={String(fileCategoryTenantId)}
+                variant="ghost"
                 scope="recap"
                 recapId={String(recap.id)}
                 subjectLabel={recap.name ?? undefined}
@@ -1237,7 +1242,7 @@ const SparkRecapInner: React.FC<{
             {isClient && (
               <button
                 onClick={openShare}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={{
                   background: "transparent",
                   color: "var(--spark-text)",
@@ -1250,7 +1255,7 @@ const SparkRecapInner: React.FC<{
             {!isClient && (
             <button
               onClick={() => setReassignOpen(true)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
@@ -1266,7 +1271,7 @@ const SparkRecapInner: React.FC<{
                 recapId={recap.id}
                 kind="legacy"
                 recapName={recap.name}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={{
                   background: "transparent",
                   color: "var(--spark-text)",
@@ -2314,7 +2319,7 @@ const SparkRecapInner: React.FC<{
                         <span
                           className="mono"
                           style={{
-                            fontSize: 10,
+                            fontSize: 12,
                             letterSpacing: "0.16em",
                             color: "var(--spark-lime)",
                           }}
@@ -2324,7 +2329,7 @@ const SparkRecapInner: React.FC<{
                         <p
                           className="mono mt-1"
                           style={{
-                            fontSize: 8,
+                            fontSize: 12,
                             letterSpacing: "0.14em",
                             color: "var(--recap-muted, #5c6154)",
                           }}
@@ -2627,96 +2632,73 @@ const SparkRecapInner: React.FC<{
                 }
               : null
           }
+          actions={[
+            ...(isAdmin &&
+            !recap.approved &&
+            !recap.archivedAt &&
+            queueInfo?.nextUnapproved
+              ? [
+                  {
+                    key: "approve-next",
+                    label: "Approve & next →",
+                    onClick: () => setApproved(true, true),
+                    disabled: isApproving,
+                    title:
+                      "Approve this recap and advance to the next unapproved recap in the queue (a)",
+                    phoneOnly: true,
+                  },
+                ]
+              : []),
+            { key: "share", label: "↗ Share", onClick: openShare },
+            ...(isAdmin
+              ? [
+                  {
+                    key: "edit",
+                    label: editingNumbers ? "✕ Close editor" : "✎ Edit recap",
+                    onClick: () =>
+                      editingNumbers
+                        ? setEditingNumbers(false)
+                        : startEditNumbers(),
+                    title:
+                      "Edit the recap's numbers (products sold, cans, packs, engagements, spend)",
+                    tone: editingNumbers
+                      ? ("active" as const)
+                      : ("default" as const),
+                  },
+                  recap.archivedAt
+                    ? {
+                        key: "unarchive",
+                        label: isUnarchiving ? "Restoring…" : "Unarchive",
+                        onClick: unarchiveRecap,
+                        disabled: isUnarchiving,
+                        title: "Restore this recap to Needs review",
+                      }
+                    : {
+                        key: "archive",
+                        label: isArchiving ? "Archiving…" : "Archive",
+                        onClick: archiveRecap,
+                        disabled: isArchiving,
+                        title: "Park this recap — keep proof, hide from client",
+                      },
+                  {
+                    key: "delete",
+                    label: isDeleting ? "Deleting…" : "Delete",
+                    onClick: deleteRecap,
+                    disabled: isDeleting,
+                    title: "Delete this recap and free the event for a new one",
+                    tone: "danger" as const,
+                  },
+                ]
+              : []),
+          ]}
         >
-          <button
-            type="button"
-            onClick={openShare}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            ↗ Share
-          </button>
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() =>
-                editingNumbers ? setEditingNumbers(false) : startEditNumbers()
-              }
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: editingNumbers
-                  ? "var(--spark-lime)"
-                  : "transparent",
-                color: editingNumbers ? "var(--spark-on-accent)" : "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-              title="Edit the recap's numbers (products sold, cans, packs, engagements, spend)"
-            >
-              {editingNumbers ? "✕ Close editor" : "✎ Edit recap"}
-            </button>
-          )}
-          {isAdmin &&
-            (recap.archivedAt ? (
-              <button
-                type="button"
-                onClick={unarchiveRecap}
-                disabled={isUnarchiving}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                  opacity: isUnarchiving ? 0.5 : 1,
-                }}
-                title="Restore this recap to Needs review"
-              >
-                {isUnarchiving ? "Restoring…" : "Unarchive"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={archiveRecap}
-                disabled={isArchiving}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: "transparent",
-                  color: "rgba(var(--spark-ink-rgb),0.7)",
-                  border: "1px solid var(--spark-border)",
-                  opacity: isArchiving ? 0.5 : 1,
-                }}
-                title="Park this recap — keep proof, hide from client"
-              >
-                {isArchiving ? "Archiving…" : "Archive"}
-              </button>
-            ))}
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={deleteRecap}
-              disabled={isDeleting}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-orange)",
-                border: "1px solid rgba(239,90,42,0.4)",
-                opacity: isDeleting ? 0.5 : 1,
-              }}
-              title="Delete this recap and free the event for a new one"
-            >
-              {isDeleting ? "Deleting…" : "Delete"}
-            </button>
-          )}
           {isAdmin &&
             (recap.approved ? (
               <button
                 type="button"
                 onClick={() => setApproved(false)}
                 disabled={isApproving}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={{
                   background: "transparent",
                   color: "var(--spark-orange)",
@@ -2733,7 +2715,7 @@ const SparkRecapInner: React.FC<{
                   onClick={() => setApproved(true, false)}
                   disabled={isApproving || Boolean(recap.archivedAt)}
                   phase={approvePhase}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                   style={
                     queueInfo?.nextUnapproved
                       ? {
@@ -2759,22 +2741,26 @@ const SparkRecapInner: React.FC<{
                   Approve recap
                 </ActionMorphButton>
                 {queueInfo?.nextUnapproved && !recap.archivedAt && (
-                  <ActionMorphButton
-                    onClick={() => setApproved(true, true)}
-                    disabled={isApproving}
-                    phase={approvePhase}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                    style={{
-                      background: "var(--spark-lime)",
-                      color: "var(--spark-on-accent)",
-                      opacity: isApproving ? 0.5 : 1,
-                    }}
-                    title="Approve this recap and advance to the next unapproved recap in the queue (a)"
-                    pendingLabel="Approving…"
-                    successLabel="Approved →"
-                  >
-                    Approve & next →
-                  </ActionMorphButton>
+                  // Phones have room for one primary button; there this
+                  // action is the first item in the More menu instead.
+                  <span className="recap-sticky-ops-from-sm">
+                    <ActionMorphButton
+                      onClick={() => setApproved(true, true)}
+                      disabled={isApproving}
+                      phase={approvePhase}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
+                      style={{
+                        background: "var(--spark-lime)",
+                        color: "var(--spark-on-accent)",
+                        opacity: isApproving ? 0.5 : 1,
+                      }}
+                      title="Approve this recap and advance to the next unapproved recap in the queue (a)"
+                      pendingLabel="Approving…"
+                      successLabel="Approved →"
+                    >
+                      Approve & next →
+                    </ActionMorphButton>
+                  </span>
                 )}
               </>
             ))}

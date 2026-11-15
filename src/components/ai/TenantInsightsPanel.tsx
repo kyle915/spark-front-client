@@ -38,14 +38,13 @@ const CALM_ACCENT = "var(--spark-border)";
 const accentFor = (sentiment: string): string =>
   sentiment.toLowerCase() === "attention" ? ATTENTION_ACCENT : CALM_ACCENT;
 
-// Bucket `key` → leading icon. Emoji is the convention across the AI surfaces
-// (e.g. the "✨ Ask AI" button). Unknown / null keys fall back to a quiet dot
-// so a legacy or new bucket never renders without a leading glyph.
+// Bucket `key` → leading icon. Unknown / null keys fall back to a quiet dot
+// so a legacy or new bucket never renders without a leading glyph. No
+// sparkle: `new_audience` uses the dot.
 const ICON_FOR_KEY: Record<string, string> = {
   reach: "👥",
   sampling: "🧪",
   sales: "🛒",
-  new_audience: "✨",
   emails: "✉️",
   momentum: "📈",
   consumers_sampled: "👥",

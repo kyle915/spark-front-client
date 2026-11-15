@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
-import { CalendarDays, Sparkles, UsersRound } from "lucide-react";
+import { CalendarDays, UsersRound } from "lucide-react";
 import FiltersPanel, {
   type DashboardFilters,
 } from "@/components/filters/FiltersPanel";
@@ -374,9 +374,7 @@ export default function DashboardRetail() {
             >
               {isGeneratingInsights ? (
                 <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <Sparkles size={16} />
-              )}
+              ) : null}
               {isGeneratingInsights
                 ? "Regenerating Insights..."
                 : "Regenerate AI-Powered Insights"}

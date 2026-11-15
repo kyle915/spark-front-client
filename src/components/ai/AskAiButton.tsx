@@ -63,6 +63,12 @@ const triggerBtn: React.CSSProperties = {
   color: "var(--spark-text)",
   border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
 };
+// Same outline as the plain buttons it sits beside (PDF, Photos).
+const ghostTriggerBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--spark-text)",
+  border: "1px solid var(--spark-border)",
+};
 
 type ScopeCopy = {
   kicker: string;
@@ -303,7 +309,7 @@ const AskAiButton: React.FC<{
   tenantId: string | null | undefined;
   tenantName?: string;
   className?: string;
-  variant?: "lime" | "text";
+  variant?: "lime" | "text" | "ghost";
   scope?: AskAiScope;
   recapId?: string | null;
   eventId?: string | null;
@@ -326,7 +332,7 @@ const AskAiButton: React.FC<{
   if (!tenantId) return null;
   if (scope === "recap" && !recapId) return null;
   if (scope === "event" && !eventId) return null;
-  const buttonLabel = label ?? (variant === "text" ? "Ask AI" : "✨ Ask AI");
+  const buttonLabel = label ?? "Ask AI";
 
   return (
     <>
@@ -339,7 +345,7 @@ const AskAiButton: React.FC<{
         className={
           variant === "text"
             ? `text-sm font-medium ${className ?? ""}`
-            : `px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2 ${
+            : `px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2 whitespace-nowrap ${
                 className ?? ""
               }`
         }
@@ -351,7 +357,9 @@ const AskAiButton: React.FC<{
                 border: "none",
                 padding: 0,
               }
-            : triggerBtn
+            : variant === "ghost"
+              ? ghostTriggerBtn
+              : triggerBtn
         }
         title="Ask AI a question about this client's program"
       >
