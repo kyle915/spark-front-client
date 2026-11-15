@@ -41,7 +41,7 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(map).toContain("first: 2000");
     expect(map).toContain("setMapsReady(true)");
     expect(map).toContain("accountMapTruncation");
-    expect(map).toContain("LOAD THE REST");
+    expect(map).toContain("Load the rest");
     expect(query).toContain("accountMapPinTotal");
     expect(query).toContain("offset: $offset");
   });

@@ -1,155 +1,66 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { useNavigate, useSearchParams } from "react-router";
-import {
-  APIProvider,
-  Map as GMap,
-  InfoWindow,
-} from "@vis.gl/react-google-maps";
-import { SparkGoogleClusters } from "@/shared/map/SparkGoogleClusters";
-import {
-  isPlottableLatLng,
-  venuePinKey,
-} from "@/shared/map/accountMapPins";
-import {
-  coverageColor,
-  coverageFromVisitCount,
-  coverageLabel,
-  parseCoverageClass,
-  type CoverageClass,
-} from "@/shared/map/accountCoverage";
 import Layout from "@/layout/Layout";
 import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
 import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
+import { prefersReducedMotion } from "@/shared/map/mapFit";
+import { COVERAGE_MARK } from "@/shared/map/markerIcons";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkFilterBar from "@/shared/SparkFilterBar";
 import {
   ACCOUNT_MAP_PAGE_SIZE,
   accountMapTruncation,
 } from "./accountMapPages";
-import useSparkRole from "@/hooks/useSparkRole";
 import {
-  loadUploadedAccounts,
-  type UploadedAccount,
-} from "@/lib/accounts";
+  buildStores,
+  filterStores,
+  hasFilters,
+  noPositionWords,
+  retailerOptions,
+  stateOptions,
+  storeCounts,
+  storesFitKey,
+  storesWord,
+  type CoverageFilter,
+  type PinRow,
+  type Store,
+  type StoreFilters,
+} from "./accountStores";
+import AccountMapView, { CoverageLegend, CoverageMark } from "./AccountMapView";
 import AccountUploader from "./AccountUploader";
-import SparkPageHeader from "@/shared/SparkPageHeader";
-import SparkFilterBar from "@/shared/SparkFilterBar";
-import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
+import { useAccountList } from "./useAccountList";
 
 /**
- * Spark v2 — Account Map (Google Maps).
+ * Account Map: every store a brand works with, one pin per physical store.
  *
- * Set VITE_GOOGLE_MAPS_API_KEY in your env to enable. Without a key the
- * map area shows a clear setup card so users aren't staring at a blank
- * grey rectangle.
+ * Pins come from the brand's requests (a request with no coordinates of its
+ * own is placed from its event's position) and from the brand's uploaded
+ * account list. The map and the list beside it show the same stores, and
+ * each leads to the other. All of the deciding happens in accountStores.ts.
+ *
+ * Set VITE_GOOGLE_MAPS_API_KEY to draw the map; without it the list still
+ * works and the map area says why it is empty.
  */
-
-type Status = "recent" | "scheduled" | "unvisited";
-
-type Account = {
-  key: string;
-  name: string;
-  market: string;
-  state: string; // 2-letter code, "" if unknown
-  status: Status;
-  coverage: CoverageClass;
-  visitCount: number;
-  planned: boolean;
-  coords: { lat: number; lng: number };
-  lastDate: string | null;
-  address: string;
-};
-
-type CoverageFilter = "all" | CoverageClass | "planned";
 
 type MapPin = NonNullable<
   NonNullable<AccountMapQueryType["response"]["accountMapPins"]>[number]
 >;
 
-/** City + ST from a US one-line address when Location FKs are empty. */
-function marketFromAddress(address: string | null | undefined): {
-  city: string;
-  state: string;
-} {
-  const raw = String(address || "").trim();
-  const m = raw.match(/^(.*?),\s*([A-Za-z]{2})\s+\d{5}(?:-\d{4})?\s*$/);
-  if (!m) return { city: "", state: "" };
-  const state = m[2].toUpperCase();
-  const head = m[1].trim();
-  const commaCity = head.match(/^(.*),\s*([^,]+)$/);
-  if (commaCity) return { city: commaCity[2].trim(), state };
-  const afterStreet = head.match(
-    /^(?:.*?\b(?:Rd\.|Ave\.|St\.|Hwy\.|Dr\.|Blvd\.|Pkwy\.?|Ln\.|Ct\.|Pl\.|Trail))\s+(.+)$/i,
-  );
-  if (afterStreet) return { city: afterStreet[1].trim(), state };
-  const words = head.split(/\s+/);
-  return { city: words.slice(-2).join(" "), state };
-}
-
-// Google Maps "Aubergine" / dark-friendly style trimmed for Spark.
-// Typed loosely so we don't pull in the @types/google.maps namespace.
-type MapStyleRule = {
-  featureType?: string;
-  elementType?: string;
-  stylers: Array<Record<string, string | number>>;
-};
-
-// Google Maps reads these as literal colours; a CSS variable is not a colour
-// to it and the rule is dropped. #0a0d09 is the base of this dark map style
-// (every other rule here is a dark literal), in both appearances.
-const DARK_MAP_STYLE: MapStyleRule[] = [
-  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
-  {
-    featureType: "administrative.locality",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#d0d2c8" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#8b8e84" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#11140e" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#1f2418" }],
-  },
-  {
-    featureType: "road",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#8b8e84" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry",
-    stylers: [{ color: "#2a3020" }],
-  },
-  {
-    featureType: "transit",
-    elementType: "geometry",
-    stylers: [{ color: "#11140e" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#050605" }],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#3b4030" }],
-  },
-];
+/** The list draws this many rows; past that, searching is the way in. */
+const LIST_ROWS = 200;
 
 const coverageFilterFromParam = (raw: string | null): CoverageFilter => {
   switch ((raw ?? "").toLowerCase()) {
@@ -168,38 +79,126 @@ const coverageFilterFromParam = (raw: string | null): CoverageFilter => {
   }
 };
 
+function StoreRow({
+  store,
+  selected,
+  onShowOnMap,
+  onSchedule,
+  rowRef,
+}: {
+  store: Store;
+  selected: boolean;
+  onShowOnMap: (key: string) => void;
+  onSchedule: (store: Store) => void;
+  rowRef: (el: HTMLLIElement | null) => void;
+}) {
+  const onMap = store.position !== null;
+  const body = (
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5">
+        <CoverageMark coverage={store.coverage} size={18} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm truncate">{store.name}</p>
+        <p
+          className="text-xs mt-0.5 truncate"
+          style={{ color: "var(--spark-text-secondary)" }}
+        >
+          {COVERAGE_MARK[store.coverage].label}
+          {store.planned ? " · Visit planned" : null}
+          {store.market ? (
+            <span style={{ color: "var(--spark-text-meta)" }}> · {store.market}</span>
+          ) : null}
+        </p>
+        {store.address ? (
+          <p className="text-xs mt-1 truncate" style={{ color: "var(--spark-text-meta)" }}>
+            {store.address}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+  return (
+    <li
+      ref={rowRef}
+      aria-current={selected ? "true" : undefined}
+      style={{
+        borderBottom: "1px solid var(--spark-border)",
+        background: selected ? "rgba(var(--spark-ink-rgb), 0.04)" : undefined,
+        boxShadow: selected ? "inset 3px 0 0 var(--spark-text)" : undefined,
+      }}
+    >
+      {onMap ? (
+        <button
+          type="button"
+          onClick={() => onShowOnMap(store.key)}
+          title="Show on the map"
+          className="spark-row-hover block w-full text-left px-4 pt-3 pb-1.5 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2"
+          style={{ color: "var(--spark-text)", outlineColor: "var(--spark-text)" }}
+        >
+          {body}
+        </button>
+      ) : (
+        <div className="px-4 pt-3 pb-1.5">{body}</div>
+      )}
+      <p
+        className="flex flex-wrap gap-x-3 px-4 pb-3 pl-[46px] text-xs"
+        style={{ color: "var(--spark-text-meta)" }}
+      >
+        {onMap ? null : <span>{noPositionWords(store.positionStatus)}</span>}
+        <button
+          type="button"
+          onClick={() => onSchedule(store)}
+          className="underline"
+          style={{
+            color: "var(--spark-text-secondary)",
+            background: "none",
+            border: 0,
+            padding: 0,
+            cursor: "pointer",
+          }}
+        >
+          Schedule a visit
+        </button>
+      </p>
+    </li>
+  );
+}
+
+const selectStyle: React.CSSProperties = { maxWidth: 220 };
+
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { tenantId } = useAuthStore();
-  const { isClient } = useSparkRole();
-  const [filter, setFilter] = useState<CoverageFilter>(() =>
+
+  const [coverage, setCoverage] = useState<CoverageFilter>(() =>
     coverageFilterFromParam(searchParams.get("coverage")),
   );
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
-  const [stateFilter, setStateFilter] = useState<string>("all");
-  // Single-select retailer filter. "all" = no filter. Values are the
-  // exact retailer-name strings we display in the dropdown.
-  const [retailerFilter, setRetailerFilter] = useState<string>("all");
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [uploaded, setUploaded] = useState<UploadedAccount[]>([]);
-  // This component only commits after the pin query resolves, so the
-  // effect mounts Maps JS on the following paint — the pin list first.
-  const [mapsReady, setMapsReady] = useState(false);
+  const [stateFilter, setStateFilter] = useState("all");
+  const [retailerFilter, setRetailerFilter] = useState("all");
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
   const [scanned, setScanned] = useState(ACCOUNT_MAP_PAGE_SIZE);
   const [loadingRest, setLoadingRest] = useState(false);
+  // This component only commits after the pin query resolves, so the
+  // effect mounts Maps JS on the following paint — the store list first.
+  const [mapsReady, setMapsReady] = useState(false);
+  useEffect(() => {
+    setMapsReady(true);
+  }, []);
 
+  // Jump deep-links (`?q=`, `?coverage=`) seed the filters.
   useEffect(() => {
     const q = searchParams.get("q");
     if (q != null && q !== search) setSearch(q);
     const cov = coverageFilterFromParam(searchParams.get("coverage"));
-    if (cov !== filter) setFilter(cov);
+    if (cov !== coverage) setCoverage(cov);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- URL seeds Jump deep-links once
   }, [searchParams]);
 
   const setCoverageFilter = (next: CoverageFilter) => {
-    setFilter(next);
+    setCoverage(next);
     const params = new URLSearchParams(searchParams);
     if (next === "all") params.delete("coverage");
     else params.set("coverage", next);
@@ -207,31 +206,20 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   };
 
   useEffect(() => {
-    if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
-  }, [tenantId]);
-
-  useEffect(() => {
     setExtraPins([]);
     setScanned(ACCOUNT_MAP_PAGE_SIZE);
     setLoadingRest(false);
   }, [tenantId]);
-
-  useEffect(() => {
-    setMapsReady(true);
-  }, []);
 
   const data = useLazyLoadQuery<AccountMapQueryType>(
     AccountMapQuery,
     { first: 2000, offset: 0, tenantId: tenantId || null },
     { fetchPolicy: "store-or-network" },
   );
+  const list = useAccountList(tenantId || null);
 
   const pinTotal = data?.accountMapPinTotal ?? null;
   const truncation = accountMapTruncation({ total: pinTotal, scanned });
-  const serverPins = useMemo(() => {
-    const first = (data?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
-    return [...first, ...extraPins];
-  }, [data, extraPins]);
 
   const loadRest = useCallback(async () => {
     if (loadingRest || pinTotal == null || scanned >= pinTotal) return;
@@ -258,385 +246,163 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     }
   }, [extraPins, loadingRest, pinTotal, scanned, tenantId]);
 
-  const accounts: Account[] = useMemo(() => {
-    const map = new Map<string, Account>();
-    const pins = serverPins;
-    for (const r of pins) {
-      const lat = Number(r.lat);
-      const lng = Number(r.lng);
-      if (!isPlottableLatLng(lat, lng)) continue;
-      const retailerName = r.retailerName || r.name || "—";
-      const key = venuePinKey(retailerName, lat, lng);
-      const parsed = marketFromAddress(r.address);
-      const stateCode = r.stateCode || parsed.state;
-      const cityish = r.locationName || parsed.city;
-      const market = [cityish, stateCode].filter(Boolean).join(", ");
-      // Coverage is server-computed from filed recaps only. Request
-      // status never makes a store Sampled — future work is `planned`.
-      const coverage = parseCoverageClass(r.coverageClass);
-      const visitCount = Number(r.visitCount ?? 0) || 0;
-      const planned = Boolean(r.planned);
-      const inferred: Status =
-        coverage !== "never_visited" ? "recent" : planned ? "scheduled" : "unvisited";
-      const existing = map.get(key);
-      if (!existing) {
-        map.set(key, {
-          key,
-          name: retailerName,
-          market: market || "—",
-          state: stateCode || "",
-          status: inferred,
-          coverage,
-          visitCount,
-          planned,
-          coords: { lat, lng },
-          lastDate: r.date ?? null,
-          address: r.address ?? "",
-        });
-      } else {
-        existing.visitCount = Math.max(existing.visitCount, visitCount);
-        existing.coverage = coverageFromVisitCount(existing.visitCount);
-        existing.planned = existing.planned || planned;
-        existing.status =
-          existing.coverage !== "never_visited"
-            ? "recent"
-            : existing.planned
-              ? "scheduled"
-              : "unvisited";
-        if (r.date && (!existing.lastDate || r.date > existing.lastDate)) {
-          existing.lastDate = r.date;
-        }
-      }
-    }
-    // Merge in client-uploaded accounts. Only include those with coords
-    // or addresses we can later geocode. They show as "unvisited" by
-    // default — admin/client schedules a demo to flip them to scheduled.
-    for (const u of uploaded) {
-      const lat = Number(u.lat);
-      const lng = Number(u.lng);
-      const key = `upload:${u.id}`;
-      const market = [u.city, u.state].filter(Boolean).join(", ");
-      if (isPlottableLatLng(lat, lng)) {
-        if (!map.has(key)) {
-          map.set(key, {
-            key,
-            name: u.name,
-            market: market || "—",
-            state: (u.state || "").toString().toUpperCase().slice(0, 2),
-            status: u.status,
-            coverage: "never_visited",
-            visitCount: 0,
-            planned: false,
-            coords: { lat, lng },
-            lastDate: null,
-            address: u.address ?? "",
-          });
-        }
-      }
-    }
+  const stores = useMemo(() => {
+    const first = (data?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
+    const rows: PinRow[] = [...first, ...extraPins];
+    return buildStores(rows, list.entries);
+  }, [data, extraPins, list.entries]);
 
-    return Array.from(map.values());
-  }, [serverPins, uploaded]);
-
-  // Distinct list of states present in the dataset for the dropdown.
-  const states = useMemo(
-    () =>
-      Array.from(
-        new Set(accounts.map((a) => a.state).filter(Boolean)),
-      ).sort(),
-    [accounts],
-  );
-
-  // Distinct retailer names with their account counts. Sorted by
-  // count descending so the highest-coverage retailers come first
-  // in the dropdown — ops usually wants to filter to "show me only
-  // 7-Eleven" rather than picking from an alpha-sorted list.
-  const retailers = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const a of accounts) {
-      const name = (a.name ?? "").trim();
-      if (!name || name === "—") continue;
-      counts.set(name, (counts.get(name) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([name, n]) => ({ name, count: n }));
-  }, [accounts]);
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return accounts.filter((a) => {
-      if (filter === "planned" && !a.planned) return false;
-      if (
-        filter !== "all" &&
-        filter !== "planned" &&
-        a.coverage !== filter
-      )
-        return false;
-      if (stateFilter !== "all" && a.state !== stateFilter) return false;
-      if (retailerFilter !== "all" && a.name !== retailerFilter) return false;
-      if (
-        q &&
-        !a.name.toLowerCase().includes(q) &&
-        !a.market.toLowerCase().includes(q) &&
-        !a.address.toLowerCase().includes(q)
-      )
-        return false;
-      return true;
-    });
-  }, [accounts, filter, stateFilter, retailerFilter, search]);
-
-  const serverCoverage = data?.accountMapCoverage;
-  const counts = useMemo(
+  // Typing stays instant; the list and the pins catch up a beat later.
+  const deferredSearch = useDeferredValue(search);
+  const filters: StoreFilters = useMemo(
     () => ({
-      all: serverCoverage?.rosterTotal ?? accounts.length,
-      sampled:
-        serverCoverage?.sampled ??
-        accounts.filter((a) => a.coverage === "sampled").length,
-      repeat:
-        serverCoverage?.repeat ??
-        accounts.filter((a) => a.coverage === "repeat").length,
-      neverVisited:
-        serverCoverage?.neverVisited ??
-        accounts.filter((a) => a.coverage === "never_visited").length,
-      planned:
-        serverCoverage?.planned ??
-        accounts.filter((a) => a.planned).length,
-      pins: accounts.length,
+      q: deferredSearch,
+      coverage,
+      state: stateFilter,
+      retailer: retailerFilter,
     }),
-    [accounts, serverCoverage],
+    [deferredSearch, coverage, stateFilter, retailerFilter],
   );
+  const filtered = useMemo(() => filterStores(stores, filters), [stores, filters]);
+  const counts = useMemo(() => storeCounts(stores), [stores]);
+  const shown = useMemo(() => storeCounts(filtered), [filtered]);
+  const states = useMemo(() => stateOptions(stores), [stores]);
+  const retailers = useMemo(() => retailerOptions(stores), [stores]);
+  const filtering = hasFilters({ ...filters, q: search });
 
-  const center = useMemo(() => {
-    if (filtered.length === 0) return { lat: 39.5, lng: -98.35 };
-    const lats = filtered.map((a) => a.coords.lat).sort((a, b) => a - b);
-    const lngs = filtered.map((a) => a.coords.lng).sort((a, b) => a - b);
-    return {
-      lat: lats[Math.floor(lats.length / 2)],
-      lng: lngs[Math.floor(lngs.length / 2)],
-    };
-  }, [filtered]);
+  const scope = `${tenantId ?? "all"}|${coverage}|${stateFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
+  const fitKey = useMemo(() => storesFitKey(scope, filtered), [scope, filtered]);
+
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [focus, setFocus] = useState<{ key: string; n: number } | null>(null);
+  const rowEls = useRef(new Map<string, HTMLLIElement>());
+
+  // List → map: pan to the pin and open its card.
+  const showOnMap = useCallback((key: string) => {
+    setSelectedKey(key);
+    setFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+  }, []);
+  // Map → list: highlight the row and bring it into view.
+  const selectFromMap = useCallback((key: string) => {
+    setSelectedKey(key);
+    rowEls.current.get(key)?.scrollIntoView({
+      block: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }, []);
+  const closeCard = useCallback(() => setSelectedKey(null), []);
+
+  // Prefill the request form with this store.
+  const schedule = useCallback(
+    (store: Store) => {
+      const params = new URLSearchParams({
+        venue: store.name,
+        address: store.address || store.market,
+      });
+      if (store.state) params.set("state", store.state);
+      navigate(`/requests/create?${params.toString()}`);
+    },
+    [navigate],
+  );
+  const onlyRetailer = useCallback((name: string) => {
+    setRetailerFilter(name);
+    setSelectedKey(null);
+  }, []);
+
+  const clearFilters = () => {
+    setCoverage("all");
+    setStateFilter("all");
+    setRetailerFilter("all");
+    setSearch("");
+    const params = new URLSearchParams(searchParams);
+    params.delete("q");
+    params.delete("coverage");
+    setSearchParams(params, { replace: true });
+  };
+
+  const roster = data?.accountMapCoverage;
+  const chips: Array<{ key: CoverageFilter; label: string; n: number }> = [
+    { key: "all", label: "All stores", n: counts.all },
+    { key: "never_visited", label: "Never visited", n: counts.neverVisited },
+    { key: "sampled", label: "Sampled", n: counts.sampled },
+    { key: "repeat", label: "Repeat", n: counts.repeat },
+    { key: "planned", label: "Visit planned", n: counts.planned },
+  ];
+
+  const emptyList =
+    stores.length === 0
+      ? "No stores yet: nothing with a map position, and no account list uploaded."
+      : "No stores match these filters.";
+  const offMap = shown.all - shown.onMap;
 
   return (
-    <div className="space-y-5 max-w-7xl spark-fade-in">
+    <div className="space-y-5 max-w-7xl spark-fade-in spark-scale">
       <SparkPageHeader
-        eyebrow={`${isClient ? "YOUR ACCOUNTS · " : "ACCOUNT MAP · "}${counts.all} VENUES`}
-        title="Plan from the map."
-        support="Coverage counts filed recaps only — Sampled is 1 visit, Repeat is 2+, and future work is labelled Planned. Click any pin to schedule a demo."
+        title="Account map"
+        support="One pin per store. Coverage counts filed recaps only: sampled is one visit, repeat is two or more."
       />
 
       {truncation.truncated && truncation.label ? (
-        <div
-          role="status"
-          className="spark-card px-4 py-3 flex flex-wrap items-center gap-3"
-        >
+        <div role="status" className="spark-card px-4 py-3 flex flex-wrap items-center gap-3">
           <p className="text-sm" style={{ color: "var(--spark-text)" }}>
-            <span className="font-semibold" style={{ color: "var(--spark-orange)" }}>
-              {truncation.label}
-            </span>{" "}
-            location pins. This map is not the full list yet.
+            <span className="font-semibold">{truncation.label}</span> request rows, so
+            some stores and counts are missing.
           </p>
           <button
             type="button"
             disabled={loadingRest}
             onClick={() => void loadRest()}
-            className="mono text-[11px]"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-on-accent)",
-              background: loadingRest ? "rgba(var(--spark-accent-rgb),0.45)" : "var(--spark-lime)",
-              borderRadius: 999,
-              padding: "6px 12px",
-            }}
+            className="spark-btn-ghost"
           >
-            {loadingRest ? "LOADING…" : "LOAD THE REST"}
+            {loadingRest ? "Loading" : "Load the rest"}
           </button>
         </div>
       ) : null}
 
-      {/* Uploader */}
-      <AccountUploader onImported={setUploaded} />
+      <AccountUploader list={list} />
 
-      {/* Coverage KPIs — Tremor lockups; orange only on never-visited */}
-      <div className="spark-card spark-stat-band">
-        <div className="spark-stat-band-grid">
-          {(
-            [
-              {
-                key: "all" as const,
-                label: "Accounts",
-                n: counts.all,
-                tone: "default" as const,
-              },
-              {
-                key: "sampled" as const,
-                label: "Sampled · 1 visit",
-                n: counts.sampled,
-                tone: "lime" as const,
-              },
-              {
-                key: "repeat" as const,
-                label: "Repeat · 2+ visits",
-                n: counts.repeat,
-                tone: "default" as const,
-              },
-              {
-                key: "never_visited" as const,
-                label: "Never visited",
-                n: counts.neverVisited,
-                tone: "orange" as const,
-              },
-            ] as const
-          ).map((tile) => {
-            const on = filter === tile.key;
-            return (
-              <button
-                key={tile.key}
-                type="button"
-                onClick={() => setCoverageFilter(tile.key)}
-                className="text-left transition rounded-xl"
-                style={{
-                  background: on ? "rgba(var(--spark-ink-rgb),0.04)" : "transparent",
-                  border: on
-                    ? "1px solid var(--spark-border)"
-                    : "1px solid transparent",
-                  padding: "0.35rem 0.4rem",
-                }}
-                title={`Show ${tile.label.toLowerCase()}`}
-              >
-                <SparkKpiLockup
-                  label={tile.label}
-                  value={tile.n > 0 ? tile.n.toLocaleString() : "—"}
-                  count={tile.n > 0 ? tile.n : undefined}
-                  tone={tile.n > 0 ? tile.tone : "default"}
-                  delta={
-                    tile.key === "never_visited" && tile.n > 0
-                      ? "Coverage gap"
-                      : undefined
-                  }
-                  deltaAttention={tile.key === "never_visited" && tile.n > 0}
-                />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {counts.all > 0 ? (
-        <div className="spark-card px-4 py-3 space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
-              Coverage scan ·{" "}
-              <span style={{ color: "var(--spark-orange)", fontWeight: 600 }}>
-                {counts.neverVisited.toLocaleString()} never visited
-              </span>
-              {" · "}
-              {(
-                ((counts.sampled + counts.repeat) / Math.max(counts.all, 1)) *
-                100
-              ).toFixed(0)}
-              % sampled+
-            </p>
-            {counts.neverVisited > 0 && filter !== "never_visited" ? (
-              <button
-                type="button"
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "var(--spark-orange)",
-                  background: "transparent",
-                  border: "none",
-                  padding: 0,
-                }}
-                onClick={() => setCoverageFilter("never_visited")}
-              >
-                SCAN GAPS →
-              </button>
-            ) : null}
-          </div>
-          <div
-            className="h-1.5 rounded-full overflow-hidden flex"
-            style={{ background: "rgba(var(--spark-ink-rgb),0.06)" }}
-            aria-hidden
-          >
-            {counts.repeat > 0 ? (
-              <span
-                style={{
-                  width: `${(counts.repeat / counts.all) * 100}%`,
-                  background: "var(--spark-sky)",
-                }}
-              />
-            ) : null}
-            {counts.sampled > 0 ? (
-              <span
-                style={{
-                  width: `${(counts.sampled / counts.all) * 100}%`,
-                  background: "var(--spark-lime)",
-                }}
-              />
-            ) : null}
-            {counts.neverVisited > 0 ? (
-              <span
-                style={{
-                  width: `${(counts.neverVisited / counts.all) * 100}%`,
-                  background: "var(--spark-orange)",
-                  opacity: filter === "never_visited" ? 1 : 0.85,
-                }}
-              />
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Filter row */}
       <SparkFilterBar
-        label="STATUS"
+        label="Stores"
         search={
           <input
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search accounts…"
+            placeholder="Search by store, city or address"
+            aria-label="Search stores by name, city or address"
             className="spark-filter-search"
+            style={{ minWidth: 240, maxWidth: 320 }}
           />
         }
       >
-        {(
-          [
-            { key: "all" as const, label: "All", chip: "chip chip-muted", n: counts.pins },
-            { key: "sampled" as const, label: "Sampled", chip: "chip chip-lime", n: counts.sampled },
-            { key: "repeat" as const, label: "Repeat", chip: "chip chip-sky", n: counts.repeat },
-            { key: "never_visited" as const, label: "Never visited", chip: "chip chip-orange", n: counts.neverVisited },
-            { key: "planned" as const, label: "Planned", chip: "chip chip-muted", n: counts.planned },
-          ]
-        ).map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setCoverageFilter(f.key)}
-            className={f.chip}
-            style={
-              filter === f.key
-                ? { outline: "1.5px solid currentColor" }
-                : undefined
-            }
-          >
-            {f.key !== "all" && "● "}
-            {f.label} · {f.n}
-          </button>
-        ))}
+        {chips.map((c) => {
+          const on = coverage === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setCoverageFilter(c.key)}
+              aria-pressed={on}
+              className="chip chip-muted"
+              style={
+                on
+                  ? {
+                      color: "var(--spark-text)",
+                      outline: "1.5px solid var(--spark-text)",
+                    }
+                  : undefined
+              }
+            >
+              {c.label} · {c.n.toLocaleString("en-US")}
+            </button>
+          );
+        })}
         <span className="flex-1" />
         <select
           value={stateFilter}
           onChange={(e) => setStateFilter(e.target.value)}
-          className="rounded-xl text-xs"
-          style={{
-            padding: "0.45rem 0.9rem",
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            maxWidth: 140,
-            outline: "none",
-          }}
-          title="Filter by state"
+          aria-label="Filter by state"
+          style={selectStyle}
         >
           <option value="all">All states</option>
           {states.map((s) => (
@@ -648,16 +414,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         <select
           value={retailerFilter}
           onChange={(e) => setRetailerFilter(e.target.value)}
-          className="rounded-xl text-xs"
-          style={{
-            padding: "0.45rem 0.9rem",
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            maxWidth: 220,
-            outline: "none",
-          }}
-          title="Filter by retailer name"
+          aria-label="Filter by retailer"
+          style={selectStyle}
         >
           <option value="all">All retailers</option>
           {retailers.map((r) => (
@@ -666,438 +424,114 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </option>
           ))}
         </select>
-        {(filter !== "all" ||
-          stateFilter !== "all" ||
-          retailerFilter !== "all" ||
-          search) && (
+        {filtering ? (
           <button
-            onClick={() => {
-              setCoverageFilter("all");
-              setStateFilter("all");
-              setRetailerFilter("all");
-              setSearch("");
-              const params = new URLSearchParams(searchParams);
-              params.delete("q");
-              params.delete("coverage");
-              setSearchParams(params, { replace: true });
-            }}
-            className="mono text-[10px] px-3 py-1.5 rounded-xl"
+            type="button"
+            onClick={clearFilters}
+            className="text-xs underline px-1"
             style={{
-              letterSpacing: "0.16em",
-              color: "var(--spark-text-meta)",
-              border: "1px solid var(--spark-border)",
-              background: "transparent",
+              color: "var(--spark-text-secondary)",
+              background: "none",
+              border: 0,
+              cursor: "pointer",
             }}
-            title="Clear all filters"
           >
-            × CLEAR
+            Clear filters
           </button>
-        )}
+        ) : null}
       </SparkFilterBar>
 
-      {/* Map + rail */}
-      <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_360px]">
-        <div
-          className="spark-card overflow-hidden relative order-1 min-h-[280px] h-[420px] lg:h-[640px]"
-          style={{ borderRadius: 20 }}
-        >
-          {!apiKey ? (
-            <div
-              className="absolute inset-0 grid place-items-center px-6"
-              style={{
-                background:
-                  "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
-              }}
-            >
-              <div className="max-w-md text-center">
-                <p
-                  className="mono text-[10px] mb-2"
-                  style={{
-                    letterSpacing: "0.18em",
-                    color: "var(--spark-orange)",
-                  }}
-                >
-                  GOOGLE MAPS NOT CONFIGURED
-                </p>
-                <h3
-                  className="display text-lg font-bold mb-2"
-                  style={{ letterSpacing: "-0.02em" }}
-                >
-                  Add your API key to enable the map.
-                </h3>
-                <p
-                  className="text-sm mb-4"
-                  style={{ color: "var(--spark-text-secondary)" }}
-                >
-                  Set{" "}
-                  <span
-                    className="mono"
-                    style={{ color: "var(--spark-lime)" }}
-                  >
-                    VITE_GOOGLE_MAPS_API_KEY
-                  </span>{" "}
-                  in <span className="mono">.env.local</span> and redeploy.
-                  Pin data + the rail on the right still work without
-                  the map.
-                </p>
-                <a
-                  href="https://console.cloud.google.com/google/maps-apis"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mono"
-                  style={{
-                    fontSize: 10,
-                    letterSpacing: "0.18em",
-                    color: "var(--spark-lime)",
-                  }}
-                >
-                  GET A KEY →
-                </a>
-              </div>
-            </div>
-          ) : !mapsReady ? (
-            <div
-              className="absolute inset-0 grid place-items-center px-6"
-              style={{
-                background:
-                  "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
-              }}
-            >
-              <p
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.18em",
-                  color: "var(--spark-text-meta)",
-                }}
-              >
-                LOADING MAP
+      {roster && roster.rosterTotal > 0 ? (
+        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+          Account roster: {roster.rosterTotal.toLocaleString("en-US")}{" "}
+          {roster.rosterTotal === 1 ? "account" : "accounts"},{" "}
+          {roster.neverVisited.toLocaleString("en-US")} with no filed visit. A
+          roster account appears here once it has a request or is on the
+          uploaded list.
+        </p>
+      ) : null}
+
+      <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]">
+        <div className="spark-card overflow-hidden order-1 flex flex-col h-[460px] lg:h-[640px]">
+          <div className="relative flex-1 min-h-0">
+            {mapsReady ? (
+              <AccountMapView
+                apiKey={apiKey}
+                stores={filtered}
+                fitKey={fitKey}
+                scope={scope}
+                selectedKey={selectedKey}
+                focus={focus}
+                onSelect={selectFromMap}
+                onCloseCard={closeCard}
+                onSchedule={schedule}
+                onOnlyRetailer={onlyRetailer}
+              />
+            ) : null}
+          </div>
+          <div
+            className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5"
+            style={{ borderTop: "1px solid var(--spark-border)" }}
+          >
+            <CoverageLegend />
+            {offMap > 0 ? (
+              <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                {storesWord(offMap)} in the list {offMap === 1 ? "has" : "have"} no
+                map position.
               </p>
-            </div>
-          ) : (
-            <APIProvider apiKey={apiKey} libraries={["marker"]}>
-              <GMap
-                defaultCenter={center}
-                defaultZoom={4}
-                mapId="spark-v2-map"
-                styles={DARK_MAP_STYLE as never}
-                disableDefaultUI={false}
-                gestureHandling="greedy"
-                style={{ width: "100%", height: "100%" }}
-              >
-                <SparkGoogleClusters
-                  pins={filtered.map((a) => ({
-                    id: a.key,
-                    position: a.coords,
-                    color: coverageColor(a.coverage),
-                    title: a.name,
-                    onClick: () => setOpenKey(a.key),
-                  }))}
-                />
-                {openKey &&
-                  (() => {
-                    const a = filtered.find((x) => x.key === openKey);
-                    if (!a) return null;
-                    const statusLabel = `${coverageLabel(a.coverage)} · ${a.visitCount} filed visit${a.visitCount === 1 ? "" : "s"}${a.planned ? " · Planned" : ""}`;
-                    const fmtLast = (() => {
-                      if (!a.lastDate) return null;
-                      try {
-                        return new Date(a.lastDate).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        );
-                      } catch {
-                        return a.lastDate.slice(0, 10);
-                      }
-                    })();
-                    return (
-                      <InfoWindow
-                        position={a.coords}
-                        onCloseClick={() => setOpenKey(null)}
-                      >
-                        <div
-                          style={{
-                            fontFamily: "Space Grotesk, sans-serif",
-                            color: "#14160f",
-                            minWidth: 240,
-                            maxWidth: 280,
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              marginBottom: 4,
-                            }}
-                          >
-                            <span
-                              style={{
-                                display: "inline-block",
-                                width: 8,
-                                height: 8,
-                                borderRadius: 4,
-                                background: coverageColor(a.coverage),
-                                boxShadow: `0 0 4px ${coverageColor(a.coverage)}`,
-                              }}
-                            />
-                            <span
-                              style={{
-                                fontFamily: "JetBrains Mono, monospace",
-                                fontSize: 9,
-                                letterSpacing: "0.18em",
-                                textTransform: "uppercase",
-                                color: "#3b4034",
-                              }}
-                            >
-                              {statusLabel}
-                              {a.state ? ` · ${a.state}` : ""}
-                            </span>
-                          </div>
-                          <p style={{ fontWeight: 700, fontSize: 15 }}>
-                            {a.name}
-                          </p>
-                          <p
-                            style={{
-                              fontSize: 12,
-                              marginTop: 2,
-                              color: "#3b4034",
-                            }}
-                          >
-                            {a.market}
-                          </p>
-                          {a.address && (
-                            <p
-                              style={{
-                                fontSize: 11,
-                                marginTop: 2,
-                                color: "#5a6354",
-                                fontStyle: "italic",
-                              }}
-                            >
-                              {a.address}
-                            </p>
-                          )}
-                          {fmtLast && (
-                            <p
-                              style={{
-                                fontSize: 10,
-                                fontFamily:
-                                  "JetBrains Mono, monospace",
-                                letterSpacing: "0.14em",
-                                opacity: 0.7,
-                                marginTop: 6,
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              Last visit · {fmtLast}
-                            </p>
-                          )}
-                          <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 6,
-                              marginTop: 12,
-                            }}
-                          >
-                            {/* Primary CTA — biggest target on the
-                                popup. Prefills venue + address +
-                                state + retailer name into the
-                                Express form. */}
-                            <button
-                              onClick={() => {
-                                const params = new URLSearchParams({
-                                  venue: a.name,
-                                  address: a.address || a.market,
-                                });
-                                if (a.state) params.set("state", a.state);
-                                navigate(
-                                  `/requests/create?${params.toString()}`,
-                                );
-                              }}
-                              style={{
-                                background: "#f2f3ee",
-                                color: "#14160f",
-                                border: "none",
-                                padding: "10px 14px",
-                                borderRadius: 10,
-                                fontFamily:
-                                  "Space Grotesk, sans-serif",
-                                fontWeight: 700,
-                                fontSize: 14,
-                                cursor: "pointer",
-                                boxShadow:
-                                  "0 0 18px rgba(var(--spark-accent-rgb),0.55)",
-                              }}
-                            >
-                              ✦ Schedule a visit
-                            </button>
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 6,
-                              }}
-                            >
-                              <button
-                                onClick={() => {
-                                  setRetailerFilter(a.name);
-                                  setOpenKey(null);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  background: "transparent",
-                                  color: "#14160f",
-                                  border:
-                                    "1px solid rgba(20,22,15,0.2)",
-                                  padding: "6px 8px",
-                                  borderRadius: 8,
-                                  fontFamily:
-                                    "JetBrains Mono, monospace",
-                                  fontSize: 10,
-                                  letterSpacing: "0.14em",
-                                  cursor: "pointer",
-                                  textTransform: "uppercase",
-                                }}
-                                title="Filter the map + list to only this retailer"
-                              >
-                                Filter to {a.name.length > 14
-                                  ? a.name.slice(0, 14) + "…"
-                                  : a.name}
-                              </button>
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${a.coords.lat},${a.coords.lng}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                  background: "transparent",
-                                  color: "#14160f",
-                                  border:
-                                    "1px solid rgba(20,22,15,0.2)",
-                                  padding: "6px 10px",
-                                  borderRadius: 8,
-                                  fontFamily:
-                                    "JetBrains Mono, monospace",
-                                  fontSize: 10,
-                                  letterSpacing: "0.14em",
-                                  textDecoration: "none",
-                                  textTransform: "uppercase",
-                                  lineHeight: "20px",
-                                }}
-                              >
-                                Open ↗
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </InfoWindow>
-                    );
-                  })()}
-              </GMap>
-            </APIProvider>
-          )}
+            ) : null}
+          </div>
         </div>
 
-        {/* List */}
-        <div
-          className="spark-card overflow-hidden flex flex-col order-2 min-h-[280px] max-h-[420px] lg:max-h-[640px]"
-        >
+        <div className="spark-card overflow-hidden flex flex-col order-2 min-h-[280px] max-h-[460px] lg:max-h-[640px]">
           <div
-            className="p-4 flex items-center justify-between"
+            className="p-4"
             style={{ borderBottom: "1px solid var(--spark-border)" }}
           >
             <h3 className="font-bold">
-              Accounts{" "}
+              Stores
               <span
-                className="mono text-xs ml-1"
+                className="text-xs font-normal ml-2"
                 style={{ color: "var(--spark-text-meta)" }}
               >
-                {filtered.length}
+                {filtering
+                  ? `${shown.all.toLocaleString("en-US")} of ${counts.all.toLocaleString("en-US")}`
+                  : counts.all.toLocaleString("en-US")}
               </span>
             </h3>
+            <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
+              {shown.neverVisited.toLocaleString("en-US")} never visited ·{" "}
+              {shown.sampled.toLocaleString("en-US")} sampled ·{" "}
+              {shown.repeat.toLocaleString("en-US")} repeat
+            </p>
           </div>
-          <ul className="overflow-y-auto flex-1">
-            {filtered.length === 0 && (
-              <li
-                className="p-6 text-center text-sm"
-                style={{ color: "var(--spark-text-meta)" }}
-              >
-                {filter === "never_visited"
-                  ? "No never-visited accounts in this view — coverage looks complete here."
-                  : "No accounts match."}
-              </li>
-            )}
-            {(filter === "never_visited"
-              ? [...filtered].sort((a, b) => a.name.localeCompare(b.name))
-              : filtered
-            )
-              .slice(0, 200)
-              .map((a) => (
-              <li
-                key={a.key}
-                className="px-4 py-3 transition"
-                style={{
-                  borderBottom: "1px solid var(--spark-border)",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(var(--spark-ink-rgb),0.02)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <div className="flex items-start gap-2">
-                  <span
-                    className="spark-dot mt-1.5 shrink-0"
-                    style={{
-                      background: coverageColor(a.coverage),
-                      boxShadow: `0 0 6px ${coverageColor(a.coverage)}`,
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{a.name}</p>
-                    <p
-                      className="mono text-[10px] uppercase truncate"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: "var(--spark-text-meta)",
-                      }}
-                    >
-                      {a.market}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Prefill the request form with this account's
-                      // venue + address (+ state when known) via
-                      // query params. SparkRequestCreate picks
-                      // these up on mount via useSearchParams.
-                      const params = new URLSearchParams({
-                        venue: a.name,
-                        address: a.address || a.market,
-                      });
-                      if (a.state) params.set("state", a.state);
-                      navigate(`/requests/create?${params.toString()}`);
-                    }}
-                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold shrink-0 transition"
-                    style={{
-                      background: "var(--spark-lime)",
-                      color: "var(--spark-on-accent)",
-                      border: "none",
-                      letterSpacing: "0.14em",
-                    }}
-                    title="Schedule a visit at this account"
-                  >
-                    ✦ SCHEDULE
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {filtered.length === 0 ? (
+            <p className="p-6 text-sm" style={{ color: "var(--spark-text-meta)" }}>
+              {emptyList}
+            </p>
+          ) : (
+            <ul className="overflow-y-auto flex-1">
+              {filtered.slice(0, LIST_ROWS).map((s) => (
+                <StoreRow
+                  key={s.key}
+                  store={s}
+                  selected={s.key === selectedKey}
+                  onShowOnMap={showOnMap}
+                  onSchedule={schedule}
+                  rowRef={(el) => {
+                    if (el) rowEls.current.set(s.key, el);
+                    else rowEls.current.delete(s.key);
+                  }}
+                />
+              ))}
+              {filtered.length > LIST_ROWS ? (
+                <li className="px-4 py-3 text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                  Showing the first {LIST_ROWS} of{" "}
+                  {filtered.length.toLocaleString("en-US")}. Search to find a store.
+                </li>
+              ) : null}
+            </ul>
+          )}
         </div>
       </div>
     </div>
@@ -1116,9 +550,7 @@ export const AccountMapBody: React.FC = () => {
   const apiKey = (import.meta as { env?: Record<string, string> }).env
     ?.VITE_GOOGLE_MAPS_API_KEY;
   return (
-    <Suspense
-      fallback={<PanelSkeleton label="Loading account map" />}
-    >
+    <Suspense fallback={<PanelSkeleton label="Loading account map" />}>
       <Inner apiKey={apiKey} />
     </Suspense>
   );
