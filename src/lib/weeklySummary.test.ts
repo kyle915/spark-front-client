@@ -5,6 +5,8 @@ import {
   recapBasis,
   shiftWeek,
   statusLine,
+  summaryIsStale,
+  summaryParagraphs,
   weekLabel,
   writtenLine,
 } from "./weeklySummary";
@@ -32,6 +34,24 @@ describe("week arithmetic", () => {
     const monday = new Date(2026, 10, 16);
     expect(isLatestWeek("2026-11-09", monday)).toBe(true);
     expect(isLatestWeek("2026-11-02", monday)).toBe(false);
+  });
+});
+
+describe("the dashboard card", () => {
+  const now = new Date("2026-11-14T18:00:00Z");
+
+  it("keeps last week's summary and drops one from five weeks ago", () => {
+    expect(summaryIsStale("2026-11-08", now)).toBe(false);
+    expect(summaryIsStale("2026-10-11", now)).toBe(true);
+    expect(summaryIsStale("", now)).toBe(true);
+  });
+
+  it("splits the text into paragraphs on blank lines", () => {
+    expect(summaryParagraphs("Three events ran.\n\n  Shoppers liked\nthe citrus. \n\n\n")).toEqual([
+      "Three events ran.",
+      "Shoppers liked the citrus.",
+    ]);
+    expect(summaryParagraphs("  ")).toEqual([]);
   });
 });
 

@@ -120,9 +120,10 @@ export const ConsumersPerWeek: React.FC<Window & { note?: string }> = (props) =>
 const TREND_WEEKS = 12;
 
 /**
- * The weekly trend on a dashboard: always the last twelve weeks, whatever
- * range the rest of the page is showing, because a 7- or 30-day window is
- * one to five points and not a trend.
+ * The weekly trend on a dashboard: always the last twelve finished weeks,
+ * whatever range the rest of the page is showing, because a 7- or 30-day
+ * window is one to five points and not a trend. The week in progress is
+ * left out, so the line does not end on a part week.
  */
 export const ConsumersPerWeekTrend: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const window = useMemo(() => lastWeeksWindow(TREND_WEEKS), []);
@@ -130,7 +131,7 @@ export const ConsumersPerWeekTrend: React.FC<{ tenantId: string }> = ({ tenantId
     <ConsumersPerWeek
       tenantId={tenantId}
       {...window}
-      note={`Last ${TREND_WEEKS} weeks, from approved recaps.`}
+      note={`Last ${TREND_WEEKS} completed weeks, from approved recaps. This week is added once it ends.`}
     />
   );
 };

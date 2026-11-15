@@ -6373,6 +6373,7 @@ type Query {
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
   weeklyClientSummaries(weekStart: String = null): WeeklyClientSummaryWeek
+  tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
@@ -8121,6 +8122,14 @@ type TenantFeedbackThemes {
   generatedAt: String
   startDate: String
   endDate: String
+}
+
+type TenantWeeklySummary {
+  weekStart: String!
+  weekEnd: String!
+  text: String!
+  isDraft: Boolean!
+  reviewedAt: String
 }
 
 type WeeklyClientSummary {

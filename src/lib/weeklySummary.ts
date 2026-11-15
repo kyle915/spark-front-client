@@ -43,6 +43,20 @@ export function isLatestWeek(weekStart: string, today: Date = new Date()): boole
   return next >= thisMonday;
 }
 
+/** A summary of a week that ended more than `days` ago is old news. */
+export function summaryIsStale(weekEnd: string, now: Date, days = 14): boolean {
+  const end = new Date(`${weekEnd}T12:00:00`).getTime();
+  if (!Number.isFinite(end)) return true;
+  return now.getTime() - end > days * 86_400_000;
+}
+
+/** The text as paragraphs: split on blank lines, empty ones dropped. */
+export const summaryParagraphs = (text: string): string[] =>
+  text
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
 /** What the text box holds differs from what is stored. */
 export const isEdited = (draft: string, stored: string): boolean =>
   draft.trim() !== stored.trim();

@@ -15,13 +15,14 @@ describe("client home stays slim", () => {
   );
   const insights = read("src/components/pages/insights/SparkInsights.tsx");
 
-  it("renames the home title and keeps week-ahead plus narration outside Performance", () => {
+  it("renames the home title and keeps week-ahead plus the weekly summary outside Performance", () => {
     expect(dash).not.toContain('title="Today"');
     expect(dash).toContain('title="Home"');
     expect(dash).toContain("<WeekAheadPanel");
-    expect(dash).toContain("<WeeklyNarrationCard");
+    expect(dash).toContain("<WeeklySummaryCard tenantId={tenantId} forClient />");
+    expect(dash).not.toContain("WeeklyNarrationCard");
     expect(dash).toContain("<ClientApprovalsBody");
-    expect(dash).not.toContain("tenantWeeklyNarration");
+    expect(dash).not.toContain("tenantWeeklySummary");
   });
 
   it("shows program performance on first paint with no hide control", () => {
@@ -35,7 +36,8 @@ describe("client home stays slim", () => {
     expect(dash).toContain("<InsightsBody embedded omitNarration />");
     expect(insights).toContain("rangePills");
     expect(insights).toContain("omitNarration");
-    expect(insights).toContain("<WeeklyNarrationCard");
+    expect(insights).toContain("<WeeklySummaryCard");
+    expect(insights).not.toContain("WeeklyNarrationCard");
     expect(insights).toContain("<PaceToGoalHero");
   });
 });

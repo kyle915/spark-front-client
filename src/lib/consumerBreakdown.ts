@@ -111,14 +111,20 @@ export const mondayOf = (d: Date): Date => {
   return start;
 };
 
-/** The last `weeks` Monday-to-Sunday weeks, ending with the one `today` is in. */
+/**
+ * The last `weeks` finished Monday-to-Sunday weeks, ending on the Sunday
+ * before `today`'s week. The week in progress is left out: its recaps are
+ * still being approved, so its figure is low and would read as a drop.
+ */
 export function lastWeeksWindow(
   weeks: number,
   today: Date = new Date(),
 ): { startDate: string; endDate: string } {
   const start = mondayOf(today);
-  start.setDate(start.getDate() - (weeks - 1) * 7);
-  return { startDate: ymd(start), endDate: ymd(today) };
+  start.setDate(start.getDate() - weeks * 7);
+  const end = mondayOf(today);
+  end.setDate(end.getDate() - 1);
+  return { startDate: ymd(start), endDate: ymd(end) };
 }
 
 /**

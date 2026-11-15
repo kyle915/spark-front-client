@@ -26,6 +26,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Answers from Ask AI for clients are built from approved recaps only.",
       "An email that fails to send is tried again instead of being dropped.",
       "Opening a recap, request or event from an email switches Spark to that record's client, and tells you it did.",
+      "Reports and the dashboard group what consumers said into themes: what people liked, why they passed and what they asked, each with a count of recaps and a comment as written.",
+      "The weekly summary on the dashboard is now a short write-up of last week from approved recaps, reviewed by the Ignite team before it appears.",
+      "The weekly chart shows the last 12 completed weeks, so it no longer dips for a week that is still being approved.",
+      "More detail on the dashboard shows consumers sampled per event.",
+      "Staff: Weekly summaries (under Outputs) drafts each client's week to review, edit and copy. Nothing is sent from it.",
     ],
   },
   {

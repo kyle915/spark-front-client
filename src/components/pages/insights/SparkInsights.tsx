@@ -15,7 +15,7 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
-import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
+import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
@@ -503,7 +503,7 @@ export function InsightsBody({
   omitNarration = false,
 }: {
   embedded?: boolean;
-  /** Client home renders the narration card above the Performance disclosure. */
+  /** Client home renders the weekly summary above Performance itself. */
   omitNarration?: boolean;
 }) {
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
@@ -743,7 +743,7 @@ export function InsightsBody({
         </div>
       )}
 
-      {tenantId && !omitNarration && <WeeklyNarrationCard tenantId={tenantId} />}
+      {tenantId && !omitNarration && <WeeklySummaryCard tenantId={tenantId} />}
 
       {/* Pace, markets, year-over-year, AI, geo, and the timeline. Gated on
           state rather than <details> so none of their queries fire until
