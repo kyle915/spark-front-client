@@ -127,8 +127,11 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(reports).not.toContain('from "@/api/queries/RequestsQuery"');
     expect(reports).not.toContain('from "@/api/queries/RecapsQuery"');
     expect(reports).toContain("ReportsRequestsChartQuery");
-    expect(reports).toContain("ReportsEngagementsChartQuery");
-    expect(reports).toContain("customRecaps");
+    // Consumer charts read one server rollup, not a page of recap rows: the
+    // recap lists return 50 rows a page, which cut those charts short.
+    expect(reports).not.toContain("ReportsEngagementsChartQuery");
+    expect(reports).toContain("useConsumerBreakdown");
+    expect(reports).toContain("isCutOff");
     const requestsChart = src("./queries/ReportsRequestsChartQuery.ts");
     expect(requestsChart).toContain("ReportsRequestsChartQuery");
     // Assert the operation selection stays slim (not comment text).
@@ -137,9 +140,8 @@ describe("list fetch caps (no silent truncation)", () => {
     );
     expect(requestsChart).not.toMatch(/\bopenShifts\b/);
     expect(requestsChart).not.toMatch(/\bproducts\b/);
-    const engagementsChart = src("./queries/ReportsEngagementsChartQuery.ts");
-    expect(engagementsChart).toContain("customRecaps");
-    expect(engagementsChart).toContain("consumersSampled");
-    expect(engagementsChart).toContain("consumerEngagements");
+    expect(requestsChart).toContain("totalCount");
+    const breakdown = src("./queries/ConsumerBreakdownQuery.ts");
+    expect(breakdown).toMatch(/tenantConsumerBreakdown[\s\S]*byWeek[\s\S]*byStore[\s\S]*byState/);
   });
 });
