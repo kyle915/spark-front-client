@@ -327,7 +327,10 @@ export function valueLabels(
           } else {
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
-            ctx.fillText(text, el.x, el.y - 8);
+            // Keep a label on the first or last point inside the canvas.
+            const half = ctx.measureText(text).width / 2;
+            const x = Math.min(Math.max(el.x, half + 2), chart.width - half - 2);
+            ctx.fillText(text, x, el.y - 8);
           }
         }
         ctx.restore();
