@@ -10,6 +10,7 @@ import {
   labelledPoints,
   lineSeries,
   peakIndex,
+  percentLabel,
   seriesColor,
 } from "./sparkChart";
 
@@ -20,6 +21,16 @@ describe("spark chart style", () => {
     expect(compactNumber(257_000)).toBe("257K");
     expect(compactNumber(4_200_000)).toBe("4.2M");
     expect(compactNumber(Number.NaN)).toBe("");
+  });
+
+  it("prints a rate as a percent with at most one decimal", () => {
+    expect(percentLabel(40)).toBe("40%");
+    expect(percentLabel(12.46)).toBe("12.5%");
+    expect(percentLabel(Number.NaN)).toBe("");
+    const o = chartOptions<"line">({ format: percentLabel }) as unknown as {
+      scales: { y: { ticks: { callback: (v: number) => string } } };
+    };
+    expect(o.scales.y.ticks.callback(25)).toBe("25%");
   });
 
   it("never invents a fifth series colour", () => {

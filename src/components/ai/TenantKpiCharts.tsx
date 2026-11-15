@@ -1,27 +1,22 @@
 import { useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import "@/lib/sparkChartRegister";
+import { Bar, Line } from "react-chartjs-2";
+import ChartBlock from "@/components/charts/ChartBlock";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  PointElement,
-  LineElement,
-  LineController,
-  Filler,
-  Tooltip,
-  Legend,
-  type Plugin,
-} from "chart.js";
-import { Chart as ChartMixed } from "react-chartjs-2";
-import type { ChartData } from "chart.js";
-import { sparkChartOptions } from "@/lib/chartTheme";
+  MAX_SERIES,
+  barSeries,
+  chartOptions,
+  lineSeries,
+  seriesColor,
+  valueLabels,
+} from "@/lib/sparkChart";
+import { sparseMonthFlags, splitMonthlyTrend } from "@/lib/chartRows";
 import { TenantKpisQuery } from "@/api/queries/TenantKpisQuery";
 import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__generated__/TenantKpisQuery.graphql";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import { CountReel } from "@/motion/CountReel";
-import { inkRgba, accentRgba } from "@/theme/chartInk";
+import { inkRgba } from "@/theme/chartInk";
 
 /**
  * Phase 1 KPI panel for the dashboards.
@@ -31,8 +26,9 @@ import { inkRgba, accentRgba } from "@/theme/chartInk";
  *   1. headline KPI stat tiles — consumers reached, samples distributed,
  *      products sold, total engagements, first-time / brand-aware / willing-to-
  *      purchase consumers, and
- *   2. a 12-month trend chart from `monthlyTrend`: recaps on the right axis,
- *      and the bars the server names in `trendSeries` on the left.
+ *   2. the 12-month trend from `monthlyTrend` as two charts on one month
+ *      axis: the measures the server names in `trendSeries`, and recaps.
+ *      They are different scales, so they are never drawn on two y-axes.
  *
  * Mounted on both dashboards (admin DashboardEvent and the client
  * SparkClientDashboard) scoped to the active tenant via `useAuthStore()
@@ -45,21 +41,6 @@ import { inkRgba, accentRgba } from "@/theme/chartInk";
  * we show a quiet "No activity yet" card instead of a wall of zeros and an
  * empty chart.
  */
-
-// Reuse the exact chart.js registration the existing dashboard trend chart
-// (MonthlyTrendsSection) uses, so we don't register anything new.
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  PointElement,
-  LineElement,
-  LineController,
-  Filler,
-  Tooltip,
-  Legend,
-);
 
 type MonthRow = {
   month: string;
@@ -77,142 +58,68 @@ const DEFAULT_SERIES: readonly TrendSeries[] = [
   { key: "samples", label: "Samples" },
 ];
 
-const SERIES_COLORS = [accentRgba(0.72), "rgba(95,184,239,0.85)"];
-
 const seriesValue = (row: MonthRow, key: string): number =>
   Number((row as Record<string, unknown>)[key]) || 0;
 
 const fmt = (n: number) => n.toLocaleString();
 
-/** Months with any activity but under 15% of the peak look sparse — annotate. */
-const sparseMonthFlags = (
-  data: readonly MonthRow[],
-  series: readonly TrendSeries[],
-): boolean[] => {
-  const peaks = data.map(
-    (d) => Math.max(d.recaps, ...series.map((s) => seriesValue(d, s.key))) || 0,
-  );
-  const peak = Math.max(...peaks, 0);
-  if (peak <= 0) return data.map(() => false);
-  return data.map((_, i) => {
-    const m = peaks[i];
-    return m > 0 && m < peak * 0.15;
-  });
-};
+const lastValue = valueLabels("last");
 
-/** Lightweight canvas note for sparse early months — no datalabels dep. */
-const sparseMonthPlugin = (flags: boolean[]): Plugin<"bar" | "line"> => ({
-  id: "sparseMonthAnnotate",
-  afterDatasetsDraw(chart) {
-    const { ctx, chartArea, scales } = chart;
-    const xScale = scales.x;
-    if (!xScale || !chartArea) return;
-    ctx.save();
-    ctx.fillStyle = inkRgba(0.4);
-    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.textAlign = "center";
-    flags.forEach((sparse, i) => {
-      if (!sparse) return;
-      const x = xScale.getPixelForValue(i);
-      ctx.fillText("sparse", x, chartArea.bottom - 4);
-    });
-    ctx.restore();
-  },
-});
+const NOTE_STYLE = { color: "var(--spark-text-meta)" } as const;
 
-/* ───────────────────────── trend chart ───────────────────────── */
+/* ───────────────────────── trend charts ───────────────────────── */
 
 const TrendChart: React.FC<{
   data: readonly MonthRow[];
   series: readonly TrendSeries[];
   note?: string | null;
 }> = ({ data, series, note }) => {
-  const sparseFlags = useMemo(
-    () => sparseMonthFlags(data, series),
+  const { labels, measures, recaps } = useMemo(
+    () => splitMonthlyTrend(data, series.slice(0, MAX_SERIES)),
     [data, series],
   );
-  const sparseCount = sparseFlags.filter(Boolean).length;
-
-  const chartData: ChartData<"bar" | "line"> = {
-    labels: data.map((d) => d.month),
-    datasets: [
-      ...series.map((s, i) => ({
-        type: "bar" as const,
-        label: s.label,
-        data: data.map((d) => seriesValue(d, s.key)),
-        backgroundColor: SERIES_COLORS[i % SERIES_COLORS.length],
-        borderRadius: 6,
-        yAxisID: "y1",
-      })),
-      {
-        type: "line",
-        label: "Recaps",
-        data: data.map((d) => d.recaps),
-        borderColor: accentRgba(0.85),
-        pointBackgroundColor: accentRgba(0.95),
-        borderWidth: 2,
-        tension: 0.35,
-        yAxisID: "y2",
-      },
-    ],
-  };
-
-  const options = sparkChartOptions<"bar" | "line">({
-    scales: {
-      y1: {
-        type: "linear",
-        position: "left",
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: series.map((s) => s.label).join(" / "),
-        },
-      },
-      y2: {
-        type: "linear",
-        position: "right",
-        beginAtZero: true,
-        ticks: { precision: 0 },
-        grid: { drawOnChartArea: false },
-        title: {
-          display: true,
-          text: "Recaps",
-        },
-      },
-      x: {},
-    },
-  });
+  const sparseCount = useMemo(
+    () => sparseMonthFlags(data, series).filter(Boolean).length,
+    [data, series],
+  );
+  const several = measures.length > 1;
 
   return (
-    <div>
-      <div style={{ height: 280 }}>
-        <ChartMixed
-          type="bar"
-          data={chartData}
-          options={options}
-          plugins={[sparseMonthPlugin(sparseFlags)]}
-        />
-      </div>
-      {sparseCount > 0 && (
-        <p
-          className="mono text-[10px] mt-2"
-          style={{
-            letterSpacing: "0.12em",
-            color: "var(--spark-text-meta)",
+    <div className="flex flex-col gap-5">
+      <ChartBlock title={`${measures.map((m) => m.label).join(" and ")} by month`} height={220}>
+        <Bar
+          data={{
+            labels,
+            datasets: measures.map((m, i) =>
+              barSeries({
+                label: m.label,
+                data: m.data,
+                // Colour only tells several measures apart; one is ink.
+                color: several ? seriesColor(i) : undefined,
+              }),
+            ),
           }}
-        >
-          {sparseCount} early / light month{sparseCount === 1 ? "" : "s"} marked
-          sparse — low volume vs peak; % swings may mislead.
+          options={chartOptions<"bar">({ legend: several })}
+        />
+      </ChartBlock>
+      <ChartBlock title="Recaps by month" height={130}>
+        <Line
+          data={{
+            labels,
+            datasets: [lineSeries({ label: "Recaps", data: recaps, area: true })],
+          }}
+          options={chartOptions<"line">()}
+          plugins={[lastValue]}
+        />
+      </ChartBlock>
+      {sparseCount > 0 && (
+        <p className="text-xs" style={NOTE_STYLE}>
+          {sparseCount} light month{sparseCount === 1 ? "" : "s"}: low volume
+          against the peak, so percentage swings there can mislead.
         </p>
       )}
       {note && (
-        <p
-          className="mono text-[10px] mt-2"
-          style={{
-            letterSpacing: "0.12em",
-            color: "var(--spark-text-meta)",
-          }}
-        >
+        <p className="text-xs" style={NOTE_STYLE}>
           {note}
         </p>
       )}
@@ -244,7 +151,7 @@ const PrimaryFigure: React.FC<{
     {sub ? (
       <p
         className="spark-stat-hint"
-        style={{ fontSize: "0.8125rem", letterSpacing: "-0.005em" }}
+        style={{ fontSize: "0.8125rem" }}
       >
         {sub}
       </p>
@@ -266,7 +173,7 @@ const QuietStat: React.FC<{
       {typeof count === "number" ? <CountReel value={count} /> : value}
     </p>
     {sub ? (
-      <p className="spark-stat-hint" style={{ letterSpacing: "-0.005em" }}>
+      <p className="spark-stat-hint">
         {sub}
       </p>
     ) : null}
@@ -424,7 +331,6 @@ const TenantKpiCharts: React.FC<{
   const series: readonly TrendSeries[] = kpis.trendSeries?.length
     ? kpis.trendSeries
     : DEFAULT_SERIES;
-  const seriesTitle = series.map((s) => s.label);
 
   // All-zero / empty: a brand-new tenant with nothing logged yet. Show a quiet
   // empty state rather than a grid of zeros and a blank chart.
@@ -446,10 +352,7 @@ const TenantKpiCharts: React.FC<{
       style={chromeless ? undefined : { borderRadius: 22 }}
     >
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-        <h2
-          className="display text-lg lg:text-xl font-bold"
-          style={{ letterSpacing: "-0.02em" }}
-        >
+        <h2 className="display text-lg lg:text-xl font-bold">
           Program KPIs
         </h2>
         <div className="flex items-center gap-3 flex-wrap">
@@ -535,32 +438,17 @@ const TenantKpiCharts: React.FC<{
           )}
 
           <div className="mt-6">
+            <p
+              className="display text-[13px] font-medium mb-3"
+              style={{ color: "var(--spark-text)" }}
+            >
+              Monthly trend
+            </p>
             {hasTrend ? (
-              <>
-                <p
-                  className="display text-[13px] mb-3"
-                  style={{ color: "var(--spark-text-meta)" }}
-                >
-                  Monthly trend · Recaps (right) / {seriesTitle.join(" + ")}{" "}
-                  (left)
-                </p>
-                <TrendChart
-                  data={trend}
-                  series={series}
-                  note={kpis.trendNote}
-                />
-              </>
+              <TrendChart data={trend} series={series} note={kpis.trendNote} />
             ) : (
-              <div>
-                <p
-                  className="display text-[13px] mb-3"
-                  style={{ color: "var(--spark-text-meta)" }}
-                >
-                  Monthly trend · Recaps / {seriesTitle.join(" / ")}
-                </p>
-                <div className="spark-chart-empty min-h-[180px]">
-                  No monthly trend data yet.
-                </div>
+              <div className="spark-chart-empty min-h-[180px]">
+                No monthly trend data yet.
               </div>
             )}
           </div>

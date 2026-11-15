@@ -45,10 +45,7 @@ export default function ChartCard({
             {Icon ? (
               <Icon className={cn(iconColor, "w-5 h-5 shrink-0")} />
             ) : null}
-            <h2
-              className="spark-title text-lg font-semibold"
-              style={{ letterSpacing: "-0.02em" }}
-            >
+            <h2 className="spark-title text-lg font-semibold">
               {title}
             </h2>
           </div>

@@ -1,29 +1,21 @@
 import { memo, useMemo, useState } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import type { TooltipItem } from "chart.js";
+import "@/lib/sparkChartRegister";
+import type { ChartOptions, TooltipItem } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { Store } from "lucide-react";
 import { useForm } from "react-hook-form";
 import ChartCard from "@/components/charts/ChartCard";
-import { useThemeMode } from "@/hooks/useThemeMode";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import { useGlobalDistributors } from "../hooks/useGlobalDistributors";
-import { inkRgba } from "@/theme/chartInk";
+import { labelsEveryRow } from "@/lib/chartRows";
+import { barSeries, chartOptions, percentLabel, valueLabels } from "@/lib/sparkChart";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+const everyCount = valueLabels("all");
 
 export type RetailAccount = {
   name: string;
   consumers: number;
   conversion: number;
-  color: string;
   distributorId: string;
 };
 
@@ -48,16 +40,6 @@ export default memo(function RetailAccountsPerformance({
   });
 
   const selectedDistributorValue = watch("distributor");
-
-  const [isDark] = useThemeMode();
-
-  const { textColor, gridColor } = useMemo(
-    () => ({
-      textColor: isDark ? "#e5e7eb" : "#1f2937",
-      gridColor: isDark ? inkRgba(0.1) : "rgba(0,0,0,0.08)",
-    }),
-    [isDark],
-  );
 
   /* =========================
      Local Filtering
@@ -87,44 +69,28 @@ export default memo(function RetailAccountsPerformance({
   const chartData = {
     labels: filteredData.map((a) => a.name),
     datasets: [
-      {
-        label: "Consumers Sampled",
+      barSeries({
+        label: "Consumers sampled",
         data: filteredData.map((a) => a.consumers),
-        backgroundColor: filteredData.map((a) => a.color),
-        borderRadius: 5,
-      },
+        horizontal: true,
+      }),
     ],
   };
 
-  const options = {
-    indexAxis: "y" as const,
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        ticks: { color: textColor },
-        grid: { color: gridColor },
-        title: {
-          display: true,
-          text: "Number of Consumers",
-          color: textColor,
-        },
-      },
-      y: {
-        ticks: { color: textColor, font: { size: 12 } },
-        grid: { display: false },
-      },
-    },
+  // The bar is consumers sampled; the tooltip adds that account's conversion,
+  // which the chart beside this one also plots.
+  const base = chartOptions<"bar">({ horizontal: true });
+  const options: ChartOptions<"bar"> = {
+    ...base,
     plugins: {
-      legend: { display: false },
+      ...base.plugins,
       tooltip: {
+        ...base.plugins?.tooltip,
         callbacks: {
-          label: (ctx: TooltipItem<"bar">) => {
+          ...base.plugins?.tooltip?.callbacks,
+          afterLabel: (ctx: TooltipItem<"bar">) => {
             const account = filteredData[ctx.dataIndex];
-            return [
-              `Consumers: ${account.consumers.toLocaleString()}`,
-              `Conversion: ${account.conversion}%`,
-            ];
+            return account ? `Conversion ${percentLabel(account.conversion)}` : "";
           },
         },
       },
@@ -133,9 +99,8 @@ export default memo(function RetailAccountsPerformance({
 
   return (
     <ChartCard
-      title="Retail Accounts Performance"
+      title="Consumers sampled by account"
       icon={Store}
-      iconColor="text-orange-600"
       fixedHeight
     >
       <div className="flex items-center justify-between mb-4 gap-3">
@@ -144,15 +109,15 @@ export default memo(function RetailAccountsPerformance({
           value={filter}
           onChange={(e) => setFilter(e.target.value as "top10" | "all")}
         >
-          <option value="top10">Top 10 Accounts</option>
-          <option value="all">All Accounts</option>
+          <option value="top10">Top 10 accounts</option>
+          <option value="all">All accounts</option>
         </select>
 
         <FormAutocomplete<DistributorFilterValues>
           control={control}
           name="distributor"
           label=""
-          options={[{ value: "", label: "All Distributors" }, ...distributors]}
+          options={[{ value: "", label: "All distributors" }, ...distributors]}
           loading={loading}
           placeholder={loading ? "Loading..." : "Search distributor..."}
           containerClassName="w-64 [&_.label]:hidden"
@@ -169,7 +134,15 @@ export default memo(function RetailAccountsPerformance({
       </div>
 
       <div className="w-full h-[460px]">
-        <Bar data={chartData} options={options} />
+        {filteredData.length === 0 ? (
+          <div className="spark-chart-empty">No accounts match these filters.</div>
+        ) : (
+          <Bar
+            data={chartData}
+            options={options}
+            plugins={labelsEveryRow(filteredData.length) ? [everyCount] : []}
+          />
+        )}
       </div>
     </ChartCard>
   );

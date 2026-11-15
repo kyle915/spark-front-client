@@ -74,6 +74,10 @@ export const compactNumber = (value: number): string => {
   return String(value);
 };
 
+/** A percent as people read it: "12.5%", "40%". For rates, never counts. */
+export const percentLabel = (value: number): string =>
+  Number.isFinite(value) ? `${Number(value.toFixed(1))}%` : "";
+
 /** Keep the largest `keep` rows and fold the rest into one "Other" row. */
 export function foldToOther<T extends { label: string; value: number }>(
   rows: readonly T[],
