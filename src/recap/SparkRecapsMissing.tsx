@@ -1,6 +1,11 @@
 import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
 import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import {
+  fetchQuery,
+  useLazyLoadQuery,
+  useMutation,
+  useRelayEnvironment,
+} from "react-relay/hooks";
 import { Navigate, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
@@ -11,7 +16,22 @@ import { MissingRecapEventsQuery } from "@/api/queries/MissingRecapEventsQuery";
 import type { MissingRecapEventsQuery as MissingRecapEventsQueryType } from "@api/queries/__generated__/MissingRecapEventsQuery.graphql";
 import { NudgeAmbassadorForRecapMutation } from "@/api/mutations/NudgeAmbassadorForRecapMutation";
 import type { NudgeAmbassadorForRecapMutation as NudgeAmbassadorForRecapMutationType } from "@api/mutations/__generated__/NudgeAmbassadorForRecapMutation.graphql";
+import { DismissMissingRecapsMutation } from "@/api/mutations/DismissMissingRecapsMutation";
+import type { DismissMissingRecapsMutation as DismissMissingRecapsMutationType } from "@api/mutations/__generated__/DismissMissingRecapsMutation.graphql";
+import { RestoreMissingRecapsMutation } from "@/api/mutations/RestoreMissingRecapsMutation";
+import type { RestoreMissingRecapsMutation as RestoreMissingRecapsMutationType } from "@api/mutations/__generated__/RestoreMissingRecapsMutation.graphql";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
+import useSparkRole from "@/hooks/useSparkRole";
 import ImportConnecteamButton from "./ImportConnecteamButton";
+import DismissRecapMenu from "./DismissRecapMenu";
+import DismissedRecapsList from "./DismissedRecapsList";
+import {
+  dismissTargetCount,
+  dismissTargetsForEvents,
+  dismissedMessage,
+  type DismissReason,
+  type DismissTargets,
+} from "./missingRecapDismiss";
 
 /**
  * /recaps/missing — admin drill-down for events that already wrapped
@@ -27,6 +47,11 @@ import ImportConnecteamButton from "./ImportConnecteamButton";
  * The drill-down complements the sidebar "N RECAPS DUE" badge from
  * PR #215 — that badge surfaces the count; this page is where the
  * admin actually clears the queue.
+ *
+ * A row that will never get a recap (no-show, test shift, filed outside
+ * Spark…) can be dismissed with a reason — per ambassador, or for every
+ * row of the selected events. Dismissed rows leave the list, the badge
+ * and the reminders; the "Dismissed" tab lists them and restores them.
  */
 
 type LookbackKey = "7" | "30" | "90";
@@ -52,7 +77,7 @@ const overdueChipStyle = (
       background: "rgba(var(--spark-ink-rgb),0.05)",
       color: "var(--spark-text-meta)",
       border: "1px solid rgba(var(--spark-ink-rgb),0.15)",
-      label: "OVERDUE",
+      label: "Overdue",
     };
   }
   if (hoursOverdue >= 72) {
@@ -60,7 +85,7 @@ const overdueChipStyle = (
       background: "rgba(239,90,42,0.16)",
       color: "var(--spark-orange)",
       border: "1px solid rgba(239,90,42,0.45)",
-      label: `OVERDUE ${Math.floor(hoursOverdue / 24)}d`,
+      label: `Overdue ${Math.floor(hoursOverdue / 24)}d`,
     };
   }
   if (hoursOverdue >= 24) {
@@ -68,23 +93,27 @@ const overdueChipStyle = (
       background: "rgba(255,200,60,0.12)",
       color: "var(--spark-warn-ink, #f5c042)",
       border: "1px solid rgba(255,200,60,0.35)",
-      label: `OVERDUE ${Math.floor(hoursOverdue / 24)}d`,
+      label: `Overdue ${Math.floor(hoursOverdue / 24)}d`,
     };
   }
   return {
     background: "rgba(var(--spark-accent-rgb),0.08)",
     color: "var(--spark-lime)",
     border: "1px solid rgba(var(--spark-accent-rgb),0.25)",
-    label: `OVERDUE ${hoursOverdue}h`,
+    label: `Overdue ${hoursOverdue}h`,
   };
 };
 
-const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
-  tenantId,
-  lookbackDays,
-}) => {
+const Inner: React.FC<{
+  tenantId: string | null;
+  lookbackDays: number;
+  /** Ignite staff: show the Dismiss actions. The server enforces it. */
+  canDismiss: boolean;
+}> = ({ tenantId, lookbackDays, canDismiss }) => {
   const navigate = useNavigate();
+  const environment = useRelayEnvironment();
   const showAlert = useAlertStore((s) => s.showAlert);
+  const showUndoable = useAlertStore((s) => s.showUndoable);
 
   const data = useLazyLoadQuery<MissingRecapEventsQueryType>(
     MissingRecapEventsQuery,
@@ -106,6 +135,87 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
   // "Sending…" without freezing the others.
   const [nudgingId, setNudgingId] = useState<string | null>(null);
 
+  const [commitDismiss] = useMutation<DismissMissingRecapsMutationType>(
+    DismissMissingRecapsMutation,
+  );
+  const [commitRestore] = useMutation<RestoreMissingRecapsMutationType>(
+    RestoreMissingRecapsMutation,
+  );
+  // Which Dismiss control is working: an ambassador row, an event, or "bulk".
+  const [dismissingKey, setDismissingKey] = useState<string | null>(null);
+
+  // Re-pull the list and the sidebar badge after a dismissal or a restore.
+  // fetchQuery writes into the store, so the list updates in place without
+  // dropping back to the loading card.
+  const refresh = () => {
+    void fetchQuery<MissingRecapEventsQueryType>(
+      environment,
+      MissingRecapEventsQuery,
+      { tenantId: tenantId ?? null, lookbackDays },
+      { fetchPolicy: "network-only" },
+    )
+      .toPromise()
+      .catch(() => undefined);
+    void refreshSidebarCounts(environment, tenantId);
+  };
+
+  const restore = (dismissalUuids: ReadonlyArray<string>) => {
+    commitRestore({
+      variables: { input: { dismissalUuids: [...dismissalUuids] } },
+      onCompleted: (res) => {
+        const out = res.restoreMissingRecaps;
+        if (out?.success) {
+          refresh();
+          showAlert("Restored. Back on Missing recaps.", "success");
+        } else {
+          showAlert(out?.message ?? "Could not undo that.", "warning");
+        }
+      },
+      onError: (err) => showAlert(err.message || "Could not undo that.", "error"),
+    });
+  };
+
+  const dismiss = (
+    targets: DismissTargets,
+    reason: DismissReason,
+    note: string,
+    key: string,
+  ) => {
+    if (dismissingKey || dismissTargetCount(targets) === 0) return;
+    setDismissingKey(key);
+    commitDismiss({
+      variables: {
+        input: {
+          ambassadorEventUuids: targets.ambassadorEventUuids,
+          eventUuids: targets.eventUuids,
+          reason,
+          note: note || null,
+        },
+      },
+      onCompleted: (res) => {
+        setDismissingKey(null);
+        const out = res.dismissMissingRecaps;
+        if (!out?.success) {
+          showAlert(out?.message ?? "Could not dismiss that.", "warning");
+          return;
+        }
+        if (key === "bulk") setSelectedEvents(new Set());
+        refresh();
+        const uuids = out.dismissalUuids;
+        // Already dismissed on the server; Undo restores it. Nothing is
+        // held back, so the toast closing does nothing.
+        showUndoable(dismissedMessage(out.dismissedCount), () => undefined, {
+          durationMs: 8000,
+          onUndo: () => restore(uuids),
+        });
+      },
+      onError: (err) => {
+        setDismissingKey(null);
+        showAlert(err.message || "Could not dismiss that.", "error");
+      },
+    });
+  };
+
   // Event-level selection for bulk nudge (nudging an event nudges every
   // assigned BA on it via the same per-BA mutation).
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
@@ -124,6 +234,10 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
   const selectedBaCount = useMemo(
     () =>
       selectedRows.reduce((n, r) => n + r.assignedAmbassadors.length, 0),
+    [selectedRows],
+  );
+  const selectedTargets = useMemo(
+    () => dismissTargetsForEvents(selectedRows),
     [selectedRows],
   );
   const allSelected =
@@ -211,7 +325,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
       <SparkEmptyState
         done
         title="All clear"
-        body={`Every shift in the last ${lookbackDays} day${lookbackDays === 1 ? "" : "s"} has a recap on file.`}
+        body={`No shift in the last ${lookbackDays} day${lookbackDays === 1 ? "" : "s"} is owing a recap.`}
       />
     );
   }
@@ -312,9 +426,9 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
               onChange={toggleAll}
               aria-label="Select all events"
             />
-            ALL
+            All
           </label>
-          {rows.length} EVENT{rows.length === 1 ? "" : "S"} OWING A RECAP
+          {rows.length} event{rows.length === 1 ? "" : "s"} owing a recap
         </span>
         <button
           type="button"
@@ -326,7 +440,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
           }}
           title="Download the visible list as CSV — one row per (event, BA) pair"
         >
-          ⇣ EXPORT CSV
+          Export CSV
         </button>
       </div>
       {selectedEvents.size > 0 && (
@@ -341,8 +455,8 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
             className="mono text-[11px]"
             style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}
           >
-            {selectedEvents.size} SELECTED · {selectedBaCount} BA
-            {selectedBaCount === 1 ? "" : "S"}
+            {selectedEvents.size} selected · {selectedBaCount} ambassador
+            {selectedBaCount === 1 ? "" : "s"}
           </span>
           <button
             type="button"
@@ -358,6 +472,17 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
           >
             {isBulkNudging ? "Nudging…" : "Nudge selected"}
           </button>
+          {canDismiss && (
+            <DismissRecapMenu
+              label="Dismiss selected"
+              busy={dismissingKey === "bulk"}
+              disabled={isBulkNudging || dismissingKey !== null}
+              title="No recap is owed for any row of the selected events. Choose a reason."
+              onDismiss={(reason, note) =>
+                dismiss(selectedTargets, reason, note, "bulk")
+              }
+            />
+          )}
           <button
             type="button"
             onClick={() => setSelectedEvents(new Set())}
@@ -365,7 +490,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
             className="mono text-[10px] disabled:opacity-50"
             style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
           >
-            ✕ CLEAR
+            Clear
           </button>
         </div>
       )}
@@ -435,7 +560,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                       color: "var(--spark-text-meta)",
                     }}
                   >
-                    → REQUEST
+                    Open request
                   </button>
                 )}
               </div>
@@ -472,8 +597,25 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                     color: "var(--spark-lime)",
                   }}
                 >
-                  + FILE NOW →
+                  File now
                 </button>
+                {canDismiss && (
+                  <span className="inline-block ml-3 align-middle">
+                    <DismissRecapMenu
+                      busy={dismissingKey === row.eventUuid}
+                      disabled={dismissingKey !== null}
+                      title="No recap is owed for this shift. Choose a reason."
+                      onDismiss={(reason, note) =>
+                        dismiss(
+                          { ambassadorEventUuids: [], eventUuids: [row.eventUuid] },
+                          reason,
+                          note,
+                          row.eventUuid,
+                        )
+                      }
+                    />
+                  </span>
+                )}
               </div>
             ) : (
               <div
@@ -488,12 +630,12 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                   return (
                     <div
                       key={ba.ambassadorEventUuid}
-                      className="flex items-center gap-3 px-3 py-2"
+                      className="flex items-center gap-x-3 gap-y-2 px-3 py-2 flex-wrap"
                       style={{
                         borderColor: "var(--spark-border)",
                       }}
                     >
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0" style={{ minWidth: "9rem" }}>
                         <p className="text-sm truncate">
                           {ba.name}
                           {!ba.isApproved && (
@@ -504,7 +646,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                                 color: "rgba(255,200,60,0.85)",
                               }}
                             >
-                              · PENDING
+                              · Pending
                             </span>
                           )}
                         </p>
@@ -522,38 +664,57 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                           </p>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          nudge(ba.ambassadorEventUuid, venueLabel, ba.name)
-                        }
-                        disabled={busy || isNudging || isBulkNudging}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-                        style={{
-                          background: "transparent",
-                          color: "var(--spark-text)",
-                          border: "1px solid var(--spark-border)",
-                        }}
-                        title="Push 'Don't forget your recap' to this BA"
-                      >
-                        {busy ? "Sending…" : "Nudge"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate(
-                            `/recap/create?event=${row.eventUuid}&ambassador=${ba.ambassadorUuid}&q=${encodeURIComponent(row.eventName)}`,
-                          )
-                        }
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                        style={{
-                          background: "var(--spark-lime)",
-                          color: "var(--spark-on-accent)",
-                        }}
-                        title="Open the recap form pre-scoped to this BA + event"
-                      >
-                        File for them
-                      </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            nudge(ba.ambassadorEventUuid, venueLabel, ba.name)
+                          }
+                          disabled={busy || isNudging || isBulkNudging}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                          style={{
+                            background: "transparent",
+                            color: "var(--spark-text)",
+                            border: "1px solid var(--spark-border)",
+                          }}
+                          title="Push 'Don't forget your recap' to this BA"
+                        >
+                          {busy ? "Sending…" : "Nudge"}
+                        </button>
+                        {canDismiss && (
+                          <DismissRecapMenu
+                            busy={dismissingKey === ba.ambassadorEventUuid}
+                            disabled={dismissingKey !== null}
+                            onDismiss={(reason, note) =>
+                              dismiss(
+                                {
+                                  ambassadorEventUuids: [ba.ambassadorEventUuid],
+                                  eventUuids: [],
+                                },
+                                reason,
+                                note,
+                                ba.ambassadorEventUuid,
+                              )
+                            }
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/recap/create?event=${row.eventUuid}&ambassador=${ba.ambassadorUuid}&q=${encodeURIComponent(row.eventName)}`,
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{
+                            background: "var(--spark-lime)",
+                            color: "var(--spark-on-accent)",
+                          }}
+                          title="Open the recap form pre-scoped to this BA + event"
+                        >
+                          File for them
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -570,6 +731,11 @@ export default function SparkRecapsMissing() {
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const [lookback, setLookback] = useState<LookbackKey>("30");
   const lookbackDays = Number(lookback);
+  // Dismissing is for Ignite staff. Brand users never reach this page in
+  // admin mode, and the server refuses them regardless.
+  const { isAdmin } = useSparkRole();
+  const [view, setView] = useState<"missing" | "dismissed">("missing");
+  const environment = useRelayEnvironment();
 
   if (!showsMissingRecaps(tenantSlug, tenantMeta?.requestUrlName)) {
     return <Navigate to="/recaps/list" replace />;
@@ -577,7 +743,7 @@ export default function SparkRecapsMissing() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-5 spark-scale">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
             <p
@@ -587,7 +753,7 @@ export default function SparkRecapsMissing() {
                 color: "var(--spark-text-meta)",
               }}
             >
-              RECAPS · MISSING
+              Recaps · Missing
             </p>
             <h1 className="display text-2xl font-bold">Shifts still owing a recap</h1>
             <p
@@ -596,6 +762,9 @@ export default function SparkRecapsMissing() {
             >
               Events that already wrapped but don't have a recap on file. Nudge the
               BA via push, or file the recap on their behalf.
+              {isAdmin
+                ? " Dismiss a row when no recap is owed; it can be restored."
+                : ""}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -607,7 +776,7 @@ export default function SparkRecapsMissing() {
                 color: "var(--spark-text-meta)",
               }}
             >
-              LOOKBACK
+              Lookback
             </span>
             <select
               value={lookback}
@@ -628,18 +797,65 @@ export default function SparkRecapsMissing() {
           </div>
         </div>
 
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center"
-              style={{ color: "var(--spark-text-meta)" }}
+        {isAdmin && (
+          <div className="pill-group" role="tablist" aria-label="Missing recaps">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === "missing"}
+              className={`pill-btn ${view === "missing" ? "on" : ""}`}
+              onClick={() => setView("missing")}
             >
-              Loading missing recaps…
-            </div>
-          }
-        >
-          <Inner tenantId={tenantId ?? null} lookbackDays={lookbackDays} />
-        </Suspense>
+              Missing
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === "dismissed"}
+              className={`pill-btn ${view === "dismissed" ? "on" : ""}`}
+              onClick={() => setView("dismissed")}
+            >
+              Dismissed
+            </button>
+          </div>
+        )}
+
+        {isAdmin && view === "dismissed" ? (
+          <DismissedRecapsList
+            tenantId={tenantId ?? null}
+            lookbackDays={lookbackDays}
+            onRestored={() => {
+              // The Missing tab reads the store: refetch so the restored
+              // row is there when the tab is opened, and fix the badge.
+              void fetchQuery<MissingRecapEventsQueryType>(
+                environment,
+                MissingRecapEventsQuery,
+                { tenantId: tenantId ?? null, lookbackDays },
+                { fetchPolicy: "network-only" },
+              )
+                .toPromise()
+                .catch(() => undefined);
+              void refreshSidebarCounts(environment, tenantId);
+            }}
+          />
+        ) : (
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-8 text-center"
+                style={{ color: "var(--spark-text-meta)" }}
+              >
+                Loading missing recaps…
+              </div>
+            }
+          >
+            <Inner
+              tenantId={tenantId ?? null}
+              lookbackDays={lookbackDays}
+              canDismiss={isAdmin}
+            />
+          </Suspense>
+        )}
       </div>
     </Layout>
   );

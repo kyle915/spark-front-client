@@ -12,6 +12,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Maps, charts and a simpler sign-in",
     items: [
       "Sign-in is one short form with a Google button. The pages for resetting a password match it.",
+      "Missing recaps can be dismissed with a reason, and restored. A dismissed one leaves the list, the counts and the reminders.",
       "Today has a map with a pin for every event, coloured by where the shift stands. Click a pin for the address and directions.",
       "Dashboards chart consumers sampled per week. Reports break the same count down by store, state and product, and the charts add up to the number at the top.",
       "Purchase intent now reads as a share of the people who were asked.",
