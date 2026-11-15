@@ -3,6 +3,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
 import StaffingRoster from "./StaffingRoster";
+import FindAmbassadors from "./FindAmbassadors";
 import { shiftTime } from "@/components/dashboard/todayAttention";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
@@ -874,6 +875,8 @@ export default function SparkStaffingBoard() {
           </button>
         </div>
       </div>
+
+      <FindAmbassadors />
 
       <Suspense
         fallback={
