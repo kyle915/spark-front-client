@@ -4,11 +4,10 @@ import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@store/authStore";
 import { GoogleButton } from "@auth/components/GoogleButton";
 import { requestMagicLink } from "@/auth/MagicLinkButton";
-import { SparkMark } from "@/recap/SparkMark";
 import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
 import { playArrival } from "./arrivalSweep";
-import "./signIn.css";
+import { AuthShell } from "./AuthShell";
 
 /**
  * Sign in. A light form beside a dark brand panel.
@@ -71,8 +70,6 @@ const Login = () => {
       setSending(false);
     }
   };
-
-  const year = new Date().getFullYear();
 
   const form = (
         <form className="signin-form" onSubmit={submit} noValidate>
@@ -173,40 +170,11 @@ const Login = () => {
     </p>
   );
 
-  const foot = (
-    <footer className="signin-foot">
-      <span>© {year} Ignite Productions LLC</span>
-      <Link to="/privacy-policy">Privacy</Link>
-      <Link to="/terms-of-service">Terms</Link>
-    </footer>
-  );
-
   return (
-    <div className="signin-page">
-      <header className="signin-top">
-        <a
-          className="signin-home"
-          href="https://www.igniteproductions.co"
-          aria-label="Ignite Productions home"
-        >
-          <img src="/legal/ignite-full-white.png" alt="Ignite Productions" />
-        </a>
-      </header>
-
-      <main className="signin-col">
-        <div className="signin-intro">
-          <span className="signin-mark">
-            <SparkMark height={88} />
-          </span>
-        </div>
-        <div className="signin-entry">
-          {form}
-          {shiftNote}
-        </div>
-      </main>
-
-      {foot}
-    </div>
+    <AuthShell>
+      {form}
+      {shiftNote}
+    </AuthShell>
   );
 };
 

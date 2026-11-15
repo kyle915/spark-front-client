@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import SparkLoginCreative from "@/auth/SparkLoginCreative";
+import { AuthShell } from "./AuthShell";
+import { failureMessage, newPasswordProblem } from "./authCopy";
 
 /**
  * /reset-password/:token — Set a new password. We POST the token +
@@ -8,6 +9,9 @@ import SparkLoginCreative from "@/auth/SparkLoginCreative";
  * signature, expiry, and password complexity, then sets the new
  * hash. On success we redirect to /login.
  */
+const SAVE_FAILED =
+  "Could not save your password. The link may have expired.";
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const { token } = useParams<{ token: string }>();
@@ -20,15 +24,12 @@ export default function ResetPassword() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
-      setError("Missing reset token.");
+      setError("This reset link is incomplete. Ask for a new one.");
       return;
     }
-    if (password1.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-    if (password1 !== password2) {
-      setError("Passwords don't match.");
+    const problem = newPasswordProblem(password1, password2);
+    if (problem) {
+      setError(problem);
       return;
     }
     setBusy(true);
@@ -59,178 +60,88 @@ export default function ResetPassword() {
       }
       const result = json?.data?.confirmPasswordReset;
       if (!result?.success) {
-        throw new Error(result?.message ?? "Couldn't update password.");
+        throw new Error(result?.message || SAVE_FAILED);
       }
       setDone(true);
       window.setTimeout(() => navigate("/login", { replace: true }), 2500);
     } catch (e) {
-      setError((e as Error).message);
+      setError(failureMessage(e, SAVE_FAILED));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background:
-          "radial-gradient(circle at 20% 10%, rgba(242,243,238,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
-      }}
-    >
-      <div
-        className="flex flex-col lg:flex-row w-full max-w-5xl rounded-3xl shadow-xl overflow-hidden"
-        style={{
-          background: "#0A0B0D",
-          minHeight: 680,
-          boxShadow:
-            "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(242,243,238,0.15), 0 0 80px rgba(242,243,238,0.10)",
-        }}
-      >
-        <div
-          className="spark-login-form flex flex-col justify-center items-center w-full lg:w-1/2 px-8 sm:px-12 md:px-16 py-10"
-          style={{ background: "#0A0B0D", color: "#F5F2EC" }}
-        >
-          <div className="w-full max-w-sm">
-            <img
-              src="/legal/spark-logo.png"
-              alt="Spark by Ignite"
-              style={{
-                height: 36,
-                width: "auto",
-                display: "block",
-                margin: "0 auto 20px",
-                filter: "invert(1) hue-rotate(180deg)",
-              }}
-            />
-            <p
-              style={{
-                fontFamily: "var(--font-mono, monospace)",
-                fontSize: 10,
-                letterSpacing: "0.28em",
-                color: "#f2f3ee",
-                textTransform: "uppercase",
-                textAlign: "center",
-              }}
-            >
-              New Password
-            </p>
-            <h1
-              style={{
-                fontFamily: "var(--font-display, sans-serif)",
-                fontWeight: 800,
-                fontSize: 32,
-                letterSpacing: "-0.03em",
-                color: "#F5F2EC",
-                textAlign: "center",
-                marginTop: 6,
-                marginBottom: 24,
-                lineHeight: 1.1,
-              }}
-            >
-              Set a new password.
-            </h1>
-
-            {done ? (
-              <div
-                className="rounded-xl p-4 text-center"
-                style={{
-                  background: "rgba(242,243,238,0.08)",
-                  border: "1px solid rgba(242,243,238,0.4)",
-                }}
-              >
-                <p
-                  style={{
-                    fontFamily: "var(--font-mono, monospace)",
-                    fontSize: 10,
-                    letterSpacing: "0.22em",
-                    color: "#f2f3ee",
-                  }}
-                >
-                  PASSWORD UPDATED
-                </p>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "rgba(245,242,236,0.8)",
-                    marginTop: 8,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  You're all set. Redirecting you to sign in…
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={submit} className="space-y-4">
-                <div className="form-control w-full">
-                  <label className="label">
-                    <span className="label-text">New Password</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    placeholder="At least 8 characters"
-                    value={password1}
-                    onChange={(e) => setPassword1(e.target.value)}
-                    className="input input-bordered w-full"
-                  />
-                </div>
-                <div className="form-control w-full">
-                  <label className="label">
-                    <span className="label-text">Confirm Password</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    placeholder="Type it again"
-                    value={password2}
-                    onChange={(e) => setPassword2(e.target.value)}
-                    className="input input-bordered w-full"
-                  />
-                </div>
-                {error && (
-                  <p
-                    style={{
-                      fontFamily: "var(--font-mono, monospace)",
-                      fontSize: 11,
-                      color: "#FF5A1F",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    {error}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="btn btn-primary"
-                  style={{ width: "100%", borderRadius: 999 }}
-                >
-                  {busy ? "Saving…" : "Set new password →"}
-                </button>
-              </form>
-            )}
-
-            <div className="mt-10 text-center">
-              <Link
-                to="/login"
-                style={{
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontSize: 11,
-                  letterSpacing: "0.18em",
-                  color: "rgba(245,242,236,0.55)",
-                }}
-              >
-                ← BACK TO SIGN IN
-              </Link>
-            </div>
-          </div>
+    <AuthShell>
+      {done ? (
+        <div className="signin-form">
+          <h1 className="signin-title">Password updated</h1>
+          <p className="signin-note" role="status">
+            Your new password is saved. Taking you to sign in.
+          </p>
+          <Link to="/login" className="signin-link signin-center">
+            Back to sign in
+          </Link>
         </div>
+      ) : (
+        <form className="signin-form" onSubmit={submit}>
+          <h1 className="signin-title">Set a new password</h1>
+          <p className="signin-lede">Use at least 8 characters.</p>
 
-        <SparkLoginCreative colorScheme="dark" onColorScheme={() => {}} />
-      </div>
-    </div>
+          <div className="signin-field">
+            <label className="signin-label" htmlFor="reset-password">
+              New password
+            </label>
+            <input
+              id="reset-password"
+              className="signin-input"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={password1}
+              onChange={(e) => setPassword1(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="signin-field">
+            <label className="signin-label" htmlFor="reset-password-again">
+              Type it again
+            </label>
+            <input
+              id="reset-password-again"
+              className="signin-input"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+            />
+          </div>
+
+          {error ? (
+            <p className="signin-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <button type="submit" className="signin-primary" disabled={busy}>
+            {busy ? "Saving…" : "Save password"}
+          </button>
+
+          <Link to="/login" className="signin-link signin-center">
+            Back to sign in
+          </Link>
+        </form>
+      )}
+      {done ? null : (
+        <p className="signin-shift">
+          <strong>Link not working?</strong> Reset links expire.{" "}
+          <Link to="/forgot-password" className="signin-link">
+            Send a new one
+          </Link>
+        </p>
+      )}
+    </AuthShell>
   );
 }

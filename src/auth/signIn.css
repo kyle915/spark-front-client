@@ -18,6 +18,11 @@
   --si-lime: #c4d82e;
   --si-flag: #b3261e;
   --si-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* The same faces the Spark theme sets. Named here too so a page reached
+     straight from an email (reset, verify), before any theme is chosen, is
+     set in the same type as sign in. */
+  --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   min-height: 100dvh;
   background: var(--si-bg);
   color: var(--si-ink);
