@@ -20,6 +20,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Menu counts are small steady badges instead of flashing dots.",
       "Ambassadors get a text before a shift, and a reminder when a recap is still missing.",
       "Someone who clocks in after the scheduled end is no longer clocked out right away.",
+      "Account map: one pin per store instead of one per chain, with pins that group as you zoom out and a search by store, city or address.",
+      "An uploaded account list is saved for the whole team, not only in the browser that uploaded it.",
+      "Maps use a quieter style, so pins stand out.",
+      "Answers from Ask AI for clients are built from approved recaps only.",
+      "An email that fails to send is tried again instead of being dropped.",
     ],
   },
   {
