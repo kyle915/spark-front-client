@@ -1,11 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Sparkles,
-  MessageSquare,
-  TrendingUp,
-  Package,
-  Brain,
-} from "lucide-react";
+import { MessageSquare, TrendingUp, Package } from "lucide-react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 
 import { AiInsightCard } from "./AiInsightCard";
@@ -212,15 +206,6 @@ function AiInsightsWithAggregates({
     <div className="w-full relative rounded-2xl p-0.5 overflow-hidden">
       <div
         className="
-          absolute inset-0 rounded-2xl 
-          blur-[28px]
-          bg-linear-to-r from-primary via-yellow-300 to-cyan-400
-          dark:bg-linear-to-r dark:from-success dark:via-indigo-500 dark:to-green-400
-          animate-border-flow
-        "
-      />
-      <div
-        className="
           relative rounded-2xl 
           bg-base-100 dark:bg-base-100
           border border-base-300/60 
@@ -230,12 +215,9 @@ function AiInsightsWithAggregates({
         "
       >
         <div className="flex items-center gap-3 px-6 pt-6 transition-colors duration-300">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-primary to-secondary flex items-center justify-center shadow-sm">
-            <Brain className="text-white" size={22} />
-          </div>
           <h2 className="text-2xl font-extrabold">AI-Powered Insights</h2>
           <span className="ml-3 badge badge-primary badge-lg font-semibold gap-1 rounded-full">
-            <Sparkles size={14} /> {totalNewInsights} New
+            {totalNewInsights} New
           </span>
         </div>
 

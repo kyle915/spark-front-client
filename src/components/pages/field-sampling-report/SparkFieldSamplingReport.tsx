@@ -492,7 +492,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40"
             style={{ background: "var(--spark-lime, #f2f3ee)", color: "var(--spark-on-accent)" }}
           >
-            {summaryInFlight ? "Summarizing…" : "✦ Summarize with AI"}
+            {summaryInFlight ? "Summarizing…" : "Summarize with AI"}
           </button>
         </div>
 

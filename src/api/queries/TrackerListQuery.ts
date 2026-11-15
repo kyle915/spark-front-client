@@ -69,6 +69,9 @@ export const TrackerListQuery = graphql`
           recapsFiledCount
           recapEventUuid
           eventsCount
+          # True when staff dismissed every event on the request as owing
+          # no recap, so the row does not show "Recap due".
+          recapDismissed
         }
       }
     }

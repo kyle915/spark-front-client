@@ -12,6 +12,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Maps, charts and a simpler sign-in",
     items: [
       "Sign-in is one short form with a Google button. The pages for resetting a password match it.",
+      "Missing recaps can be dismissed with a reason, and restored. A dismissed one leaves the list, the counts and the reminders.",
       "Today has a map with a pin for every event, coloured by where the shift stands. Click a pin for the address and directions.",
       "Dashboards chart consumers sampled per week. Reports break the same count down by store, state and product, and the charts add up to the number at the top.",
       "Purchase intent now reads as a share of the people who were asked.",
@@ -31,6 +32,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "The weekly chart shows the last 12 completed weeks, so it no longer dips for a week that is still being approved.",
       "More detail on the dashboard shows consumers sampled per event.",
       "Staff: Weekly summaries (under Outputs) drafts each client's week to review, edit and copy. Nothing is sent from it.",
+      "The recap page's action bar stays on one row on small screens, with share, edit, archive and delete under More.",
     ],
   },
   {

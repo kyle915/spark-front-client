@@ -5356,6 +5356,53 @@ type MissingRecapEventType {
   assignedAmbassadors: [MissingRecapAmbassadorInfo!]!
 }
 
+type DismissedMissingRecapType {
+  dismissalUuid: ID!
+  eventUuid: ID!
+  eventName: String!
+  address: String
+  stateCode: String
+  date: String
+  endTime: String
+  ambassadorUuid: ID
+  ambassadorName: String
+  ambassadorEmail: String
+  reason: String!
+  reasonLabel: String!
+  note: String!
+  dismissedByName: String!
+  dismissedAt: String!
+  recapFiled: Boolean!
+}
+
+type DismissMissingRecapsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  dismissedCount: Int!
+  dismissalUuids: [ID!]!
+}
+
+type RestoreMissingRecapsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  restoredCount: Int!
+}
+
+input DismissMissingRecapsInput {
+  clientMutationId: ID = null
+  ambassadorEventUuids: [ID!]! = []
+  eventUuids: [ID!]! = []
+  reason: String!
+  note: String = null
+}
+
+input RestoreMissingRecapsInput {
+  clientMutationId: ID = null
+  dismissalUuids: [ID!]!
+}
+
 type MonthlyDataPoint {
   month: String!
   consumersSampled: Int!
@@ -5496,6 +5543,8 @@ type Mutation {
   generateCampaignReportPdf(input: GenerateCampaignReportPdfInput!): RecapExportResponse!
   generateCustomRecapPdf(input: GenerateCustomRecapPdfInput!): CustomRecapFileDetailResponse!
   reassignRecapEvent(input: ReassignRecapEventInput!): RecapDetailResponse!
+  dismissMissingRecaps(input: DismissMissingRecapsInput!): DismissMissingRecapsResponse!
+  restoreMissingRecaps(input: RestoreMissingRecapsInput!): RestoreMissingRecapsResponse!
   nudgeAmbassadorForRecap(input: NudgeAmbassadorForRecapInput!): NudgeRecapResponse!
   exportRecapsXlsx(input: ExportRecapsXlsxInput!): RecapExportResponse!
   exportRecapXlsx(input: ExportRecapXlsxInput!): RecapExportResponse!
@@ -6350,6 +6399,7 @@ type Query {
   recapSection(id: ID = null, uuid: ID = null): RecapSection
   executiveSummary(tenantId: ID = null, windowDays: Int! = 7): ExecutiveSummaryType
   missingRecapEvents(tenantId: ID = null, lookbackDays: Int! = 30): [MissingRecapEventType!]!
+  dismissedMissingRecaps(tenantId: ID = null, lookbackDays: Int! = 30): [DismissedMissingRecapType!]!
   recapEventOptions(tenantId: ID = null, tenantUuid: ID = null, q: String = null, first: Int = null, after: String = null, last: Int = null, before: String = null): EventCountableConnection!
   campaignReport(requestId: ID!): CampaignReport
   campaignReportAiSummary(requestId: ID!): CampaignReportAiSummary!
@@ -7382,6 +7432,7 @@ type Request implements Node {
   events: [Event!]!
   recapsFiledCount: Int!
   recapEventUuid: String
+  recapDismissed: Boolean!
   eventsCount: Int!
   activityLog: [RequestActivityLogEntry!]!
 }
