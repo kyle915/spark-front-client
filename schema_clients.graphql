@@ -5058,6 +5058,9 @@ type LiveBoardShift {
   noShows: Int!
   pendingApproval: Int!
   lastClockInTapAt: String
+  lat: Float
+  lng: Float
+  locationSource: String
 }
 
 """

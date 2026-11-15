@@ -17,6 +17,9 @@ export const LiveShiftBoardQuery = graphql`
       endLocal
       lastClockInTapAt
       address
+      lat
+      lng
+      locationSource
       store
       requestUuid
       onClock

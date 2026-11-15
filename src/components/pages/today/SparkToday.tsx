@@ -1,14 +1,14 @@
-import { clientSafeBaName } from "@/utils/clientSafeBaName";
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
-import { useNavigate } from "react-router";
 import {
-  APIProvider,
-  Map as GMap,
-  AdvancedMarker,
-  InfoWindow,
-} from "@vis.gl/react-google-maps";
-import { SparkGoogleClusters } from "@/shared/map/SparkGoogleClusters";
+  Suspense,
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
+import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { EventsQuery } from "@/api/queries/EventsQuery";
@@ -19,78 +19,157 @@ import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
-import {
-  assigneesForEvent,
-  clockStateLabel,
-  type TodayShift,
-} from "./todayShiftStatus";
-import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
+import useBaLabel from "@/hooks/useBaLabel";
+import { SparkBentoTile } from "@/shared/SparkStatBlocks";
 import { todayGroundKpis } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import TodayMapView, { MapLegend, StatusPin } from "./TodayMapView";
+import {
+  STATUS_META,
+  baMarkers,
+  buildTodayEvents,
+  eventPins,
+  fitKey as pinSetKey,
+  localDayIso,
+  mapCoverage,
+  peopleLines,
+  todayCounts,
+  type BoardRow,
+  type ListedEvent,
+  type PingRow,
+  type TodayEvent,
+} from "./todayMap";
 
 /**
- * "Today's events" — list of events happening today with a Google Maps
- * panel showing event pins and live check-in GPS positions.
+ * Today: every event on today's board as a pin and a row. The pin and the
+ * row say the same thing (one status per event), and each leads to the
+ * other. All of the deciding happens in todayMap.ts.
  */
 
-const fmtTime12 = (raw: string | null | undefined): string => {
-  if (!raw) return "";
-  // raw may be a full venue-local datetime ("2026-05-29T07:00:00") or "HH:MM".
-  // Grab the time-of-day so split(":") doesn't read the date as the hour.
-  const match = String(raw).match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
-  if (!match) return "";
-  const hh = parseInt(match[1], 10);
-  const mm = match[2];
-  const ampm = hh >= 12 ? "PM" : "AM";
-  const h12 = ((hh + 11) % 12) + 1;
-  return mm === "00" ? `${h12} ${ampm}` : `${h12}:${mm} ${ampm}`;
-};
+const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-type Shift = {
-  uuid: string;
-  name: string;
-  startTime: string;
-  endTime: string;
-  retailer: string;
-  state: string;
-  address: string;
-  coords: { lat: number; lng: number } | null;
-  status: string;
-};
+const plural = (n: number, one: string, many: string): string =>
+  n === 1 ? one : many;
 
-type Ping = {
-  uuid: string;
-  lat: number;
-  lng: number;
-  baName: string;
-  baUuid: string;
-  eventName: string;
-  eventUuid: string;
-  recordedAt: string;
-  freshnessMin: number;
-};
-
-const clockTone = (status: string): string => {
-  if (status === "clocked_in") return "var(--spark-lime)";
-  if (status === "clocked_out") return "var(--spark-sky, #6db3f2)";
-  if (status === "no_show" || status === "missed") return "var(--spark-orange)";
-  return "rgba(var(--spark-ink-rgb),0.55)";
-};
-
-const minutesSince = (iso: string): number => {
-  try {
-    const t = new Date(iso).getTime();
-    return Math.max(0, Math.round((Date.now() - t) / 60_000));
-  } catch {
-    return 999;
-  }
-};
+function EventRow({
+  event,
+  selected,
+  people,
+  onShowOnMap,
+  rowRef,
+}: {
+  event: TodayEvent;
+  selected: boolean;
+  people: string[];
+  onShowOnMap: (uuid: string) => void;
+  rowRef: (el: HTMLLIElement | null) => void;
+}) {
+  const onMap = event.position !== null;
+  const noShow = event.status === "no_show";
+  const body = (
+    <div className="flex items-start gap-3">
+      <span className="mt-0.5">
+        <StatusPin status={event.status} size={20} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-sm truncate">{event.name}</p>
+        <p
+          className="text-xs mt-0.5 truncate"
+          style={{
+            color:
+              noShow || event.status === "late"
+                ? "var(--spark-orange)"
+                : "var(--spark-text-secondary)",
+          }}
+        >
+          {STATUS_META[event.status].label}
+          {event.place ? (
+            <span style={{ color: "var(--spark-text-meta)" }}> · {event.place}</span>
+          ) : null}
+        </p>
+        {event.address ? (
+          <p
+            className="text-xs mt-1 truncate"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
+            {event.address}
+          </p>
+        ) : null}
+        {people.map((line, i) => (
+          <p
+            key={`${i}-${line}`}
+            className="text-xs mt-1 truncate"
+            style={{ color: "var(--spark-text-secondary)" }}
+          >
+            {line}
+          </p>
+        ))}
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-semibold tabular-nums">
+          {event.startLabel || "No time"}
+        </p>
+        {event.endLabel ? (
+          <p
+            className="text-xs mt-0.5 tabular-nums"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
+            to {event.endLabel}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+  return (
+    <li
+      ref={rowRef}
+      aria-current={selected ? "true" : undefined}
+      style={{
+        borderBottom: "1px solid var(--spark-border)",
+        background: selected ? "rgba(var(--spark-ink-rgb), 0.04)" : undefined,
+        boxShadow: selected ? "inset 3px 0 0 var(--spark-text)" : undefined,
+      }}
+    >
+      {onMap ? (
+        <button
+          type="button"
+          onClick={() => onShowOnMap(event.uuid)}
+          title="Show on the map"
+          className="spark-row-hover block w-full text-left px-4 pt-3 pb-1.5 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2"
+          style={{ color: "var(--spark-text)", outlineColor: "var(--spark-text)" }}
+        >
+          {body}
+        </button>
+      ) : (
+        <div className="px-4 pt-3 pb-1.5">{body}</div>
+      )}
+      <p
+        className="flex flex-wrap gap-x-3 px-4 pb-3 pl-12 text-xs"
+        style={{ color: "var(--spark-text-meta)" }}
+      >
+        {onMap ? null : <span>No map position</span>}
+        <Link
+          to={`/event/view/${event.uuid}`}
+          className="underline"
+          style={{ color: "var(--spark-text-secondary)" }}
+        >
+          Open event
+        </Link>
+      </p>
+    </li>
+  );
+}
 
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const baLabel = useBaLabel();
+  const nameOf = useCallback((name: string) => baLabel(name), [baLabel]);
+
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -119,7 +198,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     { fetchPolicy: "store-or-network" },
   );
 
-  const shifts: Shift[] = useMemo(() => {
+  const listed: ListedEvent[] = useMemo(() => {
     return (
       data?.events?.edges
         ?.map((e) => e?.node)
@@ -132,508 +211,280 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         ?.map((n) => {
           // Coordinates are stored as [lat, lng] (ArrayField of floats).
           const c = n.coordinates ?? null;
-          const coords =
-            c && c.length >= 2
-              ? { lat: c[0] as number, lng: c[1] as number }
-              : null;
           return {
             uuid: String(n.uuid),
-            name: n.name ?? "Untitled",
-            startTime: fmtTime12(n.startTime),
-            endTime: fmtTime12(n.endTime),
-            retailer: n.request?.retailer?.name ?? "—",
-            state: "",
+            name: n.name ?? "",
+            retailer: n.request?.retailer?.name ?? "",
             address: n.address ?? "",
-            coords,
-            status: n.status?.name ?? "Scheduled",
+            date: localDayIso(today),
+            startTime: n.startTime ?? null,
+            endTime: n.endTime ?? null,
+            coords:
+              c && c.length >= 2
+                ? { lat: c[0] as number, lng: c[1] as number }
+                : null,
           };
         }) ?? []
     );
   }, [data, today]);
 
-  // GPS pings — re-fetches every 60 seconds so the map stays live.
-  // Must be useEffect (not useMemo) so the interval cleans up on unmount.
-  const [pingTick, setPingTick] = useState(0);
+  // Re-read the board and phone locations every minute. The refresh runs as
+  // a transition so the page (and the map's camera) stays put while it loads
+  // instead of dropping back to the skeleton. Must be useEffect so the
+  // interval cleans up on unmount.
+  const [tick, setTick] = useState(0);
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const id = window.setInterval(() => setPingTick((t) => t + 1), 60_000);
+    const id = window.setInterval(() => {
+      startTransition(() => {
+        setTick((t) => t + 1);
+        setNow(new Date());
+      });
+    }, 60_000);
     return () => window.clearInterval(id);
   }, []);
+
   const pingData = useLazyLoadQuery<RecentLocationPingsQueryType>(
     RecentLocationPingsQuery,
     // 120 min: walk-up may only ping at clock-in + while the check-in
     // tab stays open; 30 min dropped anyone who clocked early and put
     // the phone away.
     { withinMinutes: 120, tenantId: tenantId || null },
-    { fetchPolicy: "network-only", fetchKey: pingTick },
+    { fetchPolicy: "network-only", fetchKey: tick },
   );
-  const pings: Ping[] = useMemo(() => {
-    // Brand users never get ambassador GPS — pins and live names are
-    // an Ignite-ops tool.
-    if (isClient) return [];
-    const rows = pingData?.recentLocationPings ?? [];
-    return rows.map((p) => ({
-      uuid: String(p.uuid),
-      lat: p.lat,
-      lng: p.lng,
-      baName: p.ambassadorName,
-      baUuid: String(p.ambassadorUuid),
-      eventName: p.eventName,
-      eventUuid: String(p.eventUuid),
-      recordedAt: p.recordedAt,
-      freshnessMin: minutesSince(p.recordedAt),
-    }));
-  }, [pingData, isClient]);
-  const [openPing, setOpenPing] = useState<string | null>(null);
-
   const shiftData = useLazyLoadQuery<LiveShiftBoardQueryType>(
     LiveShiftBoardQuery,
     { tenantId: tenantId || null },
-    { fetchPolicy: "store-and-network", fetchKey: pingTick },
+    { fetchPolicy: "store-and-network", fetchKey: tick },
   );
-  const liveShifts: TodayShift[] = useMemo(() => {
+
+  const board: BoardRow[] = useMemo(() => {
     return (shiftData?.liveShiftBoard ?? [])
       .filter((row): row is NonNullable<typeof row> => Boolean(row))
       .map((row) => ({
         eventUuid: String(row.eventUuid),
+        eventName: row.eventName ?? "",
+        brandName: row.brandName ?? "",
+        store: row.store ?? "",
+        address: row.address ?? "",
+        date: row.date ?? null,
+        startTime: row.startTime ?? null,
+        endTime: row.endTime ?? null,
+        startLocal: row.startLocal ?? null,
+        endLocal: row.endLocal ?? null,
+        lat: row.lat ?? null,
+        lng: row.lng ?? null,
+        locationSource: row.locationSource ?? null,
         assigned: (row.assigned ?? [])
           .filter((ba): ba is NonNullable<typeof ba> => Boolean(ba))
           .map((ba) => ({
             ambassadorUuid: String(ba.ambassadorUuid),
             name: ba.name ?? "",
             status: ba.status ?? "",
+            clockInAt: ba.clockInAt ?? null,
+            clockOutAt: ba.clockOutAt ?? null,
+            lat: ba.lat ?? null,
+            lng: ba.lng ?? null,
+            locationAt: ba.locationAt ?? null,
           })),
       }));
   }, [shiftData]);
+
+  const events = useMemo(
+    () => buildTodayEvents({ listed, board, now }),
+    [listed, board, now],
+  );
+  const pins = useMemo(() => eventPins(events), [events]);
+
+  // Brand users never get ambassador phone locations: the markers are an
+  // Ignite-ops tool. Their names come through `useBaLabel` ("First L.").
+  const bas = useMemo(() => {
+    if (isClient) return [];
+    const pings: PingRow[] = (pingData?.recentLocationPings ?? []).map((p) => ({
+      ambassadorUuid: String(p.ambassadorUuid),
+      eventUuid: String(p.eventUuid),
+      lat: p.lat,
+      lng: p.lng,
+      recordedAt: p.recordedAt,
+    }));
+    return baMarkers(events, pings, now);
+  }, [isClient, pingData, events, now]);
+
+  const counts = useMemo(() => todayCounts(events, now), [events, now]);
+  const coverage = useMemo(() => mapCoverage(events, bas.length), [events, bas]);
+  const scope = `${tenantId ?? "all"}|${localDayIso(today)}`;
+  const pinSet = useMemo(() => pinSetKey(scope, pins, bas), [scope, pins, bas]);
+
   const clockSummary = useMemo(() => {
-    let clockedIn = 0;
     let clockedOut = 0;
     let noShows = 0;
-    for (const shift of liveShifts) {
-      for (const ba of shift.assigned) {
-        if (ba.status === "clocked_in") clockedIn += 1;
-        else if (ba.status === "clocked_out") clockedOut += 1;
+    for (const e of events) {
+      for (const ba of e.assigned) {
+        if (ba.status === "clocked_out") clockedOut += 1;
         else if (ba.status === "no_show" || ba.status === "missed") noShows += 1;
       }
     }
-    return { clockedIn, clockedOut, noShows };
-  }, [liveShifts]);
+    return { clockedOut, noShows };
+  }, [events]);
 
-  const mappable = shifts.filter((s) => s.coords !== null);
-  const center = useMemo(() => {
-    // Prefer event coords; fall back to live BA pings so an empty
-    // "MAPPED" day still frames the map on people on the ground.
-    const pts =
-      mappable.length > 0
-        ? mappable.map((s) => s.coords!)
-        : pings.map((p) => ({ lat: p.lat, lng: p.lng }));
-    if (pts.length === 0) return { lat: 39.5, lng: -98.35 };
-    const lats = pts.map((p) => p.lat).sort((a, b) => a - b);
-    const lngs = pts.map((p) => p.lng).sort((a, b) => a - b);
-    return {
-      lat: lats[Math.floor(lats.length / 2)],
-      lng: lngs[Math.floor(lngs.length / 2)],
-    };
-  }, [mappable, pings]);
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const [focus, setFocus] = useState<{ uuid: string; n: number } | null>(null);
+  const rowEls = useRef(new Map<string, HTMLLIElement>());
+
+  // List → map: pan to the pin and open its card.
+  const showOnMap = useCallback((uuid: string) => {
+    setSelectedUuid(uuid);
+    setFocus((f) => ({ uuid, n: (f?.n ?? 0) + 1 }));
+  }, []);
+  // Map → list: highlight the row and bring it into view.
+  const selectFromMap = useCallback((uuid: string) => {
+    setSelectedUuid(uuid);
+    rowEls.current.get(uuid)?.scrollIntoView({
+      block: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }, []);
+  const closeCard = useCallback(() => setSelectedUuid(null), []);
+  const openEvent = useCallback(
+    (uuid: string) => navigate(`/event/view/${uuid}`),
+    [navigate],
+  );
+
+  const tiles = (
+    <div className="spark-bento" aria-label="Today on the ground">
+      {todayGroundKpis(counts).map((k) => (
+        <SparkBentoTile key={k.label} {...k} />
+      ))}
+    </div>
+  );
+
+  if (coverage.layout === "empty") {
+    return (
+      <div className="space-y-4">
+        {tiles}
+        <p
+          className="spark-card px-4 py-3 text-sm"
+          style={{ color: "var(--spark-text-secondary)" }}
+        >
+          No events on the books today.{" "}
+          <Link
+            to="/upcoming"
+            className="underline"
+            style={{ color: "var(--spark-text)" }}
+          >
+            See upcoming events
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  const showMap = coverage.layout === "map";
 
   return (
     <div className="space-y-4">
-      <div className="spark-bento" aria-label="Today on the ground">
-        {todayGroundKpis({
-          events: shifts.length,
-          liveBas: pings.length,
-          mapped: mappable.length,
-        }).map((k) => (
-          <SparkBentoTile key={k.label} {...k} />
-        ))}
-      </div>
-      <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]">
-      {/* Map */}
+      {tiles}
+      {!showMap && coverage.note ? (
+        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+          {coverage.note}
+        </p>
+      ) : null}
       <div
-        className="spark-card overflow-hidden relative order-1 min-h-[280px] h-[420px] lg:h-[640px]"
-        style={{ borderRadius: 20 }}
+        className={
+          showMap
+            ? "grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]"
+            : "grid gap-5 grid-cols-1"
+        }
       >
-        {!apiKey ? (
+        {showMap ? (
+          <div className="spark-card overflow-hidden order-1 flex flex-col h-[460px] lg:h-[640px]">
+            <div className="relative flex-1 min-h-0">
+              <TodayMapView
+                apiKey={apiKey}
+                pins={pins}
+                bas={bas}
+                fitKey={pinSet}
+                scope={scope}
+                selectedUuid={selectedUuid}
+                focus={focus}
+                nameOf={nameOf}
+                onSelectPin={selectFromMap}
+                onCloseCard={closeCard}
+                onOpenEvent={openEvent}
+              />
+            </div>
+            <div
+              className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-x-6 gap-y-1.5"
+              style={{ borderTop: "1px solid var(--spark-border)" }}
+            >
+              <MapLegend showPhones={bas.length > 0} />
+              {coverage.note ? (
+                <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                  {coverage.note}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Roster rail */}
+        <div
+          className={`spark-card overflow-hidden flex flex-col order-2 ${
+            showMap ? "min-h-[280px] max-h-[460px] lg:max-h-[640px]" : ""
+          }`}
+        >
           <div
-            className="absolute inset-0 grid place-items-center px-6"
-            style={{ background: "var(--spark-surface)" }}
+            className="p-4 flex items-start justify-between gap-3"
+            style={{ borderBottom: "1px solid var(--spark-border)" }}
           >
-            <p
-              className="text-sm"
-              style={{ color: "var(--spark-text-meta)" }}
-            >
-              Map disabled — VITE_GOOGLE_MAPS_API_KEY not set.
-            </p>
+            <div className="min-w-0">
+              <h3 className="font-bold">
+                Today
+                <span
+                  className="text-xs font-normal ml-2"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  {events.length} {plural(events.length, "event", "events")}
+                </span>
+              </h3>
+              <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
+                {counts.onClock} clocked in · {clockSummary.clockedOut} clocked out ·{" "}
+                <span
+                  style={{
+                    color:
+                      clockSummary.noShows > 0 ? "var(--spark-orange)" : undefined,
+                  }}
+                >
+                  {clockSummary.noShows} {plural(clockSummary.noShows, "no-show", "no-shows")}
+                </span>
+              </p>
+            </div>
+            {!isClient ? (
+              <Link
+                to="/live-board"
+                className="text-xs underline shrink-0"
+                style={{ color: "var(--spark-text)" }}
+              >
+                On the clock
+              </Link>
+            ) : null}
           </div>
-        ) : (
-          <APIProvider apiKey={apiKey} libraries={["marker"]}>
-            <GMap
-              defaultCenter={center}
-              defaultZoom={
-                mappable.length === 1 || pings.length === 1 ? 11 : 4
-              }
-              mapId="spark-v2-today"
-              styles={
-                [
-                  // Literal colours: Google Maps cannot resolve a CSS variable.
-                  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
-                  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
-                  { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
-                  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1f2418" }] },
-                  { featureType: "water", elementType: "geometry", stylers: [{ color: "#050605" }] },
-                  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#11140e" }] },
-                ] as never
-              }
-              gestureHandling="greedy"
-              style={{ width: "100%", height: "100%" }}
-            >
-              <SparkGoogleClusters
-                pins={mappable.map((s) => ({
-                  id: s.uuid,
-                  position: s.coords!,
-                  color: "#f2f3ee",
-                  title: s.name,
-                  onClick: () => setOpenKey(s.uuid),
-                }))}
-              />
-
-              {/* Live BA GPS pins — orange / sky based on freshness. */}
-              {pings.map((p) => {
-                const fresh = p.freshnessMin <= 5;
-                const stale = p.freshnessMin > 15;
-                const color = stale
-                  ? "#8b8e84"
-                  : fresh
-                    ? "var(--spark-orange)"
-                    : "var(--spark-sky)";
-                return (
-                  <AdvancedMarker
-                    key={`ping-${p.uuid}`}
-                    position={{ lat: p.lat, lng: p.lng }}
-                    onClick={() => setOpenPing(p.uuid)}
-                  >
-                    <div
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 7,
-                        background: color,
-                        border: "2px solid #0a0d09",
-                        boxShadow: stale ? "none" : `0 0 10px ${color}`,
-                        position: "relative",
-                      }}
-                      title={`${p.baName} · ${p.freshnessMin}m ago`}
-                    >
-                      {fresh && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            inset: -6,
-                            borderRadius: 14,
-                            border: "2px solid var(--spark-orange)",
-                            opacity: 0.45,
-                            animation: "spark-pulse 1.4s ease-out infinite",
-                          }}
-                        />
-                      )}
-                    </div>
-                  </AdvancedMarker>
-                );
-              })}
-
-              {openPing &&
-                (() => {
-                  const p = pings.find((x) => x.uuid === openPing);
-                  if (!p) return null;
-                  return (
-                    <InfoWindow
-                      position={{ lat: p.lat, lng: p.lng }}
-                      onCloseClick={() => setOpenPing(null)}
-                    >
-                      <div
-                        style={{
-                          fontFamily: "Space Grotesk, sans-serif",
-                          color: "#14160f",
-                          minWidth: 180,
-                        }}
-                      >
-                        <p style={{ fontWeight: 700 }}>{p.baName}</p>
-                        <p style={{ fontSize: 11, marginTop: 2 }}>
-                          {p.eventName}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 12,
-                            fontFamily: "JetBrains Mono, monospace",
-                            opacity: 0.7,
-                            marginTop: 4,
-                          }}
-                        >
-                          {p.freshnessMin === 0
-                            ? "Just now"
-                            : `${p.freshnessMin} min ago`}
-                        </p>
-                      </div>
-                    </InfoWindow>
-                  );
-                })()}
-              {openKey &&
-                (() => {
-                  const s = mappable.find((x) => x.uuid === openKey);
-                  if (!s) return null;
-                  return (
-                    <InfoWindow
-                      position={s.coords!}
-                      onCloseClick={() => setOpenKey(null)}
-                    >
-                      <div
-                        style={{
-                          fontFamily: "Space Grotesk, sans-serif",
-                          color: "#14160f",
-                          minWidth: 180,
-                        }}
-                      >
-                        <p style={{ fontWeight: 700 }}>{s.name}</p>
-                        <p style={{ fontSize: 11, marginTop: 2 }}>
-                          {s.retailer}
-                          {s.state ? ` · ${s.state}` : ""}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 12,
-                            fontFamily: "JetBrains Mono, monospace",
-                            opacity: 0.7,
-                            marginTop: 4,
-                          }}
-                        >
-                          {s.startTime} – {s.endTime}
-                        </p>
-                      </div>
-                    </InfoWindow>
-                  );
-                })()}
-            </GMap>
-          </APIProvider>
-        )}
-        {/* Compact map legend overlay */}
-        <div
-          className="absolute bottom-3 left-3 z-10 px-2.5 py-1.5 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1 pointer-events-none"
-          style={{
-            background: "rgba(var(--spark-bg-rgb),0.82)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid var(--spark-border)",
-            maxWidth: "calc(100% - 24px)",
-          }}
-        >
-          <span
-            className="mono text-[10px] font-semibold"
-            style={{
-              letterSpacing: "0.14em",
-              color:
-                pings.length > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
-            }}
-          >
-            {pings.length > 0
-              ? `${pings.length} live now`
-              : "On the ground"}
-          </span>
-          <span
-            className="inline-flex items-center gap-2 text-[11px]"
-            style={{ color: "var(--spark-text-secondary)" }}
-          >
-            <span className="inline-flex items-center gap-1">
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 9999,
-                  background: "var(--spark-orange)",
-                  display: "inline-block",
+          <ul className="overflow-y-auto flex-1">
+            {events.map((e) => (
+              <EventRow
+                key={e.uuid}
+                event={e}
+                selected={e.uuid === selectedUuid}
+                people={peopleLines(e, nameOf)}
+                onShowOnMap={showOnMap}
+                rowRef={(el) => {
+                  if (el) rowEls.current.set(e.uuid, el);
+                  else rowEls.current.delete(e.uuid);
                 }}
               />
-              ≤5m
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 9999,
-                  background: "var(--spark-sky)",
-                  display: "inline-block",
-                }}
-              />
-              ≤15m
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 9999,
-                  background: "#8b8e84",
-                  display: "inline-block",
-                }}
-              />
-              &gt;15m
-            </span>
-          </span>
+            ))}
+          </ul>
         </div>
-      </div>
-
-      {/* Roster rail */}
-      <div
-        className="spark-card overflow-hidden flex flex-col order-2 min-h-[280px] max-h-[420px] lg:max-h-[640px]"
-      >
-        <div
-          className="p-4 flex items-center justify-between"
-          style={{ borderBottom: "1px solid var(--spark-border)" }}
-        >
-          <div className="min-w-0">
-            <h3 className="font-bold">
-              Today
-              <span
-                className="mono text-xs ml-2"
-                style={{ color: "var(--spark-text-meta)" }}
-              >
-                {shifts.length} event{shifts.length === 1 ? "" : "s"}
-              </span>
-            </h3>
-            <p
-              className="mono text-[10px] mt-1"
-              style={{ letterSpacing: "0.12em", color: "var(--spark-text-meta)" }}
-            >
-              {clockSummary.clockedIn} clocked in · {clockSummary.clockedOut} out ·{" "}
-              <span
-                style={{
-                  color:
-                    clockSummary.noShows > 0
-                      ? "var(--spark-orange)"
-                      : "rgba(var(--spark-ink-rgb),0.55)",
-                }}
-              >
-                {clockSummary.noShows} no-show{clockSummary.noShows === 1 ? "" : "s"}
-              </span>
-            </p>
-          </div>
-          {!isClient ? (
-            <button
-              type="button"
-              onClick={() => navigate("/live-board")}
-              className="mono text-[10px] shrink-0"
-              style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
-            >
-              On the Clock
-            </button>
-          ) : null}
-        </div>
-        <ul className="overflow-y-auto flex-1">
-          {shifts.length === 0 && (
-            <li
-              className="p-6 text-center text-sm"
-              style={{ color: "var(--spark-text-meta)" }}
-            >
-              No events on the books today.{" "}
-              <a href="/upcoming" className="underline">
-                See upcoming events
-              </a>
-            </li>
-          )}
-          {shifts.map((s) => {
-            const assignees = assigneesForEvent(s.uuid, liveShifts);
-            const liveBaNames = Array.from(
-              new Set(
-                pings
-                  .filter((p) => p.eventUuid === s.uuid && p.baName)
-                  .map((p) => p.baName),
-              ),
-            );
-            return (
-              <li
-                key={s.uuid}
-                onClick={() => {
-                  if (s.coords) setOpenKey(s.uuid);
-                  else navigate(`/event/view/${s.uuid}`);
-                }}
-                className="px-4 py-3 cursor-pointer transition"
-                style={{ borderBottom: "1px solid var(--spark-border)" }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "rgba(var(--spark-ink-rgb),0.02)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <div className="flex items-start gap-2">
-                  <span
-                    className="spark-dot mt-1.5"
-                    style={{
-                      background: s.coords
-                        ? "var(--spark-lime)"
-                        : "var(--spark-orange)",
-                      boxShadow: s.coords
-                        ? "0 0 6px var(--spark-lime)"
-                        : "0 0 6px var(--spark-orange)",
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{s.name}</p>
-                    <p
-                      className="mono text-[10px] uppercase mt-0.5 truncate"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: "var(--spark-text-meta)",
-                      }}
-                    >
-                      {s.retailer}
-                      {s.state ? ` · ${s.state}` : ""}
-                    </p>
-                    {s.address && (
-                      <p
-                        className="text-xs mt-1 truncate"
-                        style={{ color: "var(--spark-text-meta)" }}
-                      >
-                        {s.address}
-                      </p>
-                    )}
-                    {assignees.length > 0
-                      ? assignees.map((ba) => (
-                          <p
-                            key={ba.ambassadorUuid}
-                            className="mono text-[10px] mt-1.5 truncate"
-                            style={{
-                              letterSpacing: "0.12em",
-                              color: clockTone(ba.status),
-                            }}
-                          >
-                            {isClient ? clientSafeBaName(ba.name) : ba.name} ·{" "}
-                            {clockStateLabel(ba.status)}
-                          </p>
-                        ))
-                      : liveBaNames.length > 0 && (
-                          <p
-                            className="mono text-[10px] mt-1.5 truncate"
-                            style={{
-                              letterSpacing: "0.14em",
-                              color: "var(--spark-lime)",
-                            }}
-                          >
-                            {liveBaNames.join(", ")}
-                          </p>
-                        )}
-                  </div>
-                  <SparkStat
-                    size="sm"
-                    tone="lime"
-                    value={s.startTime || "—"}
-                    label={s.endTime ? `To ${s.endTime}` : "Start"}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
       </div>
     </div>
   );
@@ -649,7 +500,11 @@ export default function SparkToday() {
       <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
         <SparkPageHeader
           title={isClient ? "Today's activations." : "Today, on the ground."}
-          support="Every event on today's board, who is clocked in, clocked out, or a no-show, and their GPS. Punch edits stay on On the Clock."
+          support={
+            isClient
+              ? "Every event on today's board: where it is, when it runs, and who is clocked in."
+              : "Every event on today's board: where it is, who is booked, and who is clocked in. Punch edits stay on On the clock."
+          }
         />
 
         <Suspense fallback={<DashboardSkeleton />}>
