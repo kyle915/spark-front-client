@@ -229,9 +229,9 @@ const SECTIONS: NavSection[] = [
     title: "Outputs",
     items: [
       { label: "Reports", Icon: BarChart3, to: "/reports" },
-      // Ignite-internal: each brand's written weekly summary, drafted for
-      // staff to review and copy. Nothing is sent from it.
-      { label: "Weekly summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },
+      // Ignite-internal: each brand's written weekly summary and monthly
+      // email draft, for staff to review and copy. Nothing is sent from it.
+      { label: "Client summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },
       // Ignite-internal cost lens — labor + spend per event.
       { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
       // Consolidated samples/hour + SKU + locations + upcoming + call-outs
