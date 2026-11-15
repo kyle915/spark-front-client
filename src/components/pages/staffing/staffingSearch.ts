@@ -119,7 +119,7 @@ export function filterChips(f: SearchFilter): FilterChip[] {
     chips.push({ key: "date", text: `${input.mustBeFree ? "Free on" : "Day"}: ${days}` });
   }
   if (input.minShifts) {
-    chips.push({ key: "minShifts", text: `At least ${input.minShifts} shifts` });
+    chips.push({ key: "minShifts", text: `At least ${input.minShifts} shifts worked` });
   }
   return chips;
 }
@@ -171,12 +171,13 @@ function clockLabel(local: string | null | undefined): string {
 /** Why this person is on the list, as short plain lines. */
 export function matchReasons(m: MatchLike): string[] {
   const lines: string[] = [];
-  const worked = [`${m.shiftsWorked} ${m.shiftsWorked === 1 ? "shift" : "shifts"}`];
+  // Counted from clock-ins: a booking the person never clocked in to is not here.
+  const worked = [`Clocked in to ${m.shiftsWorked} ${m.shiftsWorked === 1 ? "shift" : "shifts"}`];
   if (m.stores.length) worked.push(m.stores.join(", "));
   if (m.cities.length) worked.push(m.cities.join(", "));
   lines.push(worked.join(" · "));
   const last = dayLabel(m.lastShiftDate);
-  if (last) lines.push(`Last shift ${last}`);
+  if (last) lines.push(`Last clocked in ${last}`);
   for (const c of m.conflicts) {
     const what = [c.store || c.eventName, c.brandName].filter(Boolean).join(", ");
     const when = [dayLabel(c.date), clockLabel(c.startLocal)].filter(Boolean).join(" ");

@@ -44,7 +44,7 @@ describe("filter chips", () => {
       "State: TX",
       "Brand: Liquid Death",
       "Day: Sat 21 Nov to Sun 22 Nov",
-      "At least 3 shifts",
+      "At least 3 shifts worked",
     ]);
   });
 
@@ -110,8 +110,8 @@ describe("match reasons", () => {
 
   it("says what they worked and when they last worked", () => {
     expect(matchReasons(base)).toEqual([
-      "2 shifts · Total Wine & More · Houston",
-      "Last shift Fri 6 Nov",
+      "Clocked in to 2 shifts · Total Wine & More · Houston",
+      "Last clocked in Fri 6 Nov",
     ]);
     expect(freeLabel(base)).toBe("Free");
   });
@@ -142,8 +142,8 @@ describe("match reasons", () => {
       ],
     });
     expect(lines).toEqual([
-      "1 shift · Total Wine & More · Houston",
-      "Last shift Fri 6 Nov",
+      "Clocked in to 1 shift · Total Wine & More · Houston",
+      "Last clocked in Fri 6 Nov",
       "Booked Sat 21 Nov 4:00 PM: Kroger, Feel Free",
       "Invited, not confirmed Sat 21 Nov: Pop-up",
       "Has not listed that day as available",

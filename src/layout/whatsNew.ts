@@ -27,6 +27,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "An email that fails to send is tried again instead of being dropped.",
       "Opening a recap, request or event from an email switches Spark to that record's client, and tells you it did.",
       "The recap page's action bar stays on one row on small screens, with share, edit, archive and delete under More.",
+      "The check-in recap form points out numbers that do not add up before you submit. You can fix them or submit as is.",
+      "Staffing Board: type a question such as who has worked a store in a city and is free on a day, and get a list of ambassadors who have clocked in there. The filters it used are shown, and you can change them.",
     ],
   },
   {

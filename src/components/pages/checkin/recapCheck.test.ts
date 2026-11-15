@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  RECAP_CHECK_TIMEOUT_MS,
   answersSignature,
   parseRecapCheckItems,
   requestRecapCheck,
@@ -83,6 +84,12 @@ describe("recap check request", () => {
 
     expect(items).toEqual([]);
     expect(Date.now() - started).toBeLessThan(1000);
+  });
+});
+
+describe("recap check wait", () => {
+  it("never holds Submit for more than five seconds", () => {
+    expect(RECAP_CHECK_TIMEOUT_MS).toBe(5_000);
   });
 });
 

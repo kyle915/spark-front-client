@@ -16,8 +16,11 @@ export type RecapCheckItem = {
   fieldId: string | null;
 };
 
-/** Long enough for the server's own limit, short enough for a shop aisle. */
-export const RECAP_CHECK_TIMEOUT_MS = 8_000;
+/**
+ * The most a tap on Submit ever waits for the check. The server drops its
+ * own slow step before this, so this is the real ceiling.
+ */
+export const RECAP_CHECK_TIMEOUT_MS = 5_000;
 /** Checks per open form. After this the answers are submitted unchecked. */
 export const RECAP_CHECK_MAX_RUNS = 3;
 const MAX_ITEMS = 6;

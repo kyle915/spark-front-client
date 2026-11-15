@@ -47,7 +47,8 @@ const BOX_FOR_CHIP: Record<FilterKey, string> = {
  *
  * Type a question, or fill the boxes. A question is read into the same
  * filter the boxes hold, and that filter is shown as chips so a wrong
- * reading can be seen and fixed. The list only suggests people: booking
+ * reading can be seen and fixed. "Worked" means clocked in; a booking
+ * nobody clocked in to does not count. The list only suggests people: booking
  * someone is still done from a slot on the board.
  */
 export default function FindAmbassadors() {
@@ -234,7 +235,7 @@ export default function FindAmbassadors() {
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label htmlFor="find-ba-store" className={labelClass}>
-                Store they have worked
+                Store they have clocked in at
               </label>
               <input
                 id="find-ba-store"
@@ -318,7 +319,7 @@ export default function FindAmbassadors() {
             </div>
             <div>
               <label htmlFor="find-ba-min" className={labelClass}>
-                Shifts worked, at least
+                Shifts clocked in to, at least
               </label>
               <input
                 id="find-ba-min"
