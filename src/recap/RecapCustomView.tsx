@@ -57,6 +57,7 @@ import {
   spendAmountSubmitError,
 } from "./spendAmount";
 import { useAuthStore } from "@/store/authStore";
+import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import {
@@ -564,6 +565,13 @@ const RecapCustomViewInner = ({
   );
 
   const recap = data?.customRecap;
+  // An emailed "Open recaps" link lands here with whatever client the
+  // user last had selected. Move the switcher / topbar / sidebar counts to
+  // the recap's own client (only if the user can switch to it).
+  useAdoptRecordTenant(
+    recap?.event?.tenant ?? recap?.customRecapTemplate?.tenant,
+    "recap",
+  );
   // Prefer the recap's own tenant over the auth-store dashboard tenant
   // (admins can be switched to another brand while viewing Torch).
   const fileCategoryTenantId =

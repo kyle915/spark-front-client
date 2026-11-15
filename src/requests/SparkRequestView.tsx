@@ -1,5 +1,6 @@
 import RequestActivityTimeline from "./RequestActivityTimeline";
 import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
+import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
@@ -435,6 +436,8 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     },
   );
   const request = data.request as Request | null;
+  // Deep link opened under another client → switch to the request's own.
+  useAdoptRecordTenant(data.request?.tenant, "request");
 
   const [busy, setBusy] = useState(false);
   const [decliningOpen, setDecliningOpen] = useState(false);

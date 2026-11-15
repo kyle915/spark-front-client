@@ -20,6 +20,7 @@ import RequestActivityTimeline from "@/requests/RequestActivityTimeline";
 import { clientSafeBaName } from "@/utils/clientSafeBaName";
 import React, { Suspense, useState } from "react";
 import { displayBaCount } from "@/public/form/eventActivationSchedule";
+import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -269,6 +270,8 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     },
   );
   const event = data.event as Event | null;
+  // Deep link opened under another client → switch to the event's own.
+  useAdoptRecordTenant(data.event?.tenant, "event");
   const [showAssign, setShowAssign] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 

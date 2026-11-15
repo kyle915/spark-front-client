@@ -71,6 +71,7 @@ export const RecapQuery = graphql`
         tenantId
         tenant {
           id
+          uuid
           name
           slug
         }

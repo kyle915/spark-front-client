@@ -154,6 +154,7 @@ export const RequestUuidQuery = graphql`
       tenantId
       tenant {
         id
+        uuid
         slug
       }
       events {

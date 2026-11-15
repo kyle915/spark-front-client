@@ -171,6 +171,13 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         date
+        # The recap's client. RecapCustomView switches the app to it when
+        # a deep link (email, notification) opens the recap while another
+        # client is selected — see useAdoptRecordTenant.
+        tenant {
+          id
+          uuid
+        }
       }
       ambassador {
         id
@@ -203,6 +210,7 @@ export const GetCustomRecapQuery = graphql`
         # "Product Spend"), not a hard-coded Sampling photos / Receipts pair.
         tenant {
           id
+          uuid
         }
       }
       customRecapProductSample {

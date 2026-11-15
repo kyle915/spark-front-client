@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import { TenantQuery } from "@/api/queries/TenantQuery";
 import type { TenantQuery as TenantQueryType } from "@api/queries/__generated__/TenantQuery.graphql";
@@ -7,6 +7,15 @@ import environment from "@api/relay/environment";
 import { useAuthStore } from "@store/authStore";
 import { useTenantSelection } from "@/hooks/useTenantSelection";
 import { AppShellSkeleton } from "@/layout/PageSkeletons";
+import {
+  applyTenantSwitch,
+  fetchSwitchableTenants,
+} from "@/hooks/useAdoptRecordTenant";
+import {
+  TENANT_LINK_PARAM,
+  decideTenantParamSwitch,
+  stripTenantParam,
+} from "@/lib/tenantDeepLink";
 
 interface TenantRouteProps {
   component: ReactElement;
@@ -24,6 +33,12 @@ interface TenantRouteProps {
  *   - tenants fetch errors → log the user out (the legacy CompanySelector
  *     used the same posture)
  *   - 0 tenants → land on the "no companies" state with a Logout button
+ *
+ * Links that carry `?tenant=<uuid>` (emailed list links: "Open Walk-ups",
+ * digest "Open recaps →") are resolved HERE, before the shell renders, so
+ * the list never loads under the previously selected client. The value is
+ * matched against the user's own switcher list only — an unknown or
+ * not-permitted tenant is ignored — and the param is then stripped.
  */
 export default function TenantRoute({ component }: TenantRouteProps) {
   const navigate = useNavigate();
@@ -31,8 +46,46 @@ export default function TenantRoute({ component }: TenantRouteProps) {
   const { tenantUuid, selectTenant } = useTenantSelection();
   const [resolving, setResolving] = useState(!tenantUuid);
   const [noTenants, setNoTenants] = useState(false);
+  const location = useLocation();
+  const tenantParam = new URLSearchParams(location.search).get(
+    TENANT_LINK_PARAM,
+  );
+  const { pathname, search, hash, state: locationState } = location;
 
   useEffect(() => {
+    if (!tenantParam) return;
+    let cancelled = false;
+    const dropParam = () => {
+      if (cancelled) return;
+      navigate(
+        { pathname, search: stripTenantParam(search), hash },
+        { replace: true, state: locationState },
+      );
+    };
+    fetchSwitchableTenants(environment, user?.uuid)
+      .then((tenants) => {
+        if (cancelled) return;
+        const now = useAuthStore.getState();
+        const target = decideTenantParamSwitch({
+          selected: { tenantId: now.tenantId, tenantUuid: now.tenantUuid },
+          param: tenantParam,
+          tenants,
+        });
+        if (target) applyTenantSwitch(target);
+        dropParam();
+      })
+      // Tenant list failed: keep the current client, still clean the URL.
+      // (The no-tenant effect below owns the "session is dead" posture.)
+      .catch(dropParam);
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantParam, pathname, search, hash, locationState, user?.uuid, navigate]);
+
+  useEffect(() => {
+    // A ?tenant= link picks the client above; don't race it with the
+    // last-used default. This effect re-runs once the param is stripped.
+    if (tenantParam) return;
     if (tenantUuid) {
       setResolving(false);
       return;
@@ -91,9 +144,9 @@ export default function TenantRoute({ component }: TenantRouteProps) {
     return () => {
       cancelled = true;
     };
-  }, [tenantUuid, user?.uuid, selectTenant, logout, navigate]);
+  }, [tenantParam, tenantUuid, user?.uuid, selectTenant, logout, navigate]);
 
-  if (resolving) {
+  if (resolving || tenantParam) {
     return <AppShellSkeleton />;
   }
 
