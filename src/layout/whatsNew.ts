@@ -33,6 +33,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "More detail on the dashboard shows consumers sampled per event.",
       "Staff: Weekly summaries (under Outputs) drafts each client's week to review, edit and copy. Nothing is sent from it.",
       "The recap page's action bar stays on one row on small screens, with share, edit, archive and delete under More.",
+      "The check-in recap form points out numbers that do not add up before you submit. You can fix them or submit as is.",
+      "Staffing Board: type a question such as who has worked a store in a city and is free on a day, and get a list of ambassadors who have clocked in there. The filters it used are shown, and you can change them.",
     ],
   },
   {

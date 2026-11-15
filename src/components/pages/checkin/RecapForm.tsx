@@ -94,6 +94,13 @@ import {
 import { buildRecapDraftRequest } from "./recapServerDraft";
 import { buildCompletenessItems } from "./checkinCompleteness";
 import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
+import { RecapCheckNotes } from "./RecapCheckNotes";
+import {
+  RECAP_CHECK_MAX_RUNS,
+  answersSignature,
+  requestRecapCheck,
+  type RecapCheckItem,
+} from "./recapCheck";
 import {
   analyzePhotoFile,
   classifyPhotoQuality,
@@ -256,6 +263,13 @@ export default function RecapForm({
   const [busy, setBusy] = useState(false);
   const [submitPhase, setSubmitPhase] = useState<ActionPhase>("idle");
   const [err, setErr] = useState<string | null>(null);
+  // The answer check that runs on Submit. `checkedAnswers` remembers the
+  // answers it last saw, so the same answers are never held twice: a second
+  // tap on Submit, or "Submit as is", files them.
+  const [checkItems, setCheckItems] = useState<RecapCheckItem[]>([]);
+  const [checking, setChecking] = useState(false);
+  const checkedAnswers = useRef<string | null>(null);
+  const checkRuns = useRef(0);
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
   const photoSeq = useRef(0);
@@ -1018,6 +1032,38 @@ export default function RecapForm({
       if (!opts.silent) onQueued();
     };
 
+    // One look at the answers before they go in. Skipped offline, and it can
+    // only ever add a note: any failure or delay returns nothing and the
+    // recap files as it always has.
+    const answers = answersSignature(fieldValues, totalEngagements, photos.length);
+    if (
+      !offlineNow &&
+      checkedAnswers.current !== answers &&
+      checkRuns.current < RECAP_CHECK_MAX_RUNS
+    ) {
+      checkRuns.current += 1;
+      setBusy(true);
+      setChecking(true);
+      setSubmitPhase("pending");
+      const notes = await requestRecapCheck({
+        origin: apiOrigin(),
+        code,
+        session: token,
+        fieldValues,
+        totalEngagements,
+        photoCount: photos.length,
+      });
+      checkedAnswers.current = answers;
+      setChecking(false);
+      if (notes.length > 0) {
+        setCheckItems(notes);
+        setBusy(false);
+        setSubmitPhase("idle");
+        return;
+      }
+    }
+    setCheckItems([]);
+
     setBusy(true);
     setSubmitPhase("pending");
     try {
@@ -1557,6 +1603,8 @@ export default function RecapForm({
 
       <RecapCompletenessChecklist items={completenessItems} />
 
+      <RecapCheckNotes items={checkItems} busy={busy} onSubmitAsIs={submit} />
+
       {err ? <p style={{ ...errText, textAlign: "center" }}>{err}</p> : null}
 
       <div
@@ -1620,7 +1668,7 @@ export default function RecapForm({
             onClick={submit}
             disabled={busy || (uploadingCount > 0 && doneCount === 0)}
             phase={submitPhase}
-            pendingLabel="Submitting…"
+            pendingLabel={checking ? "Checking…" : "Submitting…"}
             successLabel="Submitted"
           >
             {allFailedOffline
