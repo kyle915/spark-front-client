@@ -1,9 +1,11 @@
 /**
- * Spark v2 — uploaded accounts (per-tenant) used by the Account Map.
+ * Spark v2 — reading an uploaded account file (CSV/XLSX) for the Account Map.
  *
- * Clients upload a CSV/XLSX list of their retail accounts (name +
- * address) and schedule demos against them. Persistence is localStorage
- * v1 — backend table + GraphQL is the next step (BACKEND-PATCH addendum).
+ * The list itself is saved on the server, per brand (`saveAccountList`).
+ * Before that it lived only in the uploading browser's localStorage;
+ * `loadUploadedAccounts` still reads that old copy so it can be sent to the
+ * server once (see useAccountList.ts). Nothing writes to it any more, and
+ * nothing removes it.
  */
 
 export type UploadedAccount = {
@@ -28,17 +30,6 @@ export const loadUploadedAccounts = (tenantId: string): UploadedAccount[] => {
     return raw ? (JSON.parse(raw) as UploadedAccount[]) : [];
   } catch {
     return [];
-  }
-};
-
-export const saveUploadedAccounts = (
-  tenantId: string,
-  accounts: UploadedAccount[],
-) => {
-  try {
-    localStorage.setItem(KEY(tenantId), JSON.stringify(accounts));
-  } catch {
-    /* ignore quota */
   }
 };
 

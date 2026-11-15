@@ -101,6 +101,49 @@ type AccountMapPin {
   coverageClass: String!
   visitCount: Int!
   planned: Boolean!
+  storeKey: String!
+  locationSource: String!
+}
+
+type AccountListEntryType {
+  uuid: ID!
+  name: String!
+  address: String!
+  city: String!
+  state: String!
+  zip: String!
+  chain: String!
+  notes: String!
+  lat: Float
+  lng: Float
+  positionStatus: String!
+}
+
+input AccountListEntryInput {
+  name: String!
+  address: String! = ""
+  city: String! = ""
+  state: String! = ""
+  zip: String! = ""
+  chain: String! = ""
+  notes: String! = ""
+  lat: Float = null
+  lng: Float = null
+}
+
+type AccountListSaveResult {
+  added: Int!
+  duplicates: Int!
+  skipped: Int!
+  total: Int!
+  awaitingPosition: Int!
+}
+
+type AccountListPlaceResult {
+  placed: Int!
+  notFound: Int!
+  remaining: Int!
+  lookupAvailable: Boolean!
 }
 
 type AccountMapCoverage {
@@ -5330,6 +5373,8 @@ input MoveCustomFieldToSectionInput {
 }
 
 type Mutation {
+  saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
+  placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   mergeEvents(input: MergeEventsInput!): MergeEventsResponse!
   setEventMileageTracking(eventId: ID!, trackMileage: Boolean!, mileageRate: Float = null): EventDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
@@ -6267,6 +6312,7 @@ type Query {
   accountMapPins(tenantId: ID = null, first: Int = null, offset: Int = null): [AccountMapPin!]!
   accountMapPinTotal(tenantId: ID = null): Int!
   accountMapCoverage(tenantId: ID = null): AccountMapCoverage!
+  accountListEntries(tenantId: ID!): [AccountListEntryType!]!
   request(id: ID = null, uuid: ID = null): Request
   activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!

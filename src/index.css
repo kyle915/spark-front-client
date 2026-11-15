@@ -253,8 +253,7 @@ html[color-scheme="light"] .app-logo-public-default {
   background: transparent !important;
   border: none !important;
 }
-.spark-map-cluster-core,
-.spark-gmap-cluster {
+.spark-map-cluster-core {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,12 +267,6 @@ html[color-scheme="light"] .app-logo-public-default {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
-}
-.spark-gmap-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 7px;
-  border: 2px solid #0a0d09;
 }
 
 @keyframes border-flow {

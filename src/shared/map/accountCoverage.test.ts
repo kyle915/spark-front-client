@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  coverageColor,
-  coverageFromVisitCount,
-  coverageLabel,
-  parseCoverageClass,
-} from "./accountCoverage";
+import { coverageFromVisitCount, parseCoverageClass } from "./accountCoverage";
 
 describe("coverageFromVisitCount", () => {
   it("classifies 0 / 1 / >1 filed-recap visits", () => {
@@ -15,18 +10,11 @@ describe("coverageFromVisitCount", () => {
   });
 });
 
-describe("parseCoverageClass + labels", () => {
+describe("parseCoverageClass", () => {
   it("parses server slugs and falls back to never_visited", () => {
     expect(parseCoverageClass("sampled")).toBe("sampled");
     expect(parseCoverageClass("REPEAT")).toBe("repeat");
     expect(parseCoverageClass(null)).toBe("never_visited");
     expect(parseCoverageClass("bogus")).toBe("never_visited");
-  });
-
-  it("labels and colors each class distinctly", () => {
-    expect(coverageLabel("sampled")).toBe("Sampled");
-    expect(coverageLabel("repeat")).toBe("Repeat");
-    expect(coverageLabel("never_visited")).toBe("Never visited");
-    expect(new Set([coverageColor("sampled"), coverageColor("repeat"), coverageColor("never_visited")]).size).toBe(3);
   });
 });

@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  APIProvider,
-  AdvancedMarker,
-  InfoWindow,
-  Map as GMap,
-  useMap,
-} from "@vis.gl/react-google-maps";
+import { useState } from "react";
+import { APIProvider, InfoWindow, Map as GMap } from "@vis.gl/react-google-maps";
+import { MapCamera } from "@/shared/map/MapCamera";
+import { FIT_PADDING } from "@/shared/map/mapFit";
+import { PIN_INK, phoneDotSvg } from "@/shared/map/markerIcons";
+import { SvgMarker } from "@/shared/map/SvgMarker";
+import { useSparkMapStyle } from "@/shared/map/useSparkMapStyle";
 import {
   LEGEND_ORDER,
-  SINGLE_PIN_ZOOM,
   STATUS_META,
   US_DEFAULT,
   baMarkerTitle,
@@ -18,29 +16,23 @@ import {
   type BaMarker,
   type EventPin,
   type EventStatus,
-  type FitTarget,
   type LatLng,
   type NameFormatter,
 } from "./todayMap";
+import { statusPinSvg } from "./statusPinSvg";
 
 /**
  * The Today map: one pin per event with a position, smaller dots for the
  * phones of people on the clock, a legend in words. All derivation lives in
- * todayMap.ts; this file only draws and moves the camera.
+ * todayMap.ts; this file only draws. The camera (MapCamera) and the map
+ * style (useSparkMapStyle) are shared with the Account Map.
  */
 
 /** Text inside a Google InfoWindow: the bubble is white in both appearances. */
-const BUBBLE_INK = "#14160f";
-/** Phone-location dot. Fixed for the same reason the pin hues are. */
-const PHONE_DOT = "#1f7fc0";
-const FIT_PADDING = { top: 56, right: 56, bottom: 56, left: 56 };
+const BUBBLE_INK = PIN_INK;
 
-const prefersReducedMotion = (): boolean =>
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-/** The status mark: used on the map, in the legend, in list rows, on cards. */
+/** The status mark: used on the map, in the legend, in list rows, on cards.
+ *  One drawing (statusPinSvg.ts) for all of them. */
 export function StatusPin({
   status,
   size = 28,
@@ -48,227 +40,23 @@ export function StatusPin({
   status: EventStatus;
   size?: number;
 }) {
-  const meta = STATUS_META[status];
-  const ring = meta.shape === "ring";
-  // Amber and the hollow ring are light fills; everything else takes white.
-  const ink = ring || status === "late" ? BUBBLE_INK : "#ffffff";
-  const shape = (props: React.SVGProps<SVGElement>) => {
-    if (meta.shape === "diamond") {
-      return (
-        <polygon
-          points="14,3 25,14 14,25 3,14"
-          strokeLinejoin="round"
-          {...(props as React.SVGProps<SVGPolygonElement>)}
-        />
-      );
-    }
-    if (meta.shape === "square") {
-      return (
-        <rect
-          x="5"
-          y="5"
-          width="18"
-          height="18"
-          rx="3"
-          {...(props as React.SVGProps<SVGRectElement>)}
-        />
-      );
-    }
-    return (
-      <circle cx="14" cy="14" r="9.5" {...(props as React.SVGProps<SVGCircleElement>)} />
-    );
-  };
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 28 28"
-      aria-hidden="true"
-      focusable="false"
-      style={{ display: "block", flexShrink: 0 }}
-    >
-      {ring ? (
-        <>
-          {shape({ fill: "none", stroke: "#ffffff", strokeWidth: 5 })}
-          {shape({ fill: "#ffffff", stroke: BUBBLE_INK, strokeWidth: 2.5 })}
-        </>
-      ) : (
-        <>
-          {shape({ fill: "none", stroke: "rgba(20,22,15,0.7)", strokeWidth: 4.5 })}
-          {shape({ fill: meta.color, stroke: "#ffffff", strokeWidth: 2 })}
-        </>
-      )}
-      <g
-        stroke={ink}
-        fill="none"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {meta.glyph === "cross" && <path d="M10.5 10.5l7 7M17.5 10.5l-7 7" />}
-        {meta.glyph === "bang" && (
-          <>
-            <path d="M14 8.5v6" />
-            <circle cx="14" cy="18.6" r="1.2" fill={ink} stroke="none" />
-          </>
-        )}
-        {meta.glyph === "play" && (
-          <path d="M11.8 9.8l6.4 4.2-6.4 4.2z" fill={ink} stroke="none" />
-        )}
-        {meta.glyph === "check" && <path d="M9.6 14.4l3 3 5.8-6.6" />}
-        {meta.glyph === "dash" && <path d="M10 14h8" />}
-        {meta.glyph === "dot" && <circle cx="14" cy="14" r="2.6" fill={ink} stroke="none" />}
-      </g>
-    </svg>
-  );
-}
-
-function PhoneDot({ stale, size = 12 }: { stale: boolean; size?: number }) {
   return (
     <span
       aria-hidden="true"
-      style={{
-        display: "block",
-        width: size,
-        height: size,
-        borderRadius: 9999,
-        background: PHONE_DOT,
-        border: "2px solid #ffffff",
-        outline: "1px solid rgba(20,22,15,0.7)",
-        opacity: stale ? 0.55 : 1,
-        flexShrink: 0,
-      }}
+      style={{ display: "block", flexShrink: 0, width: size, height: size, lineHeight: 0 }}
+      // Our own fixed SVG text built from a status and a number; no user input.
+      dangerouslySetInnerHTML={{ __html: statusPinSvg(status, size) }}
     />
   );
 }
 
-type GoogleMap = NonNullable<ReturnType<typeof useMap>>;
-
-function applyFit(map: GoogleMap, target: FitTarget): void {
-  if (target.kind === "none") {
-    map.moveCamera({ center: US_DEFAULT.center, zoom: US_DEFAULT.zoom });
-    return;
-  }
-  if (target.kind === "single") {
-    map.moveCamera({ center: target.center, zoom: target.zoom });
-    return;
-  }
-  map.fitBounds(
-    {
-      north: target.north,
-      south: target.south,
-      east: target.east,
-      west: target.west,
-    },
-    FIT_PADDING,
-  );
-}
-
-/**
- * Camera rules:
- *  - fit to every pin when the SET of pins changes (`fitKey`), never on a
- *    poll that only changed a status or moved a phone;
- *  - once the person has dragged or zoomed, leave the camera alone until
- *    they ask ("Show all events") or the brand/day (`scope`) changes;
- *  - a list click pans to that pin and counts as the person's own move.
- */
-function CameraController({
-  points,
-  fitKey,
-  scope,
-  focus,
-  showAllLabel,
-}: {
-  points: ReadonlyArray<LatLng>;
-  fitKey: string;
-  scope: string;
-  focus: { position: LatLng; n: number } | null;
-  showAllLabel: string;
-}) {
-  const map = useMap();
-  const userMoved = useRef(false);
-  // True while a camera change of ours is settling, so it is not mistaken
-  // for the person zooming. Starts true: the map's own first layout.
-  const ours = useRef(true);
-  const oursTimer = useRef<number | null>(null);
-  const lastScope = useRef(scope);
-  const pointsRef = useRef(points);
-  pointsRef.current = points;
-
-  const markOurs = useCallback(() => {
-    ours.current = true;
-    if (oursTimer.current !== null) window.clearTimeout(oursTimer.current);
-    // `idle` does not fire when the camera did not actually move.
-    oursTimer.current = window.setTimeout(() => {
-      ours.current = false;
-    }, 1500);
-  }, []);
-
-  useEffect(() => {
-    if (!map) return;
-    const listeners = [
-      map.addListener("dragstart", () => {
-        userMoved.current = true;
-      }),
-      map.addListener("zoom_changed", () => {
-        if (!ours.current) userMoved.current = true;
-      }),
-      map.addListener("idle", () => {
-        ours.current = false;
-      }),
-    ];
-    return () => {
-      for (const l of listeners) l.remove();
-      if (oursTimer.current !== null) window.clearTimeout(oursTimer.current);
-    };
-  }, [map]);
-
-  useEffect(() => {
-    if (!map) return;
-    if (lastScope.current !== scope) {
-      lastScope.current = scope;
-      userMoved.current = false;
-    }
-    if (userMoved.current) return;
-    markOurs();
-    applyFit(map, fitTarget(pointsRef.current));
-  }, [map, fitKey, scope, markOurs]);
-
-  const focusN = focus?.n ?? 0;
-  useEffect(() => {
-    if (!map || !focus) return;
-    userMoved.current = true;
-    markOurs();
-    const zoom = Math.max(map.getZoom() ?? 0, SINGLE_PIN_ZOOM);
-    if (prefersReducedMotion()) {
-      map.moveCamera({ center: focus.position, zoom });
-    } else {
-      if ((map.getZoom() ?? 0) < zoom) map.setZoom(zoom);
-      map.panTo(focus.position);
-    }
-    // `focusN` is the click counter: the same row clicked twice pans twice.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, focusN]);
-
-  if (points.length === 0) return null;
+function PhoneDot({ size = 12 }: { size?: number }) {
   return (
-    <button
-      type="button"
-      onClick={() => {
-        if (!map) return;
-        userMoved.current = false;
-        markOurs();
-        applyFit(map, fitTarget(pointsRef.current));
-      }}
-      className="absolute top-3 left-3 z-10 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-      style={{
-        background: "var(--spark-surface)",
-        color: "var(--spark-text)",
-        border: "1px solid var(--spark-border)",
-      }}
-    >
-      {showAllLabel}
-    </button>
+    <span
+      aria-hidden="true"
+      style={{ display: "block", flexShrink: 0, width: size, height: size, lineHeight: 0 }}
+      dangerouslySetInnerHTML={{ __html: phoneDotSvg(size) }}
+    />
   );
 }
 
@@ -354,7 +142,7 @@ export function MapLegend({ showPhones }: { showPhones: boolean }) {
       ))}
       {showPhones ? (
         <li className="inline-flex items-center gap-1.5">
-          <PhoneDot stale={false} size={10} />
+          <PhoneDot size={12} />
           Ambassador's phone
         </li>
       ) : null}
@@ -390,6 +178,7 @@ export default function TodayMapView({
   onOpenEvent: (uuid: string) => void;
 }) {
   const [openBa, setOpenBa] = useState<string | null>(null);
+  const mapStyle = useSparkMapStyle();
 
   if (!apiKey) {
     return (
@@ -413,7 +202,6 @@ export default function TodayMapView({
   return (
     <APIProvider apiKey={apiKey} libraries={["marker"]}>
       <GMap
-        mapId="spark-v2-today"
         {...(initial.kind === "bounds"
           ? {
               defaultBounds: {
@@ -430,6 +218,8 @@ export default function TodayMapView({
               defaultZoom:
                 initial.kind === "single" ? initial.zoom : US_DEFAULT.zoom,
             })}
+        styles={mapStyle.styles as never}
+        backgroundColor={mapStyle.backgroundColor}
         gestureHandling="greedy"
         mapTypeControl={false}
         streetViewControl={false}
@@ -439,39 +229,37 @@ export default function TodayMapView({
         style={{ width: "100%", height: "100%" }}
       >
         {bas.map((b) => (
-          <AdvancedMarker
+          <SvgMarker
             key={`ba-${b.key}`}
             position={b.position}
-            anchorLeft="-50%"
-            anchorTop="-50%"
+            svg={phoneDotSvg(14)}
+            size={14}
             zIndex={1}
+            opacity={b.stale ? 0.55 : 1}
             title={baMarkerTitle(b)}
             onClick={() => {
               onCloseCard();
               setOpenBa(b.key);
             }}
-          >
-            <PhoneDot stale={b.stale} />
-          </AdvancedMarker>
+          />
         ))}
 
         {pins.map((p) => {
           const isSelected = p.uuid === selectedUuid;
+          const size = isSelected ? 38 : 28;
           return (
-            <AdvancedMarker
+            <SvgMarker
               key={`ev-${p.uuid}`}
               position={p.position}
-              anchorLeft="-50%"
-              anchorTop="-50%"
+              svg={statusPinSvg(p.status, size)}
+              size={size}
               zIndex={isSelected ? 1000 : 10 + STATUS_META[p.status].rank}
               title={`${p.name}: ${STATUS_META[p.status].label}`}
               onClick={() => {
                 setOpenBa(null);
                 onSelectPin(p.uuid);
               }}
-            >
-              <StatusPin status={p.status} size={isSelected ? 38 : 28} />
-            </AdvancedMarker>
+            />
           );
         })}
 
@@ -514,7 +302,7 @@ export default function TodayMapView({
           </InfoWindow>
         ) : null}
       </GMap>
-      <CameraController
+      <MapCamera
         points={points}
         fitKey={fitKey}
         scope={scope}

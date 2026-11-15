@@ -7,6 +7,11 @@ import { graphql } from "react-relay";
  * recap rollups). Cap stays at the API ceiling of 2000.
  * Coverage class comes from filed recaps (sampled=1 visit, repeat=>1,
  * never_visited=0); requests alone are only ever `planned`.
+ *
+ * Rows that share a `storeKey` are one physical store: the server groups by
+ * street address / spot on the ground, and `visitCount`, `coverageClass` and
+ * `planned` are that store's, not its banner's. `locationSource` says where
+ * lat/lng came from: the request, its event, or the event's looked-up address.
  */
 export const AccountMapQuery = graphql`
   query AccountMapQuery($tenantId: ID, $first: Int, $offset: Int) {
@@ -25,6 +30,8 @@ export const AccountMapQuery = graphql`
       coverageClass
       visitCount
       planned
+      storeKey
+      locationSource
     }
     accountMapCoverage(tenantId: $tenantId) {
       rosterTotal

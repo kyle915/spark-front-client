@@ -5,6 +5,8 @@
  * display): a roster retailer is Sampled with exactly 1 distinct event
  * that has a filed recap, Repeat with >1, and Never visited with 0.
  * Requests/events alone never make a store Sampled — they are Planned.
+ *
+ * The words and the pin for each class live in markerIcons.ts (COVERAGE_MARK).
  */
 export type CoverageClass = "sampled" | "repeat" | "never_visited";
 
@@ -24,35 +26,5 @@ export function parseCoverageClass(raw: string | null | undefined): CoverageClas
       return "never_visited";
     default:
       return "never_visited";
-  }
-}
-
-export function coverageLabel(cls: CoverageClass): string {
-  switch (cls) {
-    case "sampled":
-      return "Sampled";
-    case "repeat":
-      return "Repeat";
-    case "never_visited":
-      return "Never visited";
-    default: {
-      const _exhaustive: never = cls;
-      return _exhaustive;
-    }
-  }
-}
-
-export function coverageColor(cls: CoverageClass): string {
-  switch (cls) {
-    case "sampled":
-      return "#f2f3ee";
-    case "repeat":
-      return "#5fb8ef";
-    case "never_visited":
-      return "#ef5a2a";
-    default: {
-      const _exhaustive: never = cls;
-      return _exhaustive;
-    }
   }
 }
