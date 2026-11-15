@@ -1,52 +1,26 @@
-import { useMemo } from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  PointElement,
-  LineElement,
-  LineController,
-  Filler,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import "@/lib/sparkChartRegister";
 import { Chart } from "react-chartjs-2";
-import type { ChartData, ChartOptions } from "chart.js";
-import { inkRgba } from "@/theme/chartInk";
+import type { ChartData } from "chart.js";
+import ChartBlock from "@/components/charts/ChartBlock";
+import { labelsEveryRow, seriesLayout } from "@/lib/chartRows";
+import {
+  MAX_SERIES,
+  barSeries,
+  chartOptions,
+  lineSeries,
+  seriesColor,
+  valueLabels,
+} from "@/lib/sparkChart";
 
 /**
- * Renders the optional chart an Ask-AI answer can carry.
+ * The optional chart an Ask-AI answer can carry: `{ type, title, labels,
+ * series }`, drawn as a bar or line chart under the answer text.
  *
- * Both answer payloads (`tenantAiAnswer` / `campaignReportAiAnswer`) may now
- * include an `AiChart` when the question is visualization-worthy. This view
- * takes that shape — `{ type, title, labels, series }` — and draws a compact,
- * dark-theme bar or line chart (per `chart.type`) so it sits cleanly inside the
- * answer block / Ask-AI modal beneath the markdown text. The caller renders
- * this only when `chart` is present, so we always have data here.
- *
- * ── chart.js controller registration ──
- * We render via react-chartjs-2's generic <Chart>, which does NOT auto-register
- * controllers — only the tree-shakeable pieces you register are available. A
- * recent regression crashed the dashboard with "'line' is not a registered
- * controller" because only elements (not controllers) had been registered. So
- * we mirror the now-fixed TenantKpiCharts registration EXACTLY, including
- * BarController AND LineController, so both `type: "bar"` and `type: "line"`
- * work.
+ * One series is drawn in ink with no legend (the title names it). Two to
+ * four share a chart, a fixed colour each, with a legend. More than four
+ * become one small chart per series: a fifth colour is never generated, and
+ * unrelated series cannot honestly be summed into "Other".
  */
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  PointElement,
-  LineElement,
-  LineController,
-  Filler,
-  Tooltip,
-  Legend,
-);
 
 export type AiChartSeries = {
   readonly label: string;
@@ -60,102 +34,73 @@ export type AiChart = {
   readonly series: readonly AiChartSeries[];
 };
 
-// Dark-theme palette, reused across series in order. Mirrors the workspace
-// chart colors used by TenantKpiCharts (sky / purple / bone / gold).
-const PALETTE = [
-  "rgba(95,184,239,0.85)", // sky
-  "rgb(109,78,195)", // purple
-  "rgb(242,243,238)", // bone
-  "rgba(244,196,84,0.9)", // gold
-  "rgba(239,116,116,0.85)", // coral
-];
+const lastValue = valueLabels("last");
+const everyValue = valueLabels("all");
 
-const TEXT_COLOR = "#e5e7eb";
-const GRID_COLOR = inkRgba(0.12);
+const dataset = (s: AiChartSeries, isLine: boolean, color?: string, area = false) =>
+  isLine
+    ? { type: "line" as const, ...lineSeries({ label: s.label, data: [...s.data], color, area }) }
+    : { type: "bar" as const, ...barSeries({ label: s.label, data: [...s.data], color }) };
 
 const AiChartView: React.FC<{ chart: AiChart }> = ({ chart }) => {
   const isLine = chart.type === "line";
+  const type = isLine ? "line" : "bar";
+  const labels = [...chart.labels];
+  const layout = labels.length === 0 ? "none" : seriesLayout(chart.series.length, MAX_SERIES);
 
-  const data: ChartData<"bar" | "line"> = useMemo(
-    () => ({
-      labels: [...chart.labels],
-      datasets: chart.series.map((s, i) => {
-        const color = PALETTE[i % PALETTE.length];
-        if (isLine) {
-          return {
-            type: "line" as const,
-            label: s.label,
-            data: [...s.data],
-            borderColor: color,
-            backgroundColor: color,
-            pointBackgroundColor: color,
-            borderWidth: 2.5,
-            tension: 0.35,
-            pointRadius: 3,
-          };
-        }
-        return {
-          type: "bar" as const,
-          label: s.label,
-          data: [...s.data],
-          backgroundColor: color,
-          borderRadius: 6,
-        };
-      }),
-    }),
-    [chart.labels, chart.series, isLine],
-  );
-
-  const options: ChartOptions<"bar" | "line"> = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          // Single-series charts don't need a legend (the title says it all).
-          display: chart.series.length > 1,
-          position: "top",
-          labels: { color: TEXT_COLOR, font: { size: 11 }, boxWidth: 12 },
-        },
-        tooltip: {
-          enabled: true,
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: { color: TEXT_COLOR, font: { size: 10 } },
-          grid: { color: GRID_COLOR },
-        },
-        x: {
-          ticks: { color: TEXT_COLOR, font: { size: 10 } },
-          grid: { color: GRID_COLOR },
-        },
-      },
-    }),
-    [chart.series.length],
-  );
-
-  // Nothing meaningful to draw (no labels or no series) → render nothing.
-  if (chart.labels.length === 0 || chart.series.length === 0) return null;
+  // A lone line prints its last value; a short lone bar list prints them all.
+  const soloPlugins = isLine ? [lastValue] : labelsEveryRow(labels.length) ? [everyValue] : [];
+  const solo = (s: AiChartSeries): ChartData<"bar" | "line"> => ({
+    labels,
+    datasets: [dataset(s, isLine, undefined, true)],
+  });
 
   return (
     <div className="mt-4">
       {chart.title ? (
         <p
-          className="mono text-[10px] mb-2"
-          style={{
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--spark-text-meta)",
-          }}
+          className="mb-2 text-[13px] font-medium"
+          style={{ color: "var(--spark-text-secondary)" }}
         >
           {chart.title}
         </p>
       ) : null}
-      <div style={{ height: 220 }}>
-        <Chart type={isLine ? "line" : "bar"} data={data} options={options} />
-      </div>
+      {layout === "none" ? (
+        <div className="spark-chart-empty">There is nothing to chart for this answer.</div>
+      ) : layout === "single" ? (
+        <div className="relative" style={{ height: 220 }}>
+          <Chart
+            type={type}
+            data={solo(chart.series[0])}
+            options={chartOptions<"bar" | "line">()}
+            plugins={soloPlugins}
+          />
+        </div>
+      ) : layout === "shared" ? (
+        <div className="relative" style={{ height: 240 }}>
+          <Chart
+            type={type}
+            data={{
+              labels,
+              datasets: chart.series.map((s, i) => dataset(s, isLine, seriesColor(i))),
+            }}
+            options={chartOptions<"bar" | "line">({ legend: true })}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {chart.series.map((s, i) => (
+            <ChartBlock key={`${s.label}-${i}`} title={s.label} height={130}>
+              <Chart
+                type={type}
+                data={solo(s)}
+                options={chartOptions<"bar" | "line">()}
+                plugins={isLine ? [lastValue] : []}
+              />
+            </ChartBlock>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -26,38 +26,33 @@ import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQue
 import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
 import { ReportsEngagementsChartQuery } from "@/api/queries/ReportsEngagementsChartQuery";
 import type { ReportsEngagementsChartQuery as ReportsEngagementsChartQueryType } from "@api/queries/__generated__/ReportsEngagementsChartQuery.graphql";
-import { Bar, Doughnut } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-  type ChartData,
-  type ChartOptions,
-} from "chart.js";
-import { inkRgba, accentRgba, accentHex, surfaceHex } from "@/theme/chartInk";
+import "@/lib/sparkChartRegister";
+import { Bar } from "react-chartjs-2";
+import { labelsEveryRow, mergeSameLabel, rankRows, sharePercent } from "@/lib/chartRows";
+import { barSeries, chartOptions, foldToOther, valueLabels } from "@/lib/sparkChart";
 import { inputColorScheme } from "@/theme/inputColorScheme";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
+const everyValue = valueLabels("all");
+
+/** One quiet sentence where a chart has nothing to draw. */
+const ChartEmpty: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="spark-chart-empty h-full">{children}</div>
 );
 
-const SPARK_PALETTE = [
-  accentHex(), // lime
-  "#5fb8ef", // sky
-  "#a08bd9", // purple
-  "#d6c45f", // gold
-  "#ef5a2a", // orange
-  "#7a8074", // muted
-];
+/** A ranked list of thin ink bars, largest first, value at each bar's tip. */
+const RankedBars: React.FC<{
+  label: string;
+  rows: ReadonlyArray<{ label: string; value: number }>;
+}> = ({ label, rows }) => (
+  <Bar
+    data={{
+      labels: rows.map((r) => r.label),
+      datasets: [barSeries({ label, data: rows.map((r) => r.value), horizontal: true })],
+    }}
+    options={chartOptions<"bar">({ horizontal: true })}
+    plugins={labelsEveryRow(rows.length) ? [everyValue] : []}
+  />
+);
 
 /** Cap matches Account Map / list ceiling — enough for 90d tenant charts. */
 const CHART_PAGE_SIZE = 2000;
@@ -261,59 +256,21 @@ const EventsPerWeekChart: React.FC = () => {
     };
   }, [rows, range]);
 
-  const chartData: ChartData<"bar"> = {
-    labels,
-    datasets: [
-      {
-        label: "Requests created",
-        data: values,
-        backgroundColor: accentRgba(0.65),
-        borderColor: accentRgba(1),
-        borderWidth: 1,
-        borderRadius: 6,
-      },
-    ],
-  };
-  const options: ChartOptions<"bar"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => `${ctx.parsed.y} created`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { color: "var(--spark-text-meta)", maxRotation: 0 },
-        grid: { display: false },
-      },
-      y: {
-        beginAtZero: true,
-        ticks: { color: "var(--spark-text-meta)", precision: 0 },
-        grid: { color: inkRgba(0.06) },
-      },
-    },
-  };
   if (values.every((v) => v === 0)) {
-    return (
-      <div
-        className="grid place-items-center h-full text-xs"
-        style={{ color: "var(--spark-text-meta)" }}
-      >
-        No requests created in this window.
-      </div>
-    );
+    return <ChartEmpty>No requests created in this window.</ChartEmpty>;
   }
-  return <Bar data={chartData} options={options} />;
+  return (
+    <Bar
+      data={{ labels, datasets: [barSeries({ label: "Requests created", data: values })] }}
+      options={chartOptions<"bar">()}
+    />
+  );
 };
 
 const ActivationMixChart: React.FC = () => {
   const rows = useReportsRequestRows();
   const range = useReportsRange();
-  const { labels, values } = useMemo(() => {
+  const mix = useMemo(() => {
     const cutoff = range.start.getTime();
     const until = range.end.getTime();
     const counts = new Map<string, number>();
@@ -323,53 +280,45 @@ const ActivationMixChart: React.FC = () => {
       const key = r.requestType?.name ?? "Other";
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-    return {
-      labels: sorted.map(([k]) => k),
-      values: sorted.map(([, v]) => v),
-    };
+    // Largest first; past eight types the tail is one "Other" row (joined
+    // with untyped requests, which are already counted as "Other").
+    return rankRows(
+      mergeSameLabel(
+        foldToOther(
+          [...counts.entries()].map(([label, value]) => ({ label, value })),
+          7,
+        ),
+      ),
+    );
   }, [rows, range]);
 
-  const chartData: ChartData<"doughnut"> = {
-    labels,
-    datasets: [
-      {
-        data: values,
-        backgroundColor: labels.map(
-          (_, i) => SPARK_PALETTE[i % SPARK_PALETTE.length],
-        ),
-        borderColor: surfaceHex(),
-        borderWidth: 2,
-      },
-    ],
-  };
-  const options: ChartOptions<"doughnut"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "right",
-        labels: {
-          color: "var(--spark-text-secondary)",
-          font: { size: 12 },
-          padding: 12,
-          boxWidth: 12,
-          boxHeight: 12,
-          usePointStyle: true,
-        },
-      },
-    },
-    cutout: "62%",
-  };
-  return values.length === 0 ? (
-    <div
-      className="grid place-items-center h-full text-xs"
-      style={{ color: "var(--spark-text-meta)" }}
-    >
-      No requests in this date range.
+  if (mix.length === 0) {
+    return <ChartEmpty>No requests in this date range.</ChartEmpty>;
+  }
+  const total = mix.reduce((sum, r) => sum + r.value, 0);
+  // One type is a number, not a one-bar chart.
+  if (mix.length === 1) {
+    return (
+      <div className="flex h-full flex-col justify-center gap-1">
+        <p className="tab-num text-3xl font-bold" style={{ color: "var(--spark-text)" }}>
+          {total.toLocaleString()}
+        </p>
+        <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
+          {total === 1 ? "request" : "requests"}, all {mix[0].label}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-full flex-col gap-2">
+      <div className="relative min-h-0 flex-1">
+        <RankedBars label="Requests" rows={mix} />
+      </div>
+      <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+        {mix[0].label} is {sharePercent(mix[0].value, total)}% of{" "}
+        {total.toLocaleString()} requests.
+      </p>
     </div>
-  ) : (
-    <Doughnut data={chartData} options={options} />
   );
 };
 
@@ -401,71 +350,21 @@ const ConsumersSampledChart: React.FC = () => {
     };
   }, [rows, range]);
 
-  const total = values.reduce((s, v) => s + v, 0);
-  if (total === 0) {
-    return (
-      <div
-        className="grid place-items-center h-full text-xs"
-        style={{ color: "var(--spark-text-meta)" }}
-      >
-        No consumer engagements recorded yet.
-      </div>
-    );
-  }
-
-  const chartData: ChartData<"bar"> = {
-    labels,
-    datasets: [
-      {
-        label: "Consumers sampled",
-        data: values,
-        backgroundColor: "rgba(95,184,239,0.55)",
-        borderColor: "rgba(95,184,239,1)",
-        borderWidth: 1,
-        borderRadius: 6,
-      },
-    ],
-  };
-  const options: ChartOptions<"bar"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => `${(ctx.parsed.y ?? 0).toLocaleString()} consumers`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { color: "var(--spark-text-meta)", maxRotation: 0 },
-        grid: { display: false },
-      },
-      y: {
-        beginAtZero: true,
-        ticks: { color: "var(--spark-text-meta)", precision: 0 },
-        grid: { color: inkRgba(0.06) },
-      },
-    },
-  };
   if (values.every((v) => v === 0)) {
-    return (
-      <div
-        className="grid place-items-center h-full text-xs"
-        style={{ color: "var(--spark-text-meta)" }}
-      >
-        No consumers sampled in this window.
-      </div>
-    );
+    return <ChartEmpty>No consumers sampled in this window.</ChartEmpty>;
   }
-  return <Bar data={chartData} options={options} />;
+  return (
+    <Bar
+      data={{ labels, datasets: [barSeries({ label: "Consumers sampled", data: values })] }}
+      options={chartOptions<"bar">()}
+    />
+  );
 };
 
 const TopRetailersChart: React.FC = () => {
   const rows = useReportsEngagementRows();
   const range = useReportsRange();
-  const { labels, values } = useMemo(() => {
+  const top = useMemo(() => {
     const cutoff = range.start.getTime();
     const until = range.end.getTime();
     const totals = new Map<string, number>();
@@ -477,74 +376,29 @@ const TopRetailersChart: React.FC = () => {
       const name = r.eventRetailer || "Unknown";
       totals.set(name, (totals.get(name) ?? 0) + r.consumers);
     }
-    const sorted = [...totals.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-    return {
-      labels: sorted.map(([k]) => k),
-      values: sorted.map(([, v]) => v),
-    };
+    return rankRows(
+      [...totals.entries()].map(([label, value]) => ({ label, value })),
+      8,
+    );
   }, [rows, range]);
 
-  if (values.length === 0 || values.every((v) => v === 0)) {
+  if (top.length === 0) {
+    return <ChartEmpty>No retailer activity in this date range.</ChartEmpty>;
+  }
+  // One retailer is a number, not a one-bar chart.
+  if (top.length === 1) {
     return (
-      <div
-        className="grid place-items-center h-full text-xs"
-        style={{ color: "var(--spark-text-meta)" }}
-      >
-        No retailer activity in this date range.
+      <div className="flex h-full flex-col justify-center gap-1">
+        <p className="tab-num text-3xl font-bold" style={{ color: "var(--spark-text)" }}>
+          {top[0].value.toLocaleString()}
+        </p>
+        <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
+          consumers sampled, all at {top[0].label}
+        </p>
       </div>
     );
   }
-
-  const chartData: ChartData<"bar"> = {
-    labels,
-    datasets: [
-      {
-        label: "Consumers sampled",
-        data: values,
-        backgroundColor: accentRgba(0.55),
-        borderColor: accentRgba(1),
-        borderWidth: 1,
-        borderRadius: 6,
-      },
-    ],
-  };
-  const options: ChartOptions<"bar"> = {
-    indexAxis: "y",
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => `${(ctx.parsed.x ?? 0).toLocaleString()} consumers`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        ticks: { color: "var(--spark-text-meta)", precision: 0 },
-        grid: { color: inkRgba(0.06) },
-      },
-      y: {
-        ticks: { color: "var(--spark-text-secondary)" },
-        grid: { display: false },
-      },
-    },
-  };
-  if (values.length === 0 || values.every((v) => v === 0)) {
-    return (
-      <div
-        className="grid place-items-center h-full text-xs"
-        style={{ color: "var(--spark-text-meta)" }}
-      >
-        No retailer sampling volume yet.
-      </div>
-    );
-  }
-  return <Bar data={chartData} options={options} />;
+  return <RankedBars label="Consumers sampled" rows={top} />;
 };
 
 /**
@@ -620,10 +474,7 @@ const ChartCard: React.FC<{
   children: React.ReactNode;
 }> = ({ title, subtitle, tall, empty, children }) => (
   <div className="spark-card p-5">
-    <h3
-      className="spark-title font-semibold mb-2"
-      style={{ letterSpacing: "-0.02em" }}
-    >
+    <h3 className="spark-title font-semibold mb-2">
       {title}
     </h3>
     <p
@@ -640,9 +491,7 @@ const ChartCard: React.FC<{
       }
     >
       {empty ? (
-        <div className="spark-chart-empty h-full text-xs">
-          No data for this range yet.
-        </div>
+        <ChartEmpty>No data for this range yet.</ChartEmpty>
       ) : (
         <Suspense
           fallback={
@@ -681,7 +530,7 @@ const RequestChartsRow: React.FC = () => {
           <EventsPerWeekChart />
         </ChartCard>
       </div>
-      <ChartCard title="Activation mix" subtitle="Share by type in this range.">
+      <ChartCard title="Activation mix" subtitle="Requests by type in this range.">
         <ActivationMixChart />
       </ChartCard>
     </div>
@@ -905,7 +754,7 @@ export default function SparkReports() {
           </ChartCard>
           <ChartCard
             title="Top retailers"
-            subtitle="Consumers sampled — top 8 retailers."
+            subtitle="Consumers sampled at the top 8 retailers."
             tall
           >
             <TopRetailersChart />

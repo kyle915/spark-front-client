@@ -129,21 +129,11 @@ export default function DashboardRetail() {
   }));
 
   const retailAccounts = dashboard.marketAnalysis.dataPoints.map(
-    (point, index) => ({
+    (point) => ({
       name: point.marketName,
       consumers: point.consumers,
       conversion: point.conversion,
       distributorId: point.marketId,
-      color: [
-        "#93C5FD",
-        "#60A5FA",
-        "#34D399",
-        "#9CA3AF",
-        "#FCD34D",
-        "#FCA5A5",
-        "#A78BFA",
-        "#FDBA74",
-      ][index % 8],
     }),
   );
 
@@ -335,7 +325,7 @@ export default function DashboardRetail() {
 
         <section className="w-full">
           <ChartCard
-            title="Monthly Performance Trends"
+            title="Monthly performance trends"
             icon={CalendarDays}
             iconColor="text-[var(--spark-sky)]"
             fixedHeight
@@ -358,7 +348,7 @@ export default function DashboardRetail() {
 
         <section className="w-full">
             <ChartCard
-            title="RMM Performance"
+            title="RMM performance"
             icon={UsersRound}
             iconColor="text-[var(--spark-lime)]"
             fixedHeight
