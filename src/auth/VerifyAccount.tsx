@@ -1,34 +1,33 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-// 3.5MB PNG removed — using the same Spark v2 gradient as /login.
 import { verifyAccount } from "@/api/auth/verifyAccount";
-import Loading from "@/shared/Loading";
+import { AuthShell } from "./AuthShell";
+import { failureMessage } from "./authCopy";
 
 type VerifyStatus = "pending" | "success" | "error";
 
 const VerifyAccount = () => {
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<VerifyStatus>("pending");
-    const [message, setMessage] = useState("Verifying your account...");
+    const [message, setMessage] = useState("Checking your link.");
 
     useEffect(() => {
         const token = searchParams.get("token");
 
         if (!token) {
             setStatus("error");
-            setMessage("Verification token is missing in the link.");
+            setMessage("This link is incomplete. Open the link from your email again.");
             return;
         }
 
         verifyAccount(token)
             .then(() => {
                 setStatus("success");
-                setMessage("Your account has been verified successfully.");
+                setMessage("Your account is verified. You can sign in now.");
             })
             .catch((error) => {
-                const errorMessage = error instanceof Error ? error.message : "Could not verify the account.";
                 setStatus("error");
-                setMessage(errorMessage);
+                setMessage(failureMessage(error, "Could not verify your account."));
             });
     }, [searchParams]);
 
@@ -37,41 +36,31 @@ const VerifyAccount = () => {
         window.location.href = mobileLoginUrl;
     };
 
+    const title =
+        status === "pending"
+            ? "Verifying your account"
+            : status === "success"
+              ? "Account verified"
+              : "We could not verify your account";
+
     return (
-        <div
-            className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
-            style={{
-                background:
-                    "radial-gradient(circle at 20% 10%, rgba(242,243,238,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
-            }}
-        >
-            <div className="w-full max-w-lg bg-base-100 shadow-2xl rounded-3xl p-10 text-center space-y-6">
-                <div className="space-y-2">
-                    <p className="text-3xl font-bold text-base-content">Account verification</p>
-                    <p className="text-base-content/70">{message}</p>
-                </div>
-
-                {status === "pending" ? (
-                    <Loading />
+        <AuthShell>
+            <div className="signin-form">
+                <h1 className="signin-title">{title}</h1>
+                {status === "error" ? (
+                    <p className="signin-error" role="alert">
+                        {message}
+                    </p>
                 ) : (
-                    <div
-                        className={`px-4 py-3 rounded-xl ${
-                            status === "success" ? "bg-success/10 text-success" : "bg-error/10 text-error"
-                        }`}
-                    >
-                        {status === "success" ? "All set" : "There was a problem"}
-                    </div>
+                    <p className={status === "success" ? "signin-note" : "signin-lede"} role="status">
+                        {message}
+                    </p>
                 )}
-
-                <button
-                    type="button"
-                    onClick={handleGoToLogin}
-                    className="btn btn-primary w-full"
-                >
-                    Go to login
+                <button type="button" className="signin-primary" onClick={handleGoToLogin}>
+                    Go to sign in
                 </button>
             </div>
-        </div>
+        </AuthShell>
     );
 };
 

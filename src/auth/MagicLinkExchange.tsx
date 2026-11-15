@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { playArrival } from "@/auth/arrivalSweep";
+import { AuthShell } from "./AuthShell";
+import { failureMessage } from "./authCopy";
 
 /**
  * Spark v2 — Magic-link sign-in exchange.
@@ -11,6 +13,8 @@ import { playArrival } from "@/auth/arrivalSweep";
  * existing auth store (socialLogin path — same JWT shape as tokenAuth),
  * then redirect to the `next` query param or `/`.
  */
+const SIGN_IN_FAILED = "That link did not sign you in.";
+
 export default function MagicLinkExchange() {
   const { token } = useParams<{ token: string }>();
   const [search] = useSearchParams();
@@ -20,7 +24,7 @@ export default function MagicLinkExchange() {
 
   useEffect(() => {
     if (!token) {
-      setError("Missing sign-in token.");
+      setError("This sign-in link is incomplete.");
       return;
     }
     (async () => {
@@ -62,66 +66,46 @@ export default function MagicLinkExchange() {
         }
         const result = json.data?.loginWithMagicToken;
         if (!result?.success || !result.token) {
-          throw new Error(result?.message ?? "Sign-in failed.");
+          throw new Error(result?.message || SIGN_IN_FAILED);
         }
         await socialLogin(result.token, result.refreshToken ?? "");
         const next = search.get("next") || "/";
         void playArrival(() => navigate(next, { replace: true }));
       } catch (e) {
-        setError((e as Error).message);
+        setError(failureMessage(e, SIGN_IN_FAILED));
       }
     })();
   }, [token, search, socialLogin, navigate]);
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: "var(--spark-bg, #0a0d09)" }}
-    >
-      <div
-        className="max-w-md w-full mx-4 rounded-2xl p-6"
-        style={{
-          background: "var(--spark-surface, #11140e)",
-          border: "1px solid var(--spark-border, #1f2418)",
-        }}
-      >
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: error ? "var(--spark-orange, #ef5a2a)" : "var(--spark-lime, #f2f3ee)",
-          }}
-        >
-          {error ? "SIGN-IN FAILED" : "SIGNING YOU IN…"}
-        </p>
-        <h1
-          className="display text-2xl font-bold mt-2"
-          style={{ letterSpacing: "-0.02em" }}
-        >
-          {error ? "Couldn't sign you in." : "One moment."}
-        </h1>
+    <AuthShell>
+      <div className="signin-form">
         {error ? (
           <>
-            <p className="text-sm mt-3" style={{ color: "var(--spark-text-secondary)" }}>
+            <h1 className="signin-title">That link did not work</h1>
+            <p className="signin-error" role="alert">
               {error}
             </p>
+            <p className="signin-lede">
+              Sign-in links work for 30 minutes. You can ask for a new one.
+            </p>
             <button
+              type="button"
+              className="signin-primary"
               onClick={() => navigate("/login", { replace: true })}
-              className="mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime, #f2f3ee)",
-                color: "#0a0d09",
-              }}
             >
               Back to sign in
             </button>
           </>
         ) : (
-          <p className="text-sm mt-3" style={{ color: "var(--spark-text-meta)" }}>
-            We're verifying your link and signing you in.
-          </p>
+          <>
+            <h1 className="signin-title">Signing you in</h1>
+            <p className="signin-lede" role="status">
+              This takes a moment.
+            </p>
+          </>
         )}
       </div>
-    </div>
+    </AuthShell>
   );
 }
