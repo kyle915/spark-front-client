@@ -104,6 +104,11 @@ type BarOpts = {
   data: number[];
   /** Index drawn in full ink; the rest are quiet. Omit to ink every bar. */
   emphasis?: number;
+  /**
+   * Indexes drawn quiet while the rest stay ink: rows that are context, not
+   * a ranked item ("Other", "No store recorded"). Ignored with `emphasis`.
+   */
+  quiet?: readonly number[];
   /** Fixed colour for one of several series (see seriesColor). */
   color?: string;
   horizontal?: boolean;
@@ -114,15 +119,20 @@ export function barSeries({
   label,
   data,
   emphasis,
+  quiet,
   color,
   horizontal = false,
 }: BarOpts): ChartDataset<"bar", number[]> {
   const ink = color ?? chartInk();
+  const inked = (i: number): boolean =>
+    emphasis === undefined ? !quiet?.includes(i) : i === emphasis;
   return {
     label,
     data,
     backgroundColor:
-      emphasis === undefined ? ink : data.map((_, i) => (i === emphasis ? ink : chartQuiet())),
+      emphasis === undefined && !quiet?.length
+        ? ink
+        : data.map((_, i) => (inked(i) ? ink : chartQuiet())),
     borderWidth: 0,
     maxBarThickness: 24,
     // Rounded at the value, square where it meets the baseline.
@@ -317,7 +327,10 @@ export function valueLabels(
           } else {
             ctx.textAlign = "center";
             ctx.textBaseline = "bottom";
-            ctx.fillText(text, el.x, el.y - 8);
+            // Keep a label on the first or last point inside the canvas.
+            const half = ctx.measureText(text).width / 2;
+            const x = Math.min(Math.max(el.x, half + 2), chart.width - half - 2);
+            ctx.fillText(text, x, el.y - 8);
           }
         }
         ctx.restore();

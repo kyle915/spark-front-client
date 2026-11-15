@@ -8,6 +8,7 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { thumbUrl } from "@/utils/thumb";
 import { periodChange } from "./periodChange";
+import { ofAsked } from "@/lib/consumerBreakdown";
 
 const ymd = (d: Date) => {
   const y = d.getFullYear();
@@ -118,6 +119,10 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
     [photoData],
   );
 
+  // "62% of 1,240 asked": the rate is out of the consumers whose recap form
+  // asked the question, which can be fewer than everyone sampled.
+  const intent = ofAsked(m.purchaseIntent, m.purchaseIntentBase);
+
   const hasActivity = (m.totalEvents ?? 0) > 0 || photos.length > 0;
   if (!hasActivity) return null;
 
@@ -138,8 +143,8 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
     },
     {
       key: "intent",
-      value: typeof m.purchaseIntent === "number" ? fmtPct(m.purchaseIntent) : "—",
-      says: "said they'd buy",
+      value: intent ? intent.rate : "—",
+      says: intent?.asked ? `${intent.asked} said they'd buy` : "said they'd buy",
       change: against(m.purchaseIntent, prior.purchaseIntent, fmtPct),
     },
   ];

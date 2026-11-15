@@ -3776,6 +3776,8 @@ type EventDashboardMetrics {
   purchaseIntent: Float
   comparisonPeriod: String
   comparisonValues: ComparisonValues
+  brandAwarenessBase: Int
+  purchaseIntentBase: Int
 }
 
 type EventDetailResponse {
@@ -6219,6 +6221,7 @@ type Query {
   myReportSubscription(tenantId: ID = null): Boolean!
   checkinFieldIssues(tenantId: ID!, days: Int! = 7): [CheckinIssueSummary!]!
   tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
+  tenantConsumerBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): ConsumerBreakdown
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantBoothDayCounting(tenantId: ID!): Boolean!
@@ -8024,6 +8027,29 @@ type EfficiencyRow {
   hours: Float!
   samplesPerHour: Float
   unitsPerHour: Float
+}
+
+type ConsumerWeek {
+  weekStart: String!
+  consumers: Int!
+  recaps: Int!
+}
+
+type ConsumerBreakdownRow {
+  label: String!
+  kind: String!
+  consumers: Int!
+  recaps: Int!
+}
+
+type ConsumerBreakdown {
+  total: Int!
+  recaps: Int!
+  byWeek: [ConsumerWeek!]!
+  byStore: [ConsumerBreakdownRow!]!
+  byState: [ConsumerBreakdownRow!]!
+  storeCount: Int!
+  stateCount: Int!
 }
 
 type FieldEfficiency {

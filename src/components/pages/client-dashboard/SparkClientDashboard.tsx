@@ -43,6 +43,7 @@ import {
 } from "@/components/brandGroup/BrandCompare";
 import { useBrandView } from "@/components/brandGroup/useBrandView";
 import { CountReel } from "@/motion/CountReel";
+import { ConsumersPerWeekTrend } from "@/components/charts/ConsumerCharts";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -564,6 +565,12 @@ const ClientInner: React.FC = () => {
           <Suspense fallback={<PanelSkeleton label="Loading your program" />}>
             <ClientProgramSnapshot tenantId={tenantId} />
           </Suspense>
+        ) : null}
+
+        {tenantId ? (
+          <div className="spark-card p-5 sm:p-6">
+            <ConsumersPerWeekTrend tenantId={tenantId} />
+          </div>
         ) : null}
 
       {torch ? (

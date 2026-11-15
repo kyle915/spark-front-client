@@ -67,6 +67,13 @@ describe("spark chart style", () => {
     expect(bars.backgroundColor).toEqual([chartQuiet(), chartInk(), chartQuiet()]);
     expect(bars.maxBarThickness).toBeLessThanOrEqual(24);
     expect(barSeries({ label: "x", data: [1, 2] }).backgroundColor).toBe(chartInk());
+    // Context rows ("Other", "No store recorded") are quiet; the rest ink.
+    expect(barSeries({ label: "x", data: [9, 4, 7], quiet: [2] }).backgroundColor).toEqual([
+      chartInk(),
+      chartInk(),
+      chartQuiet(),
+    ]);
+    expect(barSeries({ label: "x", data: [1, 2], quiet: [] }).backgroundColor).toBe(chartInk());
   });
 
   it("marks only the last real point of a line, and none on the quiet one", () => {

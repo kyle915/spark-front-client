@@ -37,6 +37,16 @@ import type { TenantGoalsQuery as TenantGoalsQueryType } from "@api/queries/__ge
 import environment from "@/api/relay/environment";
 
 const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
+const ConsumersPerWeekTrend = lazy(() =>
+  import("@/components/charts/ConsumerCharts").then((m) => ({
+    default: m.ConsumersPerWeekTrend,
+  })),
+);
+const ConsumerSplits = lazy(() =>
+  import("@/components/charts/ConsumerCharts").then((m) => ({
+    default: m.ConsumerSplits,
+  })),
+);
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
 );
@@ -721,6 +731,12 @@ export function InsightsBody({
               />
             </Suspense>
           </div>
+          <div style={{ borderTop: "1px solid var(--spark-border)" }} />
+          <div className="p-5 lg:p-6">
+            <Suspense fallback={null}>
+              <ConsumersPerWeekTrend tenantId={tenantId} />
+            </Suspense>
+          </div>
         </div>
       )}
 
@@ -749,7 +765,7 @@ export function InsightsBody({
                 MORE DETAIL
               </span>
               <span className="block text-sm font-semibold mt-1">
-                Pace to goal, markets, year-over-year, AI, and timeline
+                Stores, states and products, pace to goal, year-over-year, AI, and timeline
               </span>
             </span>
             <span
@@ -764,6 +780,19 @@ export function InsightsBody({
 
       {tenantId && showDetail && (
         <div className="space-y-6 lg:space-y-8">
+          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+            <p className="text-xs mb-4" style={{ color: "var(--spark-text-meta)" }}>
+              Where it happened, {startDate} to {endDate}. Approved recaps only.
+            </p>
+            <Suspense fallback={null}>
+              <ConsumerSplits
+                tenantId={tenantId}
+                startDate={startDate}
+                endDate={endDate}
+              />
+            </Suspense>
+          </div>
+
           <PaceToGoalHero tenantId={tenantId} />
 
           <MarketConcentrationStrip

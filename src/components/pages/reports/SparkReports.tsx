@@ -24,13 +24,20 @@ import type { SendTestClientReportMutation as SendTestClientReportMutationType }
 import { useAlertStore } from "@/store/alertStore";
 import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQuery";
 import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
-import { ReportsEngagementsChartQuery } from "@/api/queries/ReportsEngagementsChartQuery";
-import type { ReportsEngagementsChartQuery as ReportsEngagementsChartQueryType } from "@api/queries/__generated__/ReportsEngagementsChartQuery.graphql";
 import "@/lib/sparkChartRegister";
 import { Bar } from "react-chartjs-2";
 import { labelsEveryRow, mergeSameLabel, rankRows, sharePercent } from "@/lib/chartRows";
 import { barSeries, chartOptions, foldToOther, valueLabels } from "@/lib/sparkChart";
 import { inputColorScheme } from "@/theme/inputColorScheme";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import useSparkRole from "@/hooks/useSparkRole";
+import {
+  ConsumerSplits,
+  ConsumersAddUpNote,
+  ConsumersPerWeek,
+} from "@/components/charts/ConsumerCharts";
+import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
+import { isCutOff, ofAsked } from "@/lib/consumerBreakdown";
 
 const everyValue = valueLabels("all");
 
@@ -54,7 +61,7 @@ const RankedBars: React.FC<{
   />
 );
 
-/** Cap matches Account Map / list ceiling — enough for 90d tenant charts. */
+/** The most requests one page returns. More than this and the page says so. */
 const CHART_PAGE_SIZE = 2000;
 
 const isoWeekKey = (d: Date): string => {
@@ -65,37 +72,6 @@ const isoWeekKey = (d: Date): string => {
   const dow = (start.getDay() + 6) % 7;
   start.setDate(start.getDate() - dow);
   return start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-};
-
-type EngagementRow = {
-  createdAt: string | null | undefined;
-  eventDate: string | null | undefined;
-  eventRetailer: string | null | undefined;
-  consumers: number;
-};
-
-const engagementFromClassic = (n: {
-  totalEngagements: number | null | undefined;
-  consumerEngagements: ReadonlyArray<{
-    totalConsumer: number | null | undefined;
-  } | null> | null;
-}): number => {
-  const fromCe = (n.consumerEngagements ?? []).reduce((sum, row) => {
-    const v = row?.totalConsumer;
-    return sum + (typeof v === "number" ? v : 0);
-  }, 0);
-  if (fromCe > 0) return fromCe;
-  return typeof n.totalEngagements === "number" ? n.totalEngagements : 0;
-};
-
-const engagementFromCustom = (n: {
-  consumersSampled: number | null | undefined;
-  totalEngagements: number | null | undefined;
-}): number => {
-  // Prefer consumers sampled only — do not conflate with totalEngagements / reach.
-  if (typeof n.consumersSampled === "number") return n.consumersSampled;
-  void n.totalEngagements;
-  return 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -193,41 +169,15 @@ const useReportsRequestRows = () => {
   );
 };
 
-const useReportsEngagementRows = (): EngagementRow[] => {
+/** How many requests match in all, to say so when a page is not everything. */
+const useReportsRequestTotal = (): number | null => {
   const { tenantId } = useAuthStore();
-  const filters = tenantId ? { tenantId } : null;
-  const data = useLazyLoadQuery<ReportsEngagementsChartQueryType>(
-    ReportsEngagementsChartQuery,
-    {
-      first: CHART_PAGE_SIZE,
-      filters,
-      customFilters: filters,
-    },
+  const data = useLazyLoadQuery<ReportsRequestsChartQueryType>(
+    ReportsRequestsChartQuery,
+    { first: CHART_PAGE_SIZE, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
-  return useMemo(() => {
-    const classic =
-      data?.recaps?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => ({
-          createdAt: n.createdAt,
-          eventDate: n.eventDate,
-          eventRetailer: n.eventRetailer,
-          consumers: engagementFromClassic(n),
-        })) ?? [];
-    const custom =
-      data?.customRecaps?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => ({
-          createdAt: n.createdAt,
-          eventDate: n.eventDate,
-          eventRetailer: n.eventRetailer,
-          consumers: engagementFromCustom(n),
-        })) ?? [];
-    return [...classic, ...custom];
-  }, [data]);
+  return data?.requests?.totalCount ?? null;
 };
 
 const EventsPerWeekChart: React.FC = () => {
@@ -322,92 +272,19 @@ const ActivationMixChart: React.FC = () => {
   );
 };
 
-// ---------------------------------------------------------------------------
-// Recap-driven charts (classic + custom; prefer consumersSampled on custom).
-// ---------------------------------------------------------------------------
-
-const ConsumersSampledChart: React.FC = () => {
-  const rows = useReportsEngagementRows();
-  const range = useReportsRange();
-  const { labels, values } = useMemo(() => {
-    const cutoff = range.start;
-    const today = range.end;
-    const buckets = weekBuckets(range);
-    const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
-
-    for (const r of rows) {
-      const raw = r.eventDate ?? r.createdAt;
-      if (!raw) continue;
-      const d = new Date(raw);
-      if (d < cutoff || d > today) continue;
-      const idx = idxByKey.get(isoWeekKey(d));
-      if (idx === undefined) continue;
-      buckets[idx].count += r.consumers;
-    }
-    return {
-      labels: buckets.map((b) => b.key),
-      values: buckets.map((b) => b.count),
-    };
-  }, [rows, range]);
-
-  if (values.every((v) => v === 0)) {
-    return <ChartEmpty>No consumers sampled in this window.</ChartEmpty>;
-  }
-  return (
-    <Bar
-      data={{ labels, datasets: [barSeries({ label: "Consumers sampled", data: values })] }}
-      options={chartOptions<"bar">()}
-    />
-  );
-};
-
-const TopRetailersChart: React.FC = () => {
-  const rows = useReportsEngagementRows();
-  const range = useReportsRange();
-  const top = useMemo(() => {
-    const cutoff = range.start.getTime();
-    const until = range.end.getTime();
-    const totals = new Map<string, number>();
-    for (const r of rows) {
-      const raw = r.eventDate ?? r.createdAt;
-      const t = raw ? new Date(raw).getTime() : NaN;
-      if (!Number.isFinite(t) || t < cutoff || t > until) continue;
-      if (r.consumers <= 0) continue;
-      const name = r.eventRetailer || "Unknown";
-      totals.set(name, (totals.get(name) ?? 0) + r.consumers);
-    }
-    return rankRows(
-      [...totals.entries()].map(([label, value]) => ({ label, value })),
-      8,
-    );
-  }, [rows, range]);
-
-  if (top.length === 0) {
-    return <ChartEmpty>No retailer activity in this date range.</ChartEmpty>;
-  }
-  // One retailer is a number, not a one-bar chart.
-  if (top.length === 1) {
-    return (
-      <div className="flex h-full flex-col justify-center gap-1">
-        <p className="tab-num text-3xl font-bold" style={{ color: "var(--spark-text)" }}>
-          {top[0].value.toLocaleString()}
-        </p>
-        <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
-          consumers sampled, all at {top[0].label}
-        </p>
-      </div>
-    );
-  }
-  return <RankedBars label="Consumers sampled" rows={top} />;
-};
-
 /**
  * Spark v2 — Reports.
  * Wireframe: spark-demo/index.html lines 2418-2484.
  *
- * KPI strip wired to dashboard metrics. Four charts wired to live data
- * (slim ReportsRequestsChartQuery + ReportsEngagementsChartQuery).
- * One date range (presets or custom) drives the KPI strip and every chart.
+ * The summary comes first, then the charts. One date range (presets or
+ * custom) drives both.
+ *
+ * Consumers sampled has ONE source on this page: `tenantConsumerBreakdown`.
+ * The headline figure and the weekly, store and state charts all read that
+ * one rollup, so they add up to each other by construction. (They used to
+ * come from two places: the headline from `eventDashboard`, the charts from
+ * a page of recap rows that the server cuts at 50, so the charts fell short
+ * of the headline for any client with more recaps than that.)
  */
 
 const fmtNum = (v: number | null | undefined) =>
@@ -522,20 +399,96 @@ const RequestChartsRow: React.FC = () => {
       return Number.isFinite(t) && t >= from && t <= to;
     });
   }, [rows, range]);
+  const total = useReportsRequestTotal();
   if (!hasRequests) return null;
   return (
-    <div className="grid lg:grid-cols-3 gap-5">
-      <div className="lg:col-span-2">
-        <ChartCard title="Requests per week" subtitle="Inbound activation volume.">
-          <EventsPerWeekChart />
+    <div className="space-y-2">
+      <div className="grid lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2">
+          <ChartCard title="Requests per week" subtitle="Inbound activation volume.">
+            <EventsPerWeekChart />
+          </ChartCard>
+        </div>
+        <ChartCard title="Activation mix" subtitle="Requests by type in this range.">
+          <ActivationMixChart />
         </ChartCard>
       </div>
-      <ChartCard title="Activation mix" subtitle="Requests by type in this range.">
-        <ActivationMixChart />
-      </ChartCard>
+      {isCutOff(rows.length, total) ? (
+        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+          These two charts are cut off: they read {rows.length.toLocaleString()} of this
+          client&rsquo;s {(total ?? 0).toLocaleString()} requests, so some weeks are short.
+        </p>
+      ) : null}
     </div>
   );
 };
+
+/* ───────────────────────── summary ───────────────────────── */
+
+const SummaryItem: React.FC<{
+  label: string;
+  figure: React.ReactNode;
+  note?: React.ReactNode;
+}> = ({ label, figure, note }) => (
+  <div className="min-w-0">
+    <dt className="text-[13px] font-medium" style={{ color: "var(--spark-text-secondary)" }}>
+      {label}
+    </dt>
+    <dd
+      className="tab-num m-0 mt-1 text-3xl font-bold truncate"
+      style={{ color: "var(--spark-text)", letterSpacing: "-0.03em" }}
+    >
+      {figure}
+    </dd>
+    {note ? (
+      <dd className="m-0 mt-1 text-xs" style={{ color: "var(--spark-text-meta)" }}>
+        {note}
+      </dd>
+    ) : null}
+  </div>
+);
+
+/**
+ * Consumers sampled, from the same rollup the charts below draw, so the
+ * headline and the charts cannot disagree.
+ */
+const ConsumersSummary: React.FC<{
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  /** The dashboard's figure, which also counts recaps not yet approved. */
+  everyRecap: number | null | undefined;
+}> = ({ tenantId, startDate, endDate, everyRecap }) => {
+  const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
+  const { isAdmin } = useSparkRole();
+  if (!breakdown) return <ConsumersUnavailable />;
+  const waiting =
+    isAdmin && typeof everyRecap === "number" && everyRecap > breakdown.total
+      ? everyRecap
+      : null;
+  return (
+    <SummaryItem
+      label="Consumers sampled"
+      figure={breakdown.total.toLocaleString()}
+      note={
+        <>
+          on {breakdown.recaps.toLocaleString()} approved{" "}
+          {breakdown.recaps === 1 ? "recap" : "recaps"}
+          {waiting !== null ? (
+            <span className="block">
+              {waiting.toLocaleString()} counting every recap filed, approved or not
+            </span>
+          ) : null}
+        </>
+      }
+    />
+  );
+};
+
+/** No figure is better than one the charts below would not add up to. */
+const ConsumersUnavailable: React.FC = () => (
+  <SummaryItem label="Consumers sampled" figure="—" note="This figure could not load." />
+);
 
 export default function SparkReports() {
   const { tenantId } = useAuthStore();
@@ -597,6 +550,8 @@ export default function SparkReports() {
     });
   };
   const m = dashboard.metrics;
+  const intent = ofAsked(m.purchaseIntent, m.purchaseIntentBase);
+  const awareness = ofAsked(m.brandAwareness, m.brandAwarenessBase);
 
   return (
     <Layout>
@@ -624,14 +579,6 @@ export default function SparkReports() {
             </>
           }
         />
-
-        <div className="print:hidden">
-          <ReportSubscriptionToggle tenantId={tenantId || null} />
-        </div>
-
-        <div className="print:hidden">
-          <ProgramShareControl tenantId={tenantId || null} />
-        </div>
 
         {/* Date range */}
         <div className="flex items-center gap-2 flex-wrap print:hidden">
@@ -697,45 +644,50 @@ export default function SparkReports() {
           )}
         </div>
 
-        {/* KPI strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4 min-w-0">
-            <p className="label-mini">EVENTS</p>
-            <p
-              className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              {fmtNum(m.totalEvents)}
-            </p>
-          </div>
-          <div className="spark-card p-4 min-w-0">
-            <p className="label-mini">CONSUMERS SAMPLED</p>
-            <p className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate">
-              {fmtNum(m.consumersSampled)}
-            </p>
-          </div>
-          <div className="spark-card p-4 min-w-0">
-            <p className="label-mini">BRAND AWARENESS</p>
-            <p
-              className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              {typeof m.brandAwareness === "number"
-                ? `${m.brandAwareness.toFixed(1)}%`
-                : "—"}
-            </p>
-          </div>
-          <div className="spark-card p-4 min-w-0">
-            <p className="label-mini">PURCHASE INTENT</p>
-            <p
-              className="tab-num text-2xl sm:text-3xl font-bold mt-1 truncate"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              {typeof m.purchaseIntent === "number"
-                ? `${m.purchaseIntent.toFixed(1)}%`
-                : "—"}
-            </p>
-          </div>
+        {/* Summary first: the headline numbers, before any chart. */}
+        <section className="spark-card p-5 sm:p-6" aria-label={`Summary, ${range.label}`}>
+          <dl className="m-0 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+            {tenantId ? (
+              <ErrorBoundary
+                key={`${tenantId}|${startYmd}|${endYmd}`}
+                fallback={<ConsumersUnavailable />}
+              >
+                <Suspense fallback={<SummaryItem label="Consumers sampled" figure="…" />}>
+                  <ConsumersSummary
+                    tenantId={tenantId}
+                    startDate={startYmd}
+                    endDate={endYmd}
+                    everyRecap={m.consumersSampled}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            ) : (
+              <SummaryItem label="Consumers sampled" figure={fmtNum(m.consumersSampled)} />
+            )}
+            <SummaryItem
+              label="Events run"
+              figure={fmtNum(m.totalEvents)}
+              note="events with a recap filed"
+            />
+            <SummaryItem
+              label="Purchase intent"
+              figure={intent ? intent.rate : "—"}
+              note={intent ? (intent.asked ?? undefined) : "not asked on these recaps"}
+            />
+            <SummaryItem
+              label="Brand awareness"
+              figure={awareness ? awareness.rate : "—"}
+              note={awareness ? (awareness.asked ?? undefined) : "not asked on these recaps"}
+            />
+          </dl>
+        </section>
+
+        <div className="print:hidden">
+          <ReportSubscriptionToggle tenantId={tenantId || null} />
+        </div>
+
+        <div className="print:hidden">
+          <ProgramShareControl tenantId={tenantId || null} />
         </div>
 
         {/* Request charts — hidden when nothing was requested in the range,
@@ -744,22 +696,15 @@ export default function SparkReports() {
           <RequestChartsRow />
         </Suspense>
 
-        <div className="grid lg:grid-cols-2 gap-5">
-          <ChartCard
-            title="Consumers sampled per week"
-            subtitle="Sum of recap engagements per week."
-            tall
-          >
-            <ConsumersSampledChart />
-          </ChartCard>
-          <ChartCard
-            title="Top retailers"
-            subtitle="Consumers sampled at the top 8 retailers."
-            tall
-          >
-            <TopRetailersChart />
-          </ChartCard>
-        </div>
+        {/* Consumers sampled by week, store and state: one rollup, the same
+            one the summary reads, so every chart adds up to the headline. */}
+        {tenantId ? (
+          <section className="spark-card p-5 sm:p-6 space-y-6">
+            <ConsumersPerWeek tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+            <ConsumerSplits tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+            <ConsumersAddUpNote tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          </section>
+        ) : null}
 
         {/* Everything the recaps collected, beyond the headline KPIs. */}
         {tenantId ? (

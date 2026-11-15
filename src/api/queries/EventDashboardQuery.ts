@@ -20,6 +20,8 @@ export const EventDashboardQuery = graphql`
         consumersSampled
         brandAwareness
         purchaseIntent
+        brandAwarenessBase
+        purchaseIntentBase
         comparisonPeriod
         comparisonValues {
           totalEvents
