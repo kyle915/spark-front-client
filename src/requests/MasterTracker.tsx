@@ -1283,9 +1283,12 @@ const MasterTrackerInner: React.FC<{
           ? "none"
           : recapCount > 0
             ? "submitted"
-            : isRecapDue(activationDate, 30)
-              ? "due"
-              : "none";
+            : n.recapDismissed
+              ? // Staff dismissed it on Missing recaps: no recap is owed.
+                "none"
+              : isRecapDue(activationDate, 30)
+                ? "due"
+                : "none";
       return {
         uuid: String(n.uuid),
         id: String(n.id),

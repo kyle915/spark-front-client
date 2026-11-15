@@ -21,6 +21,8 @@ export type HistoryShift = {
   status: ShiftStatus;
   paidAt: string | null;
   recapFiled: boolean;
+  /** Staff dismissed the missing recap: none is owed for this shift. */
+  recapDismissed?: boolean;
 };
 
 export type ShiftHistory = {
@@ -46,7 +48,7 @@ export function shiftStatusView(shift: HistoryShift): StatusView {
   if (shift.onTheClock) {
     return { label: "On the clock", detail: "Clock out when you finish.", tone: "wait" };
   }
-  if (!shift.recapFiled) {
+  if (!shift.recapFiled && !shift.recapDismissed) {
     return {
       label: "Recap needed",
       detail: "File the recap so your hours can be reviewed.",
@@ -104,6 +106,7 @@ export function parseShiftHistory(raw: unknown): ShiftHistory {
         : "pending_review",
       paidAt: typeof s.paidAt === "string" ? s.paidAt : null,
       recapFiled: s.recapFiled === true,
+      recapDismissed: s.recapDismissed === true,
     }));
   return {
     shifts,

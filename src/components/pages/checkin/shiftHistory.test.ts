@@ -44,6 +44,12 @@ describe("shiftStatusView", () => {
     expect(shiftStatusView({ ...base, recapFiled: false, status: "confirmed" }).label).toBe("Recap needed");
     expect(shiftStatusView({ ...base, onTheClock: true }).label).toBe("On the clock");
   });
+  it("does not ask for a recap staff dismissed as not owed", () => {
+    const dismissed = { ...base, recapFiled: false, recapDismissed: true };
+    expect(shiftStatusView({ ...dismissed, status: "confirmed" }).label).toBe("Confirmed");
+    expect(parseShiftHistory({ shifts: [{ ...dismissed }] }).shifts[0]?.recapDismissed).toBe(true);
+    expect(parseShiftHistory({ shifts: [{ ...base }] }).shifts[0]?.recapDismissed).toBe(false);
+  });
 });
 
 describe("parseShiftHistory", () => {

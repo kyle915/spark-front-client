@@ -2728,6 +2728,20 @@ tr.spark-row-selected:hover,
     0 16px 40px rgba(0, 0, 0, 0.32);
 }
 
+/* Missing recaps — reasons in the Dismiss menu */
+.spark-dismiss-reason {
+  color: var(--spark-text);
+  background: transparent;
+}
+.spark-dismiss-reason:hover,
+.spark-dismiss-reason:focus-visible {
+  background: rgba(var(--spark-ink-rgb), 0.06);
+}
+.spark-dismiss-reason:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: -2px;
+}
+
 /* List/Tracker row actions — secondary links stay quiet until row hover */
 .spark-row-actions {
   display: flex;
