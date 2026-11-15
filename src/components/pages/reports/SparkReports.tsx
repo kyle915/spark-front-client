@@ -8,7 +8,7 @@ import ProgramShareControl from "./ProgramShareControl";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
-import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
+import FeedbackThemes from "@/components/charts/FeedbackThemes";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
@@ -746,18 +746,9 @@ export default function SparkReports() {
           <FieldPhotos />
         </Suspense>
         {tenantId ? (
-          <div>
-            <h3 className="display font-bold mb-1" style={{ letterSpacing: "-0.02em" }}>
-              What consumers said
-            </h3>
-            <p className="text-sm mb-3" style={{ color: "var(--spark-text-meta)" }}>
-              Themes and quotes from recap comments across the program (not limited
-              to the date range above).
-            </p>
-            <Suspense fallback={<PanelSkeleton label="Loading consumer feedback" />}>
-              <TenantSentimentCard tenantId={tenantId} />
-            </Suspense>
-          </div>
+          <section className="spark-card p-5 sm:p-6">
+            <FeedbackThemes tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          </section>
         ) : null}
       </div>
       </ReportsRangeContext.Provider>

@@ -5,6 +5,7 @@ import {
   lastWeeksWindow,
   mondayOf,
   ofAsked,
+  perEvent,
   productSplit,
   rankedSplit,
   shortLabel,
@@ -188,5 +189,18 @@ describe("shortLabel", () => {
     expect(shortLabel("Sprouts Farmers Market")).toBe("Sprouts Farmers M…");
     expect(shortLabel("Whole Foods Market — Lamar")).toBe("Whole Foods Marke…");
     expect(shortLabel("Supercalifragilisticexpialidocious Foods", 12)).toBe("Supercalifr…");
+  });
+});
+
+describe("perEvent", () => {
+  it("divides consumers by events, whole above ten and one decimal under", () => {
+    expect(perEvent(1440, 30)).toBe(48);
+    expect(perEvent(1450, 30)).toBe(48);
+    expect(perEvent(25, 4)).toBe(6.3);
+  });
+
+  it("is null when there is nothing to divide", () => {
+    expect(perEvent(0, 5)).toBeNull();
+    expect(perEvent(100, 0)).toBeNull();
   });
 });

@@ -5474,6 +5474,10 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
+  refreshTenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes
+  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!): WeeklyClientSummaryResult!
+  saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
+  setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
   archiveRecap(input: ArchiveRecapInput!): RecapDetailResponse!
   unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
@@ -6367,6 +6371,8 @@ type Query {
   tenantInsights(tenantId: ID!, startDate: String = null, endDate: String = null): TenantInsights!
   tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
+  tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
+  weeklyClientSummaries(weekStart: String = null): WeeklyClientSummaryWeek
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
@@ -8091,11 +8097,63 @@ type ConsumerBreakdownRow {
 type ConsumerBreakdown {
   total: Int!
   recaps: Int!
+  events: Int!
   byWeek: [ConsumerWeek!]!
   byStore: [ConsumerBreakdownRow!]!
   byState: [ConsumerBreakdownRow!]!
   storeCount: Int!
   stateCount: Int!
+}
+
+type FeedbackTheme {
+  section: String!
+  label: String!
+  recapCount: Int!
+  quote: String!
+}
+
+type TenantFeedbackThemes {
+  status: String!
+  themes: [FeedbackTheme!]!
+  recapCount: Int!
+  commentCount: Int!
+  truncated: Boolean!
+  generatedAt: String
+  startDate: String
+  endDate: String
+}
+
+type WeeklyClientSummary {
+  id: ID!
+  weekStart: String!
+  weekEnd: String!
+  body: String!
+  editedBody: String!
+  text: String!
+  status: String!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
+}
+
+type WeeklyClientSummaryRow {
+  tenantId: ID!
+  tenantName: String!
+  approvedRecaps: Int!
+  pendingRecaps: Int!
+  summary: WeeklyClientSummary
+}
+
+type WeeklyClientSummaryWeek {
+  weekStart: String!
+  weekEnd: String!
+  rows: [WeeklyClientSummaryRow!]!
+}
+
+type WeeklyClientSummaryResult {
+  ok: Boolean!
+  reason: String
+  summary: WeeklyClientSummary
 }
 
 type FieldEfficiency {

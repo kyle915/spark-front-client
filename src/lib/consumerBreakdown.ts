@@ -188,3 +188,13 @@ export function productSplit(
 /** Whether a paged list came back short of everything that matches. */
 export const isCutOff = (shown: number, total: number | null | undefined): boolean =>
   typeof total === "number" && total > shown;
+
+/**
+ * Consumers sampled per event, or null when there is nothing to divide.
+ * One decimal under ten, whole numbers above.
+ */
+export function perEvent(total: number, events: number): number | null {
+  if (!(events > 0) || !(total > 0)) return null;
+  const each = total / events;
+  return each < 10 ? Math.round(each * 10) / 10 : Math.round(each);
+}
