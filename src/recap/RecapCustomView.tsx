@@ -1603,7 +1603,7 @@ const RecapCustomViewInner = ({
 
   const inner = (
     <>
-      <div className="space-y-6 max-w-7xl pb-24">
+      <div className="space-y-6 max-w-7xl recap-sticky-ops-pad recap-min-type">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <RecapDetailBackLink to={backToListUrl}>
               ← Recaps
@@ -1621,6 +1621,7 @@ const RecapCustomViewInner = ({
                 {!isClient && tenantId ? (
                   <AskAiButton
                     tenantId={tenantId}
+                    variant="ghost"
                     scope="recap"
                     recapId={String(recap.id)}
                     subjectLabel={recap.name ?? undefined}
@@ -1656,7 +1657,7 @@ const RecapCustomViewInner = ({
                 <button
                   onClick={handleGeneratePdf}
                   disabled={isGeneratingPdf}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                   style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                   title={
                     existingPdfUrl
@@ -1674,7 +1675,7 @@ const RecapCustomViewInner = ({
                 <button
                   onClick={handleDownloadPhotos}
                   disabled={isZipping || flatImages.length === 0}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                   style={{
                     ...ghostBtn,
                     opacity: isZipping || flatImages.length === 0 ? 0.5 : 1,
@@ -1689,7 +1690,7 @@ const RecapCustomViewInner = ({
                 {isClient && (
                   <button
                     onClick={openShare}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                     style={ghostBtn}
                   >
                     ↗ Share
@@ -1700,7 +1701,7 @@ const RecapCustomViewInner = ({
                     recapId={recap.id}
                     kind="custom"
                     recapName={recap.name}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                     style={ghostBtn}
                   />
                 )}
@@ -1718,7 +1719,7 @@ const RecapCustomViewInner = ({
                 <button
                   onClick={exitEditMode}
                   disabled={isSavingValues}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                   style={ghostBtn}
                 >
                   Cancel
@@ -1726,7 +1727,7 @@ const RecapCustomViewInner = ({
                 <button
                   onClick={saveValues}
                   disabled={isSavingValues}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                   style={{ ...limeBtn, opacity: isSavingValues ? 0.5 : 1 }}
                 >
                   {isSavingValues ? "Saving…" : "Save changes"}
@@ -3176,57 +3177,53 @@ const RecapCustomViewInner = ({
                 }
               : null
           }
+          actions={[
+            ...(!recap.approved && !recap.archivedAt && queueInfo?.nextUnapproved
+              ? [
+                  {
+                    key: "approve-next",
+                    label: "Approve & next →",
+                    onClick: () => handleApprove(true),
+                    disabled: isApproving,
+                    title:
+                      "Approve recap and advance to the next unapproved recap in the queue (a)",
+                    phoneOnly: true,
+                  },
+                ]
+              : []),
+            { key: "share", label: "↗ Share", onClick: openShare },
+            {
+              key: "edit",
+              label: "✎ Edit recap",
+              onClick: enterEditMode,
+              title:
+                "Correct metrics, field values, sampled products and title. Changes are logged in edit history.",
+            },
+            recap.archivedAt
+              ? {
+                  key: "unarchive",
+                  label: isUnarchiving ? "Restoring…" : "Unarchive",
+                  onClick: handleUnarchive,
+                  disabled: isUnarchiving,
+                  title: "Restore this recap to Needs review",
+                }
+              : {
+                  key: "archive",
+                  label: isArchiving ? "Archiving…" : "Archive",
+                  onClick: handleArchive,
+                  disabled: isArchiving,
+                  title: "Park this recap — keep proof, hide from client",
+                },
+            {
+              key: "delete",
+              label: isDeleting ? "Deleting…" : "Delete",
+              onClick: handleDelete,
+              disabled: isDeleting,
+              title: "Delete this recap and free the event for a new one",
+              tone: "danger",
+            },
+          ]}
         >
-          <button
-            type="button"
-            onClick={openShare}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-            style={ghostBtn}
-          >
-            ↗ Share
-          </button>
-          <button
-            type="button"
-            onClick={enterEditMode}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-            style={ghostBtn}
-            title="Correct metrics, field values, sampled products and title. Changes are logged in edit history."
-          >
-            ✎ Edit recap
-          </button>
-          {recap.archivedAt ? (
-            <button
-              type="button"
-              onClick={handleUnarchive}
-              disabled={isUnarchiving}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{ ...ghostBtn, opacity: isUnarchiving ? 0.5 : 1 }}
-              title="Restore this recap to Needs review"
-            >
-              {isUnarchiving ? "Restoring…" : "Unarchive"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleArchive}
-              disabled={isArchiving}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{ ...ghostBtn, opacity: isArchiving ? 0.5 : 1 }}
-              title="Park this recap — keep proof, hide from client"
-            >
-              {isArchiving ? "Archiving…" : "Archive"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-            style={{ ...dangerBtn, opacity: isDeleting ? 0.5 : 1 }}
-            title="Delete this recap and free the event for a new one"
-          >
-            {isDeleting ? "Deleting…" : "Delete"}
-          </button>
           {recap.approved ? (
             <span className="chip chip-lime">
               <StatusMorph value="Approved" />
@@ -3237,7 +3234,7 @@ const RecapCustomViewInner = ({
                 onClick={() => handleApprove(false)}
                 disabled={isApproving || Boolean(recap.archivedAt)}
                 phase={approvePhase}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={
                   queueInfo?.nextUnapproved
                     ? {
@@ -3259,18 +3256,22 @@ const RecapCustomViewInner = ({
                 Approve recap
               </ActionMorphButton>
               {queueInfo?.nextUnapproved && !recap.archivedAt && (
-                <ActionMorphButton
-                  onClick={() => handleApprove(true)}
-                  disabled={isApproving}
-                  phase={approvePhase}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
-                  title="Approve recap and advance to the next unapproved recap in the queue (a)"
-                  pendingLabel="Approving…"
-                  successLabel="Approved →"
-                >
-                  Approve & next →
-                </ActionMorphButton>
+                // Phones have room for one primary button; there this
+                // action is the first item in the More menu instead.
+                <span className="recap-sticky-ops-from-sm">
+                  <ActionMorphButton
+                    onClick={() => handleApprove(true)}
+                    disabled={isApproving}
+                    phase={approvePhase}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
+                    style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
+                    title="Approve recap and advance to the next unapproved recap in the queue (a)"
+                    pendingLabel="Approving…"
+                    successLabel="Approved →"
+                  >
+                    Approve & next →
+                  </ActionMorphButton>
+                </span>
               )}
             </>
           )}
@@ -3333,7 +3334,7 @@ const RecapCustomViewInner = ({
               <button
                 onClick={handleGeneratePdf}
                 disabled={isGeneratingPdf}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                 title={
                   existingPdfUrl
@@ -3355,7 +3356,7 @@ const RecapCustomViewInner = ({
                   }
                   setShareOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={ghostBtn}
               >
                 Share

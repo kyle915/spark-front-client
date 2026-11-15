@@ -2244,6 +2244,12 @@ body { background: var(--spark-bg); }
 .recap-detail-back {
   letter-spacing: 0.14em;
   color: rgba(var(--spark-ink-rgb), 0.45);
+  /* A long recap or store name wraps inside the page instead of pushing
+     it sideways on a phone. */
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 .recap-detail-chrome {
   display: flex;
@@ -2852,9 +2858,11 @@ tr:hover > td .spark-row-actions > a,
   padding: 0.7rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* Sticky ops bar — denser dark chrome around the light paper */
+/* Sticky ops bar — denser dark chrome around the light paper.
+   One row at every width: secondary actions sit inline from 1280px and
+   fold into the More menu below that. */
 .recap-sticky-ops {
-  padding: 0.45rem 0.65rem;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   border-radius: var(--spark-radius-card, 14px);
   background: rgba(var(--spark-bg-rgb), 0.94);
   border: 1px solid var(--spark-hairline, var(--spark-border));
@@ -2862,8 +2870,22 @@ tr:hover > td .spark-row-actions > a,
   backdrop-filter: saturate(180%) blur(12px);
   -webkit-backdrop-filter: saturate(180%) blur(12px);
 }
+.recap-sticky-ops-row {
+  padding: 0.45rem 0.65rem;
+  /* Last resort for an unusually long label: scroll, never wrap. */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-radius: inherit;
+}
+.recap-sticky-ops-row::-webkit-scrollbar {
+  display: none;
+}
+/* Room for the bar under the last content on the page. */
+.recap-sticky-ops-pad {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+}
 .recap-sticky-ops-label {
-  letter-spacing: 0.16em;
   color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.48));
 }
 .recap-sticky-ops-queue {
@@ -2882,8 +2904,101 @@ tr:hover > td .spark-row-actions > a,
   cursor: not-allowed;
 }
 .recap-sticky-ops-count {
-  letter-spacing: 0.12em;
   color: rgba(var(--spark-ink-rgb), 0.7);
+}
+.recap-sticky-ops-btn {
+  background: transparent;
+  color: var(--spark-text);
+  border: 1px solid var(--spark-border);
+}
+.recap-sticky-ops-btn:hover:not(:disabled) {
+  border-color: rgba(var(--spark-ink-rgb), 0.22);
+}
+.recap-sticky-ops-btn:disabled,
+.recap-sticky-ops-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.recap-sticky-ops-btn.recap-sticky-ops-danger {
+  color: var(--spark-orange);
+  border-color: rgba(239, 90, 42, 0.4);
+}
+.recap-sticky-ops-btn.recap-sticky-ops-active {
+  background: var(--spark-lime);
+  color: var(--spark-on-accent);
+}
+.recap-sticky-ops-inline {
+  display: none;
+}
+.recap-sticky-ops-from-sm {
+  display: none;
+}
+@media (min-width: 640px) {
+  .recap-sticky-ops-from-sm {
+    display: contents;
+  }
+  .recap-sticky-ops-menu-item.recap-sticky-ops-phone-only {
+    display: none;
+  }
+}
+@media (min-width: 1280px) {
+  .recap-sticky-ops-inline {
+    display: flex;
+  }
+  .recap-sticky-ops-more,
+  .recap-sticky-ops-menu {
+    display: none;
+  }
+}
+.recap-sticky-ops-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.4rem);
+  min-width: 12rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.3rem;
+  border-radius: var(--spark-radius-card, 14px);
+  background: var(--spark-surface);
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+.recap-sticky-ops-menu-item {
+  display: block;
+  width: 100%;
+  min-height: var(--spark-hit, 44px);
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--spark-text);
+}
+.recap-sticky-ops-menu-item:hover:not(:disabled) {
+  background: rgba(var(--spark-ink-rgb), 0.06);
+}
+.recap-sticky-ops-menu-item:focus-visible,
+.recap-sticky-ops-btn:focus-visible,
+.recap-sticky-ops-nav:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: -2px;
+}
+.recap-sticky-ops-menu-item.recap-sticky-ops-danger {
+  color: var(--spark-orange);
+}
+.recap-sticky-ops-menu-item.recap-sticky-ops-menu-divided {
+  margin-top: 0.3rem;
+  border-top: 1px solid var(--spark-hairline, var(--spark-border));
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+/* Recap detail: nothing set smaller than 12px (size only — case and
+   spacing are left as they are). */
+.recap-min-type .text-\[8px\],
+.recap-min-type .text-\[9px\],
+.recap-min-type .text-\[10px\],
+.recap-min-type .text-\[11px\] {
+  font-size: 12px;
+  line-height: 1.35;
 }
 @keyframes spark-sheet-scrim-in {
   from {

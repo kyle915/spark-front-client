@@ -26,6 +26,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Answers from Ask AI for clients are built from approved recaps only.",
       "An email that fails to send is tried again instead of being dropped.",
       "Opening a recap, request or event from an email switches Spark to that record's client, and tells you it did.",
+      "The recap page's action bar stays on one row on small screens, with share, edit, archive and delete under More.",
     ],
   },
   {
