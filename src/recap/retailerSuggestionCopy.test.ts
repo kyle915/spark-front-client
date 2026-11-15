@@ -13,10 +13,15 @@ describe("retailer suggestion copy", () => {
     expect(suggestionSentence({ ...base, confidence: "low" })).toContain("guess");
   });
 
-  it("ticks the approve box by default except for a guess or no suggestion", () => {
+  it("ticks the approve box only for a sure suggestion", () => {
     expect(tickedByDefault(base)).toBe(true);
-    expect(tickedByDefault({ confidence: "medium" })).toBe(true);
+    expect(tickedByDefault({ confidence: "medium" })).toBe(false);
     expect(tickedByDefault({ confidence: "low" })).toBe(false);
     expect(tickedByDefault(null)).toBe(false);
+  });
+
+  it("asks the reviewer to check a less-sure suggestion", () => {
+    expect(suggestionSentence({ ...base, confidence: "medium" })).toContain("Check it");
+    expect(suggestionSentence(base)).not.toContain("Check it");
   });
 });
