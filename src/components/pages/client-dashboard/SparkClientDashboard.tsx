@@ -26,7 +26,7 @@ import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
 import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
-import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
+import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
 import { rankUpcomingRetailers } from "@/components/pages/client-dashboard/topRetailers";
@@ -652,7 +652,7 @@ const ClientInner: React.FC = () => {
         </Suspense>
       )}
 
-      {tenantId ? <WeeklyNarrationCard tenantId={tenantId} forClient /> : null}
+      {tenantId ? <WeeklySummaryCard tenantId={tenantId} forClient /> : null}
 
       </>)}
 

@@ -5,6 +5,7 @@ import {
   lastWeeksWindow,
   mondayOf,
   ofAsked,
+  perEvent,
   productSplit,
   rankedSplit,
   shortLabel,
@@ -130,9 +131,19 @@ describe("weekly trend", () => {
     expect(mondayOf(new Date(2026, 9, 12)).getDate()).toBe(12); // Monday
   });
 
-  it("covers twelve whole weeks ending with the current one", () => {
-    expect(lastWeeksWindow(12, today)).toEqual({ startDate: "2026-07-27", endDate: "2026-10-14" });
-    expect(lastWeeksWindow(1, today)).toEqual({ startDate: "2026-10-12", endDate: "2026-10-14" });
+  it("covers twelve finished weeks and leaves out the one in progress", () => {
+    expect(lastWeeksWindow(12, today)).toEqual({ startDate: "2026-07-20", endDate: "2026-10-11" });
+    expect(lastWeeksWindow(1, today)).toEqual({ startDate: "2026-10-05", endDate: "2026-10-11" });
+    // On a Monday the week that just ended is the last one shown.
+    expect(lastWeeksWindow(1, new Date(2026, 9, 12))).toEqual({
+      startDate: "2026-10-05",
+      endDate: "2026-10-11",
+    });
+    // On a Sunday that week is still in progress.
+    expect(lastWeeksWindow(1, new Date(2026, 9, 18))).toEqual({
+      startDate: "2026-10-05",
+      endDate: "2026-10-11",
+    });
   });
 
   it("names the week in progress so a part week does not read as a drop", () => {
@@ -188,5 +199,18 @@ describe("shortLabel", () => {
     expect(shortLabel("Sprouts Farmers Market")).toBe("Sprouts Farmers M…");
     expect(shortLabel("Whole Foods Market — Lamar")).toBe("Whole Foods Marke…");
     expect(shortLabel("Supercalifragilisticexpialidocious Foods", 12)).toBe("Supercalifr…");
+  });
+});
+
+describe("perEvent", () => {
+  it("divides consumers by events, whole above ten and one decimal under", () => {
+    expect(perEvent(1440, 30)).toBe(48);
+    expect(perEvent(1450, 30)).toBe(48);
+    expect(perEvent(25, 4)).toBe(6.3);
+  });
+
+  it("is null when there is nothing to divide", () => {
+    expect(perEvent(0, 5)).toBeNull();
+    expect(perEvent(100, 0)).toBeNull();
   });
 });

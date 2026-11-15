@@ -20,7 +20,7 @@ import {
  * vs last-period with an up/down delta chip.
  *
  * Loads `tenantKpiComparison(tenantId, period)` for ONE client (tenant) and
- * renders, dark-theme styled to match <TenantKpiCharts> / <TenantSentimentCard>
+ * renders, dark-theme styled to match <TenantKpiCharts>
  * so it reads as one dashboard: a header ("Period comparison") with a muted
  * sub showing the two periods being compared ("May 2026 vs Apr 2026"), then the
  * HEADLINE KPIs (consumers sampled, samples handed out when distinct, products
@@ -60,7 +60,7 @@ const HIDDEN_DELTA: PeriodDelta = { kind: "sparse", label: "n/a", note: "" };
 // (the same hue the sentiment card reserves for a negative move) — deliberately
 // NOT an alarm red, since a KPI dipping isn't a crisis. Flat / New / none /
 // sparse sit quietly in a muted neutral. Solid `text` color + matching rgba bg
-// / border tints, the same way <TenantKpiCharts> and <TenantSentimentCard> tint
+// / border tints, the same way <TenantKpiCharts> tints
 // pills.
 type ChipStyle = { label: string; text: string; bg: string; border: string };
 

@@ -5,12 +5,15 @@ import "@/lib/sparkChartRegister";
 import ChartBlock from "@/components/charts/ChartBlock";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
+import { ConsumersPerEventQuery } from "@/api/queries/ConsumersPerEventQuery";
+import type { ConsumersPerEventQuery as ConsumersPerEventQueryType } from "@api/queries/__generated__/ConsumersPerEventQuery.graphql";
 import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
 import type { TenantSkuPulseQuery as TenantSkuPulseQueryType } from "@api/queries/__generated__/TenantSkuPulseQuery.graphql";
 import { labelsEveryRow } from "@/lib/chartRows";
 import {
   contextIndexes,
   lastWeeksWindow,
+  perEvent,
   productSplit,
   rankedSplit,
   shortLabel,
@@ -117,9 +120,10 @@ export const ConsumersPerWeek: React.FC<Window & { note?: string }> = (props) =>
 const TREND_WEEKS = 12;
 
 /**
- * The weekly trend on a dashboard: always the last twelve weeks, whatever
- * range the rest of the page is showing, because a 7- or 30-day window is
- * one to five points and not a trend.
+ * The weekly trend on a dashboard: always the last twelve finished weeks,
+ * whatever range the rest of the page is showing, because a 7- or 30-day
+ * window is one to five points and not a trend. The week in progress is
+ * left out, so the line does not end on a part week.
  */
 export const ConsumersPerWeekTrend: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const window = useMemo(() => lastWeeksWindow(TREND_WEEKS), []);
@@ -127,7 +131,7 @@ export const ConsumersPerWeekTrend: React.FC<{ tenantId: string }> = ({ tenantId
     <ConsumersPerWeek
       tenantId={tenantId}
       {...window}
-      note={`Last ${TREND_WEEKS} weeks, from approved recaps.`}
+      note={`Last ${TREND_WEEKS} completed weeks, from approved recaps. This week is added once it ends.`}
     />
   );
 };
@@ -301,6 +305,49 @@ export const ConsumersAddUpNote: React.FC<Window> = (props) => (
   <ErrorBoundary key={`${props.tenantId}|${props.startDate}|${props.endDate}`} fallback={null}>
     <Suspense fallback={null}>
       <AddsUpInner {...props} />
+    </Suspense>
+  </ErrorBoundary>
+);
+
+const PER_EVENT_TITLE = "Consumers sampled per event";
+
+const PerEventInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+  const data = useLazyLoadQuery<ConsumersPerEventQueryType>(
+    ConsumersPerEventQuery,
+    { tenantId, startDate, endDate },
+    { fetchPolicy: "store-or-network" },
+  );
+  const breakdown = data.tenantConsumerBreakdown;
+  const each = breakdown ? perEvent(breakdown.total, breakdown.events) : null;
+  if (!breakdown || each === null) return null;
+  return (
+    <figure className="m-0">
+      <figcaption className="mb-1 text-[13px] font-medium" style={SECONDARY}>
+        {PER_EVENT_TITLE}
+      </figcaption>
+      <p className="text-sm" style={META}>
+        <span
+          className="tab-num text-2xl font-semibold mr-2"
+          style={{ color: "var(--spark-text)" }}
+        >
+          {each.toLocaleString("en-US")}
+        </span>
+        {count(breakdown.total)} consumers across {count(breakdown.events)}{" "}
+        {breakdown.events === 1 ? "event" : "events"} with an approved recap.
+      </p>
+    </figure>
+  );
+};
+
+/**
+ * One plain figure: consumers sampled divided by the events they were
+ * sampled at. Shows nothing when there is nothing to divide or the load
+ * fails, so it never prints a zero or a broken number.
+ */
+export const ConsumersPerEvent: React.FC<Window> = (props) => (
+  <ErrorBoundary key={`${props.tenantId}|${props.startDate}|${props.endDate}`} fallback={null}>
+    <Suspense fallback={null}>
+      <PerEventInner {...props} />
     </Suspense>
   </ErrorBoundary>
 );

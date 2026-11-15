@@ -15,7 +15,7 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
-import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
+import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
@@ -47,14 +47,17 @@ const ConsumerSplits = lazy(() =>
     default: m.ConsumerSplits,
   })),
 );
+const ConsumersPerEvent = lazy(() =>
+  import("@/components/charts/ConsumerCharts").then((m) => ({
+    default: m.ConsumersPerEvent,
+  })),
+);
+const FeedbackThemes = lazy(() => import("@/components/charts/FeedbackThemes"));
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
 );
 const TenantInsightsPanel = lazy(
   () => import("@/components/ai/TenantInsightsPanel"),
-);
-const TenantSentimentCard = lazy(
-  () => import("@/components/ai/TenantSentimentCard"),
 );
 const TenantGeoHeatmap = lazy(() => import("@/components/ai/TenantGeoHeatmap"));
 const MetroBreakdownCard = lazy(
@@ -500,7 +503,7 @@ export function InsightsBody({
   omitNarration = false,
 }: {
   embedded?: boolean;
-  /** Client home renders the narration card above the Performance disclosure. */
+  /** Client home renders the weekly summary above Performance itself. */
   omitNarration?: boolean;
 }) {
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
@@ -740,7 +743,7 @@ export function InsightsBody({
         </div>
       )}
 
-      {tenantId && !omitNarration && <WeeklyNarrationCard tenantId={tenantId} />}
+      {tenantId && !omitNarration && <WeeklySummaryCard tenantId={tenantId} />}
 
       {/* Pace, markets, year-over-year, AI, geo, and the timeline. Gated on
           state rather than <details> so none of their queries fire until
@@ -765,7 +768,7 @@ export function InsightsBody({
                 MORE DETAIL
               </span>
               <span className="block text-sm font-semibold mt-1">
-                Stores, states and products, pace to goal, year-over-year, AI, and timeline
+                Stores, states and products, what consumers said, pace to goal, year-over-year, and timeline
               </span>
             </span>
             <span
@@ -785,7 +788,27 @@ export function InsightsBody({
               Where it happened, {startDate} to {endDate}. Approved recaps only.
             </p>
             <Suspense fallback={null}>
-              <ConsumerSplits
+              <div className="flex flex-col gap-6">
+                <ConsumersPerEvent
+                  tenantId={tenantId}
+                  startDate={startDate}
+                  endDate={endDate}
+                />
+                <ConsumerSplits
+                  tenantId={tenantId}
+                  startDate={startDate}
+                  endDate={endDate}
+                />
+              </div>
+            </Suspense>
+          </div>
+
+          {/* What consumers said in the same dates, grouped into themes.
+              Sits behind More detail, so the grouping is only asked for
+              when someone opens it. */}
+          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+            <Suspense fallback={null}>
+              <FeedbackThemes
                 tenantId={tenantId}
                 startDate={startDate}
                 endDate={endDate}
@@ -839,9 +862,6 @@ export function InsightsBody({
             }
           >
             <div className="space-y-6 lg:space-y-8">
-              <Suspense fallback={<PanelSkeleton />}>
-                <TenantSentimentCard tenantId={tenantId} />
-              </Suspense>
               <Suspense fallback={<PanelSkeleton />}>
                 <TenantGeoHeatmap
                   tenantId={tenantId}

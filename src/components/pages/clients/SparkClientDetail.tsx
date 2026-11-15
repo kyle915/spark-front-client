@@ -36,8 +36,7 @@ import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
-import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
-import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
+import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
 
@@ -135,14 +134,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         <TenantInsightsPanel tenantId={tenantId} />
       </Suspense>
 
-      <WeeklyNarrationCard tenantId={tenantId} />
-
-      {/* "What people are saying" — consumer-sentiment card for this client.
-          Mounted right after Insights; the card renders nothing when there's
-          no feedback text yet. */}
-      <Suspense fallback={<CardFallback label="Loading sentiment…" />}>
-        <TenantSentimentCard tenantId={tenantId} />
-      </Suspense>
+      <WeeklySummaryCard tenantId={tenantId} />
 
       {/* Goals & pace-to-target for this client. */}
       <Suspense fallback={<CardFallback label="Loading goals…" />}>

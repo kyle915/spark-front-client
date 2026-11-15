@@ -111,14 +111,20 @@ export const mondayOf = (d: Date): Date => {
   return start;
 };
 
-/** The last `weeks` Monday-to-Sunday weeks, ending with the one `today` is in. */
+/**
+ * The last `weeks` finished Monday-to-Sunday weeks, ending on the Sunday
+ * before `today`'s week. The week in progress is left out: its recaps are
+ * still being approved, so its figure is low and would read as a drop.
+ */
 export function lastWeeksWindow(
   weeks: number,
   today: Date = new Date(),
 ): { startDate: string; endDate: string } {
   const start = mondayOf(today);
-  start.setDate(start.getDate() - (weeks - 1) * 7);
-  return { startDate: ymd(start), endDate: ymd(today) };
+  start.setDate(start.getDate() - weeks * 7);
+  const end = mondayOf(today);
+  end.setDate(end.getDate() - 1);
+  return { startDate: ymd(start), endDate: ymd(end) };
 }
 
 /**
@@ -188,3 +194,13 @@ export function productSplit(
 /** Whether a paged list came back short of everything that matches. */
 export const isCutOff = (shown: number, total: number | null | undefined): boolean =>
   typeof total === "number" && total > shown;
+
+/**
+ * Consumers sampled per event, or null when there is nothing to divide.
+ * One decimal under ten, whole numbers above.
+ */
+export function perEvent(total: number, events: number): number | null {
+  if (!(events > 0) || !(total > 0)) return null;
+  const each = total / events;
+  return each < 10 ? Math.round(each * 10) / 10 : Math.round(each);
+}

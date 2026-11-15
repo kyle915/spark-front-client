@@ -337,6 +337,9 @@ const SparkRecentSubmissions = lazyDefault(
 const SparkPeople = lazyDefault(
   () => import("@/components/pages/people/SparkPeople"),
 );
+const SparkWeeklySummaries = lazyDefault(
+  () => import("@/components/pages/weekly-summaries/SparkWeeklySummaries"),
+);
 const SparkSystemHealth = lazyDefault(
   () => import("@/components/pages/system-health/SparkSystemHealth"),
 );
@@ -924,6 +927,16 @@ const RequestsLinks = {
       path: "/training/:code",
       component: <TrainingHub />,
       isPublic: true,
+    },
+    {
+      // Staff only: each brand's written weekly summary, to review and copy.
+      path: "/weekly-summaries",
+      component: (
+        <AdminOnly>
+          <SparkWeeklySummaries />
+        </AdminOnly>
+      ),
+      isPublic: false,
     },
     {
       path: "/system-health",
