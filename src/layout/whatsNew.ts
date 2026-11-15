@@ -25,6 +25,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Maps use a quieter style, so pins stand out.",
       "Answers from Ask AI for clients are built from approved recaps only.",
       "An email that fails to send is tried again instead of being dropped.",
+      "Opening a recap, request or event from an email switches Spark to that record's client, and tells you it did.",
     ],
   },
   {
