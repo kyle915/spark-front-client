@@ -160,6 +160,8 @@ export function lineSeries({
     borderWidth: 2,
     borderJoinStyle: "round",
     borderCapStyle: "round",
+    // Monotone: the curve never bulges past a value that was not reached.
+    cubicInterpolationMode: "monotone",
     tension: 0.25,
     fill: area && !quiet ? "origin" : false,
     backgroundColor: area && !quiet ? inkRgba(light() ? 0.06 : 0.1) : stroke,
@@ -209,7 +211,10 @@ export function chartOptions<T extends "bar" | "line">({
     stacked,
     border: { display: false },
     grid: { display: false },
-    ticks: { ...tick, color: chartText(), maxRotation: 0, autoSkipPadding: 16 },
+    // A ranked list names every row; a time axis may thin its labels.
+    ticks: horizontal
+      ? { ...tick, color: chartText(), autoSkip: false }
+      : { ...tick, color: chartText(), maxRotation: 0, autoSkipPadding: 16 },
   };
   return {
     responsive: true,
