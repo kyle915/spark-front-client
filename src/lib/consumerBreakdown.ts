@@ -204,3 +204,11 @@ export function perEvent(total: number, events: number): number | null {
   const each = total / events;
   return each < 10 ? Math.round(each * 10) / 10 : Math.round(each);
 }
+
+/** "498 consumers across 6 events with an approved recap." */
+export function perEventSentence(total: number, events: number): string {
+  const n = (value: number) => value.toLocaleString("en-US");
+  return `${n(total)} ${total === 1 ? "consumer" : "consumers"} across ${n(events)} ${
+    events === 1 ? "event" : "events"
+  } with an approved recap.`;
+}

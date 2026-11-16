@@ -1032,8 +1032,8 @@ const ReceiptCard: React.FC<{
               />
             </a>
           ) : (
-            <span className="text-4xl" aria-hidden>
-              🧾
+            <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+              No image
             </span>
           )}
           <span

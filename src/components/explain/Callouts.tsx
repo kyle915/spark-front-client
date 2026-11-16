@@ -41,11 +41,11 @@ const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
               ))}
             </p>
             <Link
-              to={calloutRecapsHref(c.link)}
+              to={calloutRecapsHref(c.link, c.kind)}
               className="text-xs underline mt-1 inline-block"
               style={{ color: "var(--spark-text-secondary)" }}
             >
-              {calloutLinkLabel(c.link)}
+              {calloutLinkLabel(c.link, c.kind)}
             </Link>
           </li>
         ))}

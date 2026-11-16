@@ -230,8 +230,7 @@ const ProfileInner: React.FC<{
         </div>
         {p.completedShifts + p.claimedShifts + p.droppedShifts > 0 && (
           <p style={{ ...labelMini, letterSpacing: "0.04em", marginTop: 6 }}>
-            ✓ {p.completedShifts} COMPLETED · ⚡ {p.claimedShifts} CLAIMED · ↩{" "}
-            {p.droppedShifts} DROPPED
+            {p.completedShifts} COMPLETED · {p.claimedShifts} CLAIMED · {p.droppedShifts} DROPPED
           </p>
         )}
       </div>

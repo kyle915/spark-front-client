@@ -6,6 +6,7 @@ import {
   mondayOf,
   ofAsked,
   perEvent,
+  perEventSentence,
   productSplit,
   rankedSplit,
   shortLabel,
@@ -199,6 +200,16 @@ describe("shortLabel", () => {
     expect(shortLabel("Sprouts Farmers Market")).toBe("Sprouts Farmers M…");
     expect(shortLabel("Whole Foods Market — Lamar")).toBe("Whole Foods Marke…");
     expect(shortLabel("Supercalifragilisticexpialidocious Foods", 12)).toBe("Supercalifr…");
+  });
+});
+
+describe("perEventSentence", () => {
+  it("separates thousands and agrees in number", () => {
+    expect(perEventSentence(498, 6)).toBe("498 consumers across 6 events with an approved recap.");
+    expect(perEventSentence(83498, 1204)).toBe(
+      "83,498 consumers across 1,204 events with an approved recap.",
+    );
+    expect(perEventSentence(1, 1)).toBe("1 consumer across 1 event with an approved recap.");
   });
 });
 

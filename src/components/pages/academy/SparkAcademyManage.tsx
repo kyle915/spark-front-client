@@ -261,7 +261,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             border: "none",
           }}
         >
-          ✦ New module
+          New module
         </button>
       </div>
 

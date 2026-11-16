@@ -265,7 +265,7 @@ const Inner: React.FC = () => {
             <div className="spark-card overflow-hidden" style={{ borderRadius: 20 }}>
               {health.recentErrors.length === 0 ? (
                 <div className="p-6 text-sm" style={{ color: "var(--spark-lime)" }}>
-                  ✅ No backend errors recorded. All clear.
+                  No backend errors recorded. All clear.
                 </div>
               ) : (
                 <div className="overflow-x-auto">

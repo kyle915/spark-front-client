@@ -72,13 +72,6 @@ const ago = (iso: string) => {
   return `${Math.floor(s / 86400)}d ago`;
 };
 
-const kindEmoji = (k: string) => {
-  if (k === "extension_request") return "⏱";
-  if (k === "shift_status") return "⚠️";
-  if (k === "extension_decision") return "✅";
-  return "🔔";
-};
-
 export default function NotificationBell() {
   const { isAdmin } = useSparkRole();
   const [open, setOpen] = useState(false);
@@ -395,7 +388,6 @@ export default function NotificationBell() {
                     className="group flex gap-2.5 px-1 py-2"
                     style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.04)" }}
                   >
-                    <span className="text-base leading-none mt-0.5">{kindEmoji(n.kind)}</span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold truncate">{n.title}</p>
                       {n.body ? (

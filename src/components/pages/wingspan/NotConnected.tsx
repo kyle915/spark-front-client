@@ -11,20 +11,6 @@ export const WingspanNotConnected: React.FC<{ message: string }> = ({
     }}
   >
     <div className="flex items-start gap-4 flex-wrap">
-      <div
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: "rgba(255,196,0,0.10)",
-          color: "var(--spark-gold)",
-          display: "grid",
-          placeItems: "center",
-          fontSize: 22,
-        }}
-      >
-        🪶
-      </div>
       <div className="flex-1 min-w-0">
         <p
           className="mono text-[10px]"

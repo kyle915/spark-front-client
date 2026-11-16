@@ -55,6 +55,10 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Recaps and the request list have a search box: type what you are looking for, such as Texas Kroger events in October with conversion under 10%. The filters it used are shown, and you can change them. Anything it could not filter on is listed.",
       "Each store has its own page: every visit, totals from approved recaps, products, what consumers said there and photos. Open it from a pin on the account map, from the store chart on Reports, or from the retailer on a recap.",
       "The dashboard and Reports show a highlight for the month: the store with the best conversion, a comment from a consumer and a photo, with links to the store and the recap. It is left out when a month has too few approved recaps.",
+      "Worth a look no longer calls a state quiet, or a week a drop, while its recaps are still waiting for review.",
+      "Staff: Worth a look says when a state has recaps waiting for review, with a link to them.",
+      "The quote in the highlight of the month is credited to the approved recap it came from.",
+      "Insights tiles and a few other screens no longer use emoji as icons.",
     ],
   },
   {

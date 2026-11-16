@@ -58,13 +58,10 @@ const Inner: React.FC<Props> = ({ tenantId, month, heading, fallbackMonth, class
             {h.caption}
           </p>
           {h.quote ? (
-            <blockquote
-              className="m-0 mt-3 pl-3 text-sm leading-relaxed max-w-3xl"
-              style={{ ...INK, borderLeft: "2px solid var(--spark-border)" }}
-            >
+            <blockquote className="m-0 mt-3 text-sm leading-relaxed max-w-3xl" style={INK}>
               “{h.quote.text}”
               <footer className="text-xs mt-1" style={META}>
-                A consumer, as written on{" "}
+                From{" "}
                 {h.quote.recapUuid ? (
                   <Link
                     to={recapHref(h.quote.recapKind, h.quote.recapUuid)}
@@ -102,7 +99,7 @@ const Inner: React.FC<Props> = ({ tenantId, month, heading, fallbackMonth, class
 };
 
 /**
- * Highlight of the month: a best store, a consumer quote and a photo, all
+ * Highlight of the month: a best store, a comment from a recap and a photo, all
  * picked by rule from approved recaps. Renders nothing while it loads, if
  * it fails, or when the month has too little to show.
  */

@@ -387,7 +387,7 @@ const TalentInner: React.FC = () => {
                   className="text-[11px] mt-3 truncate"
                   style={{ color: "var(--spark-text-meta)" }}
                 >
-                  🎓 {b.college}
+                  {b.college}
                 </p>
               )}
               <div

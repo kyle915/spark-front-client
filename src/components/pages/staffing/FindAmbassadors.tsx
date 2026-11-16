@@ -147,6 +147,18 @@ export default function FindAmbassadors() {
     setFilter((prev) => ({ ...prev, [key]: value }));
 
   const chips = filterChips(filter);
+  const statusLine = loading
+    ? "Searching…"
+    : notice ||
+      (result
+        ? result.total === 0
+          ? "No one matches. Remove a filter to widen the search."
+          : `${result.total.toLocaleString("en-US")} ${result.total === 1 ? "person" : "people"}${
+              result.total > result.matches.length
+                ? `, showing the first ${result.matches.length}`
+                : ""
+            }. To book someone, tap a slot on the board.`
+        : "");
   const inputClass = "w-full text-sm rounded-xl px-3 py-2";
   const labelClass = "block text-[12px] font-semibold mb-1";
 
@@ -346,19 +358,10 @@ export default function FindAmbassadors() {
         </form>
       ) : null}
 
-      <p className="text-[13px] mt-3" style={{ ...meta, minHeight: "1.25rem" }} aria-live="polite">
-        {loading
-          ? "Searching…"
-          : notice ||
-            (result
-              ? result.total === 0
-                ? "No one matches. Remove a filter to widen the search."
-                : `${result.total} ${result.total === 1 ? "person" : "people"}${
-                    result.total > result.matches.length
-                      ? `, showing the first ${result.matches.length}`
-                      : ""
-                  }. To book someone, tap a slot on the board.`
-              : "")}
+      {/* Always mounted so a screen reader hears it change; it takes no
+          room until there is something to say. */}
+      <p className={`text-[13px] ${statusLine ? "mt-3" : ""}`} style={meta} aria-live="polite">
+        {statusLine}
       </p>
 
       {result && result.matches.length > 0 && !notice ? (

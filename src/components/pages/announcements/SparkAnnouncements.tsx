@@ -159,7 +159,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           className="px-4 py-2 rounded-xl text-sm font-semibold transition"
           style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)", border: "none" }}
         >
-          ✦ New announcement
+          New announcement
         </button>
       </div>
 
