@@ -41,6 +41,7 @@ import {
 } from "./accountStores";
 import AccountMapView, { CoverageLegend, CoverageMark } from "./AccountMapView";
 import AccountUploader from "./AccountUploader";
+import SampleNextList from "@/components/explain/SampleNextList";
 import { useAccountList } from "./useAccountList";
 
 /**
@@ -360,6 +361,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       ) : null}
 
       <AccountUploader list={list} />
+
+      <SampleNextList tenantId={tenantId} />
 
       <SparkFilterBar
         label="Stores"
