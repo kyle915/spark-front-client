@@ -146,6 +146,88 @@ type AccountListPlaceResult {
   lookupAvailable: Boolean!
 }
 
+type StoreNameAlias {
+  uuid: ID!
+  name: String!
+  records: Int!
+  places: String!
+}
+
+type StoreNameGroup {
+  groupKey: String!
+  canonicalName: String!
+  kind: String!
+  source: String!
+  reason: String!
+  canonicalRecords: Int!
+  affectedRecords: Int!
+  names: [StoreNameAlias!]!
+}
+
+type StoreNameAccepted {
+  uuid: ID!
+  name: String!
+  canonicalName: String!
+  records: Int!
+}
+
+type StoreNameSuggestions {
+  groups: [StoreNameGroup!]!
+  accepted: [StoreNameAccepted!]!
+  maxGroupSize: Int!
+}
+
+type StoreNameDecision {
+  ok: Boolean!
+  message: String!
+  changed: Int!
+  affectedRecords: Int!
+}
+
+type StoreNameCheck {
+  ok: Boolean!
+  message: String!
+  namesChecked: Int!
+  groupsFound: Int!
+  aiUsed: Boolean!
+}
+
+type RequestIntakeProduct {
+  uuid: ID!
+  name: String!
+}
+
+type RequestIntakeDraft {
+  date: String!
+  dateAsTyped: String!
+  yearAssumed: Boolean!
+  dateWarning: String!
+  startTime: String!
+  startAsTyped: String!
+  endTime: String!
+  endAsTyped: String!
+  timeAssumed: Boolean!
+  storeName: String!
+  matchedStoreName: String!
+  storeNumber: String!
+  streetAddress: String!
+  city: String!
+  state: String!
+  zip: String!
+  address: String!
+  notes: String!
+  products: [RequestIntakeProduct!]!
+  unmatchedProducts: [String!]!
+  couldNotRead: [String!]!
+}
+
+type RequestIntakeResult {
+  ok: Boolean!
+  message: String!
+  truncated: Boolean!
+  drafts: [RequestIntakeDraft!]!
+}
+
 type AccountMapCoverage {
   rosterTotal: Int!
   sampled: Int!
@@ -5424,6 +5506,10 @@ input MoveCustomFieldToSectionInput {
 type Mutation {
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
+  decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
+  undoStoreNameAlias(tenantId: ID!, aliasUuid: ID!): StoreNameDecision!
+  checkStoreNames(tenantId: ID!): StoreNameCheck!
+  parseRequestDetails(tenantId: ID!, text: String!): RequestIntakeResult!
   mergeEvents(input: MergeEventsInput!): MergeEventsResponse!
   setEventMileageTracking(eventId: ID!, trackMileage: Boolean!, mileageRate: Float = null): EventDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
@@ -6376,6 +6462,7 @@ type Query {
   accountMapPinTotal(tenantId: ID = null): Int!
   accountMapCoverage(tenantId: ID = null): AccountMapCoverage!
   accountListEntries(tenantId: ID!): [AccountListEntryType!]!
+  storeNameSuggestions(tenantId: ID!): StoreNameSuggestions!
   request(id: ID = null, uuid: ID = null): Request
   activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!

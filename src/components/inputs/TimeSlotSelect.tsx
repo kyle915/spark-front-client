@@ -35,6 +35,12 @@ type Props = {
   style?: React.CSSProperties;
   disabled?: boolean;
   "aria-label"?: string;
+  /**
+   * Shown as the selected option while `value` is empty, so an unset time
+   * reads as unset instead of as the first slot (12:00 AM). Callers that
+   * always hold a time never see it.
+   */
+  placeholder?: string;
 };
 
 const TimeSlotSelect: React.FC<Props> = ({
@@ -44,6 +50,7 @@ const TimeSlotSelect: React.FC<Props> = ({
   style,
   disabled,
   "aria-label": ariaLabel,
+  placeholder,
 }) => {
   // If the caller passes a value that doesn't fall on our 30-min grid
   // (e.g. legacy 17:13), we still show it so we don't silently corrupt
@@ -63,6 +70,7 @@ const TimeSlotSelect: React.FC<Props> = ({
       className={className}
       style={style}
     >
+      {placeholder && !value ? <option value="">{placeholder}</option> : null}
       {slots.map((s) => (
         <option key={s.value} value={s.value}>
           {s.label}
