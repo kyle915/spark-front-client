@@ -313,6 +313,9 @@ const SparkEmailPreferences = lazyDefault(
 const SparkPhotoGallery = lazyDefault(
   () => import("@/components/pages/photos/SparkPhotoGallery"),
 );
+const SparkClientRecapDraft = lazyDefault(
+  () => import("@/components/pages/client-recap/SparkClientRecapDraft"),
+);
 const SparkAlerts = lazyDefault(
   () => import("@/components/pages/alerts/SparkAlerts"),
 );
@@ -756,6 +759,18 @@ const RequestsLinks = {
     {
       path: "/photos",
       component: <SparkPhotoGallery />,
+      isPublic: false,
+    },
+    {
+      // Staff-only first draft of a client recap deck. The page and the
+      // server both turn brand users away.
+      path: "/reports/client-recap",
+      component: <SparkClientRecapDraft />,
+      isPublic: false,
+    },
+    {
+      path: "/reports/client-recap/:uuid",
+      component: <SparkClientRecapDraft />,
       isPublic: false,
     },
     {

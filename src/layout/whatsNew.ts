@@ -39,6 +39,9 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "The dashboard lists up to four things worth a look, such as a store converting far above or below average or a state with no recent recaps, each with its numbers and a link to the recaps behind it.",
       "Each consumers and samples chart has an Ask about this chart link. The answer uses that chart's figures only.",
       "Account map: staff see a ranked list of where to sample next, with the reason for each store.",
+      "Photos and the program report open on the best photos from each recap. All photos is one click away.",
+      "On a recap, staff can pin or unpin which photos count as its best.",
+      "Staff can draft a client recap for any dates: headline numbers, best photos and a short summary to edit, then download as a PDF.",
     ],
   },
   {

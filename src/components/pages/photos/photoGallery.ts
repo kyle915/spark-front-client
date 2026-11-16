@@ -6,7 +6,30 @@ export type GalleryPhoto = {
   store: string;
   state: string;
   eventDate: string;
+  /** A best photo: pinned by staff, or picked by Spark and not unpinned. */
+  isPick?: boolean;
+  /** Short description of the setup, product and setting; "" when none. */
+  caption?: string;
 };
+
+/** Which photos the gallery lists. Best photos is where it opens. */
+export type GalleryView = "best" | "all";
+
+export type GalleryViewState = {
+  view: GalleryView;
+  /** True once a person has picked a view; before that the gallery may
+   *  fall back to all photos when no best photos exist. */
+  chosen: boolean;
+};
+
+export const INITIAL_GALLERY_VIEW: GalleryViewState = { view: "best", chosen: false };
+
+/**
+ * The gallery opens on best photos. When there are none for the filters and
+ * nobody asked for that view, show all photos instead of an empty page.
+ */
+export const fallBackToAll = (state: GalleryViewState, total: number, page: number): boolean =>
+  state.view === "best" && !state.chosen && total === 0 && page === 0;
 
 export type DeckLayout = 1 | 4 | 6 | 9;
 export const DECK_LAYOUTS: DeckLayout[] = [1, 4, 6, 9];

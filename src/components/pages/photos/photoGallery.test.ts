@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   deckColumns,
   deckPages,
+  fallBackToAll,
+  INITIAL_GALLERY_VIEW,
   photoCaption,
   photoFileName,
   rangeDates,
@@ -61,5 +63,14 @@ describe("photo gallery", () => {
     expect(
       photoCaption({ ...photo, store: "11/8/2026 - 1099 E Hospitality Ln", state: "CA" }),
     ).toBe("1099 E Hospitality Ln · CA · Oct 11, 2026");
+  });
+
+  it("opens on best photos and falls back to all only when nobody chose", () => {
+    expect(INITIAL_GALLERY_VIEW).toEqual({ view: "best", chosen: false });
+    expect(fallBackToAll(INITIAL_GALLERY_VIEW, 0, 0)).toBe(true);
+    expect(fallBackToAll(INITIAL_GALLERY_VIEW, 5, 0)).toBe(false);
+    // A person who asked for best photos gets an honest empty state.
+    expect(fallBackToAll({ view: "best", chosen: true }, 0, 0)).toBe(false);
+    expect(fallBackToAll({ view: "all", chosen: false }, 0, 0)).toBe(false);
   });
 });

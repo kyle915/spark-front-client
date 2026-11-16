@@ -5551,6 +5551,9 @@ type Mutation {
   exportCustomRecapsXlsx(input: ExportCustomRecapsXlsxInput!): RecapExportResponse!
   exportCustomRecapXlsx(input: ExportCustomRecapXlsxInput!): RecapExportResponse!
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
+  setRecapPhotoPick(fileId: ID!, choice: String!): RecapPhotoPicksResult!
+  createClientRecapDraft(tenantId: ID!, startDate: String!, endDate: String!): ClientRecapDraftResult!
+  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null): ClientRecapDraftResult!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
@@ -6325,7 +6328,7 @@ type Query {
   tenantCallouts(tenantId: ID!, startDate: String = null, endDate: String = null): [DashboardCallout!]!
   chartAnswer(tenantId: ID!, chart: String!, question: String!, startDate: String = null, endDate: String = null): ChartAnswer!
   tenantSampleNext(tenantId: ID!): SampleNext
-  tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoGalleryPage!
+  tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantBoothDayCounting(tenantId: ID!): Boolean!
   programShareLink(tenantId: ID = null): ProgramShareLink!
@@ -6432,6 +6435,10 @@ type Query {
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
+  recapPhotoPicks(recapId: ID!): RecapPhotoPicksResult!
+  clientRecapDraft(uuid: String!): ClientRecapDraftResult!
+  clientRecapDrafts(tenantId: ID!, first: Int! = 20): [ClientRecapDraftSummary!]!
+  clientRecapDraftPdf(uuid: String!): ClientRecapDraftPdf!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
@@ -7143,6 +7150,89 @@ type RecapReviewFlagSummary {
 type RecapReviewFlagsForRecap {
   recapId: ID!
   flags: [RecapReviewFlagSummary!]!
+}
+
+type RecapPhotoPick {
+  fileId: String!
+  url: String!
+  category: String!
+  status: String!
+  note: String!
+  score: Int
+  caption: String!
+  modelPick: Boolean!
+  staffChoice: String!
+  isPick: Boolean!
+  canPick: Boolean!
+}
+
+type RecapPhotoPicksResult {
+  ok: Boolean!
+  reason: String!
+  items: [RecapPhotoPick!]!
+}
+
+type ClientRecapNumber {
+  label: String!
+  value: Int!
+}
+
+type ClientRecapBar {
+  label: String!
+  value: Int!
+}
+
+type ClientRecapDraftPhoto {
+  id: String!
+  url: String!
+  category: String!
+  caption: String!
+  store: String!
+  state: String!
+  eventDate: String!
+  isPick: Boolean!
+}
+
+type ClientRecapDraftType {
+  uuid: String!
+  tenantId: String!
+  tenantName: String!
+  startDate: String!
+  endDate: String!
+  period: String!
+  title: String!
+  summary: String!
+  takeaways: [String!]!
+  textSource: String!
+  numbers: [ClientRecapNumber!]!
+  weeks: [ClientRecapBar!]!
+  stores: [ClientRecapBar!]!
+  states: [ClientRecapBar!]!
+  quotes: [String!]!
+  photos: [ClientRecapDraftPhoto!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ClientRecapDraftResult {
+  ok: Boolean!
+  reason: String!
+  draft: ClientRecapDraftType
+}
+
+type ClientRecapDraftSummary {
+  uuid: String!
+  tenantName: String!
+  title: String!
+  period: String!
+  updatedAt: String!
+}
+
+type ClientRecapDraftPdf {
+  ok: Boolean!
+  reason: String!
+  filename: String!
+  pdfBase64: String!
 }
 
 """
@@ -8119,6 +8209,8 @@ type GalleryPhoto {
   store: String!
   state: String!
   eventDate: String!
+  isPick: Boolean!
+  caption: String!
 }
 
 type PhotoGalleryPage {
