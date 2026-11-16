@@ -1,4 +1,5 @@
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
+import WhatChangedLine from "@/components/explain/WhatChangedLine";
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
@@ -175,6 +176,13 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
           </div>
         ))}
       </dl>
+
+      <WhatChangedLine
+        tenantId={tenantId}
+        startDate={startDate}
+        endDate={endDate}
+        className="mt-4"
+      />
 
       {photos.length > 0 ? (
         <>

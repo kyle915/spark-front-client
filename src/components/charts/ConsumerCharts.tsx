@@ -3,6 +3,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { Bar, Line } from "react-chartjs-2";
 import "@/lib/sparkChartRegister";
 import ChartBlock from "@/components/charts/ChartBlock";
+import AskAboutChart from "@/components/explain/AskAboutChart";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import { ConsumersPerEventQuery } from "@/api/queries/ConsumersPerEventQuery";
@@ -20,6 +21,7 @@ import {
   weeklyTrend,
   type RankedSplit,
 } from "@/lib/consumerBreakdown";
+import type { ChartKind } from "@/lib/dashboardExplain";
 import { barSeries, chartOptions, lineSeries, valueLabels } from "@/lib/sparkChart";
 
 const lastValue = valueLabels("last");
@@ -106,6 +108,13 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
           {note}
         </p>
       ) : null}
+      <AskAboutChart
+        tenantId={tenantId}
+        chart="consumers_by_week"
+        startDate={startDate}
+        endDate={endDate}
+        title={WEEKLY_TITLE}
+      />
     </div>
   );
 };
@@ -152,7 +161,9 @@ const RankedSplitChart: React.FC<{
   noun: string;
   /** Joins the sentence when one row is the whole split: "at" Costco, "in" CA. */
   where: string;
-}> = ({ title, measure, split, empty, noun, where }) => {
+  /** Which chart this is, so a question about it can be asked. */
+  ask: Window & { chart: ChartKind };
+}> = ({ title, measure, split, empty, noun, where, ask }) => {
   const { bars, aside } = split;
   if (bars.length === 0) return <Nothing title={title}>{empty}</Nothing>;
   // One row is a sentence, not a one-bar chart.
@@ -194,6 +205,7 @@ const RankedSplitChart: React.FC<{
             : `Other ${noun}s add ${count(aside.value)}.`}
         </p>
       ) : null}
+      <AskAboutChart {...ask} title={title} />
     </div>
   );
 };
@@ -220,6 +232,7 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       split={split}
       empty="No approved recaps in these dates."
       noun="store"
+      ask={{ tenantId, startDate, endDate, chart: "consumers_by_store" }}
       where="at"
     />
   );
@@ -243,6 +256,7 @@ const StateInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       split={split}
       empty="No approved recaps in these dates."
       noun="state"
+      ask={{ tenantId, startDate, endDate, chart: "consumers_by_state" }}
       where="in"
     />
   );
@@ -266,6 +280,7 @@ const ProductInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       split={split}
       empty="No recap in these dates logged samples by product."
       noun="product"
+      ask={{ tenantId, startDate, endDate, chart: "samples_by_product" }}
       where="were"
     />
   );
