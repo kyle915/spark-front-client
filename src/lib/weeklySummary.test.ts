@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   isEdited,
+  isLatestMonth,
   isLatestWeek,
+  mailtoHref,
+  monthLabel,
   recapBasis,
+  shiftMonth,
   shiftWeek,
   statusLine,
   summaryIsStale,
@@ -34,6 +38,37 @@ describe("week arithmetic", () => {
     const monday = new Date(2026, 10, 16);
     expect(isLatestWeek("2026-11-09", monday)).toBe(true);
     expect(isLatestWeek("2026-11-02", monday)).toBe(false);
+  });
+});
+
+describe("month arithmetic", () => {
+  it("moves by whole months and lands on the first", () => {
+    expect(shiftMonth("2026-10-14", 0)).toBe("2026-10-01");
+    expect(shiftMonth("2026-10-31", 1)).toBe("2026-11-01");
+    expect(shiftMonth("2026-01-01", -1)).toBe("2025-12-01");
+    expect(shiftMonth("2026-12-01", 1)).toBe("2027-01-01");
+    expect(shiftMonth("nonsense", 1)).toBe("nonsense");
+  });
+
+  it("labels a month", () => {
+    expect(monthLabel("2026-10-01")).toBe("October 2026");
+    expect(monthLabel("x")).toBe("x");
+  });
+
+  it("knows the last finished month", () => {
+    const midNovember = new Date(2026, 10, 15);
+    expect(isLatestMonth("2026-10-01", midNovember)).toBe(true);
+    expect(isLatestMonth("2026-09-01", midNovember)).toBe(false);
+  });
+
+  it("builds an email link with no recipient", () => {
+    expect(mailtoHref("Alpha: October 2026", "Hi team,\n\nIt went well & sold 5.")).toBe(
+      "mailto:?subject=Alpha%3A%20October%202026&body=Hi%20team%2C%0D%0A%0D%0AIt%20went%20well%20%26%20sold%205.",
+    );
+  });
+
+  it("names the period in the basis line", () => {
+    expect(recapBasis(0, 0, "month")).toBe("No approved recaps this month.");
   });
 });
 

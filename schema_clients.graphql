@@ -5522,7 +5522,7 @@ type Mutation {
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
   refreshTenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes
-  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!): WeeklyClientSummaryResult!
+  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
@@ -6427,7 +6427,7 @@ type Query {
   tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
-  weeklyClientSummaries(weekStart: String = null): WeeklyClientSummaryWeek
+  weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
@@ -8207,6 +8207,7 @@ type TenantWeeklySummary {
 
 type WeeklyClientSummary {
   id: ID!
+  period: String!
   weekStart: String!
   weekEnd: String!
   body: String!
@@ -8227,6 +8228,7 @@ type WeeklyClientSummaryRow {
 }
 
 type WeeklyClientSummaryWeek {
+  period: String!
   weekStart: String!
   weekEnd: String!
   rows: [WeeklyClientSummaryRow!]!
