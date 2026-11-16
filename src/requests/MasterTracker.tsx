@@ -32,6 +32,7 @@ import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
 import TrackerPlanAttachBar from "@/plans/TrackerPlanAttachBar";
 import TrackerBulkBar from "./TrackerBulkBar";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import ListSearch from "@/components/search/ListSearch";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import SparkGhostButton from "@/shared/SparkGhostButton";
 import SparkFilterBar from "@/shared/SparkFilterBar";
@@ -2064,6 +2065,15 @@ export default function MasterTracker() {
         />
 
         {torchProgram ? <ProgramSwitch active="retail" /> : null}
+
+        {tenantId ? (
+          <ListSearch
+            list="events"
+            tenantId={String(tenantId)}
+            isClient={isClient}
+            className="mb-3"
+          />
+        ) : null}
 
         <div className="sticky top-0 z-20 flex flex-col spark-sticky-filters spark-tracker-filters">
         <SparkFilterBar

@@ -18,6 +18,7 @@ import { SvgMarker } from "@/shared/map/SvgMarker";
 import { useSparkMapStyle } from "@/shared/map/useSparkMapStyle";
 import type { CoverageClass } from "@/shared/map/accountCoverage";
 import type { Store } from "./accountStores";
+import { storeHref } from "@/lib/storeProfile";
 
 /**
  * The Account Map: one pin per store, grouped into counts where they would
@@ -137,6 +138,11 @@ function StoreCard({
             style={link}
           >
             Directions
+          </a>
+        ) : null}
+        {store.source === "requests" && storeHref(store.key) ? (
+          <a href={storeHref(store.key) ?? undefined} style={link}>
+            Store page
           </a>
         ) : null}
         <button type="button" style={link} onClick={() => onSchedule(store)}>

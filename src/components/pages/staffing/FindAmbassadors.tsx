@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { fetchQuery, useRelayEnvironment } from "react-relay";
+import FilterChips from "@/components/filters/FilterChips";
 import { StaffingSearchQuery } from "@/api/queries/StaffingSearchQuery";
 import type {
   StaffingSearchQuery as StaffingSearchQueryType,
@@ -191,37 +192,12 @@ export default function FindAmbassadors() {
         </div>
       </form>
 
-      {chips.length > 0 ? (
-        <ul className="flex flex-wrap gap-2 mt-3" aria-label="Search filters">
-          {chips.map((chip) => (
-            <li
-              key={chip.key}
-              className="inline-flex items-center rounded-full text-[13px]"
-              style={{ border: "1px solid var(--spark-border)" }}
-            >
-              <button
-                type="button"
-                onClick={() => editChip(chip.key)}
-                title="Change"
-                className="pl-3 pr-1 py-1 rounded-l-full"
-                style={{ color: "var(--spark-text)", background: "transparent" }}
-              >
-                {chip.text}
-              </button>
-              <button
-                type="button"
-                aria-label={`Remove ${chip.text}`}
-                disabled={loading}
-                onClick={() => void searchWith(withoutChip(filter, chip.key))}
-                className="pl-1 pr-3 py-1 rounded-r-full"
-                style={{ ...meta, background: "transparent" }}
-              >
-                <span aria-hidden>×</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <FilterChips
+        chips={chips}
+        disabled={loading}
+        onEdit={editChip}
+        onRemove={(key) => void searchWith(withoutChip(filter, key))}
+      />
 
       {boxesOpen ? (
         <form

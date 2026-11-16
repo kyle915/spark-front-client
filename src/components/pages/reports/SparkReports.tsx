@@ -18,6 +18,8 @@ import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import MonthHighlight from "@/components/explain/MonthHighlight";
+import { monthOfDate } from "@/lib/storeProfile";
 import SparkGhostButton, { SparkGhostLink } from "@/shared/SparkGhostButton";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
@@ -705,6 +707,14 @@ export default function SparkReports() {
             </span>
           )}
         </div>
+
+        {tenantId ? (
+          <MonthHighlight
+            tenantId={tenantId}
+            month={monthOfDate(endYmd)}
+            className="spark-card p-5 sm:p-6"
+          />
+        ) : null}
 
         {/* Summary first: the headline numbers, before any chart. */}
         <section className="spark-card p-5 sm:p-6" aria-label={`Summary, ${range.label}`}>

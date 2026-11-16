@@ -18,6 +18,7 @@ import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import WhatChangedLine from "@/components/explain/WhatChangedLine";
 import Callouts from "@/components/explain/Callouts";
+import { LatestMonthHighlight } from "@/components/explain/MonthHighlight";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
@@ -748,6 +749,7 @@ export function InsightsBody({
               endDate={endDate}
               className="mt-5"
             />
+            <LatestMonthHighlight tenantId={tenantId} className="mt-5" />
           </div>
           <div style={{ borderTop: "1px solid var(--spark-border)" }} />
           <div className="p-5 lg:p-6">
