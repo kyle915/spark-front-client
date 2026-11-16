@@ -35,6 +35,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "The recap page's action bar stays on one row on small screens, with share, edit, archive and delete under More.",
       "The check-in recap form points out numbers that do not add up before you submit. You can fix them or submit as is.",
       "Staffing Board: type a question such as who has worked a store in a city and is free on a day, and get a list of ambassadors who have clocked in there. The filters it used are shown, and you can change them.",
+      "Staff: Weekly summaries is now Client summaries, and also drafts an email for each client's month to review, edit and copy. Nothing is sent from it.",
       "Under the dashboard numbers, a sentence or two says what changed against the period before and where the change came from. It stays quiet when there are too few approved recaps to compare.",
       "The dashboard lists up to four things worth a look, such as a store converting far above or below average or a state with no recent recaps, each with its numbers and a link to the recaps behind it.",
       "Each consumers and samples chart has an Ask about this chart link. The answer uses that chart's figures only.",
@@ -42,6 +43,10 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Photos and the program report open on the best photos from each recap. All photos is one click away.",
       "On a recap, staff can pin or unpin which photos count as its best.",
       "Staff can draft a client recap for any dates: headline numbers, best photos and a short summary to edit, then download as a PDF.",
+      "A recap form worded differently from Spark's standard numbers can now be matched to them by our team, so the dashboard shows the number instead of a dash.",
+      "When a recap is held for review, the reviewer sees one line saying why and what to check first.",
+      "A store typed in different ways (HEB, H-E-B) can be combined, so reports count it once.",
+      "Requests sent by email or in a sheet can be read into the request form by Ignite staff, who check each one before it is submitted.",
     ],
   },
   {

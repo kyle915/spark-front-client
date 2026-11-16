@@ -1,9 +1,19 @@
-import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { RecapReviewChecksQuery } from "@/api/queries/RecapReviewChecksQuery";
 import type { RecapReviewChecksQuery as RecapReviewChecksQueryType } from "@api/queries/__generated__/RecapReviewChecksQuery.graphql";
+import { RecapFlagExplanationQuery } from "@/api/queries/RecapFlagExplanationQuery";
+import type { RecapFlagExplanationQuery as RecapFlagExplanationQueryType } from "@api/queries/__generated__/RecapFlagExplanationQuery.graphql";
 import { recapConversionChip, type RecapKpiRow } from "@/shared/sparkStat";
 import {
+  flagExplanationLine,
   reviewCheckCounts,
   reviewCheckTint,
   visibleReviewChecks,
@@ -16,6 +26,33 @@ import {
  * are hidden, so GPS simply doesn't appear when no coordinates exist.
  * Advisory only — approving stays a human click.
  */
+
+/**
+ * One plain line above the checks: why the recap was flagged and what to
+ * look at first. Loaded on its own, so a slow or failed load never holds up
+ * the checks; when there is no line it renders nothing and the list of
+ * checks reads exactly as before.
+ */
+const WhyFlagged: React.FC<{ recapId: string; isCustom: boolean }> = ({
+  recapId,
+  isCustom,
+}) => {
+  const data = useLazyLoadQuery<RecapFlagExplanationQueryType>(
+    RecapFlagExplanationQuery,
+    { recapId, isCustom },
+    { fetchPolicy: "store-or-network" },
+  );
+  const line = flagExplanationLine(data?.recapFlagExplanation);
+  if (!line) return null;
+  return (
+    <p
+      className="text-[13px] mt-2"
+      style={{ color: "var(--spark-text)", maxWidth: "62ch" }}
+    >
+      {line}
+    </p>
+  );
+};
 
 const Inner: React.FC<{
   recapId: string;
@@ -60,6 +97,11 @@ const Inner: React.FC<{
             : "Nothing flagged · advisory only"}
         </span>
       </div>
+      <QuietBoundary>
+        <Suspense fallback={null}>
+          <WhyFlagged recapId={recapId} isCustom={isCustom} />
+        </Suspense>
+      </QuietBoundary>
       <div className="flex flex-wrap gap-2 mt-2">
         <span
           className="text-[12px] px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"

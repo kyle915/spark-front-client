@@ -229,9 +229,9 @@ const SECTIONS: NavSection[] = [
     title: "Outputs",
     items: [
       { label: "Reports", Icon: BarChart3, to: "/reports" },
-      // Ignite-internal: each brand's written weekly summary, drafted for
-      // staff to review and copy. Nothing is sent from it.
-      { label: "Weekly summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },
+      // Ignite-internal: each brand's written weekly summary and monthly
+      // email draft, for staff to review and copy. Nothing is sent from it.
+      { label: "Client summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },
       // Ignite-internal cost lens — labor + spend per event.
       { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
       // Consolidated samples/hour + SKU + locations + upcoming + call-outs
@@ -289,6 +289,8 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Locations (Towns)", Icon: MapPin, to: "/catalogs/locations/list" },
       { label: "Retailers", Icon: Store, to: "/catalogs/retailers/list" },
+      // One store typed several ways, combined for reports. Staff only.
+      { label: "Store names", Icon: ListChecks, to: "/catalogs/store-names" },
       { label: "Distributors", Icon: Truck, to: "/catalogs/distributors/list" },
       { label: "Event Types", Icon: CalendarRange, to: "/catalogs/event-types/list" },
       { label: "Product Types", Icon: Tags, to: "/catalogs/product-types/list" },

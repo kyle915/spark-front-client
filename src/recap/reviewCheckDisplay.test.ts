@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  flagExplanationLine,
   reviewCheckCounts,
   reviewCheckTint,
   reviewFlagBadges,
@@ -76,3 +77,20 @@ describe("reviewFlagShortLabel", () => {
   });
 });
 
+
+describe("flagExplanationLine", () => {
+  it("returns the reviewer's line", () => {
+    expect(
+      flagExplanationLine({
+        summary: " Sold 55 against 40 samples handed out. Check the sold count first. ",
+      }),
+    ).toBe("Sold 55 against 40 samples handed out. Check the sold count first.");
+  });
+
+  it("is null when there is no line, so the checks stand alone", () => {
+    expect(flagExplanationLine(null)).toBeNull();
+    expect(flagExplanationLine(undefined)).toBeNull();
+    expect(flagExplanationLine({ summary: null })).toBeNull();
+    expect(flagExplanationLine({ summary: "   " })).toBeNull();
+  });
+});

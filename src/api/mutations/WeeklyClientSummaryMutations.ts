@@ -8,12 +8,18 @@ export const GenerateWeeklyClientSummaryMutation = graphql`
   mutation WeeklyClientSummaryMutationsGenerateMutation(
     $tenantId: ID!
     $weekStart: String!
+    $period: String!
   ) {
-    generateWeeklyClientSummary(tenantId: $tenantId, weekStart: $weekStart) {
+    generateWeeklyClientSummary(
+      tenantId: $tenantId
+      weekStart: $weekStart
+      period: $period
+    ) {
       ok
       reason
       summary {
         id
+        period
         weekStart
         weekEnd
         body
@@ -39,6 +45,7 @@ export const SaveWeeklyClientSummaryMutation = graphql`
       reason
       summary {
         id
+        period
         weekStart
         weekEnd
         body
@@ -64,6 +71,7 @@ export const SetWeeklyClientSummaryReviewedMutation = graphql`
       reason
       summary {
         id
+        period
         weekStart
         weekEnd
         body

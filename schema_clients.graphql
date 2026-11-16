@@ -146,6 +146,88 @@ type AccountListPlaceResult {
   lookupAvailable: Boolean!
 }
 
+type StoreNameAlias {
+  uuid: ID!
+  name: String!
+  records: Int!
+  places: String!
+}
+
+type StoreNameGroup {
+  groupKey: String!
+  canonicalName: String!
+  kind: String!
+  source: String!
+  reason: String!
+  canonicalRecords: Int!
+  affectedRecords: Int!
+  names: [StoreNameAlias!]!
+}
+
+type StoreNameAccepted {
+  uuid: ID!
+  name: String!
+  canonicalName: String!
+  records: Int!
+}
+
+type StoreNameSuggestions {
+  groups: [StoreNameGroup!]!
+  accepted: [StoreNameAccepted!]!
+  maxGroupSize: Int!
+}
+
+type StoreNameDecision {
+  ok: Boolean!
+  message: String!
+  changed: Int!
+  affectedRecords: Int!
+}
+
+type StoreNameCheck {
+  ok: Boolean!
+  message: String!
+  namesChecked: Int!
+  groupsFound: Int!
+  aiUsed: Boolean!
+}
+
+type RequestIntakeProduct {
+  uuid: ID!
+  name: String!
+}
+
+type RequestIntakeDraft {
+  date: String!
+  dateAsTyped: String!
+  yearAssumed: Boolean!
+  dateWarning: String!
+  startTime: String!
+  startAsTyped: String!
+  endTime: String!
+  endAsTyped: String!
+  timeAssumed: Boolean!
+  storeName: String!
+  matchedStoreName: String!
+  storeNumber: String!
+  streetAddress: String!
+  city: String!
+  state: String!
+  zip: String!
+  address: String!
+  notes: String!
+  products: [RequestIntakeProduct!]!
+  unmatchedProducts: [String!]!
+  couldNotRead: [String!]!
+}
+
+type RequestIntakeResult {
+  ok: Boolean!
+  message: String!
+  truncated: Boolean!
+  drafts: [RequestIntakeDraft!]!
+}
+
 type AccountMapCoverage {
   rosterTotal: Int!
   sampled: Int!
@@ -5424,6 +5506,10 @@ input MoveCustomFieldToSectionInput {
 type Mutation {
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
+  decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
+  undoStoreNameAlias(tenantId: ID!, aliasUuid: ID!): StoreNameDecision!
+  checkStoreNames(tenantId: ID!): StoreNameCheck!
+  parseRequestDetails(tenantId: ID!, text: String!): RequestIntakeResult!
   mergeEvents(input: MergeEventsInput!): MergeEventsResponse!
   setEventMileageTracking(eventId: ID!, trackMileage: Boolean!, mileageRate: Float = null): EventDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
@@ -5522,9 +5608,11 @@ type Mutation {
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
   refreshTenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes
-  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!): WeeklyClientSummaryResult!
+  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
+  saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
   archiveRecap(input: ArchiveRecapInput!): RecapDetailResponse!
   unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
@@ -6377,6 +6465,7 @@ type Query {
   accountMapPinTotal(tenantId: ID = null): Int!
   accountMapCoverage(tenantId: ID = null): AccountMapCoverage!
   accountListEntries(tenantId: ID!): [AccountListEntryType!]!
+  storeNameSuggestions(tenantId: ID!): StoreNameSuggestions!
   request(id: ID = null, uuid: ID = null): Request
   activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!
@@ -6430,10 +6519,12 @@ type Query {
   tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
-  weeklyClientSummaries(weekStart: String = null): WeeklyClientSummaryWeek
+  weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
+  recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
+  recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   recapPhotoPicks(recapId: ID!): RecapPhotoPicksResult!
   clientRecapDraft(uuid: String!): ClientRecapDraftResult!
@@ -7140,6 +7231,69 @@ type RecapReviewCheck {
   label: String!
   status: String!
   detail: String!
+}
+
+"""
+Why a recap was flagged, in a line. Staff only. `summary` is null when there
+is no line to show.
+"""
+type RecapFlagExplanation {
+  summary: String
+  source: String!
+  flagCount: Int!
+}
+
+type RecapStandardMetric {
+  key: String!
+  label: String!
+}
+
+"""
+One recap template field and what Spark counts it as. Staff only.
+"""
+type RecapFieldMetric {
+  fieldId: ID!
+  name: String!
+  fieldType: String!
+  section: String!
+  currentMetric: String
+  confirmedMetric: String
+  packSize: Int
+  confirmedBy: String!
+  confirmedAt: DateTime
+  canCount: Boolean!
+}
+
+type RecapTemplateMetricMapping {
+  templateId: ID!
+  fields: [RecapFieldMetric!]!
+  missingMetrics: [RecapStandardMetric!]!
+  metricOptions: [RecapStandardMetric!]!
+}
+
+type RecapMetricSuggestion {
+  fieldId: ID!
+  metric: String!
+  packSize: Int
+  reason: String!
+}
+
+type RecapMetricSuggestionResult {
+  ok: Boolean!
+  reason: String!
+  suggestions: [RecapMetricSuggestion!]!
+}
+
+type SaveRecapMetricMappingResult {
+  ok: Boolean!
+  message: String!
+  mapping: RecapTemplateMetricMapping
+}
+
+input RecapFieldMetricInput {
+  fieldId: ID!
+  metric: String = null
+  packSize: Int = null
 }
 
 type RecapReviewFlagSummary {
@@ -8299,6 +8453,7 @@ type TenantWeeklySummary {
 
 type WeeklyClientSummary {
   id: ID!
+  period: String!
   weekStart: String!
   weekEnd: String!
   body: String!
@@ -8319,6 +8474,7 @@ type WeeklyClientSummaryRow {
 }
 
 type WeeklyClientSummaryWeek {
+  period: String!
   weekStart: String!
   weekEnd: String!
   rows: [WeeklyClientSummaryRow!]!

@@ -328,6 +328,9 @@ const SparkJobDetail = lazyDefault(
 const SparkAccountMap = lazyDefault(
   () => import("@/components/pages/map/SparkAccountMap"),
 );
+const SparkStoreNames = lazyDefault(
+  () => import("@/catalogs/storeNames/SparkStoreNames"),
+);
 const SparkToday = lazyDefault(
   () => import("@/components/pages/today/SparkToday"),
 );
@@ -809,6 +812,17 @@ const RequestsLinks = {
       // /upcoming which are likewise tenant-scoped client surfaces).
       path: "/account-map",
       component: <SparkAccountMap />,
+      isPublic: false,
+    },
+    {
+      // Store names typed several ways, combined for reports. Staff only:
+      // the server refuses brand users as well.
+      path: "/catalogs/store-names",
+      component: (
+        <AdminOnly>
+          <SparkStoreNames />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     { path: "/today", component: <SparkToday />, isPublic: false },
