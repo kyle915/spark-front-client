@@ -49,6 +49,9 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "When a recap is held for review, the reviewer sees one line saying why and what to check first.",
       "A store typed in different ways (HEB, H-E-B) can be combined, so reports count it once.",
       "Requests sent by email or in a sheet can be read into the request form by Ignite staff, who check each one before it is submitted.",
+      "The check-in recap form has Fill from photo: take a photo of your tally sheet and the counts are read for you. Each number shows next to its box to accept or ignore, and nothing is filled in until you do.",
+      "Reports and the dashboard have an On shelf summary from shelf photos on approved retail recaps: how often the product was on the shelf, how often a price tag was visible, and the stores where it was not found.",
+      "Staff: a retail recap shows what each shelf photo shows (product on shelf, facings, price tag, gap) next to the photo, and you can correct it.",
     ],
   },
   {

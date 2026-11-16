@@ -65,6 +65,7 @@ const ProductRegions = lazy(() =>
     default: m.ProductRegions,
   })),
 );
+const OnShelfSummary = lazy(() => import("@/components/charts/OnShelfSummary"));
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
 );
@@ -860,6 +861,11 @@ export function InsightsBody({
               />
             </Suspense>
           </div>
+          {/* On shelf, from shelf photos on approved retail recaps. Renders
+              its own card, and nothing when there are no shelf photos. */}
+          <Suspense fallback={null}>
+            <OnShelfSummary tenantId={tenantId} startDate={startDate} endDate={endDate} />
+          </Suspense>
 
           <PaceToGoalHero tenantId={tenantId} />
 
