@@ -156,6 +156,7 @@ import PushToPlanButton from "@/field/PushToPlanButton";
 import { recapTypeForRow } from "@/lib/activationBucket";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 import { RecapBestPhotosPanel } from "./RecapBestPhotosPanel";
+import { RecapShelfPanel } from "./RecapShelfPanel";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 const RecapReviewChecks = lazy(() => import("./RecapReviewChecks"));
@@ -1961,6 +1962,7 @@ const RecapCustomViewInner = ({
           {/* Which photos lead client-facing views. Staff only (the server
               refuses anyone else); approved recaps are the ones scored. */}
           {!isClient && <RecapBestPhotosPanel recapId={recap.id} />}
+          {!isClient && <RecapShelfPanel recapId={recap.id} />}
 
           {!isClient && retailerProposal && !recap.isThirdParty ? (
             <RetailerSuggestion

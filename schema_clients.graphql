@@ -5608,6 +5608,8 @@ type Mutation {
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
   refreshTenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes
+  readRecapShelfPhotos(recapId: ID!): RecapShelfReadings!
+  correctShelfReading(input: CorrectShelfReadingInput!): CorrectShelfReadingPayload!
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
@@ -6521,6 +6523,8 @@ type Query {
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
   tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
   tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
+  recapShelfReadings(recapId: ID!): RecapShelfReadings!
+  shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
@@ -8476,6 +8480,69 @@ type TenantProductRegions {
   generatedAt: String
   startDate: String
   endDate: String
+}
+
+type ShelfAnswers {
+  productOnShelf: String!
+  facings: Int
+  priceTagVisible: String!
+  price: String
+  outOfStockGap: String!
+}
+
+type ShelfCorrection {
+  answers: ShelfAnswers!
+  note: String!
+  correctedByName: String!
+  correctedAt: String!
+}
+
+type ShelfPhotoReading {
+  fileId: ID!
+  fileUrl: String!
+  bucketName: String!
+  status: String!
+  reading: ShelfAnswers
+  correction: ShelfCorrection
+}
+
+type RecapShelfReadings {
+  allowed: Boolean!
+  photos: [ShelfPhotoReading!]!
+  message: String!
+}
+
+input CorrectShelfReadingInput {
+  fileId: ID!
+  productOnShelf: String!
+  priceTagVisible: String!
+  outOfStockGap: String!
+  facings: Int = null
+  price: String = null
+  note: String! = ""
+}
+
+type CorrectShelfReadingPayload {
+  success: Boolean!
+  message: String!
+  photo: ShelfPhotoReading
+}
+
+type ShelfNotFoundStore {
+  storeName: String!
+  eventDate: String!
+}
+
+type ShelfSummary {
+  status: String!
+  visits: Int!
+  onShelf: Int!
+  notFound: Int!
+  unclear: Int!
+  priceTagVisible: Int!
+  unreadVisits: Int!
+  notFoundStores: [ShelfNotFoundStore!]!
+  notFoundMore: Int!
 }
 
 type WhatChanged {

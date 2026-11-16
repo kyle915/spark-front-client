@@ -13,6 +13,7 @@ import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@ap
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
 import FeedbackThemes from "@/components/charts/FeedbackThemes";
 import { CompetitorMentions, ProductRegions } from "@/components/charts/CommentInsights";
+import OnShelfSummary from "@/components/charts/OnShelfSummary";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
@@ -820,6 +821,10 @@ export default function SparkReports() {
           <section className="spark-card p-5 sm:p-6">
             <ProductRegions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
           </section>
+        ) : null}
+        {/* Renders its own card, and nothing when there are no shelf photos. */}
+        {tenantId ? (
+          <OnShelfSummary tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
         ) : null}
       </div>
       </ReportsRangeContext.Provider>

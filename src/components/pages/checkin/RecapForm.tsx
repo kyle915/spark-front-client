@@ -95,6 +95,8 @@ import { buildRecapDraftRequest } from "./recapServerDraft";
 import { buildCompletenessItems } from "./checkinCompleteness";
 import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
 import { RecapCheckNotes } from "./RecapCheckNotes";
+import { TallyPhotoCard, TallyProposal } from "./TallyPhotoCard";
+import { isTallyNumberType, shownProposals, type TallyProposals } from "./tallyRead";
 import {
   RECAP_CHECK_MAX_RUNS,
   answersSignature,
@@ -368,6 +370,56 @@ export default function RecapForm({
   const loosePhotos = photos.filter((p) => p.category === null);
 
   const setVal = (id: string, v: string | string[]) => setValues((p) => ({ ...p, [id]: v }));
+
+  // "Fill from photo": numbers read off a tally photo, waiting next to their
+  // boxes. A number is only in the form once the ambassador taps Use (or
+  // Use all); nothing here is submitted or saved with the draft.
+  const [tallyFields, setTallyFields] = useState<Record<string, string>>({});
+  const [tallyProducts, setTallyProducts] = useState<Record<string, string>>({});
+  const showProductGrid = Boolean(
+    template?.productSamples &&
+      (template?.products.length ?? 0) > 0 &&
+      !hasProductsSampledMultiselect &&
+      !hasDropOffLocations,
+  );
+  // Number boxes on screen now, in form order.
+  const tallyFieldIds = templateFields
+    .filter(
+      (f) =>
+        isTallyNumberType(f.type) &&
+        !isMileageCustomFieldName(f.name) &&
+        isFieldShown(f, values),
+    )
+    .map((f) => f.id);
+  const tallyFieldShown = shownProposals(tallyFields, tallyFieldIds, values);
+  const tallyProductShown = showProductGrid
+    ? shownProposals(
+        tallyProducts,
+        (template?.products ?? []).map((p) => p.id),
+        samples,
+      )
+    : {};
+  const tallyPending =
+    Object.keys(tallyFieldShown).length + Object.keys(tallyProductShown).length;
+  const dropTally = (
+    set: typeof setTallyFields,
+    id: string,
+  ) =>
+    set((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+  const onTallyProposals = (result: TallyProposals) => {
+    setTallyFields(result.ok ? result.fields : {});
+    setTallyProducts(result.ok ? result.products : {});
+  };
+  const acceptAllTally = () => {
+    setValues((prev) => ({ ...prev, ...tallyFieldShown }));
+    setSamples((prev) => ({ ...prev, ...tallyProductShown }));
+    setTallyFields({});
+    setTallyProducts({});
+  };
 
   // Set once the recap is filed, so a late upload can't write a fresh draft
   // for a recap that's already in.
@@ -1288,6 +1340,20 @@ export default function RecapForm({
           />
         </div>
       ) : null}
+      {token && (tallyFieldIds.length > 0 || showProductGrid) ? (
+        <div style={card}>
+          <TallyPhotoCard
+            origin={apiOrigin()}
+            code={code}
+            session={token}
+            accent={accent}
+            includeProducts={showProductGrid}
+            pendingCount={tallyPending}
+            onProposals={onTallyProposals}
+            onUseAll={acceptAllTally}
+          />
+        </div>
+      ) : null}
       {template.sections.map((section) => {
         // Mileage moves to the end of the recap (after photos). Skip empty
         // sections that only held mileage fields.
@@ -1322,6 +1388,16 @@ export default function RecapForm({
                 qtyLabel={template.sampleQtyLabel}
                 qtyTotalLabel={template.sampleQtyTotalLabel}
               />
+              {tallyFieldShown[f.id] !== undefined ? (
+                <TallyProposal
+                  value={tallyFieldShown[f.id]}
+                  onUse={() => {
+                    setVal(f.id, tallyFieldShown[f.id]);
+                    dropTally(setTallyFields, f.id);
+                  }}
+                  onDismiss={() => dropTally(setTallyFields, f.id)}
+                />
+              ) : null}
               </div>
             ))}
           </div>
@@ -1363,7 +1439,8 @@ export default function RecapForm({
           <h2 style={h2}>Products sampled</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
             {template.products.map((p) => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div key={p.id}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover" }} />
                 ) : null}
@@ -1375,6 +1452,17 @@ export default function RecapForm({
                   value={samples[p.id] ?? ""}
                   onChange={(e) => setSamples((s) => ({ ...s, [p.id]: e.target.value }))}
                 />
+              </div>
+              {tallyProductShown[p.id] !== undefined ? (
+                <TallyProposal
+                  value={tallyProductShown[p.id]}
+                  onUse={() => {
+                    setSamples((s) => ({ ...s, [p.id]: tallyProductShown[p.id] }));
+                    dropTally(setTallyProducts, p.id);
+                  }}
+                  onDismiss={() => dropTally(setTallyProducts, p.id)}
+                />
+              ) : null}
               </div>
             ))}
           </div>
