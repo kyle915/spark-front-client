@@ -16,6 +16,8 @@ import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
+import WhatChangedLine from "@/components/explain/WhatChangedLine";
+import Callouts from "@/components/explain/Callouts";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
@@ -722,6 +724,18 @@ export function InsightsBody({
               comparisonPeriod={comparisonPeriod}
               chromeless
               detail={showDetail}
+            />
+            <WhatChangedLine
+              tenantId={tenantId}
+              startDate={startDate}
+              endDate={endDate}
+              className="mt-4"
+            />
+            <Callouts
+              tenantId={tenantId}
+              startDate={startDate}
+              endDate={endDate}
+              className="mt-5"
             />
           </div>
           <div style={{ borderTop: "1px solid var(--spark-border)" }} />

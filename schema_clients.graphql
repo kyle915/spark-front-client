@@ -6321,6 +6321,10 @@ type Query {
   checkinFieldIssues(tenantId: ID!, days: Int! = 7): [CheckinIssueSummary!]!
   tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
   tenantConsumerBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): ConsumerBreakdown
+  tenantWhatChanged(tenantId: ID!, startDate: String = null, endDate: String = null): WhatChanged
+  tenantCallouts(tenantId: ID!, startDate: String = null, endDate: String = null): [DashboardCallout!]!
+  chartAnswer(tenantId: ID!, chart: String!, question: String!, startDate: String = null, endDate: String = null): ChartAnswer!
+  tenantSampleNext(tenantId: ID!): SampleNext
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantBoothDayCounting(tenantId: ID!): Boolean!
@@ -8172,6 +8176,23 @@ type TenantFeedbackThemes {
   commentCount: Int!
   truncated: Boolean!
   generatedAt: String
+}
+
+type WhatChanged {
+  text: String!
+  source: String!
+  previousStartDate: String
+  previousEndDate: String
+}
+
+type CalloutNumber {
+  label: String!
+  value: String!
+}
+
+type CalloutLink {
+  store: String
+  state: String
   startDate: String
   endDate: String
 }
@@ -8217,6 +8238,36 @@ type WeeklyClientSummaryResult {
   ok: Boolean!
   reason: String
   summary: WeeklyClientSummary
+}
+
+type DashboardCallout {
+  key: String!
+  kind: String!
+  text: String!
+  numbers: [CalloutNumber!]!
+  link: CalloutLink!
+}
+
+type ChartAnswer {
+  ok: Boolean!
+  answered: Boolean!
+  answer: String!
+  reason: String
+}
+
+type SampleNextItem {
+  key: String!
+  kind: String!
+  name: String!
+  address: String!
+  market: String!
+  reason: String!
+  lat: Float
+  lng: Float
+}
+
+type SampleNext {
+  items: [SampleNextItem!]!
 }
 
 type FieldEfficiency {
