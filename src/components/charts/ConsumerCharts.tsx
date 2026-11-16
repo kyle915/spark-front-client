@@ -5,6 +5,7 @@ import "@/lib/sparkChartRegister";
 import ChartBlock from "@/components/charts/ChartBlock";
 import AskAboutChart from "@/components/explain/AskAboutChart";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { StoreChartLinks } from "@/components/store/StoreLinks";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import { ConsumersPerEventQuery } from "@/api/queries/ConsumersPerEventQuery";
 import type { ConsumersPerEventQuery as ConsumersPerEventQueryType } from "@api/queries/__generated__/ConsumersPerEventQuery.graphql";
@@ -226,15 +227,21 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
   );
   if (!breakdown) return <Nothing title={STORE_TITLE}>This chart could not load.</Nothing>;
   return (
-    <RankedSplitChart
-      title={STORE_TITLE}
-      measure="Consumers sampled"
-      split={split}
-      empty="No approved recaps in these dates."
-      noun="store"
-      ask={{ tenantId, startDate, endDate, chart: "consumers_by_store" }}
-      where="at"
-    />
+    <div className="flex flex-col gap-2">
+      <RankedSplitChart
+        title={STORE_TITLE}
+        measure="Consumers sampled"
+        split={split}
+        empty="No approved recaps in these dates."
+        noun="store"
+        ask={{ tenantId, startDate, endDate, chart: "consumers_by_store" }}
+        where="at"
+      />
+      <StoreChartLinks
+        tenantId={tenantId}
+        labels={split.bars.filter((b) => !b.context).map((b) => b.label)}
+      />
+    </div>
   );
 };
 

@@ -325,6 +325,9 @@ const SparkTalent = lazyDefault(
 const SparkJobDetail = lazyDefault(
   () => import("@/components/pages/jobs/SparkJobDetail"),
 );
+const SparkStoreProfile = lazyDefault(
+  () => import("@/components/pages/store/SparkStoreProfile"),
+);
 const SparkAccountMap = lazyDefault(
   () => import("@/components/pages/map/SparkAccountMap"),
 );
@@ -823,6 +826,13 @@ const RequestsLinks = {
           <SparkStoreNames />
         </AdminOnly>
       ),
+      isPublic: false,
+    },
+    {
+      // One store of the current client. The key is opaque: the server
+      // looks it up in the viewer's own brand and decides what they see.
+      path: "/store/:storeKey",
+      component: <SparkStoreProfile />,
       isPublic: false,
     },
     { path: "/today", component: <SparkToday />, isPublic: false },

@@ -6418,6 +6418,11 @@ type Query {
   tenantCallouts(tenantId: ID!, startDate: String = null, endDate: String = null): [DashboardCallout!]!
   chartAnswer(tenantId: ID!, chart: String!, question: String!, startDate: String = null, endDate: String = null): ChartAnswer!
   tenantSampleNext(tenantId: ID!): SampleNext
+  listSearch(tenantId: ID!, list: String!, question: String = null, filter: ListSearchFilterInput = null): ListSearchResult
+  storeProfile(tenantId: ID!, storeKey: String!): StoreProfile
+  recapStoreKey(tenantId: ID!, recapId: ID!): String
+  tenantStoreLinks(tenantId: ID!): [StoreLink!]!
+  monthHighlight(tenantId: ID!, month: String!): MonthHighlight
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantBoothDayCounting(tenantId: ID!): Boolean!
@@ -8635,6 +8640,193 @@ type SampleNextItem {
 
 type SampleNext {
   items: [SampleNextItem!]!
+}
+
+type ListSearchCondition {
+  metric: String!
+  op: String!
+  value: Float!
+}
+
+type ListSearchFilter {
+  state: String
+  city: String
+  store: String
+  dateFrom: String
+  dateTo: String
+  status: String
+  activationType: String
+  product: String
+  conditions: [ListSearchCondition!]!
+}
+
+type ListSearchRow {
+  kind: String!
+  uuid: String!
+  title: String!
+  date: String
+  store: String!
+  city: String!
+  state: String!
+  activationType: String!
+  status: String!
+  requestUuid: String
+  recapCount: Int
+  consumers: Int
+  unitsSold: Int
+  conversion: Float
+}
+
+type ListSearchResult {
+  list: String!
+  filter: ListSearchFilter!
+  interpreted: Boolean!
+  modelAvailable: Boolean!
+  ignored: [String!]!
+  reason: String
+  rows: [ListSearchRow!]!
+  total: Int!
+}
+
+input ListSearchConditionInput {
+  metric: String!
+  op: String!
+  value: Float!
+}
+
+input ListSearchFilterInput {
+  state: String = null
+  city: String = null
+  store: String = null
+  dateFrom: String = null
+  dateTo: String = null
+  status: String = null
+  activationType: String = null
+  product: String = null
+  conditions: [ListSearchConditionInput!] = null
+}
+
+type StoreVisit {
+  eventUuid: String!
+  requestUuid: String
+  title: String!
+  date: String
+  activationType: String!
+  status: String!
+  recapUuid: String
+  recapKind: String
+  consumers: Int
+  unitsSold: Int
+  conversion: Float
+}
+
+type StoreTotals {
+  visits: Int!
+  upcoming: Int!
+  approvedRecaps: Int!
+  consumers: Int!
+  unitsSold: Int!
+  conversion: Float
+  averageConsumers: Float
+  averageUnitsSold: Float
+  firstVisit: String
+  lastVisit: String
+}
+
+type StoreProduct {
+  label: String!
+  samples: Int!
+  sold: Int
+}
+
+type StoreComment {
+  text: String!
+  kind: String!
+  recapUuid: String
+  recapKind: String
+}
+
+type StorePhoto {
+  url: String!
+  category: String!
+  recapUuid: String!
+  eventDate: String!
+}
+
+type StorePerson {
+  name: String!
+  visits: Int!
+  lastDate: String
+}
+
+type StoreFlag {
+  recapUuid: String!
+  recapKind: String!
+  date: String
+  labels: [String!]!
+}
+
+type StoreStaffView {
+  people: [StorePerson!]!
+  flags: [StoreFlag!]!
+  inReview: Int!
+}
+
+type StoreProfile {
+  storeKey: String!
+  name: String!
+  address: String!
+  city: String!
+  state: String!
+  summary: String!
+  summarySource: String!
+  totals: StoreTotals!
+  visits: [StoreVisit!]!
+  visitTotal: Int!
+  products: [StoreProduct!]!
+  comments: [StoreComment!]!
+  photos: [StorePhoto!]!
+  staff: StoreStaffView
+}
+
+type StoreLink {
+  name: String!
+  storeKey: String!
+}
+
+type HighlightStore {
+  storeKey: String!
+  name: String!
+  market: String!
+  conversion: Float!
+  consumers: Int!
+  unitsSold: Int!
+  recaps: Int!
+  recapUuid: String
+  recapKind: String
+}
+
+type HighlightQuote {
+  text: String!
+  recapUuid: String
+  recapKind: String
+}
+
+type HighlightPhoto {
+  url: String!
+  category: String!
+  recapUuid: String!
+}
+
+type MonthHighlight {
+  month: String!
+  label: String!
+  caption: String!
+  captionSource: String!
+  recaps: Int!
+  store: HighlightStore
+  quote: HighlightQuote
+  photo: HighlightPhoto
 }
 
 type FieldEfficiency {

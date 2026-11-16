@@ -107,6 +107,7 @@ import {
 } from "@/lib/activationBucket";
 import { BaNameFilter } from "./BaNameFilter";
 import { RecapTypeChips } from "./RecapTypeChips";
+import ListSearch from "@/components/search/ListSearch";
 import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
 import { useRecapReviewFlags } from "./useRecapReviewFlags";
 import type { ReviewFlagSummary } from "./reviewCheckDisplay";
@@ -3321,6 +3322,9 @@ export default function SparkRecapsList() {
             ) : null
           }
         />
+        {tenantId ? (
+          <ListSearch list="recaps" tenantId={String(tenantId)} isClient={isClient} />
+        ) : null}
         <div
           className="sticky top-0 z-20 spark-sticky-filters flex flex-col"
           style={{

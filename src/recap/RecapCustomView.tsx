@@ -59,6 +59,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
+import { RecapStoreLink } from "@/components/store/StoreLinks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import {
   lazy,
@@ -2177,7 +2178,13 @@ const RecapCustomViewInner = ({
                         )}
                       </span>
                       <span className="font-medium text-right">
-                        {value || "—"}
+                        {label === "Retailer" && value && !isEditingValues ? (
+                          <RecapStoreLink tenantId={tenantId} recapId={recap.uuid}>
+                            {value}
+                          </RecapStoreLink>
+                        ) : (
+                          value || "—"
+                        )}
                       </span>
                     </div>
                   ))}

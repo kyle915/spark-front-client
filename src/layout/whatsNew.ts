@@ -52,6 +52,9 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "The check-in recap form has Fill from photo: take a photo of your tally sheet and the counts are read for you. Each number shows next to its box to accept or ignore, and nothing is filled in until you do.",
       "Reports and the dashboard have an On shelf summary from shelf photos on approved retail recaps: how often the product was on the shelf, how often a price tag was visible, and the stores where it was not found.",
       "Staff: a retail recap shows what each shelf photo shows (product on shelf, facings, price tag, gap) next to the photo, and you can correct it.",
+      "Recaps and the request list have a search box: type what you are looking for, such as Texas Kroger events in October with conversion under 10%. The filters it used are shown, and you can change them. Anything it could not filter on is listed.",
+      "Each store has its own page: every visit, totals from approved recaps, products, what consumers said there and photos. Open it from a pin on the account map, from the store chart on Reports, or from the retailer on a recap.",
+      "The dashboard and Reports show a highlight for the month: the store with the best conversion, a comment from a consumer and a photo, with links to the store and the recap. It is left out when a month has too few approved recaps.",
     ],
   },
   {
