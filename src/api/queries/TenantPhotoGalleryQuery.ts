@@ -9,6 +9,7 @@ export const TenantPhotoGalleryQuery = graphql`
     $state: String
     $store: String
     $category: String
+    $picksOnly: Boolean!
     $first: Int!
     $offset: Int!
   ) {
@@ -19,6 +20,7 @@ export const TenantPhotoGalleryQuery = graphql`
       state: $state
       store: $store
       category: $category
+      picksOnly: $picksOnly
       first: $first
       offset: $offset
     ) {
@@ -33,6 +35,8 @@ export const TenantPhotoGalleryQuery = graphql`
         store
         state
         eventDate
+        isPick
+        caption
       }
     }
   }

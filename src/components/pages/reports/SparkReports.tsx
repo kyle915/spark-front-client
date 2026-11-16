@@ -6,6 +6,9 @@ import RecapFieldTotalsSection from "./RecapFieldTotalsSection";
 import FieldEfficiencySection from "./FieldEfficiencySection";
 import ProgramShareControl from "./ProgramShareControl";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
+import { ReportsBestPhotosQuery } from "@/api/queries/ReportsBestPhotosQuery";
+import type { ReportsBestPhotosQuery as ReportsBestPhotosQueryType } from "@api/queries/__generated__/ReportsBestPhotosQuery.graphql";
+import { bestPhotoCaption, type FieldPhotoView } from "./fieldPhotos";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
 import FeedbackThemes from "@/components/charts/FeedbackThemes";
@@ -14,11 +17,11 @@ import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
-import SparkGhostButton from "@/shared/SparkGhostButton";
+import SparkGhostButton, { SparkGhostLink } from "@/shared/SparkGhostButton";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
-import { Suspense, createContext, useContext, useMemo } from "react";
+import { Suspense, createContext, useContext, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
@@ -293,12 +296,33 @@ const fmtNum = (v: number | null | undefined) =>
 
 
 /**
- * "From the field" — up to 24 recent approved recap photos in the range,
- * with a lightbox. Renders nothing when there are none.
+ * "From the field" — photos from approved recaps in the range, with a
+ * lightbox. Opens on the best photos (up to 24) when any have been picked;
+ * "All photos" (one per recap, as before) is one click away. Renders
+ * nothing when there are no photos at all.
  */
 const FieldPhotos: React.FC = () => {
   const { tenantId } = useAuthStore();
   const range = useReportsRange();
+  const [view, setView] = useState<FieldPhotoView>("best");
+  const best = useLazyLoadQuery<ReportsBestPhotosQueryType>(
+    ReportsBestPhotosQuery,
+    {
+      tenantId: String(tenantId ?? ""),
+      startDate: ymdLocal(range.start),
+      endDate: ymdLocal(range.end),
+      first: 24,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  const bestPhotos = useMemo(
+    () =>
+      (best?.tenantPhotoGallery?.photos ?? []).map((p) => ({
+        url: thumbUrl(p.url, 800) || p.url,
+        caption: bestPhotoCaption(p),
+      })),
+    [best],
+  );
   const data = useLazyLoadQuery<ReportsFieldPhotosQueryType>(
     ReportsFieldPhotosQuery,
     {
@@ -336,10 +360,37 @@ const FieldPhotos: React.FC = () => {
         }),
     [data],
   );
-  if (photos.length === 0) return null;
+  if (photos.length === 0 && bestPhotos.length === 0) return null;
+  // No picks in this range yet: show what the section always showed.
+  const hasBest = bestPhotos.length > 0;
+  const shown = hasBest && view === "best" ? bestPhotos : photos;
   return (
     <div className="spark-card p-5">
-      <CampaignPhotoHighlights photos={photos} />
+      {hasBest ? (
+        <div
+          className="pill-group mb-3 print:hidden"
+          role="group"
+          aria-label="Which photos to show"
+        >
+          {(
+            [
+              ["best", "Best photos"],
+              ["all", "All photos"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              aria-pressed={view === key}
+              className={`pill-btn whitespace-nowrap ${view === key ? "on" : ""}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <CampaignPhotoHighlights photos={shown} />
     </div>
   );
 };
@@ -493,6 +544,7 @@ const ConsumersUnavailable: React.FC = () => (
 
 export default function SparkReports() {
   const { tenantId } = useAuthStore();
+  const { isAdmin: isStaffView } = useSparkRole();
   // The chosen range sticks per client in this browser, so a view someone
   // set up is still there next time.
   const stickyKey = `@spark.view.reports/${tenantId || "all"}`;
@@ -564,6 +616,14 @@ export default function SparkReports() {
           support="Numbers, photos and consumer feedback for the dates you pick. Consumers counted are sampled — not reach or samples handed out."
           action={
             <>
+            {/* Staff only: a first draft of a client recap for any dates. */}
+            {isStaffView ? (
+              <SparkGhostLink
+                to={`/reports/client-recap?start=${ymdLocal(range.start)}&end=${ymdLocal(range.end)}`}
+              >
+                Draft client recap
+              </SparkGhostLink>
+            ) : null}
             <SparkGhostButton
               onClick={emailLastMonth}
               disabled={emailing || !tenantId}

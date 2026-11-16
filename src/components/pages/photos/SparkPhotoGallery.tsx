@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
 import Layout from "@/layout/Layout";
@@ -11,12 +11,15 @@ import { thumbUrl } from "@/utils/thumb";
 import {
   DATE_RANGES,
   DECK_LAYOUTS,
+  fallBackToAll,
+  INITIAL_GALLERY_VIEW,
   photoCaption,
   photoFileName,
   rangeDates,
   type DateRangeKey,
   type DeckLayout,
   type GalleryPhoto,
+  type GalleryViewState,
 } from "./photoGallery";
 import { buildDeckHtml, openDeck } from "./photoDeck";
 
@@ -42,13 +45,26 @@ type Filters = {
 const Grid: React.FC<{
   tenantId: string;
   filters: Filters;
+  view: GalleryViewState;
+  onNoBestPhotos: () => void;
   page: number;
   onPage: (p: number) => void;
   onChoices: (c: { categories: readonly string[]; states: readonly string[] }) => void;
   selected: Map<string, GalleryPhoto>;
   onToggle: (p: GalleryPhoto) => void;
   onSelectMany: (photos: readonly GalleryPhoto[], on: boolean) => void;
-}> = ({ tenantId, filters, page, onPage, onChoices, selected, onToggle, onSelectMany }) => {
+}> = ({
+  tenantId,
+  filters,
+  view,
+  onNoBestPhotos,
+  page,
+  onPage,
+  onChoices,
+  selected,
+  onToggle,
+  onSelectMany,
+}) => {
   const dates = useMemo(() => rangeDates(filters.range), [filters.range]);
   const data = useLazyLoadQuery<QueryType>(
     TenantPhotoGalleryQuery,
@@ -59,6 +75,7 @@ const Grid: React.FC<{
       state: filters.state || null,
       category: filters.category || null,
       store: filters.store || null,
+      picksOnly: view.view === "best",
       first: PAGE_SIZE,
       offset: page * PAGE_SIZE,
     },
@@ -71,13 +88,24 @@ const Grid: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [g.categories.join("|"), g.states.join("|")]);
 
+  // Nothing picked yet for these filters and nobody asked for best photos:
+  // show everything rather than an empty page.
+  const fallBack = fallBackToAll(view, g.total, page);
+  useEffect(() => {
+    if (fallBack) onNoBestPhotos();
+  }, [fallBack, onNoBestPhotos]);
+  if (fallBack) return null;
+
   if (g.total === 0) {
     return (
       <div className="spark-empty">
-        <h2 className="spark-title text-2xl font-semibold">No photos match.</h2>
+        <h2 className="spark-title text-2xl font-semibold">
+          {view.view === "best" ? "No best photos match." : "No photos match."}
+        </h2>
         <p className="spark-support mt-2 mx-auto">
-          Photos appear here once a recap is approved. Try a wider date range or
-          clear the filters.
+          {view.view === "best"
+            ? "Best photos are picked once a recap is approved. Choose All photos to see everything, or try a wider date range."
+            : "Photos appear here once a recap is approved. Try a wider date range or clear the filters."}
         </p>
       </div>
     );
@@ -90,7 +118,8 @@ const Grid: React.FC<{
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3 text-sm">
         <span style={{ color: "var(--spark-text-meta)" }}>
-          {g.total.toLocaleString("en-US")} photo{g.total === 1 ? "" : "s"}
+          {g.total.toLocaleString("en-US")} {view.view === "best" ? "best " : ""}photo
+          {g.total === 1 ? "" : "s"}
           {pages > 1 ? ` · page ${page + 1} of ${pages}` : ""}
         </span>
         <button
@@ -120,7 +149,7 @@ const Grid: React.FC<{
                 <label className="block cursor-pointer">
                   <img
                     src={thumbUrl(p.url, 400)}
-                    alt={p.category || "Field photo"}
+                    alt={p.caption || p.category || "Field photo"}
                     loading="lazy"
                     className="w-full aspect-[4/3] object-cover block"
                   />
@@ -136,7 +165,21 @@ const Grid: React.FC<{
               </div>
               <p className="text-xs mt-1.5 font-semibold truncate" title={p.category}>
                 {p.category || "Field photo"}
+                {p.isPick && view.view === "all" ? (
+                  <span className="font-normal" style={{ color: "var(--spark-text-meta)" }}>
+                    {" · Best photo"}
+                  </span>
+                ) : null}
               </p>
+              {p.caption ? (
+                <p
+                  className="text-xs truncate"
+                  style={{ color: "var(--spark-text-secondary)" }}
+                  title={p.caption}
+                >
+                  {p.caption}
+                </p>
+              ) : null}
               <p
                 className="text-xs truncate"
                 style={{ color: "var(--spark-text-meta)" }}
@@ -196,6 +239,18 @@ const SparkPhotoGallery: React.FC = () => {
   });
   const [storeDraft, setStoreDraft] = useState("");
   const [page, setPage] = useState(0);
+  // Opens on best photos; All photos is one click away.
+  const [view, setView] = useState<GalleryViewState>(INITIAL_GALLERY_VIEW);
+  const [noBestNote, setNoBestNote] = useState(false);
+  const showAll = useCallback(() => {
+    setView({ view: "all", chosen: false });
+    setNoBestNote(true);
+  }, []);
+  const chooseView = (next: GalleryViewState["view"]) => {
+    setView({ view: next, chosen: true });
+    setNoBestNote(false);
+    setPage(0);
+  };
   const [choices, setChoices] = useState<{
     categories: readonly string[];
     states: readonly string[];
@@ -303,8 +358,34 @@ const SparkPhotoGallery: React.FC = () => {
         <SparkPageHeader
           eyebrow="RECAPS"
           title="Photos"
-          support="Every approved field photo in one place. Filter, pick the ones you want, then download them or build a photo deck."
+          support="Field photos from approved recaps, best photos first. Filter, pick the ones you want, then download them or build a photo deck."
         />
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="pill-group" role="group" aria-label="Which photos to show">
+            {(
+              [
+                ["best", "Best photos"],
+                ["all", "All photos"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => chooseView(key)}
+                aria-pressed={view.view === key}
+                className={`pill-btn whitespace-nowrap ${view.view === key ? "on" : ""}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {noBestNote ? (
+            <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+              No best photos picked for these filters yet, so all photos are shown.
+            </p>
+          ) : null}
+        </div>
 
         <div className="spark-card p-3 flex items-center gap-2 flex-wrap">
           <select
@@ -414,6 +495,8 @@ const SparkPhotoGallery: React.FC = () => {
             <Grid
               tenantId={String(tenantId)}
               filters={filters}
+              view={view}
+              onNoBestPhotos={showAll}
               page={page}
               onPage={setPage}
               onChoices={setChoices}
