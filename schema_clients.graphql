@@ -6516,6 +6516,8 @@ type Query {
   tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
+  tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
+  tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
@@ -8330,6 +8332,58 @@ type TenantFeedbackThemes {
   commentCount: Int!
   truncated: Boolean!
   generatedAt: String
+}
+
+type CompetitorBrand {
+  brand: String!
+  recapCount: Int!
+  preferOurs: Int!
+  preferTheirs: Int!
+  neutral: Int!
+  quote: String!
+}
+
+type TenantCompetitorMentions {
+  status: String!
+  brands: [CompetitorBrand!]!
+  mentionCommentCount: Int!
+  recapCount: Int!
+  commentCount: Int!
+  truncated: Boolean!
+  generatedAt: String
+  startDate: String
+  endDate: String
+}
+
+type ProductRegionState {
+  state: String!
+  recaps: Int!
+  soldStatus: String!
+  soldProduct: String
+  soldUnits: Int!
+  soldRecaps: Int!
+  sampledStatus: String!
+  sampledProduct: String
+  sampledUnits: Int!
+  sampledRecaps: Int!
+  spokenStatus: String!
+  spokenProduct: String
+  spokenPositive: Int!
+  spokenNegative: Int!
+  spokenRecaps: Int!
+}
+
+type TenantProductRegions {
+  status: String!
+  commentsStatus: String!
+  hasSold: Boolean!
+  hasSampled: Boolean!
+  states: [ProductRegionState!]!
+  recapCount: Int!
+  minStateRecaps: Int!
+  generatedAt: String
+  startDate: String
+  endDate: String
 }
 
 type WhatChanged {
