@@ -40,6 +40,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "The dashboard lists up to four things worth a look, such as a store converting far above or below average or a state with no recent recaps, each with its numbers and a link to the recaps behind it.",
       "Each consumers and samples chart has an Ask about this chart link. The answer uses that chart's figures only.",
       "Account map: staff see a ranked list of where to sample next, with the reason for each store.",
+      "A recap form worded differently from Spark's standard numbers can now be matched to them by our team, so the dashboard shows the number instead of a dash.",
+      "When a recap is held for review, the reviewer sees one line saying why and what to check first.",
     ],
   },
   {

@@ -29,6 +29,7 @@ import type { CustomRecapTemplateBuilderQuery as CustomRecapTemplateBuilderQuery
 import { UpdateCustomRecapTemplateMutation } from "@/api/mutations/UpdateCustomRecapTemplateMutation";
 import type { UpdateCustomRecapTemplateMutation as UpdateCustomRecapTemplateMutationType } from "@api/mutations/__generated__/UpdateCustomRecapTemplateMutation.graphql";
 import { CreateRecapSectionMutation } from "@/api/mutations/CreateRecapSectionMutation";
+import RecapMetricMappingCard from "./RecapMetricMappingCard";
 import type { CreateRecapSectionMutation as CreateRecapSectionMutationType } from "@api/mutations/__generated__/CreateRecapSectionMutation.graphql";
 
 type DraftField = {
@@ -629,6 +630,13 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
           {isUpdating ? "Saving…" : "Save changes"}
         </button>
       </div>
+
+      {/* What Spark counts from this form: its own load and its own save,
+          separate from the template's fields above. */}
+      <RecapMetricMappingCard
+        templateId={String(template.id)}
+        tracksProductSamples={Boolean(template.productSamples)}
+      />
     </div>
   );
 };

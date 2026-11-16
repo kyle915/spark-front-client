@@ -5525,6 +5525,8 @@ type Mutation {
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
+  saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
   archiveRecap(input: ArchiveRecapInput!): RecapDetailResponse!
   unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
@@ -6431,6 +6433,8 @@ type Query {
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
+  recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
+  recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
@@ -7133,6 +7137,69 @@ type RecapReviewCheck {
   label: String!
   status: String!
   detail: String!
+}
+
+"""
+Why a recap was flagged, in a line. Staff only. `summary` is null when there
+is no line to show.
+"""
+type RecapFlagExplanation {
+  summary: String
+  source: String!
+  flagCount: Int!
+}
+
+type RecapStandardMetric {
+  key: String!
+  label: String!
+}
+
+"""
+One recap template field and what Spark counts it as. Staff only.
+"""
+type RecapFieldMetric {
+  fieldId: ID!
+  name: String!
+  fieldType: String!
+  section: String!
+  currentMetric: String
+  confirmedMetric: String
+  packSize: Int
+  confirmedBy: String!
+  confirmedAt: DateTime
+  canCount: Boolean!
+}
+
+type RecapTemplateMetricMapping {
+  templateId: ID!
+  fields: [RecapFieldMetric!]!
+  missingMetrics: [RecapStandardMetric!]!
+  metricOptions: [RecapStandardMetric!]!
+}
+
+type RecapMetricSuggestion {
+  fieldId: ID!
+  metric: String!
+  packSize: Int
+  reason: String!
+}
+
+type RecapMetricSuggestionResult {
+  ok: Boolean!
+  reason: String!
+  suggestions: [RecapMetricSuggestion!]!
+}
+
+type SaveRecapMetricMappingResult {
+  ok: Boolean!
+  message: String!
+  mapping: RecapTemplateMetricMapping
+}
+
+input RecapFieldMetricInput {
+  fieldId: ID!
+  metric: String = null
+  packSize: Int = null
 }
 
 type RecapReviewFlagSummary {

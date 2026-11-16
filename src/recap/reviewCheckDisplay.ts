@@ -145,3 +145,15 @@ export type ReviewFlagSummary = {
   label: string;
 };
 
+
+/**
+ * The reviewer's one-line "why was this flagged", or null when there is
+ * none to show (nothing flagged, no line available, or not staff). With
+ * null the checks below are the whole story, as they always were.
+ */
+export function flagExplanationLine(
+  explanation: { summary?: string | null } | null | undefined,
+): string | null {
+  const line = (explanation?.summary ?? "").trim();
+  return line ? line : null;
+}
