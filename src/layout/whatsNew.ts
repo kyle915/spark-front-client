@@ -43,6 +43,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "Photos and the program report open on the best photos from each recap. All photos is one click away.",
       "On a recap, staff can pin or unpin which photos count as its best.",
       "Staff can draft a client recap for any dates: headline numbers, best photos and a short summary to edit, then download as a PDF.",
+      "Reports and More detail on the dashboard list the other brands people mentioned in their comments, how many recaps named each, whether people preferred yours or theirs, and a comment as written.",
+      "What sells where shows, for each state, the product with the most units sold, the most samples handed out and the one people spoke best of, each with the recaps it rests on. A state without enough recaps says Not enough data yet.",
       "A recap form worded differently from Spark's standard numbers can now be matched to them by our team, so the dashboard shows the number instead of a dash.",
       "When a recap is held for review, the reviewer sees one line saying why and what to check first.",
       "A store typed in different ways (HEB, H-E-B) can be combined, so reports count it once.",
