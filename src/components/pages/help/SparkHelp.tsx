@@ -33,7 +33,7 @@ const FAQS: FAQItem[] = [
     q: "How do I invite a BA to a shift?",
     a: (
       <>
-        Open the request → click the lime <strong>✦ INVITE BA</strong>{" "}
+        Open the request → click the lime <strong>INVITE BA</strong>{" "}
         button at the top. Pick a Brand Ambassador from the list and
         Spark sends them a "New shift offered" push. They can{" "}
         Accept or Decline from the mobile Shifts tab.
@@ -111,11 +111,10 @@ const FAQS: FAQItem[] = [
 ];
 
 const ResourceLink: React.FC<{
-  emoji: string;
   title: string;
   body: string;
   href: string;
-}> = ({ emoji, title, body, href }) => (
+}> = ({ title, body, href }) => (
   <a
     href={href}
     target="_blank"
@@ -123,7 +122,6 @@ const ResourceLink: React.FC<{
     className="spark-card hov p-5 block"
     style={{ textDecoration: "none", color: "inherit" }}
   >
-    <p className="text-2xl mb-2">{emoji}</p>
     <p className="font-bold text-sm">{title}</p>
     <p
       className="text-xs mt-1"
@@ -195,7 +193,7 @@ const SupportTicketForm: React.FC = () => {
         className="mono text-[10px]"
         style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}
       >
-        ✦ OPEN A SUPPORT REQUEST
+        OPEN A SUPPORT REQUEST
       </p>
       <label className="block">
         <span className="mono text-[10px]" style={captionStyle}>
@@ -310,19 +308,16 @@ export default function SparkHelp() {
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <ResourceLink
-              emoji="✉"
               title="Email staffing"
               body="staffing@igniteproductions.co — invites, scheduling, recaps"
               href="mailto:staffing@igniteproductions.co"
             />
             <ResourceLink
-              emoji="💸"
               title="Email finance"
               body="finance@igniteproductions.co — payroll, billing, invoices"
               href="mailto:finance@igniteproductions.co"
             />
             <ResourceLink
-              emoji="🚨"
               title="Urgent / day-of issue"
               body="Text Kyle at +1 (513) 614-3884 — only for active shifts"
               href="sms:+15136143884"

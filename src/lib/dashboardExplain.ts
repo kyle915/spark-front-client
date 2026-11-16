@@ -17,13 +17,19 @@ export type CalloutLink = {
   endDate?: string | null;
 };
 
+/** The callout staff get for a state whose recaps are waiting for review. */
+export const WAITING_REVIEW_KIND = "state_waiting_review";
+
 /**
  * The recaps list filtered to the recaps behind a callout: approved recaps,
- * for that store or state, between those dates. Uses the list's own URL
+ * for that store or state, between those dates. For a state waiting for
+ * review it is the needs-review recaps instead. Uses the list's own URL
  * filters (`status`, `retailer`, `state`, `from`, `to`).
  */
-export function calloutRecapsHref(link: CalloutLink): string {
-  const params = new URLSearchParams({ status: "approved" });
+export function calloutRecapsHref(link: CalloutLink, kind?: string): string {
+  const params = new URLSearchParams({
+    status: kind === WAITING_REVIEW_KIND ? "needs_review" : "approved",
+  });
   const store = (link.store ?? "").trim();
   const state = (link.state ?? "").trim();
   if (store) params.set("retailer", store);
@@ -37,9 +43,12 @@ export function calloutRecapsHref(link: CalloutLink): string {
 }
 
 /** What the link under a callout says. */
-export function calloutLinkLabel(link: CalloutLink): string {
+export function calloutLinkLabel(link: CalloutLink, kind?: string): string {
   const store = (link.store ?? "").trim();
   const state = (link.state ?? "").trim();
+  if (kind === WAITING_REVIEW_KIND) {
+    return state ? `Review the recaps in ${state}` : "Review the recaps";
+  }
   if (store) return `See the recaps at ${store}`;
   if (state) return `See the recaps in ${state}`;
   return "See the recaps";

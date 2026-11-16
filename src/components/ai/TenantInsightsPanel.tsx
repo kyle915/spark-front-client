@@ -9,8 +9,7 @@ import type { TenantInsightsQuery as TenantInsightsQueryType } from "@api/querie
  * Loads `tenantInsights` for ONE client (tenant) and renders a fixed set of
  * deterministic buckets as scoreboard tiles — each tile a small UPPERCASE mono
  * category label (`title`), a big headline number (`metric`), a one-line
- * takeaway (`detail`), and a leading icon mapped from the bucket `key`
- * (reach / sampling / sales / new_audience / momentum). The visual deliberately
+ * takeaway (`detail`). No icon: the label says what the tile is. The visual deliberately
  * matches <TenantKpiCharts>'s StatTile so Insights and KPIs read as one
  * dashboard: a calm `spark-card` dark tile with a subtle top-border accent —
  * not a wall of colored alerts. A restrained amber accent is reserved ONLY for
@@ -37,21 +36,6 @@ const CALM_ACCENT = "var(--spark-border)";
 
 const accentFor = (sentiment: string): string =>
   sentiment.toLowerCase() === "attention" ? ATTENTION_ACCENT : CALM_ACCENT;
-
-// Bucket `key` → leading icon. Unknown / null keys fall back to a quiet dot
-// so a legacy or new bucket never renders without a leading glyph. No
-// sparkle: `new_audience` uses the dot.
-const ICON_FOR_KEY: Record<string, string> = {
-  reach: "👥",
-  sampling: "🧪",
-  sales: "🛒",
-  emails: "✉️",
-  momentum: "📈",
-  consumers_sampled: "👥",
-};
-
-const iconFor = (key: string | null | undefined): string =>
-  (key && ICON_FOR_KEY[key.toLowerCase()]) || "•";
 
 /**
  * Format the `generatedAt` timestamp into a short, friendly caption: a relative
@@ -83,7 +67,7 @@ const formatUpdated = (raw: string | null | undefined): string | null => {
 
 // Calm scoreboard tile — same `spark-card` dark tile + top-border accent as the
 // KPI StatTile (see TenantKpiCharts), so the two panels feel like one surface.
-// Layout top→bottom: leading icon + UPPERCASE mono category label, then a big
+// Layout top→bottom: UPPERCASE mono category label, then a big
 // tab-num headline number (omitted gracefully when `metric` is empty), then the
 // muted `detail` one-liner.
 const InsightTile: React.FC<{
@@ -91,31 +75,24 @@ const InsightTile: React.FC<{
   detail: string;
   sentiment: string;
   metric?: string | null;
-  insightKey?: string | null;
-}> = ({ title, detail, sentiment, metric, insightKey }) => {
+}> = ({ title, detail, sentiment, metric }) => {
   const accent = accentFor(sentiment);
-  const icon = iconFor(insightKey);
   const hasMetric = !!metric && metric.trim().length > 0;
   return (
     <div
       className="spark-card rounded-2xl px-4 py-4"
       style={{ borderTop: `2px solid ${accent}` }}
     >
-      <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="text-[13px] leading-none shrink-0">
-          {icon}
-        </span>
-        <p
-          className="mono text-[9px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-text-meta)",
-            textTransform: "uppercase",
-          }}
-        >
-          {title}
-        </p>
-      </div>
+      <p
+        className="mono text-[9px]"
+        style={{
+          letterSpacing: "0.18em",
+          color: "var(--spark-text-meta)",
+          textTransform: "uppercase",
+        }}
+      >
+        {title}
+      </p>
       {hasMetric && (
         <p
           className="display tab-num font-bold mt-1.5"
@@ -209,7 +186,6 @@ const TenantInsightsPanel: React.FC<{
                   detail={item.detail}
                   sentiment={item.sentiment}
                   metric={item.metric}
-                  insightKey={item.key}
                 />
               </div>
             );

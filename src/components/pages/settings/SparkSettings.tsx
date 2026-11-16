@@ -18,7 +18,7 @@ import type { SetMyPreferencesMutation as SetMyPreferencesMutationType } from "@
 
 const ACTIVATION_TYPES = [
   { id: "retail", label: "Retail Sampling", icon: "▦" },
-  { id: "onprem", label: "On-Premise", icon: "🍺" },
+  { id: "onprem", label: "On-Premise", icon: "○" },
   { id: "event", label: "Event", icon: "◇" },
 ];
 
@@ -95,16 +95,6 @@ const LinkedSheetRow: React.FC = () => {
       }}
     >
       <div className="flex items-center gap-3 py-3 px-3">
-        <span
-          className="mono w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{
-            background: "rgba(95,184,239,0.10)",
-            border: "1px solid rgba(95,184,239,0.25)",
-            color: "var(--spark-sky)",
-          }}
-        >
-          📊
-        </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium">Linked Google Sheet</p>
           <p
@@ -376,16 +366,6 @@ export default function SparkSettings() {
               border: "1px solid var(--spark-border)",
             }}
           >
-            <span
-              className="mono w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{
-                background: "rgba(95,184,239,0.10)",
-                border: "1px solid rgba(95,184,239,0.25)",
-                color: "var(--spark-sky)",
-              }}
-            >
-              📅
-            </span>
             <div className="flex-1">
               <p className="text-sm font-medium">Google Calendar</p>
               <p

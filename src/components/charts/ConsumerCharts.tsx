@@ -16,6 +16,7 @@ import {
   contextIndexes,
   lastWeeksWindow,
   perEvent,
+  perEventSentence,
   productSplit,
   rankedSplit,
   shortLabel,
@@ -347,16 +348,20 @@ const PerEventInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       <figcaption className="mb-1 text-[13px] font-medium" style={SECONDARY}>
         {PER_EVENT_TITLE}
       </figcaption>
-      <p className="text-sm" style={META}>
-        <span
-          className="tab-num text-2xl font-semibold mr-2"
-          style={{ color: "var(--spark-text)" }}
-        >
-          {each.toLocaleString("en-US")}
-        </span>
-        {count(breakdown.total)} consumers across {count(breakdown.events)}{" "}
-        {breakdown.events === 1 ? "event" : "events"} with an approved recap.
-      </p>
+      {/* Two elements with real text between them, so a screen reader and
+          a copy read "83 per event. 498 consumers across 6 events…" and
+          never "83498 consumers". */}
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <p className="m-0">
+          <span className="tab-num text-2xl font-semibold" style={{ color: "var(--spark-text)" }}>
+            {count(each)}
+          </span>
+          <span className="sr-only"> per event. </span>
+        </p>
+        <p className="m-0 text-sm" style={META}>
+          {perEventSentence(breakdown.total, breakdown.events)}
+        </p>
+      </div>
     </figure>
   );
 };

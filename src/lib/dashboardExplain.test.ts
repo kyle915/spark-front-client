@@ -33,6 +33,19 @@ describe("calloutRecapsHref", () => {
     expect(url.searchParams.has("retailer")).toBe(false);
   });
 
+  it("opens the needs-review recaps for a state waiting for review", () => {
+    const link = { state: "NY", startDate: "2026-10-19", endDate: "2026-11-15" };
+    const url = new URL(calloutRecapsHref(link, "state_waiting_review"), "https://x.test");
+    expect(url.pathname).toBe("/recaps/list");
+    expect(url.searchParams.get("status")).toBe("needs_review");
+    expect(url.searchParams.get("state")).toBe("NY");
+    expect(url.searchParams.get("from")).toBe("2026-10-19");
+    expect(url.searchParams.get("to")).toBe("2026-11-15");
+    expect(calloutLinkLabel(link, "state_waiting_review")).toBe("Review the recaps in NY");
+    // Every other kind keeps the approved list.
+    expect(new URL(calloutRecapsHref(link, "state_quiet"), "https://x.test").searchParams.get("status")).toBe("approved");
+  });
+
   it("leaves the dates off when there are none", () => {
     expect(calloutRecapsHref({})).toBe("/recaps/list?status=approved");
   });
