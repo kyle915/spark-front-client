@@ -39,6 +39,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "The dashboard lists up to four things worth a look, such as a store converting far above or below average or a state with no recent recaps, each with its numbers and a link to the recaps behind it.",
       "Each consumers and samples chart has an Ask about this chart link. The answer uses that chart's figures only.",
       "Account map: staff see a ranked list of where to sample next, with the reason for each store.",
+      "Reports and More detail on the dashboard list the other brands people mentioned in their comments, how many recaps named each, whether people preferred yours or theirs, and a comment as written.",
+      "What sells where shows, for each state, the product with the most units sold, the most samples handed out and the one people spoke best of, each with the recaps it rests on. A state without enough recaps says Not enough data yet.",
     ],
   },
   {

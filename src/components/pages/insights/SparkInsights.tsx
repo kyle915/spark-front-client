@@ -55,6 +55,16 @@ const ConsumersPerEvent = lazy(() =>
   })),
 );
 const FeedbackThemes = lazy(() => import("@/components/charts/FeedbackThemes"));
+const CompetitorMentions = lazy(() =>
+  import("@/components/charts/CommentInsights").then((m) => ({
+    default: m.CompetitorMentions,
+  })),
+);
+const ProductRegions = lazy(() =>
+  import("@/components/charts/CommentInsights").then((m) => ({
+    default: m.ProductRegions,
+  })),
+);
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
 );
@@ -823,6 +833,27 @@ export function InsightsBody({
           <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
             <Suspense fallback={null}>
               <FeedbackThemes
+                tenantId={tenantId}
+                startDate={startDate}
+                endDate={endDate}
+              />
+            </Suspense>
+          </div>
+
+          {/* Read from the same comments: the other brands people named,
+              and which product leads in which state. */}
+          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+            <Suspense fallback={null}>
+              <CompetitorMentions
+                tenantId={tenantId}
+                startDate={startDate}
+                endDate={endDate}
+              />
+            </Suspense>
+          </div>
+          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+            <Suspense fallback={null}>
+              <ProductRegions
                 tenantId={tenantId}
                 startDate={startDate}
                 endDate={endDate}

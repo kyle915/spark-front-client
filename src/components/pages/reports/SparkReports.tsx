@@ -9,6 +9,7 @@ import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
 import FeedbackThemes from "@/components/charts/FeedbackThemes";
+import { CompetitorMentions, ProductRegions } from "@/components/charts/CommentInsights";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
@@ -748,6 +749,16 @@ export default function SparkReports() {
         {tenantId ? (
           <section className="spark-card p-5 sm:p-6">
             <FeedbackThemes tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          </section>
+        ) : null}
+        {tenantId ? (
+          <section className="spark-card p-5 sm:p-6">
+            <CompetitorMentions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          </section>
+        ) : null}
+        {tenantId ? (
+          <section className="spark-card p-5 sm:p-6">
+            <ProductRegions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
           </section>
         ) : null}
       </div>
