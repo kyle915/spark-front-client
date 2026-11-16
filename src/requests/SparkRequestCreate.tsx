@@ -12,6 +12,7 @@ import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import GooglePlacesInput, {
   matchTimezoneOption,
+  resolveAddressPlace,
 } from "@/components/inputs/GooglePlacesInput";
 import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 // resolveTimezoneIdByDate maps a picked zone to its DST-correct STD/DST
@@ -64,6 +65,17 @@ import {
   type CoBrandSelection,
 } from "@/public/form/components/coBrandPayload";
 import { useTenantPublic } from "@/public/form/hooks/useTenantPublic";
+import PasteDetailsPanel, {
+  type ZoneState,
+} from "@/requests/pasteDetails/PasteDetailsPanel";
+import {
+  advanceQueue,
+  draftFormValues,
+  hasFullAddress,
+  queueLabel,
+  type PasteQueue,
+  type PastedDraft,
+} from "@/requests/pasteDetails/pasteDetails";
 // Start/End time pickers (TimeSlotSelect) ship inline so the time is
 // set at create time rather than deferred to the edit page. They still
 // default to 12:00 PM – 4:00 PM via useState init.
@@ -493,7 +505,10 @@ const SparkRequestInner: React.FC = () => {
     torchActivationOk,
     coBrandMissing,
   });
-  const canSubmit = !isCommitting && !submitBlocker;
+  // Only a pasted draft can leave a time empty (the form starts with
+  // 12:00 PM to 4:00 PM). An empty time is never sent as a default.
+  const timeMissing = !multiDateEvent && (!startTime || !endTime);
+  const canSubmit = !isCommitting && !submitBlocker && !timeMissing;
   const listedVisits = multiDateEvent
     ? visitSlots.filter((slot) => slot.date.trim()).length
     : (date ? 1 : 0) + (legacyBulkDates ? extraDates.filter(Boolean).length : 0);
@@ -504,6 +519,93 @@ const SparkRequestInner: React.FC = () => {
   // the user can preview options without committing.
   const [distributorQuery, setDistributorQuery] = useState("");
   const [distributorOpen, setDistributorOpen] = useState(false);
+
+  // ─── Paste details (staff only) ───────────────────────────────
+  // Drafts read from a pasted email or sheet rows, loaded into this form
+  // one at a time. A draft only pre-fills fields: it is submitted with the
+  // same button, checks and createRequest mutation as a typed request.
+  const [pasteQueue, setPasteQueue] = useState<PasteQueue | null>(null);
+  const [pasteZone, setPasteZone] = useState<ZoneState>({ kind: "none" });
+  // Bumped per loaded draft so a slow address lookup for the previous
+  // draft cannot set the time zone of the next one.
+  const pasteRun = useRef(0);
+  const productCatalog = useMemo(
+    () =>
+      products.map((p) => ({
+        id: String(p.id),
+        uuid: String(p.uuid),
+        name: p.name ?? "",
+      })),
+    [products],
+  );
+  const pasteValues = useMemo(
+    () =>
+      pasteQueue
+        ? draftFormValues(pasteQueue.drafts[pasteQueue.index], productCatalog)
+        : null,
+    [pasteQueue, productCatalog],
+  );
+
+  const loadPastedDraft = (draft: PastedDraft) => {
+    const v = draftFormValues(draft, productCatalog);
+    setVenue(v.venue);
+    setAddress(v.address);
+    setStoreNumber(v.storeNumber);
+    // A date or time the text did not give stays empty, never a default.
+    setDate(v.date);
+    setStartTime(v.startTime);
+    setEndTime(v.endTime);
+    setVisitSlots([{ date: v.date, startTime: v.startTime, endTime: v.endTime }]);
+    setExtraDates([]);
+    setNotes(v.notes);
+    setSelectedProducts(new Set(v.productIds));
+    setDraftRestored(false);
+    // The time zone is never taken from the pasted text. Clear the last
+    // draft's zone, then look this address up the way picking a Google
+    // suggestion does; if that finds nothing, the person chooses it.
+    setTimezoneId("");
+    pasteRun.current += 1;
+    const mine = pasteRun.current;
+    if (!hasFullAddress(v.address)) {
+      setPasteZone({ kind: "unset" });
+      return;
+    }
+    setPasteZone({ kind: "looking" });
+    resolveAddressPlace(v.address)
+      .then((place) => {
+        if (pasteRun.current !== mine) return;
+        const match = place?.timezoneId
+          ? matchTimezoneOption(place.timezoneId, timezones)
+          : null;
+        if (match) {
+          setTimezoneId(String(match.id));
+          setPasteZone({ kind: "set", name: match.name ?? "Set" });
+        } else {
+          setPasteZone({ kind: "unset" });
+        }
+      })
+      .catch(() => {
+        if (pasteRun.current === mine) setPasteZone({ kind: "unset" });
+      });
+  };
+
+  const startPasteQueue = (drafts: PastedDraft[]) => {
+    if (drafts.length === 0) return;
+    setPasteQueue({ drafts, index: 0 });
+    loadPastedDraft(drafts[0]);
+  };
+
+  /** Move to the next pasted draft. Returns it, or null when none is left. */
+  const nextPastedDraft = (): PasteQueue | null => {
+    const next = advanceQueue(pasteQueue);
+    setPasteQueue(next);
+    if (next) loadPastedDraft(next.drafts[next.index]);
+    else {
+      pasteRun.current += 1;
+      setPasteZone({ kind: "none" });
+    }
+    return next;
+  };
 
   // ─── Draft autosave ───────────────────────────────────────────
   // Keep a per-user, per-tenant draft of the in-progress form in
@@ -784,6 +886,10 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
+    if (timeMissing) {
+      showAlert("Choose a start time and an end time.", "warning");
+      return;
+    }
     const submitSlots: VisitSlot[] = multiDateEvent
       ? visitSlotsForSubmit(visitSlots)
       : [date, ...(legacyBulkDates ? extraDates.filter(Boolean) : [])].map(
@@ -929,6 +1035,16 @@ const SparkRequestInner: React.FC = () => {
     if (failures.length === 0) {
       // Whole batch landed cleanly — the draft is no longer useful.
       clearDraft();
+      // More pasted drafts waiting: stay here and load the next one.
+      const upNext = pasteQueue ? nextPastedDraft() : null;
+      if (upNext) {
+        showAlert(
+          `Request submitted. ${queueLabel(upNext)} is loaded for you to check.`,
+          "success",
+        );
+        window.scrollTo({ top: 0 });
+        return;
+      }
       showAlert(
         successes > 1
           ? `Submitted ${successes} requests · sent to your Ignite team.`
@@ -1053,6 +1169,25 @@ const SparkRequestInner: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Staff only: read a pasted email or sheet rows into the form. */}
+      {!isClient && tenantId ? (
+        <PasteDetailsPanel
+          tenantId={tenantId}
+          queue={pasteQueue}
+          currentValues={pasteValues}
+          zone={pasteZone}
+          onDrafts={startPasteQueue}
+          onSkip={() => {
+            nextPastedDraft();
+          }}
+          onClear={() => {
+            pasteRun.current += 1;
+            setPasteQueue(null);
+            setPasteZone({ kind: "none" });
+          }}
+        />
+      ) : null}
 
       {/* Card */}
       <div className="spark-card p-6 lg:p-8 space-y-6" style={{ paddingBottom: "6rem" }}>
@@ -1229,6 +1364,7 @@ const SparkRequestInner: React.FC = () => {
                     value={startTime}
                     onChange={setStartTime}
                     style={inputStyle}
+                    placeholder="Select a start time"
                   />
                 </div>
                 <div>
@@ -1237,6 +1373,7 @@ const SparkRequestInner: React.FC = () => {
                     value={endTime}
                     onChange={setEndTime}
                     style={inputStyle}
+                    placeholder="Select an end time"
                   />
                 </div>
               </>
@@ -1902,9 +2039,9 @@ const SparkRequestInner: React.FC = () => {
               {listedVisits > 1 ? `${listedVisits} VISITS · ` : ""}
               {`${selectedProducts.size} PRODUCTS`}
               {showBaCount ? ` · ${baCount} BAs` : ""}
-              {submitBlocker ? (
+              {submitBlocker || timeMissing ? (
                 <span style={{ color: "var(--spark-orange, #ef5a2a)" }}>
-                  {` · Needs: ${submitBlocker}`}
+                  {` · Needs: ${submitBlocker ?? "Time"}`}
                 </span>
               ) : null}
             </div>

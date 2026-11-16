@@ -33,6 +33,38 @@ export function weekLabel(start: string, end: string): string {
   return `${month(a)} ${a.getUTCDate()} to ${last}, ${b.getUTCFullYear()}`;
 }
 
+export type SummaryPeriod = "week" | "month";
+
+/** The first day of the month `months` months away from the one holding `ymd`. */
+export function shiftMonth(ymd: string, months: number): string {
+  const day = parse(ymd);
+  if (!day) return ymd;
+  return format(new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + months, 1)));
+}
+
+/** "October 2026" */
+export function monthLabel(start: string): string {
+  const day = parse(start);
+  if (!day) return start;
+  return day.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** True when the next month has not finished yet, so there is nothing to draft. */
+export function isLatestMonth(monthStart: string, today: Date = new Date()): boolean {
+  const thisMonth = format(new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1)));
+  return shiftMonth(monthStart, 1) >= thisMonth;
+}
+
+/**
+ * A mailto: link that opens the draft in the person's own mail program,
+ * with no recipient filled in. Nothing is sent by Spark.
+ */
+export function mailtoHref(subject: string, body: string): string {
+  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
+    body.trim().replace(/\r?\n/g, "\r\n"),
+  )}`;
+}
+
 /** True when the next week has not finished yet, so there is nothing to draft. */
 export function isLatestWeek(weekStart: string, today: Date = new Date()): boolean {
   const next = shiftWeek(weekStart, 1);
@@ -62,10 +94,14 @@ export const isEdited = (draft: string, stored: string): boolean =>
   draft.trim() !== stored.trim();
 
 /** "5 approved recaps. 1 more is waiting for review and is not included." */
-export function recapBasis(approved: number, pending: number): string {
+export function recapBasis(
+  approved: number,
+  pending: number,
+  period: SummaryPeriod = "week",
+): string {
   const base =
     approved === 0
-      ? "No approved recaps this week."
+      ? `No approved recaps this ${period}.`
       : `${approved.toLocaleString("en-US")} approved ${approved === 1 ? "recap" : "recaps"}.`;
   if (pending <= 0) return base;
   return `${base} ${pending.toLocaleString("en-US")} more ${
