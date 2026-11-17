@@ -12,6 +12,16 @@ import type {
   GraphQLResponse,
 } from "relay-runtime";
 
+/**
+ * The brand selected in the app. For people on more than one brand the
+ * server can't tell which one a page means; it uses this when they are a
+ * member of it (spark-api utils/graphql/mixins.py, X-Spark-Tenant).
+ */
+function selectedTenantHeader(): Record<string, string> {
+  const uuid = useAuthStore.getState().tenantUuid;
+  return uuid ? { "X-Spark-Tenant": uuid } : {};
+}
+
 async function fetchGraphQL(
   params: RequestParameters,
   variables: Variables
@@ -23,6 +33,7 @@ async function fetchGraphQL(
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `JWT ${token}` } : {}),
+      ...selectedTenantHeader(),
     },
     body: JSON.stringify({
       query: params.text,
@@ -98,6 +109,7 @@ async function fetchGraphQL(
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `JWT ${newToken}`,
+                ...selectedTenantHeader(),
               },
               body: JSON.stringify({
                 query: params.text,

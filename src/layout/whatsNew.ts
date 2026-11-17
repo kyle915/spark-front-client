@@ -11,7 +11,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     date: "November 17, 2026",
     title: "Fixes for people on more than one brand",
     items: [
-      "If your login covers more than one brand, My Requests, Insights and Ask AI load for the brand you have selected instead of saying you are not a member.",
+      "If your login covers more than one brand, My Requests, Insights, Ask AI and event, request and job pages load for the brand you have selected instead of saying you are not a member or the item was not found.",
       "Answers such as \"over 200\", \"more than 200\" or \"at least 200\" now count as 200.",
     ],
   },
