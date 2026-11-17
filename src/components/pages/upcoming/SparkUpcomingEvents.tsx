@@ -4,8 +4,8 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
-import { EventsQuery } from "@/api/queries/EventsQuery";
-import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { useAllEventPages } from "@/hooks/useAllEventPages";
+import { addDaysIso, dayToDate, opsTodayIso, venueDayOf } from "@/utils/venueDay";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -42,7 +42,10 @@ const fmtTime12 = (raw: string | null | undefined): string => {
 type Row = {
   uuid: string;
   name: string;
+  /** The venue's day, YYYY-MM-DD. */
   date: string;
+  /** Venue wall-clock start, for ordering within a day. */
+  sortAt: string;
   startTime: string;
   endTime: string;
   retailer: string;
@@ -55,33 +58,31 @@ type Row = {
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-  const end = useMemo(() => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 7);
-    return d;
-  }, [today]);
+  // Days are the venue's, compared as YYYY-MM-DD strings; "today" is the
+  // ops day (Pacific), as on the live board. Nothing goes through the
+  // viewer's browser clock.
+  const today = useMemo(() => opsTodayIso(), []);
+  const end = useMemo(() => addDaysIso(today, 7), [today]);
 
-  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
-
-  const eventsData = useLazyLoadQuery<EventsQueryType>(
-    EventsQuery,
-    {
-      first: 200,
-      filters: tenantId
-        ? { tenantId, startDate: fmtIso(today), endDate: fmtIso(end) }
-        : null,
-    },
-    { fetchPolicy: "store-or-network" },
-  );
+  // The API filters by UTC day, so ask for a day either side of the window
+  // and keep rows whose venue day falls inside it. Every page is loaded: the
+  // list returns at most 100 a request.
+  const { events, loadingMore } = useAllEventPages({
+    ...(tenantId ? { tenantId } : {}),
+    startDate: addDaysIso(today, -1),
+    endDate: addDaysIso(end, 1),
+  });
 
   const requestsData = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 500, filters: tenantId ? { tenantId } : null },
+    {
+      first: 500,
+      filters: {
+        ...(tenantId ? { tenantId } : {}),
+        startDate: addDaysIso(today, -1),
+        endDate: addDaysIso(end, 1),
+      },
+    },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -89,24 +90,20 @@ const Inner: React.FC = () => {
     const out: Row[] = [];
 
     // 1. Scheduled / approved events with a real event row.
-    const events =
-      eventsData?.events?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     for (const n of events) {
-      if (!n.date) continue;
-      const d = new Date(n.date);
-      if (d < today || d > end) continue;
+      const day = venueDayOf(n);
+      if (!day || day < today || day > end) continue;
       out.push({
         uuid: String(n.uuid),
         name: n.name ?? "Untitled",
-        date: n.date,
+        date: day,
+        sortAt: n.startTime ?? n.date ?? "",
         startTime: fmtTime12(n.startTime),
         endTime: fmtTime12(n.endTime),
         retailer: n.request?.retailer?.name ?? n.address ?? "—",
         status: n.status?.name ?? "Scheduled",
         source: "event",
-        isToday: d.toDateString() === today.toDateString(),
+        isToday: day === today,
         isPending: false,
       });
     }
@@ -120,9 +117,9 @@ const Inner: React.FC = () => {
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     for (const r of requests) {
-      if (!r.date) continue;
-      const d = new Date(r.date);
-      if (d < today || d > end) continue;
+      // Request times are venue wall-clock strings: read the day off them.
+      const day = venueDayOf(r);
+      if (!day || day < today || day > end) continue;
       const slug = (r.status?.slug ?? r.status?.name ?? "")
         .toString()
         .toLowerCase();
@@ -132,19 +129,22 @@ const Inner: React.FC = () => {
       out.push({
         uuid: String(r.uuid),
         name: r.retailer?.name ?? r.name ?? "Untitled",
-        date: r.date,
+        date: day,
+        sortAt: r.startTime ?? r.date ?? "",
         startTime: r.startTime ? fmtTime12(r.startTime) : "",
         endTime: r.endTime ? fmtTime12(r.endTime) : "",
         retailer: r.retailer?.name ?? r.address ?? "—",
         status: r.status?.name ?? "Pending",
         source: "request",
-        isToday: d.toDateString() === today.toDateString(),
+        isToday: day === today,
         isPending: slug === "pending" || slug === "queue",
       });
     }
 
-    return out.sort((a, b) => a.date.localeCompare(b.date));
-  }, [eventsData, requestsData, today, end]);
+    return out.sort(
+      (a, b) => a.date.localeCompare(b.date) || a.sortAt.localeCompare(b.sortAt),
+    );
+  }, [events, requestsData, today, end]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -185,9 +185,16 @@ const Inner: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {loadingMore ? (
+        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+          Loading more events…
+        </p>
+      ) : null}
       {groups.map(([key, items]) => {
-        const d = new Date(key);
-        const isToday = d.toDateString() === today.toDateString();
+        // `key` is the venue's day. new Date("2026-11-16") is UTC midnight,
+        // the previous evening anywhere in the US; build it from its parts.
+        const d = dayToDate(key);
+        const isToday = key === today;
         return (
           <div key={key}>
             <div className="flex items-baseline justify-between mb-3">

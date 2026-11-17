@@ -11,6 +11,7 @@ export const LiveShiftBoardQuery = graphql`
       eventName
       brandName
       date
+      localDate
       startTime
       endTime
       startLocal

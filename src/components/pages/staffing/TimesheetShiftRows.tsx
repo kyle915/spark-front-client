@@ -4,14 +4,12 @@ import { Link } from "react-router";
 import { PayrollTimesheetShiftsQuery } from "@/api/queries/PayrollTimesheetShiftsQuery";
 import type { PayrollTimesheetShiftsQuery as ShiftsQueryType } from "@api/queries/__generated__/PayrollTimesheetShiftsQuery.graphql";
 import AdminPunchControls from "@/components/staffing/AdminPunchControls";
+import { fmtTimeInZone, zoneShortName } from "@/utils/venueDay";
 
-const fmtTime = (iso: string | null | undefined) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? "—"
-    : d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-};
+// Punch times on the venue's clock: a 9 PM Eastern clock-out reads 9 PM for a
+// Pacific admin too.
+const fmtTime = (iso: string | null | undefined, timeZone: string | null | undefined) =>
+  fmtTimeInZone(iso, timeZone);
 const fmtDay = (ymd: string | null | undefined) => {
   if (!ymd) return "—";
   const d = new Date(`${ymd.slice(0, 10)}T12:00:00`);
@@ -19,6 +17,18 @@ const fmtDay = (ymd: string | null | undefined) => {
     ? ymd
     : d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 };
+/** "ET" after a venue time, so nobody reads it as their own clock. */
+const ZoneTag: React.FC<{ iso: string | null | undefined; timeZone: string | null | undefined }> = ({
+  iso,
+  timeZone,
+}) =>
+  iso && timeZone ? (
+    <span style={{ color: "var(--spark-text-meta)" }}>
+      {" "}
+      {zoneShortName(timeZone, new Date(iso))}
+    </span>
+  ) : null;
+
 const money = (v: number | null | undefined) =>
   typeof v === "number" ? `$${v.toFixed(2)}` : "—";
 
@@ -78,12 +88,18 @@ const Body: React.FC<Props> = ({ startDate, endDate, tenantId, ambassadorUuid, o
                   <span style={{ color: "var(--spark-text-meta)" }}> · {s.tenantName}</span>
                 ) : null}
               </td>
-              <td className="px-2 py-2 whitespace-nowrap">{fmtTime(s.clockInAt)}</td>
+              <td className="px-2 py-2 whitespace-nowrap">
+                {fmtTime(s.clockInAt, s.timeZone)}
+                <ZoneTag iso={s.clockInAt} timeZone={s.timeZone} />
+              </td>
               <td className="px-2 py-2 whitespace-nowrap">
                 {s.onTheClock ? (
                   <span style={{ color: "var(--spark-orange)" }}>Still on the clock</span>
                 ) : (
-                  fmtTime(s.clockOutAt)
+                  <>
+                    {fmtTime(s.clockOutAt, s.timeZone)}
+                    <ZoneTag iso={s.clockOutAt} timeZone={s.timeZone} />
+                  </>
                 )}
               </td>
               <td className="px-2 py-2 whitespace-nowrap">
@@ -118,6 +134,7 @@ const Body: React.FC<Props> = ({ startDate, endDate, tenantId, ambassadorUuid, o
                   clockOutAt={s.clockOutAt}
                   clockInAttendanceUuid={s.clockInAttendanceUuid}
                   clockOutAttendanceUuid={s.clockOutAttendanceUuid}
+                  timeZone={s.timeZone}
                   onDone={() => {
                     setFetchKey((k) => k + 1);
                     onChanged();

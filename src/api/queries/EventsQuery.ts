@@ -32,6 +32,7 @@ export const EventsQuery = graphql`
           uuid
           name
           date
+          localDate
           timezone {
             __typename
             id

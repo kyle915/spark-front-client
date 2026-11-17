@@ -306,6 +306,27 @@ describe("buildTodayEvents", () => {
     expect(events.find((e) => e.uuid === "evt-9")?.name).toBe("Walk-up at Kroger");
   });
 
+  it("dates a board row by the venue's day, not the UTC day", () => {
+    // 6 PM Pacific on the 14th is 02:00 UTC on the 15th.
+    const evening = row({
+      eventUuid: "evt-evening",
+      date: "2026-11-15T02:00:00+00:00",
+      localDate: DAY,
+    });
+    const tomorrowMorning = row({
+      eventUuid: "evt-next",
+      date: "2026-11-15T14:00:00+00:00",
+      localDate: "2026-11-15",
+    });
+    const events = buildTodayEvents({
+      listed: [],
+      board: [evening, tomorrowMorning],
+      now: NOW,
+      today: DAY,
+    });
+    expect(events.map((e) => e.uuid)).toEqual(["evt-evening"]);
+  });
+
   it("lists each event once", () => {
     const events = buildTodayEvents({
       listed: [listed(), listed()],

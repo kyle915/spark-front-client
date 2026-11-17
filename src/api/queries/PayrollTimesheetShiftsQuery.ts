@@ -25,6 +25,7 @@ export const PayrollTimesheetShiftsQuery = graphql`
       address
       clockInAt
       clockOutAt
+      timeZone
       clockInAttendanceUuid
       clockOutAttendanceUuid
       onTheClock

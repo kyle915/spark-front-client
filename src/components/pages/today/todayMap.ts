@@ -40,6 +40,10 @@ export type BoardRow = {
   store: string;
   address: string;
   date: string | null;
+  /** The shift's day at the venue ("2026-11-16"). `date` is a UTC instant,
+   *  whose first ten characters are the UTC day: tomorrow, for an evening
+   *  shift out west. */
+  localDate?: string | null;
   /** The start as the server sends it: an instant when it carries a zone. */
   startTime: string | null;
   endTime: string | null;
@@ -249,9 +253,11 @@ export function buildTodayEvents(input: {
   listed: ReadonlyArray<ListedEvent>;
   board: ReadonlyArray<BoardRow>;
   now: Date;
+  /** The day being shown, YYYY-MM-DD (the page passes the ops day). */
+  today?: string;
 }): TodayEvent[] {
   const nowMs = input.now.getTime();
-  const today = localDayIso(input.now);
+  const today = input.today ?? localDayIso(input.now);
   const boardByUuid = new Map(input.board.map((r) => [r.eventUuid, r]));
   const out: TodayEvent[] = [];
   const seen = new Set<string>();
@@ -260,7 +266,7 @@ export function buildTodayEvents(input: {
     const uuid = listed?.uuid ?? row?.eventUuid ?? "";
     if (!uuid || seen.has(uuid)) return;
     seen.add(uuid);
-    const day = row?.date ?? listed?.date ?? today;
+    const day = row?.localDate ?? row?.date ?? listed?.date ?? today;
     const startRaw = row?.startLocal ?? row?.startTime ?? listed?.startTime ?? null;
     const endRaw = row?.endLocal ?? row?.endTime ?? listed?.endTime ?? null;
     const startAt =
@@ -307,7 +313,7 @@ export function buildTodayEvents(input: {
 
   for (const e of input.listed) push(e, boardByUuid.get(e.uuid) ?? null);
   for (const r of input.board) {
-    if (String(r.date ?? "").slice(0, 10) === today) push(null, r);
+    if (String(r.localDate ?? r.date ?? "").slice(0, 10) === today) push(null, r);
   }
 
   const order = (e: TodayEvent) => e.startAt ?? Number.MAX_SAFE_INTEGER;

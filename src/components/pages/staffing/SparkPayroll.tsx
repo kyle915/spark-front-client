@@ -13,6 +13,7 @@ import type { PayrollMutationsApproveMutation as ApproveType } from "@api/mutati
 import type { PayrollMutationsMarkPaidMutation as MarkPaidType } from "@api/mutations/__generated__/PayrollMutationsMarkPaidMutation.graphql";
 import type { PayrollMutationsUnapproveMutation as UnapproveType } from "@api/mutations/__generated__/PayrollMutationsUnapproveMutation.graphql";
 import { useTenantSelection } from "@/catalogs/useTenantSelection";
+import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
 /**
@@ -371,14 +372,16 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
 };
 
 // Wraps the timesheet with a client (tenant) selector — payroll close-out is
-// per-client, so the sheet is scoped to one tenant (defaults to the first the
-// admin can access; a lone-tenant client sees no picker).
+// per-client, so the sheet is scoped to one tenant. It opens on the client
+// picked in the sidebar (it used to open on the alphabetically first one);
+// a lone-tenant client sees no picker.
 const Body: React.FC<{ startDate: string; endDate: string }> = ({
   startDate,
   endDate,
 }) => {
+  const { tenantId, tenantUuid } = useAuthStore();
   const { tenantOptions, selectedTenantId, setSelectedTenantId } =
-    useTenantSelection();
+    useTenantSelection({ tenantId, tenantUuid });
   if (tenantOptions.length === 0) {
     return (
       <p className="p-10 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
