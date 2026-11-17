@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17c",
+    date: "November 17, 2026",
+    title: "Move an event yourself",
+    items: [
+      "Need a different day or time? Open the event and choose Change date. Pick the new day, start and end time, and Ignite is told right away so they can confirm the team.",
+      "Events that are cancelled, already started or already recapped can't be moved this way. Contact Ignite for those.",
+      "If a request is already on the schedule, change its date from the event instead of the request.",
+    ],
+  },
+  {
     id: "2026-11-17b",
     date: "November 17, 2026",
     title: "Fixes for people on more than one brand",
