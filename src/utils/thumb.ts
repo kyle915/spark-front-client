@@ -19,11 +19,24 @@ const API_ORIGIN = (() => {
 
 export type ThumbWidth = 400 | 800;
 
+/**
+ * Private-media URL from the API (`/api/public/media/o/<token>/<name>`).
+ * The API serves these for recap photos, receipts, documents etc. once the
+ * bucket is private; the same endpoint takes `?w=` and serves a thumbnail.
+ */
+export const isPrivateMediaUrl = (url: string | null | undefined): boolean =>
+  !!url && url.includes("/api/public/media/o/");
+
 export function thumbUrl(
   url: string | null | undefined,
   w: ThumbWidth = 400,
 ): string {
   if (!url) return "";
+  if (isPrivateMediaUrl(url)) {
+    // Token URLs thumb themselves. Drop any client cache-buster first.
+    const base = url.split("?")[0];
+    return `${base}?w=${w}`;
+  }
   // Only our own GCS objects can be thumbed; anything else (data URIs,
   // already-thumbed URLs, foreign hosts) passes through untouched.
   if (!API_ORIGIN || !url.includes("storage.googleapis.com/")) return url;

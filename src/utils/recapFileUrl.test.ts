@@ -205,3 +205,17 @@ describe("recap video playback urls", () => {
     expect(recapVideoPlayUrl(raw, "")).toBe(raw);
   });
 });
+
+describe("private-media URLs", () => {
+  const video = "https://api.test/api/public/media/o/k1.abc.def/clip.mov";
+  it("plays a private-media video URL as-is (server forces inline mp4)", () => {
+    expect(recapVideoPlayUrl(video, "https://api.test")).toBe(video);
+    expect(recapVideoPlayUrl(`${video}?cb=v6`, "https://api.test")).toBe(video);
+  });
+  it("classifies by the filename the API keeps on the URL", () => {
+    expect(recapFileKind(video)).toBe("video");
+    expect(recapFileKind("https://api.test/api/public/media/o/t/IMG.HEIC")).toBe("heic");
+    expect(recapFileKind("https://api.test/api/public/media/o/t/r.pdf")).toBe("pdf");
+    expect(recapFileKind("https://api.test/api/public/media/o/t/a.jpg?w=400")).toBe("image");
+  });
+});

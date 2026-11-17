@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { thumbUrl } from "./thumb";
+import { isPrivateMediaUrl, thumbUrl } from "./thumb";
 
 describe("thumbUrl", () => {
   it("rewrites a GCS public URL onto the resize endpoint when API origin is known", () => {
@@ -25,5 +25,13 @@ describe("thumbUrl", () => {
     expect(thumbUrl("data:image/jpeg;base64,xx")).toBe(
       "data:image/jpeg;base64,xx",
     );
+  });
+
+  it("thumbs private-media URLs on their own endpoint", () => {
+    const src = "https://api.test/api/public/media/o/k1.abc.def/IMG_1.jpg";
+    expect(isPrivateMediaUrl(src)).toBe(true);
+    expect(thumbUrl(src, 400)).toBe(`${src}?w=400`);
+    expect(thumbUrl(`${src}?cb=v6`, 800)).toBe(`${src}?w=800`);
+    expect(isPrivateMediaUrl("https://storage.googleapis.com/b/recaps/a.jpg")).toBe(false);
   });
 });
