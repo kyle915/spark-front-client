@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17b",
+    date: "November 17, 2026",
+    title: "Fixes for people on more than one brand",
+    items: [
+      "If your login covers more than one brand, My Requests, Insights and Ask AI load for the brand you have selected instead of saying you are not a member.",
+      "Answers such as \"over 200\", \"more than 200\" or \"at least 200\" now count as 200.",
+    ],
+  },
+  {
     id: "2026-11-17",
     date: "November 17, 2026",
     title: "Numbers that agree",
