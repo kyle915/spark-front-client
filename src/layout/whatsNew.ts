@@ -7,6 +7,17 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17",
+    date: "November 17, 2026",
+    title: "Numbers that agree",
+    items: [
+      "The campaign report, its share link and PDF, and the numbers at the top of Home count approved recaps only, the same as the rest of the page.",
+      "Product given away as samples is no longer counted as sold.",
+      "A number typed as 1,234 reads as 1,234 everywhere. Approximate answers such as ~30 or 50+ count as 30 and 50, and a range such as 20-30 counts as 20.",
+      "Staff: Approve selected approves every selected recap, including ones the current filter hides, and says how many were approved and how many could not be.",
+    ],
+  },
+  {
     id: "2026-11-16",
     date: "November 16, 2026",
     title: "Right day, full lists, fewer stray reminders",
