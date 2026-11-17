@@ -35,6 +35,7 @@ import EventAttendanceTable from "@/requests/EventAttendanceTable";
 import EventMileagePanel from "@/requests/EventMileagePanel";
 import InviteBAModal from "@/requests/InviteBAModal";
 import CancelDemoDialog from "@/requests/CancelDemoDialog";
+import ChangeEventDateDialog from "@/events/ChangeEventDateDialog";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 // Element id the header recap chip scrolls to when an event has >1 recap.
@@ -274,6 +275,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   useAdoptRecordTenant(data.event?.tenant, "event");
   const [showAssign, setShowAssign] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [changeDateOpen, setChangeDateOpen] = useState(false);
 
   if (!event) {
     return (
@@ -432,6 +434,10 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   const cancelTargetId = req?.id || req?.uuid || event.uuid;
   const canCancelEvent =
     Boolean(cancelTargetId) && !isCancelledOrDeclined && !hasApprovedRecap;
+  // Brands can move their own events (date + times only). Admins keep the
+  // full Edit page. The backend also refuses clocked-in and past events.
+  const canChangeDate =
+    role.isClient && !isCancelledOrDeclined && recaps.length === 0;
   const brandName =
     billingEntityName ||
     (tenantSlug ? cleanVenueTitle(tenantSlug.replace(/-/g, " ")) : null);
@@ -774,6 +780,20 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 ✎ Edit
               </Link>
             </>
+          )}
+          {canChangeDate && (
+            <button
+              type="button"
+              onClick={() => setChangeDateOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Change date
+            </button>
           )}
           {canCancelEvent && (
             <button
@@ -1383,6 +1403,21 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             }}
           />
         </Suspense>
+      )}
+
+      {/* Change date modal (brand users) */}
+      {canChangeDate && (
+        <ChangeEventDateDialog
+          open={changeDateOpen}
+          onClose={() => setChangeDateOpen(false)}
+          eventUuid={String(event.uuid)}
+          startTime={startRaw}
+          endTime={endRaw}
+          date={event.date ?? req?.date ?? null}
+          storeName={displayTitle}
+          timezoneLabel={tz?.name ?? null}
+          onChanged={() => load()}
+        />
       )}
 
       {/* Cancel event modal */}

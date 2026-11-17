@@ -5524,6 +5524,7 @@ type Mutation {
   createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
+  rescheduleEvent(input: RescheduleEventInput!): RescheduleEventResponse!
   suspendEvent(input: SuspendEventInput!): EventDetailResponse!
   archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
   approveEvent(input: ApproveEventInput!): EventDetailResponse!
@@ -7960,6 +7961,22 @@ input RequestTypeFiltersInput {
 type ResendBaWelcomeResponse {
   success: Boolean!
   message: String!
+}
+
+input RescheduleEventInput {
+  clientMutationId: ID = null
+  eventId: ID!
+  date: String!
+  startTime: String!
+  endTime: String!
+}
+
+type RescheduleEventResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
+  requestMoved: Boolean!
 }
 
 input ResetPasswordWithCodeInput {
