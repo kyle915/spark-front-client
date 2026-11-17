@@ -3016,6 +3016,12 @@ type CustomField implements Node {
   options: [String!]!
   value: String
   customFieldValueId: ID
+  """
+  Browser-loadable URL when this recap's ``value`` is a recap photo key (IMAGE
+  fields), else null. The web app used to build a bucket URL from the raw
+  key, which stops working on a private bucket.
+  """
+  mediaUrl: String
 }
 
 type CustomFieldDetailResponse {

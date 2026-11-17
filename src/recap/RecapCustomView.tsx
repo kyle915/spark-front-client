@@ -2511,8 +2511,16 @@ const RecapCustomViewInner = ({
                     // exactly mirroring how SparkRecapCreate captures
                     // image fields via the GCS upload flow.
                     if (kind === "image") {
+                      // Prefer the server-resolved URL for the saved value:
+                      // once the bucket is private a URL built from the raw
+                      // key 403s. A just-uploaded (unsaved) key has no
+                      // mediaUrl yet and keeps the old resolution.
+                      const serverMediaUrl =
+                        field.mediaUrl && displayValue === field.value
+                          ? field.mediaUrl
+                          : null;
                       const imgSrc = displayValue
-                        ? recapDisplayUrl(displayValue)
+                        ? serverMediaUrl || recapDisplayUrl(displayValue)
                         : "";
                       // One photo surface: empty IMAGE fields stay out of
                       // read mode when the Photos gallery already has files
@@ -2537,7 +2545,8 @@ const RecapCustomViewInner = ({
                               style={inset}
                               onError={(event) => {
                                 const img = event.currentTarget;
-                                const fallback = recapFileUrl(displayValue);
+                                const fallback =
+                                  serverMediaUrl || recapFileUrl(displayValue);
                                 if (fallback && img.src !== fallback)
                                   img.src = fallback;
                               }}

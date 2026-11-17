@@ -254,6 +254,9 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         value
+        # Server-resolved URL when value is a recap photo key (IMAGE fields);
+        # null otherwise. Needed once the media bucket is private.
+        mediaUrl
         # Admin-defined allowed choices for select / multiselect fields
         # (empty for every other field type). RecapCustomView renders the
         # submitted value against these (single string vs JSON array).

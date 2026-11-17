@@ -247,6 +247,9 @@ export const recapVideoPlayUrl = (
 ): string => {
   const fileUrl = recapFileUrl(path);
   if (!fileUrl) return "";
+  // Private-media URLs already play inline: the API answers a video key
+  // with Content-Type video/mp4 + Content-Disposition inline.
+  if (fileUrl.includes("/api/public/media/o/")) return fileUrl.split("?")[0];
   const base = (origin ?? graphqlOrigin()).replace(/\/$/, "");
   const blob = recapMediaBlob(path);
   if (!base || !blob) return fileUrl;
