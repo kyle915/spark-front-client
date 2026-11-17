@@ -12,6 +12,7 @@ import type { BulkAssignAmbassadorMutation as BulkAssignAmbassadorMutationType }
 import { RebookLastCrewMutation } from "@/api/mutations/RebookLastCrewMutation";
 import type { RebookLastCrewMutation as RebookLastCrewMutationType } from "@api/mutations/__generated__/RebookLastCrewMutation.graphql";
 import InviteBAModal from "@/requests/InviteBAModal";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 /**
  * Staffing Board — a week grid of shifts × dates so an admin can see who's
@@ -56,21 +57,22 @@ type AssignTarget = {
   alreadyIds: string[];
 };
 
-/**
- * A compact "pick one BA" modal for bulk assignment — lists the tenant's
- * active BAs (searchable) and hands the chosen ambassador global-id back.
- * Loads its own query lazily so the board isn't slowed by it until opened.
- */
-export const BulkBaPicker: React.FC<{
-  count: number;
+// The ambassadors list returns at most 50 rows a request, newest first, so
+// the picker searches on the server instead of filtering one page.
+const PICKER_PAGE = 50;
+
+/** One page of active BAs matching `search`, alphabetical. */
+const BulkBaPickerResults: React.FC<{
+  search: string;
   busy: boolean;
   onPick: (ambassadorId: string, name: string) => void;
-  onClose: () => void;
-}> = ({ count, busy, onPick, onClose }) => {
-  const [q, setQ] = useState("");
+}> = ({ search, busy, onPick }) => {
   const data = useLazyLoadQuery<AmbassadorsListQueryType>(
     AmbassadorsListQuery,
-    { first: 200 },
+    {
+      first: PICKER_PAGE,
+      filters: { isActive: true, name: search || null },
+    },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -82,15 +84,69 @@ export const BulkBaPicker: React.FC<{
         const first = n?.user?.firstName ?? "";
         const last = n?.user?.lastName ?? "";
         const name = `${first} ${last}`.trim() || n?.user?.email || "BA";
-        return { id: n!.id as string, name, isActive: !!n?.isActive };
-      })
-      .filter((p) => p.isActive);
-    const needle = q.trim().toLowerCase();
-    const filtered = needle
-      ? rows.filter((p) => p.name.toLowerCase().includes(needle))
-      : rows;
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [data, q]);
+        return { id: n!.id as string, name };
+      });
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
+  const total = data?.ambassadors?.totalCount ?? people.length;
+
+  if (people.length === 0) {
+    return (
+      <p className="p-6 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
+        No active BAs match.
+      </p>
+    );
+  }
+  return (
+    <>
+      {total > people.length ? (
+        <p className="px-2 pb-2 text-xs" style={{ color: "var(--spark-text-meta)" }}>
+          Showing {people.length} of {total}. Type a name to find anyone else.
+        </p>
+      ) : null}
+      {people.map((p) => (
+        <button
+          key={p.id}
+          disabled={busy}
+          onClick={() => onPick(p.id, p.name)}
+          className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left"
+          style={{ opacity: busy ? 0.5 : 1 }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(var(--spark-ink-rgb),0.05)")
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          <span
+            className="grid place-items-center rounded-full text-xs font-bold shrink-0"
+            style={{
+              width: 28,
+              height: 28,
+              background: "rgba(var(--spark-accent-rgb),0.15)",
+              color: "var(--spark-lime)",
+            }}
+          >
+            {initials(p.name)}
+          </span>
+          <span className="text-sm">{p.name}</span>
+        </button>
+      ))}
+    </>
+  );
+};
+
+/**
+ * A compact "pick one BA" modal for bulk assignment — searches the tenant's
+ * active BAs on the server and hands the chosen ambassador global-id back.
+ * Loads its own query lazily so the board isn't slowed by it until opened.
+ */
+export const BulkBaPicker: React.FC<{
+  count: number;
+  busy: boolean;
+  onPick: (ambassadorId: string, name: string) => void;
+  onClose: () => void;
+}> = ({ count, busy, onPick, onClose }) => {
+  const [q, setQ] = useState("");
+  const search = useDebouncedValue(q.trim(), 250);
 
   return (
     <div
@@ -122,7 +178,8 @@ export const BulkBaPicker: React.FC<{
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search BAs…"
+            placeholder="Search BAs by name…"
+            aria-label="Search BAs by name"
             disabled={busy}
             className="w-full rounded-lg px-3 py-2 text-sm"
             style={{
@@ -133,43 +190,15 @@ export const BulkBaPicker: React.FC<{
           />
         </div>
         <div className="overflow-y-auto px-3 pb-3" style={{ minHeight: 80 }}>
-          {people.length === 0 ? (
-            <p
-              className="p-6 text-center text-sm"
-              style={{ color: "var(--spark-text-meta)" }}
-            >
-              No active BAs match.
-            </p>
-          ) : (
-            people.map((p) => (
-              <button
-                key={p.id}
-                disabled={busy}
-                onClick={() => onPick(p.id, p.name)}
-                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left"
-                style={{ opacity: busy ? 0.5 : 1 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(var(--spark-ink-rgb),0.05)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <span
-                  className="grid place-items-center rounded-full text-[10px] font-bold shrink-0"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    background: "rgba(var(--spark-accent-rgb),0.15)",
-                    color: "var(--spark-lime)",
-                  }}
-                >
-                  {initials(p.name)}
-                </span>
-                <span className="text-sm">{p.name}</span>
-              </button>
-            ))
-          )}
+          <Suspense
+            fallback={
+              <p className="p-6 text-center text-sm" style={{ color: "var(--spark-text-meta)" }}>
+                Searching…
+              </p>
+            }
+          >
+            <BulkBaPickerResults search={search} busy={busy} onPick={onPick} />
+          </Suspense>
         </div>
         <div
           className="px-5 py-3 flex justify-end"

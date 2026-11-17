@@ -1,9 +1,8 @@
 import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
-import { EventsQuery } from "@/api/queries/EventsQuery";
-import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { useAllEventPages } from "@/hooks/useAllEventPages";
+import { addDaysIso, venueDayOf } from "@/utils/venueDay";
 import { useAuthStore } from "@/store/authStore";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -392,44 +391,32 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
 
 /* ───────────────── inner ───────────────── */
 
+const ymdOf = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
   const days = useMemo(() => weekDays(anchor), [anchor]);
+  const dayKeys = useMemo(() => days.map(ymdOf), [days]);
   const { tenantId } = useAuthStore();
 
-  const data = useLazyLoadQuery<EventsQueryType>(
-    EventsQuery,
-    {
-      first: 500,
-      filters: tenantId ? { tenantId } : null,
-    },
-    { fetchPolicy: "store-or-network" },
-  );
+  // Only the week on screen, every page of it. This used to ask for 500
+  // events with no dates; the list returns at most 100, newest date first,
+  // so a busy brand's current week could come back empty. The API filters
+  // by UTC day, so a day either side catches evening shifts out west.
+  const { events } = useAllEventPages({
+    ...(tenantId ? { tenantId } : {}),
+    startDate: addDaysIso(dayKeys[0], -1),
+    endDate: addDaysIso(dayKeys[6], 1),
+  });
 
   const shifts: Shift[] = useMemo(() => {
-    const start = days[0];
-    const end = new Date(days[6]);
-    end.setHours(23, 59, 59, 999);
-
-    return (
-      data?.events?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => {
-          if (!n.date) return null;
-          // Parse the date portion as a LOCAL date. `new Date("2026-05-29")`
-          // parses as UTC midnight, which in US timezones lands on the prior
-          // day and mis-buckets events at week edges. Build it from parts.
-          const [dy, dmo, dd] = String(n.date)
-            .slice(0, 10)
-            .split("-")
-            .map((p) => parseInt(p, 10));
-          const d = new Date(dy, (dmo || 1) - 1, dd || 1);
-          if (Number.isNaN(d.getTime())) return null;
-          if (d < start || d > end) return null;
-          const dayIndex = Math.max(
-            0,
-            Math.min(6, Math.floor((d.getTime() - start.getTime()) / 86400000)),
-          );
+    return events
+        .map((n) => {
+          // The venue's day, read off the server / the venue clock string,
+          // never through the browser's zone.
+          const day = venueDayOf(n);
+          const dayIndex = day ? dayKeys.indexOf(day) : -1;
+          if (dayIndex < 0) return null;
           let sh = parseHour(n.startTime) ?? 12;
           let eh = parseHour(n.endTime) ?? sh + 1;
           if (eh <= sh) eh = sh + 1; // minimum 1h block
@@ -450,9 +437,8 @@ const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
             dayIndex,
           } as Shift;
         })
-        ?.filter((s): s is Shift => s !== null) ?? []
-    );
-  }, [data, days]);
+        .filter((s): s is Shift => s !== null);
+  }, [events, dayKeys]);
 
   return <TimeGrid shifts={shifts} days={days} />;
 };

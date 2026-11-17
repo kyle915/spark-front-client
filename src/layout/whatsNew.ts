@@ -7,6 +7,21 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-16",
+    date: "November 16, 2026",
+    title: "Right day, full lists, fewer stray reminders",
+    items: [
+      "Today, Upcoming and the Calendar put each event on the day it happens at the store, wherever you are looking from.",
+      "The Calendar and Upcoming show every event in the period instead of stopping at 100.",
+      "Ambassadors no longer get shift reminders or a not-clocked-in nudge for a demo that was cancelled.",
+      "A shift reminder email that fails to send is tried again on the next run, and is only marked sent once it goes out.",
+      "Times in shift emails stay right after a daylight saving change.",
+      "Staff: the Timesheet opens on the client you have selected, and clock-in and clock-out times are shown and edited in the store's time zone.",
+      "Staff: Assign a BA searches every active ambassador by name.",
+      "Staff: System Health loads again.",
+    ],
+  },
+  {
     id: "2026-11-15",
     date: "November 15, 2026",
     title: "Maps, charts and a simpler sign-in",

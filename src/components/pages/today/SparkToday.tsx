@@ -11,8 +11,8 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
-import { EventsQuery } from "@/api/queries/EventsQuery";
-import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { useAllEventPages } from "@/hooks/useAllEventPages";
+import { addDaysIso, opsTodayIso, venueDayOf } from "@/utils/venueDay";
 import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery";
 import type { RecentLocationPingsQuery as RecentLocationPingsQueryType } from "@api/queries/__generated__/RecentLocationPingsQuery.graphql";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
@@ -30,7 +30,6 @@ import {
   buildTodayEvents,
   eventPins,
   fitKey as pinSetKey,
-  localDayIso,
   mapCoverage,
   peopleLines,
   todayCounts,
@@ -170,45 +169,24 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const baLabel = useBaLabel();
   const nameOf = useCallback((name: string) => baLabel(name), [baLabel]);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-  const tomorrow = useMemo(() => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 1);
-    return d;
-  }, [today]);
+  // The ops day (Pacific), the same "today" the live board uses, never the
+  // viewer's browser day.
+  const today = useMemo(() => opsTodayIso(), []);
 
-  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
-
-  const data = useLazyLoadQuery<EventsQueryType>(
-    EventsQuery,
-    {
-      first: 200,
-      filters: tenantId
-        ? {
-            tenantId,
-            startDate: fmtIso(today),
-            endDate: fmtIso(tomorrow),
-          }
-        : null,
-    },
-    { fetchPolicy: "store-or-network" },
-  );
+  // The API filters by the UTC day; a venue's day spans that day and the
+  // next (an evening shift out west is stored on the next UTC date), so ask
+  // for a day either side and keep the venue's day below.
+  const { events: todaysEvents } = useAllEventPages({
+    ...(tenantId ? { tenantId } : {}),
+    startDate: addDaysIso(today, -1),
+    endDate: addDaysIso(today, 1),
+  });
 
   const listed: ListedEvent[] = useMemo(() => {
     return (
-      data?.events?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.filter((n) => {
-          if (!n.date) return false;
-          const d = new Date(n.date);
-          return d.toDateString() === today.toDateString();
-        })
-        ?.map((n) => {
+      todaysEvents
+        .filter((n) => venueDayOf(n) === today)
+        .map((n) => {
           // Coordinates are stored as [lat, lng] (ArrayField of floats).
           const c = n.coordinates ?? null;
           return {
@@ -216,7 +194,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             name: n.name ?? "",
             retailer: n.request?.retailer?.name ?? "",
             address: n.address ?? "",
-            date: localDayIso(today),
+            date: today,
             startTime: n.startTime ?? null,
             endTime: n.endTime ?? null,
             coords:
@@ -224,9 +202,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 ? { lat: c[0] as number, lng: c[1] as number }
                 : null,
           };
-        }) ?? []
+        })
     );
-  }, [data, today]);
+  }, [todaysEvents, today]);
 
   // Re-read the board and phone locations every minute. The refresh runs as
   // a transition so the page (and the map's camera) stays put while it loads
@@ -268,6 +246,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         store: row.store ?? "",
         address: row.address ?? "",
         date: row.date ?? null,
+        localDate: row.localDate ?? null,
         startTime: row.startTime ?? null,
         endTime: row.endTime ?? null,
         startLocal: row.startLocal ?? null,
@@ -291,8 +270,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   }, [shiftData]);
 
   const events = useMemo(
-    () => buildTodayEvents({ listed, board, now }),
-    [listed, board, now],
+    () => buildTodayEvents({ listed, board, now, today }),
+    [listed, board, now, today],
   );
   const pins = useMemo(() => eventPins(events), [events]);
 
@@ -312,7 +291,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
   const counts = useMemo(() => todayCounts(events, now), [events, now]);
   const coverage = useMemo(() => mapCoverage(events, bas.length), [events, bas]);
-  const scope = `${tenantId ?? "all"}|${localDayIso(today)}`;
+  const scope = `${tenantId ?? "all"}|${today}`;
   const pinSet = useMemo(() => pinSetKey(scope, pins, bas), [scope, pins, bas]);
 
   const clockSummary = useMemo(() => {

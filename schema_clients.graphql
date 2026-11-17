@@ -3763,6 +3763,7 @@ type Event implements Node {
   startTime: String
   endTime: String
   newEndTime: String
+  localDate: String
   recaps: [Recap!]!
   assignedAmbassadorsCount: Int!
   confirmedAmbassadorsCount: Int!
@@ -5173,6 +5174,7 @@ type LiveBoardShift {
   eventName: String!
   brandName: String!
   date: String
+  localDate: String
   startTime: String
   endTime: String
   startLocal: String
@@ -6104,6 +6106,7 @@ type PayrollShiftRow {
   address: String
   clockInAt: String
   clockOutAt: String
+  timeZone: String
   clockInAttendanceUuid: String
   clockOutAttendanceUuid: String
   onTheClock: Boolean!

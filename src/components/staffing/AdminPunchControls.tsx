@@ -9,6 +9,7 @@ import type { AdminAttendanceMutationsClockInMutation as ClockInType } from "@ap
 import type { AdminAttendanceMutationsClockOutMutation as ClockOutType } from "@api/mutations/__generated__/AdminAttendanceMutationsClockOutMutation.graphql";
 import type { AdminAttendanceMutationsEditPunchMutation as EditType } from "@api/mutations/__generated__/AdminAttendanceMutationsEditPunchMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import { instantToZoneInput, zoneInputToIso, zoneShortName } from "@/utils/venueDay";
 
 /**
  * Compact ops controls for TIME CLOCK / Attendance — manual clock-in,
@@ -26,17 +27,14 @@ type Props = {
   clockOutAt?: string | null;
   clockInAttendanceUuid?: string | null;
   clockOutAttendanceUuid?: string | null;
+  /**
+   * The venue's IANA zone. When set, times are shown and typed on the
+   * venue's clock, so a Pacific admin fixing an East Coast clock-out types
+   * the time the BA left. Without it, the browser's clock (as before).
+   */
+  timeZone?: string | null;
   onDone?: () => void;
 };
-
-const toLocalInput = (iso: string | null | undefined): string => {
-  const d = iso ? new Date(iso) : new Date();
-  const src = isNaN(d.getTime()) ? new Date() : d;
-  const pad = (x: number) => String(x).padStart(2, "0");
-  return `${src.getFullYear()}-${pad(src.getMonth() + 1)}-${pad(src.getDate())}T${pad(src.getHours())}:${pad(src.getMinutes())}`;
-};
-
-const fromLocalInput = (local: string): string => new Date(local).toISOString();
 
 const btnStyle: React.CSSProperties = {
   fontSize: 10,
@@ -59,6 +57,7 @@ const AdminPunchControls: React.FC<Props> = ({
   clockOutAt,
   clockInAttendanceUuid,
   clockOutAttendanceUuid,
+  timeZone,
   onDone,
 }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -76,7 +75,7 @@ const AdminPunchControls: React.FC<Props> = ({
   const open = (m: Mode) => {
     const seed =
       m === "edit_in" ? clockInAt : m === "edit_out" ? clockOutAt : null;
-    setClockTime(toLocalInput(seed));
+    setClockTime(instantToZoneInput(seed, timeZone));
     setNote("");
     setMode(m);
   };
@@ -96,7 +95,7 @@ const AdminPunchControls: React.FC<Props> = ({
 
   const submit = () => {
     if (!mode || busy) return;
-    const iso = fromLocalInput(clockTime);
+    const iso = zoneInputToIso(clockTime, timeZone);
     if (!iso || Number.isNaN(Date.parse(iso))) {
       showAlert("Enter a valid date/time.", "error");
       return;
@@ -198,6 +197,7 @@ const AdminPunchControls: React.FC<Props> = ({
           style={{ letterSpacing: "0.1em", color: "var(--spark-text-meta)" }}
         >
           {title.toUpperCase()}
+          {timeZone ? ` · ${zoneShortName(timeZone)} (venue time)` : ""}
         </span>
         <input
           type="datetime-local"
