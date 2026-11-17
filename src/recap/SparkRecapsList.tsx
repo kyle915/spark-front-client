@@ -24,6 +24,7 @@ import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__gene
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
 import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
 import { BulkApproveRecapsMutation } from "@/api/mutations/BulkApproveRecapsMutation";
+import { bulkApproveMessage, idsByKind, selectedRows } from "@/recap/recapSelection";
 import type { BulkApproveRecapsMutation as BulkApproveRecapsMutationType } from "@api/mutations/__generated__/BulkApproveRecapsMutation.graphql";
 import { ArchiveRecapMutation } from "@/api/mutations/ArchiveRecapMutation";
 import type { ArchiveRecapMutation as ArchiveRecapMutationType } from "@/api/mutations/__generated__/ArchiveRecapMutation.graphql";
@@ -2671,15 +2672,25 @@ export default function SparkRecapsList() {
   // changes — kyle can switch retailer, tick a few more, etc. The
   // sticky action bar at the bottom of the page shows the count and
   // fires the Campaign Report mutation.
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // The row is remembered with its id (recapSelection.ts), so a bulk
+  // action can still act on a pick the current filter hides — the bar's
+  // "N SELECTED" and what the actions touch are always the same set.
+  const [selection, setSelection] = useState<Map<string, Recap>>(
+    () => new Map(),
+  );
+  const selectedIds = useMemo(() => new Set(selection.keys()), [selection]);
   const toggleSelected = (id: string) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+    setSelection((prev) => {
+      const next = new Map(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        const row = visibleRecaps.find((r) => r.id === id);
+        if (row) next.set(id, row);
+      }
       return next;
     });
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => setSelection(new Map());
   // Select-all operates on the recaps currently on screen (loaded +
   // filter-matching), matching how the campaign report reads the
   // selection. Toggles: when everything visible is already ticked it
@@ -2688,11 +2699,11 @@ export default function SparkRecapsList() {
     visibleRecaps.length > 0 &&
     visibleRecaps.every((r) => selectedIds.has(r.id));
   const toggleSelectAllVisible = () =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+    setSelection((prev) => {
+      const next = new Map(prev);
       for (const r of visibleRecaps) {
         if (allVisibleSelected) next.delete(r.id);
-        else next.add(r.id);
+        else next.set(r.id, r);
       }
       return next;
     });
@@ -2765,16 +2776,18 @@ export default function SparkRecapsList() {
   const [commitMarkShared, isMarkingShared] =
     useMutation<MarkRecapsSharedMutationType>(MarkRecapsSharedMutation);
 
-  // The mutation expects ids ordered the way the user picked them on
-  // the page (which determines cover-page recap order). We don't
-  // store insertion order in the Set, so use the visible list order
-  // as a sensible default — that matches what the user just saw.
-  const orderedSelectedIds = useMemo(() => {
-    if (selectedIds.size === 0) return [] as string[];
-    return visibleRecaps
-      .filter((r) => selectedIds.has(r.id))
-      .map((r) => r.id);
-  }, [visibleRecaps, selectedIds]);
+  // Every selected recap, on-screen ones first in the order the user sees
+  // them (the campaign report's cover order), then picks the current
+  // filter hides. All bulk actions read this, so they act on exactly what
+  // the bar counts.
+  const selectedRecaps = useMemo(
+    () => selectedRows(selection, visibleRecaps),
+    [selection, visibleRecaps],
+  );
+  const orderedSelectedIds = useMemo(
+    () => selectedRecaps.map((r) => r.id),
+    [selectedRecaps],
+  );
 
   const generateReport = () => {
     if (selectedIds.size === 0 || isGeneratingReport) return;
@@ -2812,21 +2825,18 @@ export default function SparkRecapsList() {
     });
   };
 
-  const selectedByKind = useMemo(() => {
-    const recapIds: string[] = [];
-    const customRecapIds: string[] = [];
-    for (const r of visibleRecaps) {
-      if (!selectedIds.has(r.id)) continue;
-      if (r.kind === "custom") customRecapIds.push(r.id);
-      else recapIds.push(r.id);
-    }
-    return { recapIds, customRecapIds };
-  }, [visibleRecaps, selectedIds]);
+  const selectedByKind = useMemo(
+    () => idsByKind(selectedRecaps),
+    [selectedRecaps],
+  );
 
   const approveSelected = () => {
     if (selectedIds.size === 0 || isBulkApproving || approvePhase !== "idle") return;
     setApprovePhase("pending");
-    const approvedNow = new Set(selectedIds);
+    // Exactly the selected recaps, on screen or not.
+    const targets = selectedRecaps;
+    const approvedNow = new Set(targets.map((r) => r.id));
+    const requested = targets.length;
     commitBulkApprove({
       variables: {
         input: {
@@ -2837,16 +2847,20 @@ export default function SparkRecapsList() {
       },
       onCompleted: (res) => {
         const payload = res.bulkApproveRecaps;
-        if (payload?.success) {
-          const names = visibleRecaps
-            .filter((r) => approvedNow.has(r.id))
-            .map((r) => r.retailerName || r.name)
-            .filter(Boolean);
-          const copy =
-            names.length === 1
-              ? `Approved · ${names[0]}`
-              : `Approved · ${approvedNow.size}`;
-          showAlert(copy, "success");
+        // The server approves one by one and reports how many it did; a
+        // recap it couldn't approve leaves success false with a reason.
+        const approvedCount = payload?.updatedCount ?? 0;
+        const toast = bulkApproveMessage({
+          requested,
+          approved: approvedCount,
+          singleLabel:
+            requested === 1
+              ? targets[0]?.retailerName || targets[0]?.name
+              : null,
+          reason: payload?.message,
+        });
+        if (payload?.success && approvedCount === requested) {
+          showAlert(toast.text, toast.tone);
           setJustApprovedIds(approvedNow);
           setApprovePhase("success");
           void holdActionSuccess().then(() => {
@@ -2856,8 +2870,11 @@ export default function SparkRecapsList() {
             setRefreshKey((k) => k + 1);
           });
         } else {
+          // Some or none approved: say the true count and why, keep the
+          // selection for a retry, and reload so approved rows move on.
           setApprovePhase("idle");
-          showAlert(payload?.message ?? "Bulk approve failed.", "error");
+          showAlert(toast.text, toast.tone);
+          if (approvedCount > 0) setRefreshKey((k) => k + 1);
         }
       },
       onError: (err) => {
@@ -2873,7 +2890,7 @@ export default function SparkRecapsList() {
   // Already-archived rows are skipped by the partition helper.
   const archiveSelected = async () => {
     if (selectedIds.size === 0 || isBulkArchiving) return;
-    const targets = partitionRecapsForBulkArchive(visibleRecaps, selectedIds);
+    const targets = partitionRecapsForBulkArchive(selectedRecaps, selectedIds);
     const total = targets.recapIds.length + targets.customRecapIds.length;
     if (total === 0) {
       showAlert("Selected recaps are already archived.", "info");
@@ -2941,22 +2958,20 @@ export default function SparkRecapsList() {
     }
   };
 
-  // Bulk Share / Email modal. The selected Recap objects (visible ∩
-  // selected — the same set the campaign report exports) feed the
+  // Bulk Share / Email modal. The selected Recap objects (every pick,
+  // the same set the campaign report exports) feed the
   // modal's list, the copy-links path, and the shareRecapsByEmail
   // mutation.
   const [bulkShareOpen, setBulkShareOpen] = useState(false);
   const selectedShareRecaps = useMemo(
     () =>
-      visibleRecaps
-        .filter((r) => selectedIds.has(r.id))
-        .map((r) => ({
-          id: r.id,
-          kind: r.kind,
-          name: r.name,
-          shareToken: r.shareToken,
-        })),
-    [visibleRecaps, selectedIds],
+      selectedRecaps.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        name: r.name,
+        shareToken: r.shareToken,
+      })),
+    [selectedRecaps],
   );
 
   // Copy-links path inside the bulk modal: handing someone the public
