@@ -66,6 +66,7 @@ const ProductRegions = lazy(() =>
     default: m.ProductRegions,
   })),
 );
+const MentionTrends = lazy(() => import("@/components/charts/MentionTrends"));
 const OnShelfSummary = lazy(() => import("@/components/charts/OnShelfSummary"));
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
@@ -852,6 +853,14 @@ export function InsightsBody({
                 startDate={startDate}
                 endDate={endDate}
               />
+            </Suspense>
+          </div>
+          {/* The same comments month by month: which themes and other
+              brands come up, and whether they are rising or falling. Its own
+              six months, not the range above. */}
+          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+            <Suspense fallback={null}>
+              <MentionTrends tenantId={tenantId} />
             </Suspense>
           </div>
           <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
