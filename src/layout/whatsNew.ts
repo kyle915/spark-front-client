@@ -7,6 +7,14 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18b",
+    date: "November 18, 2026",
+    title: "Connect an AI app with Google",
+    items: [
+      "When you connect Claude, ChatGPT or another AI app to Spark, choose Continue with Google on the Spark page. Spark signs you in with Google, then brings you back to pick the brand.",
+    ],
+  },
+  {
     id: "2026-11-18a",
     date: "November 18, 2026",
     title: "Product questions on the check-in page",

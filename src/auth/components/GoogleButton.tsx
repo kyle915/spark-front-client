@@ -7,6 +7,8 @@ import { playArrival } from "@/auth/arrivalSweep";
 
 interface GoogleButtonProps {
   isLogin?: boolean;
+  /** Called after sign-in instead of going to the dashboard. */
+  onSignedIn?: () => void;
 }
 
 export const SOCIAL_AUTH_GOOGLE = `
@@ -27,6 +29,7 @@ export const SOCIAL_AUTH_GOOGLE = `
  */
 export const GoogleButton: React.FC<GoogleButtonProps> = ({
   isLogin = true,
+  onSignedIn,
 }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -64,6 +67,10 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
       const payload = result?.data?.socialAuthGoogle;
       if (payload?.success && payload.token) {
         await socialLogin(payload.token, payload.refreshToken);
+        if (onSignedIn) {
+          onSignedIn();
+          return;
+        }
         void playArrival(() => navigate("/"));
         return;
       }

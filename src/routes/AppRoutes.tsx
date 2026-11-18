@@ -482,6 +482,7 @@ const PublicJobBoard = lazyDefault(() => import("@/public/jobs/PublicJobBoard"))
 // Public, no-login clock in/out. The :token is the link (see timeclock/ in spark-api).
 const PublicClock = lazyDefault(() => import("@/public/clock/PublicClock"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
+const ConnectAi = lazyDefault(() => import("@/auth/ConnectAi"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
 const PrivacyPolicyView = lazyDefault(
@@ -519,6 +520,13 @@ const PublicRoutes = {
     {
       path: "/magic/:token",
       component: <MagicLinkExchange />,
+      isPublic: true,
+    },
+    // "Continue with Google" for the AI connection page on the API. Public:
+    // the page signs people in itself, then hands back to the API.
+    {
+      path: "/connect-ai",
+      component: <ConnectAi />,
       isPublic: true,
     },
     // Public, token-authenticated approval page. Linked from the
