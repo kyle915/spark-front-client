@@ -148,3 +148,6 @@ TASKS.md
 
 # A worktree may symlink node_modules; the trailing-slash rule above does not match a symlink.
 /node_modules
+
+# Markdown copies written by scripts/legal/export-legal.mjs
+/legal-export/

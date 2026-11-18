@@ -37,6 +37,7 @@ import { labelsEveryRow, mergeSameLabel, rankRows, sharePercent } from "@/lib/ch
 import { barSeries, chartOptions, foldToOther, valueLabels } from "@/lib/sparkChart";
 import { inputColorScheme } from "@/theme/inputColorScheme";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import RecapDecksCard from "@/components/pages/client-recap/RecapDecksCard";
 import useSparkRole from "@/hooks/useSparkRole";
 import {
   ConsumerSplits,
@@ -624,7 +625,7 @@ export default function SparkReports() {
               <SparkGhostLink
                 to={`/reports/client-recap?start=${ymdLocal(range.start)}&end=${ymdLocal(range.end)}`}
               >
-                Draft client recap
+                Build a recap deck
               </SparkGhostLink>
             ) : null}
             <SparkGhostButton
@@ -760,6 +761,15 @@ export default function SparkReports() {
 
         <div className="print:hidden">
           <ProgramShareControl tenantId={tenantId || null} />
+        </div>
+
+        {/* Recap decks Ignite has shared with this brand. Nothing renders
+            until staff mark one ready. */}
+        <div className="print:hidden">
+          <RecapDecksCard
+            tenantId={tenantId ? String(tenantId) : null}
+            staffView={isStaffView}
+          />
         </div>
 
         {/* Request charts — hidden when nothing was requested in the range,

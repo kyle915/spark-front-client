@@ -52,6 +52,7 @@ import {
   QrCode,
   LayoutGrid,
   MailCheck,
+  Plug,
 } from "lucide-react";
 
 /**
@@ -213,6 +214,7 @@ const SECTIONS: NavSection[] = [
         to: "/account-map",
         clientLabel: "Account Map",
       },
+      { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],
   },
   {

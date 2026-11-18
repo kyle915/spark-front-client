@@ -5512,6 +5512,11 @@ input MoveCustomFieldToSectionInput {
 }
 
 type Mutation {
+  """
+  Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
+  stop working at once.
+  """
+  revokeAiConnection(id: ID!): RevokeAiConnectionResult!
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
@@ -5622,6 +5627,9 @@ type Mutation {
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
+  publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
+  generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
   saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
@@ -5652,7 +5660,8 @@ type Mutation {
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
   setRecapPhotoPick(fileId: ID!, choice: String!): RecapPhotoPicksResult!
   createClientRecapDraft(tenantId: ID!, startDate: String!, endDate: String!): ClientRecapDraftResult!
-  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null): ClientRecapDraftResult!
+  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null, nextSteps: [String!] = null, hiddenQuotes: [String!] = null, keptVisits: [String!] = null): ClientRecapDraftResult!
+  setClientRecapDeckStatus(uuid: String!, status: String!): ClientRecapDraftResult!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
@@ -6403,6 +6412,8 @@ type QuarterOption {
 }
 
 type Query {
+  """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
+  myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6543,10 +6554,13 @@ type Query {
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
   tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
   tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
+  tenantMentionTrends(tenantId: ID!, endDate: String = null, months: Int = null): TenantMentionTrends!
   recapShelfReadings(recapId: ID!): RecapShelfReadings!
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
+  tenantStoreInsights(tenantId: ID!): TenantStoreInsights
+  brandInsightReview: [BrandInsightReviewBrand!]
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
@@ -6556,6 +6570,8 @@ type Query {
   clientRecapDraft(uuid: String!): ClientRecapDraftResult!
   clientRecapDrafts(tenantId: ID!, first: Int! = 20): [ClientRecapDraftSummary!]!
   clientRecapDraftPdf(uuid: String!): ClientRecapDraftPdf!
+  clientRecapDecks(tenantId: ID!, first: Int! = 20): [ClientRecapDeckSummary!]!
+  clientRecapDeckPdf(uuid: String!): ClientRecapDraftPdf!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
@@ -7373,6 +7389,22 @@ type ClientRecapDraftPhoto {
   isPick: Boolean!
 }
 
+type ClientRecapVisit {
+  key: String!
+  day: String!
+  store: String!
+  state: String!
+  reason: String!
+  label: String!
+  evidence: String!
+  kept: Boolean!
+}
+
+type ClientRecapQuoteChoice {
+  text: String!
+  hidden: Boolean!
+}
+
 type ClientRecapDraftType {
   uuid: String!
   tenantId: String!
@@ -7392,6 +7424,17 @@ type ClientRecapDraftType {
   photos: [ClientRecapDraftPhoto!]!
   createdAt: String!
   updatedAt: String!
+  status: String!
+  canEdit: Boolean!
+  buildNote: String!
+  readyAt: String!
+  nextSteps: [String!]!
+  deckNumbers: [ClientRecapNumber!]!
+  noProductNote: String!
+  leftOutVisits: [ClientRecapVisit!]!
+  visitsToCheck: [ClientRecapVisit!]!
+  leftOutCount: Int!
+  quoteChoices: [ClientRecapQuoteChoice!]!
 }
 
 type ClientRecapDraftResult {
@@ -7406,6 +7449,14 @@ type ClientRecapDraftSummary {
   title: String!
   period: String!
   updatedAt: String!
+}
+
+type ClientRecapDeckSummary {
+  uuid: String!
+  tenantName: String!
+  title: String!
+  period: String!
+  readyAt: String!
 }
 
 type ClientRecapDraftPdf {
@@ -8505,6 +8556,35 @@ type ProductRegionState {
   spokenRecaps: Int!
 }
 
+type TenantMentionTrends {
+  status: String!
+  months: [String!]!
+  recapCounts: [Int!]!
+  compareMonth: String
+  priorMonth: String
+  minMonthRecaps: Int!
+  minTrendMentions: Int!
+  themes: [MentionSeries!]!
+  brands: [MentionSeries!]!
+  otherCount: Int!
+  headlines: [String!]!
+  taggedAt: String
+}
+
+type MentionSeries {
+  key: String!
+  label: String!
+  polarity: String!
+  counts: [Int!]!
+  total: Int!
+  current: Int!
+  previous: Int!
+  currentShare: Int!
+  previousShare: Int!
+  direction: String!
+  quote: String!
+}
+
 type TenantProductRegions {
   status: String!
   commentsStatus: String!
@@ -8598,6 +8678,81 @@ type CalloutLink {
   state: String
   startDate: String
   endDate: String
+}
+
+type StoreInsight {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  periodStart: String!
+  periodEnd: String!
+  isDraft: Boolean!
+}
+
+type TenantStoreInsights {
+  recommendations: [StoreInsight!]!
+  alerts: [StoreInsight!]!
+}
+
+type BrandInsightReviewItem {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  template: String!
+  factsText: String!
+  source: String!
+  status: String!
+  periodStart: String!
+  periodEnd: String!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
+}
+
+type BrandInsightReviewBrand {
+  tenantId: ID!
+  tenantName: String!
+  drafts: Int!
+  items: [BrandInsightReviewItem!]!
+}
+
+type BrandInsightResult {
+  ok: Boolean!
+  reason: String
+  item: BrandInsightReviewItem
+}
+
+type BrandInsightBatchResult {
+  ok: Boolean!
+  reason: String
+  count: Int!
+}
+
+type AiConnection {
+  id: ID!
+  appName: String!
+  brandName: String!
+  userEmail: String
+  createdAt: String!
+  lastUsedAt: String
+  callsLast30Days: Int!
+}
+
+type AiConnectorInfo {
+  connectorUrl: String!
+  helpUrl: String!
+  dailyCallLimit: Int!
+  isAdminView: Boolean!
+  connections: [AiConnection!]!
+}
+
+type RevokeAiConnectionResult {
+  ok: Boolean!
+  message: String!
 }
 
 type TenantWeeklySummary {

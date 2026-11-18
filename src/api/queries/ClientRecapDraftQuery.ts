@@ -46,6 +46,41 @@ export const ClientRecapDraftQuery = graphql`
         }
         createdAt
         updatedAt
+        status
+        canEdit
+        buildNote
+        readyAt
+        nextSteps
+        deckNumbers {
+          label
+          value
+        }
+        noProductNote
+        leftOutCount
+        leftOutVisits {
+          key
+          day
+          store
+          state
+          reason
+          label
+          evidence
+          kept
+        }
+        visitsToCheck {
+          key
+          day
+          store
+          state
+          reason
+          label
+          evidence
+          kept
+        }
+        quoteChoices {
+          text
+          hidden
+        }
       }
     }
   }
@@ -68,6 +103,34 @@ export const ClientRecapDraftsQuery = graphql`
 export const ClientRecapDraftPdfQuery = graphql`
   query ClientRecapDraftQueryPdfQuery($uuid: String!) {
     clientRecapDraftPdf(uuid: $uuid) {
+      ok
+      reason
+      filename
+      pdfBase64
+    }
+  }
+`;
+
+/**
+ * Recap decks Ignite has shared with a brand (staff marked them ready),
+ * newest first. A brand user only ever gets their own brand's.
+ */
+export const ClientRecapDecksQuery = graphql`
+  query ClientRecapDraftQueryDecksQuery($tenantId: ID!) {
+    clientRecapDecks(tenantId: $tenantId) {
+      uuid
+      tenantName
+      title
+      period
+      readyAt
+    }
+  }
+`;
+
+/** One shared deck as a PDF (base64). Brand users: ready decks of their own brand only. */
+export const ClientRecapDeckPdfQuery = graphql`
+  query ClientRecapDraftQueryDeckPdfQuery($uuid: String!) {
+    clientRecapDeckPdf(uuid: $uuid) {
       ok
       reason
       filename
