@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17f",
+    date: "November 17, 2026",
+    title: "What consumers mention, month by month",
+    items: [
+      "Insights now shows which themes and other brands come up in consumer comments over the last six months, with a small column per month.",
+      "Each theme says whether it is rising, falling or steady compared with the month before, with a comment as a shopper said it. Small changes are not called a trend.",
+    ],
+  },
+  {
     id: "2026-11-17e",
     date: "November 17, 2026",
     title: "A simpler Upcoming page",

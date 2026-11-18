@@ -6538,6 +6538,7 @@ type Query {
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
   tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
   tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
+  tenantMentionTrends(tenantId: ID!, endDate: String = null, months: Int = null): TenantMentionTrends!
   recapShelfReadings(recapId: ID!): RecapShelfReadings!
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
@@ -8498,6 +8499,35 @@ type ProductRegionState {
   spokenPositive: Int!
   spokenNegative: Int!
   spokenRecaps: Int!
+}
+
+type TenantMentionTrends {
+  status: String!
+  months: [String!]!
+  recapCounts: [Int!]!
+  compareMonth: String
+  priorMonth: String
+  minMonthRecaps: Int!
+  minTrendMentions: Int!
+  themes: [MentionSeries!]!
+  brands: [MentionSeries!]!
+  otherCount: Int!
+  headlines: [String!]!
+  taggedAt: String
+}
+
+type MentionSeries {
+  key: String!
+  label: String!
+  polarity: String!
+  counts: [Int!]!
+  total: Int!
+  current: Int!
+  previous: Int!
+  currentShare: Int!
+  previousShare: Int!
+  direction: String!
+  quote: String!
 }
 
 type TenantProductRegions {
