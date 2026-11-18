@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17d",
+    date: "November 17, 2026",
+    title: "Spend needs a receipt photo",
+    items: [
+      "Ambassadors: if you enter product spend on a recap, add a photo of the receipt to the receipt group before you submit. The form tells you right away if it's missing.",
+      "Staff editing a recap can still enter spend without a receipt.",
+    ],
+  },
+  {
     id: "2026-11-17c",
     date: "November 17, 2026",
     title: "Move an event yourself",
