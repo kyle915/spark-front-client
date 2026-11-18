@@ -7,13 +7,99 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-17e",
+    id: "2026-11-17e-1",
     date: "November 17, 2026",
     title: "Clearer messages when Spark is busy",
     items: [
       "If you make a lot of requests in a short time, export too often or select too many items at once, Spark now says so in plain words and tells you to try again shortly, instead of showing an error page.",
       "Too many sign-in attempts shows a short wait message on the sign-in page.",
       "Long lists on Home, Upcoming, Recent submissions, My approvals, Alerts, Reports and the Account Map load in full for brand users.",
+    ],
+  },
+  {
+    id: "2026-11-18b",
+    date: "November 18, 2026",
+    title: "Product answers from brand documents and websites",
+    items: [
+      "Ambassadors: product questions on the check-in page are now also answered from the brand's uploaded documents and its own website, and each answer says where it came from, such as a product page or a sell sheet.",
+      "Staff: on the BA product notes card under Walk-ups, Standing codes, add the brand's website, see every page and document Spark read, refresh them now, or exclude one. Your notes win when they disagree with the website.",
+    ],
+  },
+  {
+    id: "2026-11-18a-1",
+    date: "November 18, 2026",
+    title: "Where to go next, and alerts",
+    items: [
+      "Brand dashboards can show a Where to go next card: stores that converted well above your average and are worth a return visit, and stores to fix, such as no product on the shelf twice in 30 days or lots of sampling with few sales.",
+      "An Alerts card gives short notices about last week, such as product missing at a store or conversion dropping against the 4 weeks before.",
+      "Every number comes from approved recaps, visits with no product are left out of conversion, and the Ignite team reviews each one before it appears.",
+      "Staff: review and publish them under Client summaries, Store insights.",
+    ],
+  },
+  {
+    id: "2026-11-17g-1",
+    date: "November 17, 2026",
+    title: "Campaign recap decks",
+    items: [
+      "Ignite can now build your end-of-program recap deck in Spark: headline numbers, where the program ran, what consumers said, the best photos from the field and suggested next steps.",
+      "When Ignite shares a deck with you, it appears under Recap decks in your program report, ready to download as a PDF.",
+      "Store visits where there was no product on hand are left out of the demo count and listed at the end of the deck. Totals still match your dashboard.",
+    ],
+  },
+  {
+    id: "2026-11-17h",
+    date: "November 17, 2026",
+    title: "Updated Terms, Privacy Policy and new legal pages",
+    items: [
+      "The Terms of Service are reorganized into parts for everyone, for brands, and for brand ambassadors, and the Privacy Policy now lists the services Spark uses and explains location, text messages and AI features.",
+      "New pages: an Acceptable Use Policy and a Data Processing Summary for brands. Each legal page links to the others.",
+    ],
+  },
+  {
+    id: "2026-11-17g",
+    date: "November 17, 2026",
+    title: "Connect Claude or ChatGPT",
+    items: [
+      "Brands can now ask Claude or ChatGPT about their program with their own Spark login: results, recaps, stores, upcoming events and what's waiting on approval. Open AI connector in the sidebar for the link and steps.",
+      "It reads your brand's data only, can't change anything, and never shares brand ambassadors' personal details. You can disconnect an app at any time from the same page.",
+      "Updated Terms of Service: automated access to Spark is allowed only through this connection or another integration Ignite approves in writing.",
+    ],
+  },
+  {
+    id: "2026-11-17f-1",
+    date: "November 17, 2026",
+    title: "What consumers mention, month by month",
+    items: [
+      "Insights now shows which themes and other brands come up in consumer comments over the last six months, with a small column per month.",
+      "Each theme says whether it is rising, falling or steady compared with the month before, with a comment as a shopper said it. Small changes are not called a trend.",
+    ],
+  },
+  {
+    id: "2026-11-18a",
+    date: "November 18, 2026",
+    title: "Product questions on the check-in page",
+    items: [
+      "Ambassadors: once you've checked in, ask a product question such as \"How much caffeine is in this?\" and get a short answer taken only from the brand's own notes. If the notes don't cover it, it says so — check with your lead.",
+      "Staff: write each brand's BA product notes and see what ambassadors have been asking under Walk-ups, Standing codes.",
+    ],
+  },
+  {
+    id: "2026-11-17f",
+    date: "November 17, 2026",
+    title: "An easier-to-read state map",
+    items: [
+      "On Geographic performance, states with more activity are now a darker blue and states with none are plain gray, so the busiest state stands out instead of fading away.",
+      "Each state with activity shows its number on the map, and a ranked list beside it gives every state's total and share.",
+      "When a brand runs in only a few neighboring states, the map zooms to them. Choose Show all states to see the whole country.",
+    ],
+  },
+  {
+    id: "2026-11-17e",
+    date: "November 17, 2026",
+    title: "A simpler Upcoming page",
+    items: [
+      "Upcoming lists the next 7 days as a plain schedule: one list per day, with the time first, then the store and its address. Click any row to open it.",
+      "Only events that still need something show a status, such as Pending.",
     ],
   },
   {

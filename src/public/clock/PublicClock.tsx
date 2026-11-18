@@ -361,7 +361,10 @@ function ClockInForm({
       </label>
       <p style={{ ...hint, marginTop: 14 }}>
         When you tap Clock in, your phone will ask to share your location. Spark saves it once when you clock in and
-        once when you clock out — never in between. If you say no, you can still clock in.
+        once when you clock out — never in between. If you say no, you can still clock in.{" "}
+        <a href="/privacy-policy#location" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+          Privacy Policy
+        </a>
       </p>
       <PrimaryButton accent={accent} busy={busy} type="submit">
         Clock in

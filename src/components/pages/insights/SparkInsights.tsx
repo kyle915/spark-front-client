@@ -16,6 +16,7 @@ import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
+import StoreInsightsCards from "@/components/ai/StoreInsightsCards";
 import WhatChangedLine from "@/components/explain/WhatChangedLine";
 import Callouts from "@/components/explain/Callouts";
 import { LatestMonthHighlight } from "@/components/explain/MonthHighlight";
@@ -66,6 +67,7 @@ const ProductRegions = lazy(() =>
     default: m.ProductRegions,
   })),
 );
+const MentionTrends = lazy(() => import("@/components/charts/MentionTrends"));
 const OnShelfSummary = lazy(() => import("@/components/charts/OnShelfSummary"));
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
@@ -772,6 +774,8 @@ export function InsightsBody({
 
       {tenantId && !omitNarration && <WeeklySummaryCard tenantId={tenantId} />}
 
+      {tenantId && !omitNarration && <StoreInsightsCards tenantId={tenantId} />}
+
       {/* Pace, markets, year-over-year, AI, geo, and the timeline. Gated on
           state rather than <details> so none of their queries fire until
           someone actually asks for the detail. */}
@@ -852,6 +856,14 @@ export function InsightsBody({
                 startDate={startDate}
                 endDate={endDate}
               />
+            </Suspense>
+          </div>
+          {/* The same comments month by month: which themes and other
+              brands come up, and whether they are rising or falling. Its own
+              six months, not the range above. */}
+          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+            <Suspense fallback={null}>
+              <MentionTrends tenantId={tenantId} />
             </Suspense>
           </div>
           <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
