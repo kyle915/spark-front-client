@@ -92,12 +92,14 @@ import {
 import {
   PROGRAM_MISSING_ERROR,
   PROGRAM_STEP_TITLE,
+  STORE_NAME_REQUIRED_ERROR,
   identifyPlaceKind,
   identifySubmitLabel,
   prefersReducedMotion,
   programPickerPrompt,
   programRequiredHint,
   revealProgramPicker,
+  storeNameRequired,
 } from "./programPickerGate";
 
 
@@ -199,6 +201,7 @@ export default function IdentifyStep({
   markets = [],
   eventTypes = [],
   programPickerTitle = "",
+  storeNameRequiredByDefault = false,
 }: {
   code: string;
   accent: string;
@@ -211,6 +214,7 @@ export default function IdentifyStep({
   markets?: string[];
   eventTypes?: EventTypeOption[];
   programPickerTitle?: string;
+  storeNameRequiredByDefault?: boolean;
 }) {
   // Repeat BAs are the norm on a standing link — the same crew works these
   // stores week after week. Remember who they said they were so the second
@@ -248,6 +252,16 @@ export default function IdentifyStep({
   // An Event Activation is one venue, so a roaming brand types or GPS-picks
   // it like a store instead of choosing a market.
   const marketPicker = isMarket && !atVenue;
+  // Retail sampling: the store's name, not just its address, so the recap
+  // counts under the store on the brand's dashboards.
+  const needStoreName =
+    placeKind === "store" &&
+    !marketPicker &&
+    storeNameRequired({
+      program: selectedEventType,
+      linkDefault: storeNameRequiredByDefault,
+      hasPrograms,
+    });
 
   const saved = readIdentity(code);
   const [firstName, setFirstName] = useState(saved.firstName);
@@ -592,6 +606,8 @@ export default function IdentifyStep({
           if (!addr.trim()) return setErr("Enter the store address.");
         } else if (!addr.trim()) {
           return setErr(atVenue ? "Enter the event or venue address." : "Enter the store address.");
+        } else if (needStoreName && !overrides && !storeName.trim()) {
+          return setErr(STORE_NAME_REQUIRED_ERROR);
         }
       }
       if (!date) return setErr("Pick the date you're working.");
@@ -1027,7 +1043,9 @@ export default function IdentifyStep({
           <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
             {atVenue
               ? "Use the venue's address — anyone else working this event today lands on the same one."
-              : "Type the store's name or address. If it shows in the list, tap it. If it doesn't, type the full address and continue: new locations are fine."}
+              : needStoreName
+                ? "Type the store's name or address. If it shows in the list, tap it. If it doesn't, type the full address, then the store name below: new locations are fine."
+                : "Type the store's name or address. If it shows in the list, tap it. If it doesn't, type the full address and continue: new locations are fine."}
           </p>
           <input
             style={input}
@@ -1077,7 +1095,15 @@ export default function IdentifyStep({
           </button>
           <input
             style={input}
-            placeholder={atVenue ? "Event or venue name (optional)" : "Store name (optional)"}
+            placeholder={
+              atVenue
+                ? "Event or venue name (optional)"
+                : needStoreName
+                  ? "Store name"
+                  : "Store name (optional)"
+            }
+            aria-label={needStoreName ? "Store name (required)" : undefined}
+            aria-required={needStoreName || undefined}
             autoComplete="off"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}

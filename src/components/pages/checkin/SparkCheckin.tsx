@@ -697,6 +697,7 @@ export default function SparkCheckin() {
             markets={ctx.markets || []}
             eventTypes={ctx.eventTypes || []}
             programPickerTitle={ctx.programPickerTitle || ""}
+            storeNameRequiredByDefault={Boolean(ctx.storeNameRequired)}
           />
         ) : (
           <CheckedInFlow
