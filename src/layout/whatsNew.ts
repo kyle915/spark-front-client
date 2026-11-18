@@ -7,6 +7,17 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18c",
+    date: "November 18, 2026",
+    title: "Search your field photos",
+    items: [
+      "The Photos page has a search box. Type what you want in plain words, like “best crowd photos at Kroger in Texas”, and Spark turns it into filters you can see and remove.",
+      "One tap narrows to consumers engaging, product on the table, shelf displays or signage, and you can hide blurry or dark photos.",
+      "Spark tags each photo once: what it shows, which of your products are in it, roughly how busy it was and the setting. It never identifies anyone.",
+      "Brands see photos from their own approved recaps only, and receipts never appear. Staff can also include recaps waiting for approval and add photos to a recap deck.",
+    ],
+  },
+  {
     id: "2026-11-18b",
     date: "November 18, 2026",
     title: "Product answers from brand documents and websites",
