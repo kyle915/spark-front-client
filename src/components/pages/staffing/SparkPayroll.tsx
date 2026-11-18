@@ -15,6 +15,10 @@ import type { PayrollMutationsUnapproveMutation as UnapproveType } from "@api/mu
 import { useTenantSelection } from "@/catalogs/useTenantSelection";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { PayrollHoursCheckQuery } from "@/api/queries/PayrollHoursCheckQuery";
+import type { PayrollHoursCheckQuery as HoursCheckQueryType } from "@api/queries/__generated__/PayrollHoursCheckQuery.graphql";
+import { BaFlagChip, HoursCheckSummary } from "./HoursCheck";
+import { shiftsByAmbassador } from "./hoursCheckData";
 
 /**
  * Payroll timesheet — per-BA worked hours + estimated pay for a pay period,
@@ -88,13 +92,27 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
   const sheet = data?.payrollTimesheet;
   const rows: Row[] = (sheet?.rows ?? []) as Row[];
   const [reviewOnly, setReviewOnly] = useState(false);
+  // Hours check: rule-based flags on padded or impossible shifts. Staff
+  // decide; nothing here blocks an approval.
+  const [explain, setExplain] = useState(false);
+  const [lookOnly, setLookOnly] = useState(false);
+  const check = useLazyLoadQuery<HoursCheckQueryType>(
+    PayrollHoursCheckQuery,
+    { startDate, endDate, tenantId, explain },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+  )?.payrollHoursCheck;
+  const flagsByBa = shiftsByAmbassador(check);
   // "Approve all" is two-step: the first click arms it, the second commits.
   // True while an approve-all sits in its undo window.
   const [held, setHeld] = useState(false);
   const showUndoable = useAlertStore((s) => s.showUndoable);
   // Which ambassador's shifts are expanded under their row (one at a time).
   const [openUuid, setOpenUuid] = useState<string | null>(null);
-  const shown = reviewOnly ? rows.filter((r) => r.needsReview) : rows;
+  const shown = rows.filter(
+    (r) =>
+      (!reviewOnly || r.needsReview) &&
+      (!lookOnly || (flagsByBa.get(r.ambassadorUuid) ?? []).some((s) => s.needsLook)),
+  );
 
   const [commitApprove, approving] = useMutation<ApproveType>(ApprovePayrollHoursMutation);
   const [commitMarkPaid, paying] = useMutation<MarkPaidType>(MarkPayrollPaidMutation);
@@ -136,6 +154,15 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
 
   return (
     <>
+      {check ? (
+        <HoursCheckSummary
+          report={check}
+          lookOnly={lookOnly}
+          onToggleLookOnly={() => setLookOnly((v) => !v)}
+          explain={explain}
+          onExplain={() => setExplain(true)}
+        />
+      ) : null}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <span
           className="mono text-[11px]"
@@ -256,6 +283,9 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                         </StatusChip>
                       </span>
                     ) : null}
+                    <span className="ml-2">
+                      <BaFlagChip shifts={flagsByBa.get(r.ambassadorUuid)} />
+                    </span>
                   </p>
                   {r.email ? (
                     <p className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
@@ -338,6 +368,7 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                       endDate={endDate}
                       tenantId={tenantId}
                       ambassadorUuid={r.ambassadorUuid}
+                      hoursShifts={flagsByBa.get(r.ambassadorUuid)}
                       onChanged={() => setRefreshKey((k) => k + 1)}
                     />
                   </td>
