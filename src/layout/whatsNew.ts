@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17g-1",
+    date: "November 17, 2026",
+    title: "Campaign recap decks",
+    items: [
+      "Ignite can now build your end-of-program recap deck in Spark: headline numbers, where the program ran, what consumers said, the best photos from the field and suggested next steps.",
+      "When Ignite shares a deck with you, it appears under Recap decks in your program report, ready to download as a PDF.",
+      "Store visits where there was no product on hand are left out of the demo count and listed at the end of the deck. Totals still match your dashboard.",
+    ],
+  },
+  {
     id: "2026-11-17h",
     date: "November 17, 2026",
     title: "Updated Terms, Privacy Policy and new legal pages",

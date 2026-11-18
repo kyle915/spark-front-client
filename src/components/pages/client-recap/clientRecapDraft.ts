@@ -14,12 +14,20 @@ export type DraftPhoto = {
   isPick: boolean;
 };
 
+export const MAX_NEXT_STEPS = 5;
+
 export type DraftText = {
   title: string;
   summary: string;
   takeaways: string[];
   photoIds: string[];
+  /** Optional on older callers; compared only when present on both sides. */
+  nextSteps?: string[];
+  hiddenQuotes?: string[];
+  keptVisits?: string[];
 };
+
+export type DeckStatus = "building" | "draft" | "ready";
 
 const ymd = (d: Date): string => {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -58,12 +66,56 @@ export const cleanTakeaways = (lines: readonly string[]): string[] =>
     .filter(Boolean)
     .slice(0, MAX_TAKEAWAYS);
 
+/** Next steps as they will be saved: trimmed, blanks dropped, capped. */
+export const cleanNextSteps = (lines: readonly string[]): string[] =>
+  lines
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, MAX_NEXT_STEPS);
+
+const sameSet = (a: readonly string[] = [], b: readonly string[] = []): boolean =>
+  [...a].sort().join("\u0000") === [...b].sort().join("\u0000");
+
 /** True when what is on screen differs from what was last saved. */
 export const isDirty = (saved: DraftText, current: DraftText): boolean =>
   saved.title.trim() !== current.title.trim() ||
   saved.summary.trim() !== current.summary.trim() ||
   cleanTakeaways(saved.takeaways).join("\n") !== cleanTakeaways(current.takeaways).join("\n") ||
-  saved.photoIds.join(",") !== current.photoIds.join(",");
+  saved.photoIds.join(",") !== current.photoIds.join(",") ||
+  cleanNextSteps(saved.nextSteps ?? []).join("\n") !==
+    cleanNextSteps(current.nextSteps ?? []).join("\n") ||
+  !sameSet(saved.hiddenQuotes, current.hiddenQuotes) ||
+  !sameSet(saved.keptVisits, current.keptVisits);
+
+/** Add or remove one value from a list (a quote to hide, a visit to keep). */
+export const toggleIn = (items: readonly string[], value: string, on: boolean): string[] =>
+  on ? (items.includes(value) ? [...items] : [...items, value]) : items.filter((x) => x !== value);
+
+/** The status of a deck in staff words. */
+export const statusLabel = (status: string): string => {
+  if (status === "building") return "Being written";
+  if (status === "ready") return "Shared with the brand";
+  return "Staff draft";
+};
+
+/** What the status means, for the line under it. */
+export const statusNote = (status: string): string => {
+  if (status === "building") {
+    return "The numbers, photos and no-product visits are in. The summary, takeaways and next steps for a program this size are written in the background, usually within 10 minutes. This page checks for them on its own.";
+  }
+  if (status === "ready") {
+    return "The brand's users can download this deck from their program report. Nothing was emailed. Move it back to draft to make changes.";
+  }
+  return "Only Ignite staff can see this deck. Check it, then mark it ready to share it with the brand. Nothing is emailed.";
+};
+
+/** "Oct 15" from "2026-10-15". */
+export const shortDay = (iso: string): string => {
+  const [y, m, d] = (iso || "").slice(0, 10).split("-").map(Number);
+  return y && m && d
+    ? new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : "";
+};
 
 /** Move one item one place earlier (-1) or later (+1). The first photo is
  *  the cover. Out-of-range moves return the list unchanged. */
