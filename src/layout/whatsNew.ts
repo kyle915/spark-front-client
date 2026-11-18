@@ -7,6 +7,14 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18v",
+    date: "November 18, 2026",
+    title: "Festivals show by venue",
+    items: [
+      "Consumers sampled by store now shows festivals and events by their venue name instead of No store recorded. Venues are marked (venue) so they are not mistaken for stores.",
+    ],
+  },
+  {
     id: "2026-11-18b-2",
     date: "November 18, 2026",
     title: "Connect an AI app with Google",
