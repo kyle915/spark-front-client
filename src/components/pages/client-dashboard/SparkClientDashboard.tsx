@@ -27,6 +27,7 @@ import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/quer
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
+import StoreInsightsCards from "@/components/ai/StoreInsightsCards";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
 import { rankUpcomingRetailers } from "@/components/pages/client-dashboard/topRetailers";
@@ -653,6 +654,8 @@ const ClientInner: React.FC = () => {
       )}
 
       {tenantId ? <WeeklySummaryCard tenantId={tenantId} forClient /> : null}
+
+      {tenantId ? <StoreInsightsCards tenantId={tenantId} forClient /> : null}
 
       </>)}
 

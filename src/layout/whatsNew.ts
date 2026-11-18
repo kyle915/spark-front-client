@@ -7,6 +7,17 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18a",
+    date: "November 18, 2026",
+    title: "Where to go next, and alerts",
+    items: [
+      "Brand dashboards can show a Where to go next card: stores that converted well above your average and are worth a return visit, and stores to fix, such as no product on the shelf twice in 30 days or lots of sampling with few sales.",
+      "An Alerts card gives short notices about last week, such as product missing at a store or conversion dropping against the 4 weeks before.",
+      "Every number comes from approved recaps, visits with no product are left out of conversion, and the Ignite team reviews each one before it appears.",
+      "Staff: review and publish them under Client summaries, Store insights.",
+    ],
+  },
+  {
     id: "2026-11-17f",
     date: "November 17, 2026",
     title: "An easier-to-read state map",
