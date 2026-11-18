@@ -7,6 +7,17 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18b-1-2",
+    date: "November 18, 2026",
+    title: "Say your recap, and the form fills in",
+    items: [
+      "On the check-in recap, tap Record and talk through the shift. Spark fills in the whole form from what you said: counts, dropdowns, products, yes or no questions and notes.",
+      "Recording now works on iPhone Safari too.",
+      "Only empty boxes are filled. If you already typed an answer, it stays, and you can tap Replace to use what you said instead. Boxes filled by voice are marked so you can check them before you submit.",
+      "Spark never guesses: anything you didn't mention stays blank. Recordings are turned into text and not kept.",
+    ],
+  },
+  {
     id: "2026-11-18b-1-1",
     date: "November 18, 2026",
     title: "Hours check before payroll",
