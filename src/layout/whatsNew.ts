@@ -7,6 +7,14 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18i",
+    date: "November 18, 2026",
+    title: "Insights uses your local date",
+    items: [
+      "Insights now asks for the right date range in the evening. Before, after about 5 PM Pacific it counted tomorrow as today, so the last 7, 30 or 90 days could start and end a day late.",
+    ],
+  },
+  {
     id: "2026-11-17e-1",
     date: "November 17, 2026",
     title: "Clearer messages when Spark is busy",
