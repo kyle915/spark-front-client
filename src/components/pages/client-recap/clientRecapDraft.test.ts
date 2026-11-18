@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addPhoto,
   base64ToBytes,
+  cleanNextSteps,
   cleanTakeaways,
   initialRange,
   isDirty,
@@ -9,7 +10,11 @@ import {
   moveItem,
   photoPlace,
   rangeProblem,
+  shortDay,
+  statusLabel,
+  statusNote,
   textSourceNote,
+  toggleIn,
   type DraftText,
 } from "./clientRecapDraft";
 
@@ -87,5 +92,39 @@ describe("client recap draft", () => {
   it("decodes a base64 PDF", () => {
     const bytes = base64ToBytes(btoa("%PDF-1.7"));
     expect(String.fromCharCode(...bytes)).toBe("%PDF-1.7");
+  });
+});
+
+describe("client recap deck", () => {
+  it("counts next steps, hidden quotes and kept visits as changes", () => {
+    const base: DraftText = { ...saved, nextSteps: ["Book March."], hiddenQuotes: ["a"], keptVisits: [] };
+    expect(isDirty(base, { ...base })).toBe(false);
+    expect(isDirty(base, { ...base, nextSteps: ["Book March.", " "] })).toBe(false);
+    expect(isDirty(base, { ...base, nextSteps: ["Book April."] })).toBe(true);
+    expect(isDirty(base, { ...base, hiddenQuotes: [] })).toBe(true);
+    expect(isDirty(base, { ...base, keptVisits: ["C12"] })).toBe(true);
+    // Order of a set does not matter.
+    expect(
+      isDirty({ ...base, hiddenQuotes: ["a", "b"] }, { ...base, hiddenQuotes: ["b", "a"] }),
+    ).toBe(false);
+  });
+
+  it("cleans next steps like takeaways, capped at five", () => {
+    expect(cleanNextSteps([" a  b ", "", "c", "d", "e", "f", "g"])).toEqual(["a b", "c", "d", "e", "f"]);
+  });
+
+  it("toggles a value in a list", () => {
+    expect(toggleIn(["a"], "b", true)).toEqual(["a", "b"]);
+    expect(toggleIn(["a", "b"], "b", true)).toEqual(["a", "b"]);
+    expect(toggleIn(["a", "b"], "a", false)).toEqual(["b"]);
+  });
+
+  it("names each status in staff words", () => {
+    expect(statusLabel("building")).toBe("Being written");
+    expect(statusLabel("draft")).toBe("Staff draft");
+    expect(statusLabel("ready")).toBe("Shared with the brand");
+    expect(statusNote("ready")).toContain("Nothing was emailed");
+    expect(shortDay("2026-10-15")).toBe("Oct 15");
+    expect(shortDay("")).toBe("");
   });
 });

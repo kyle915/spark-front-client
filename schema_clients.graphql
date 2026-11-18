@@ -5652,7 +5652,8 @@ type Mutation {
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
   setRecapPhotoPick(fileId: ID!, choice: String!): RecapPhotoPicksResult!
   createClientRecapDraft(tenantId: ID!, startDate: String!, endDate: String!): ClientRecapDraftResult!
-  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null): ClientRecapDraftResult!
+  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null, nextSteps: [String!] = null, hiddenQuotes: [String!] = null, keptVisits: [String!] = null): ClientRecapDraftResult!
+  setClientRecapDeckStatus(uuid: String!, status: String!): ClientRecapDraftResult!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
@@ -6551,6 +6552,8 @@ type Query {
   clientRecapDraft(uuid: String!): ClientRecapDraftResult!
   clientRecapDrafts(tenantId: ID!, first: Int! = 20): [ClientRecapDraftSummary!]!
   clientRecapDraftPdf(uuid: String!): ClientRecapDraftPdf!
+  clientRecapDecks(tenantId: ID!, first: Int! = 20): [ClientRecapDeckSummary!]!
+  clientRecapDeckPdf(uuid: String!): ClientRecapDraftPdf!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
@@ -7368,6 +7371,22 @@ type ClientRecapDraftPhoto {
   isPick: Boolean!
 }
 
+type ClientRecapVisit {
+  key: String!
+  day: String!
+  store: String!
+  state: String!
+  reason: String!
+  label: String!
+  evidence: String!
+  kept: Boolean!
+}
+
+type ClientRecapQuoteChoice {
+  text: String!
+  hidden: Boolean!
+}
+
 type ClientRecapDraftType {
   uuid: String!
   tenantId: String!
@@ -7387,6 +7406,17 @@ type ClientRecapDraftType {
   photos: [ClientRecapDraftPhoto!]!
   createdAt: String!
   updatedAt: String!
+  status: String!
+  canEdit: Boolean!
+  buildNote: String!
+  readyAt: String!
+  nextSteps: [String!]!
+  deckNumbers: [ClientRecapNumber!]!
+  noProductNote: String!
+  leftOutVisits: [ClientRecapVisit!]!
+  visitsToCheck: [ClientRecapVisit!]!
+  leftOutCount: Int!
+  quoteChoices: [ClientRecapQuoteChoice!]!
 }
 
 type ClientRecapDraftResult {
@@ -7401,6 +7431,14 @@ type ClientRecapDraftSummary {
   title: String!
   period: String!
   updatedAt: String!
+}
+
+type ClientRecapDeckSummary {
+  uuid: String!
+  tenantName: String!
+  title: String!
+  period: String!
+  readyAt: String!
 }
 
 type ClientRecapDraftPdf {
