@@ -488,11 +488,21 @@ const PublicClock = lazyDefault(() => import("@/public/clock/PublicClock"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
-const PrivacyPolicyView = lazyDefault(
-  () => import("@/utils/PrivacyPolicyView"),
+const PrivacyPolicyView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "PrivacyPolicyPage",
 );
-const TermsOfServiceView = lazyDefault(
-  () => import("@/utils/TermsOfServiceView"),
+const TermsOfServiceView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "TermsOfServicePage",
+);
+const AcceptableUsePolicyView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "AcceptableUsePolicyPage",
+);
+const DataProcessingView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "DataProcessingPage",
 );
 const IndependentContractorAgreementPage = lazyDefault(
   () => import("@/utils/IndependentContractorAgreement"),
@@ -619,6 +629,16 @@ const PublicRoutes = {
     {
       path: "/terms-of-service",
       component: <TermsOfServiceView />,
+      isPublic: true,
+    },
+    {
+      path: "/acceptable-use-policy",
+      component: <AcceptableUsePolicyView />,
+      isPublic: true,
+    },
+    {
+      path: "/data-processing",
+      component: <DataProcessingView />,
       isPublic: true,
     },
   ],

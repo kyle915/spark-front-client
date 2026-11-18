@@ -107,7 +107,14 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
                   to="/terms-of-service"
                   className="text-primary hover:underline"
                 >
-                  Terms & Conditions
+                  Terms of Service
+                </Link>{" "}
+                and have read the{" "}
+                <Link
+                  to="/privacy-policy"
+                  className="text-primary hover:underline"
+                >
+                  Privacy Policy
                 </Link>
               </span>
             </label>

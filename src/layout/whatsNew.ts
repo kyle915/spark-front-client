@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17h",
+    date: "November 17, 2026",
+    title: "Updated Terms, Privacy Policy and new legal pages",
+    items: [
+      "The Terms of Service are reorganized into parts for everyone, for brands, and for brand ambassadors, and the Privacy Policy now lists the services Spark uses and explains location, text messages and AI features.",
+      "New pages: an Acceptable Use Policy and a Data Processing Summary for brands. Each legal page links to the others.",
+    ],
+  },
+  {
     id: "2026-11-17g",
     date: "November 17, 2026",
     title: "Connect Claude or ChatGPT",

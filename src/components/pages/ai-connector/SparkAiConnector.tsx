@@ -9,6 +9,7 @@
  */
 
 import { Suspense, useState } from "react";
+import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 
 import Layout from "@/layout/Layout";
@@ -209,7 +210,11 @@ export default function SparkAiConnector() {
           <p className="text-sm" style={meta}>
             This connection is the only approved way to give an AI app, script or bot access to
             Spark. Copying your login token into other tools isn't allowed and may get access
-            suspended. See the Terms of Service, section 7.1.
+            suspended. See the{" "}
+            <Link to="/terms-of-service#automated-access" className="link link-primary">
+              Terms of Service, section 7.1
+            </Link>
+            .
           </p>
         </section>
       </div>
