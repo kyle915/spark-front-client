@@ -55,10 +55,10 @@ describe("ProductQuestionsView", () => {
     expect(view({ state: undefined })).toBe("");
   });
 
-  it("shows the no-notes line and no input", () => {
+  it("shows the no-material line and no input", () => {
     const html = view({ state: { hasMaterial: false, hasNotes: false, aiAvailable: true } });
     expect(html).toContain("Product questions");
-    expect(html).toContain("Your lead hasn&#x27;t added product notes yet.");
+    expect(html).toContain("No product info for this brand yet — check with your lead.");
     expect(html).not.toContain("<input");
   });
 
@@ -143,6 +143,6 @@ describe("askProductQuestion", () => {
   });
 
   it("keeps the no-notes copy in sync with the server", () => {
-    expect(NO_NOTES_YET).toBe("Your lead hasn't added product notes yet.");
+    expect(NO_NOTES_YET).toBe("No product info for this brand yet — check with your lead.");
   });
 });
