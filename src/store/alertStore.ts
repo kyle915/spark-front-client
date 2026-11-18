@@ -1,4 +1,8 @@
 import { create } from "zustand";
+import {
+    createGuardrailNotifier,
+    type GuardrailHit,
+} from "@/api/relay/guardrailErrors";
 
 export type AlertType = "info" | "success" | "warning" | "error";
 
@@ -43,9 +47,17 @@ export const flushPendingUndoables = (): void => {
 
 export const pendingUndoableCount = (): number => pending.size;
 
+// One guardrail toast per code per window; see guardrailErrors.ts.
+const guardrailToasts = createGuardrailNotifier();
+
 interface AlertStore {
     alerts: Alert[];
     showAlert: (message: string, type?: AlertType, duration?: number) => void;
+    /**
+     * A server guardrail refusal (rate limit, export cap, ...). Shown once
+     * per burst; a caller's own alert repeating it is dropped.
+     */
+    showGuardrail: (hit: GuardrailHit) => void;
     removeAlert: (id: number) => void;
     /**
      * Do something after a short grace period, with an Undo button in the
@@ -65,6 +77,9 @@ export const useAlertStore = create<AlertStore>((set) => ({
     alerts: [],
 
     showAlert: (message, type = "info", duration = 3000) => {
+        // "Save failed: Too many requests…" right after the network layer
+        // said "Too many requests…" is the same news twice.
+        if (type !== "success" && guardrailToasts.isEcho(message)) return;
         const id = newId();
         const newAlert: Alert = { id, message, type };
 
@@ -72,6 +87,24 @@ export const useAlertStore = create<AlertStore>((set) => ({
             alerts: [...state.alerts, newAlert],
         }));
 
+        setTimeout(() => {
+            set((state) => ({
+                alerts: state.alerts.filter((a) => a.id !== id),
+            }));
+        }, duration);
+    },
+
+    showGuardrail: (hit) => {
+        if (!guardrailToasts.shouldShow(hit)) return;
+        const id = newId();
+        // Long enough to read; a rate limit says how long to wait.
+        const duration = Math.min(
+            10_000,
+            Math.max(6_000, (hit.retryAfter ?? 0) * 1000),
+        );
+        set((state) => ({
+            alerts: [...state.alerts, { id, message: hit.message, type: "warning" }],
+        }));
         setTimeout(() => {
             set((state) => ({
                 alerts: state.alerts.filter((a) => a.id !== id),

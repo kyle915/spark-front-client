@@ -1,4 +1,4 @@
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import { HomeAttentionQuery } from "@/api/queries/HomeAttentionQuery";
 import type { HomeAttentionQuery as HomeAttentionQueryType } from "@api/queries/__generated__/HomeAttentionQuery.graphql";
 
@@ -41,10 +41,9 @@ const isoLocalDay = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const requestNodes = (data: HomeAttentionQueryType["response"]) =>
-  data?.requests?.edges
-    ?.map((e) => e?.node)
-    ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+type AttentionRow = NonNullable<
+  NonNullable<HomeAttentionQueryType["response"]["requests"]["edges"][number]>["node"]
+>;
 
 const statusSlug = (node: {
   status?: { slug?: string | null; name?: string | null } | null;
@@ -67,7 +66,12 @@ export function useRequestAttentionCounts(
   const startDate = isoLocalDay(today);
   const endDate = isoLocalDay(end);
 
-  const pending = useLazyLoadQuery<HomeAttentionQueryType>(
+  // Brand users get 200 rows a request; the hook walks the rest by cursor
+  // (admins still get one request of ATTENTION_CAP).
+  const { nodes: pending } = useAllConnectionPages<
+    HomeAttentionQueryType,
+    AttentionRow
+  >(
     HomeAttentionQuery,
     {
       first: ATTENTION_CAP,
@@ -76,9 +80,12 @@ export function useRequestAttentionCounts(
         statusSlugs: ["pending", "queue"],
       },
     },
-    { fetchPolicy: "store-or-network" },
+    (response) => response.requests,
   );
-  const upcoming = useLazyLoadQuery<HomeAttentionQueryType>(
+  const { nodes: upcoming } = useAllConnectionPages<
+    HomeAttentionQueryType,
+    AttentionRow
+  >(
     HomeAttentionQuery,
     {
       first: ATTENTION_CAP,
@@ -88,15 +95,15 @@ export function useRequestAttentionCounts(
         endDate,
       },
     },
-    { fetchPolicy: "store-or-network" },
+    (response) => response.requests,
   );
 
-  const stale = requestNodes(pending).filter((r) => {
+  const stale = pending.filter((r) => {
     const slug = statusSlug(r);
     if (!(slug === "pending" || slug === "queue")) return false;
     return ageHours(r.createdAt) > 24;
   }).length;
-  const unscheduled = requestNodes(upcoming).filter((r) => {
+  const unscheduled = upcoming.filter((r) => {
     if (!isUpcomingWithin(r.date, 7)) return false;
     const slug = statusSlug(r);
     return slug !== "scheduled" && slug !== "done" && slug !== "completed";

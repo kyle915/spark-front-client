@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { isGuardrailError } from "@/api/relay/guardrailErrors";
 
 interface Props {
   children: ReactNode;
@@ -47,7 +48,10 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.props.fallback !== undefined) return this.props.fallback;
 
     const message = error.message || "Unknown error";
-    const isPermission = /permission/i.test(message);
+    // A rate limit or "too large" refusal: the page is fine, it just has to
+    // wait. Say so in the server's words, without the debug line.
+    const isGuardrail = isGuardrailError(error);
+    const isPermission = !isGuardrail && /permission/i.test(message);
 
     return (
       <div
@@ -64,21 +68,27 @@ class ErrorBoundary extends Component<Props, State> {
           className="display text-3xl font-bold mt-3"
           style={{ letterSpacing: "-0.03em" }}
         >
-          {isPermission
-            ? "You don't have access to this section."
-            : "This section couldn't load."}
+          {isGuardrail
+            ? "Spark needs a moment."
+            : isPermission
+              ? "You don't have access to this section."
+              : "This section couldn't load."}
         </h1>
         <p className="mt-3 text-sm" style={{ color: "var(--spark-text-secondary)" }}>
-          {isPermission
-            ? "If you think this is a mistake, ping the Ignite team — the rest of the app still works."
-            : "The rest of the app is still up. Try again, or reload the page."}
+          {isGuardrail
+            ? message
+            : isPermission
+              ? "If you think this is a mistake, ping the Ignite team — the rest of the app still works."
+              : "The rest of the app is still up. Try again, or reload the page."}
         </p>
-        <p
-          className="mono text-[11px] mt-4 break-words"
-          style={{ color: "var(--spark-text-meta)" }}
-        >
-          {message.slice(0, 300)}
-        </p>
+        {isGuardrail ? null : (
+          <p
+            className="mono text-[11px] mt-4 break-words"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
+            {message.slice(0, 300)}
+          </p>
+        )}
         <div className="flex items-center justify-center gap-2 mt-6">
           <button
             type="button"

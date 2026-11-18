@@ -55,12 +55,18 @@ import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } fro
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import { approvalNumberParts, type ApprovalNumbers } from "./approvalNumbers";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
+
 import { ApproveRequestMutation } from "@/api/mutations/ApproveRequestMutation";
 import type { ApproveRequestMutation as ApproveRequestMutationType } from "@api/mutations/__generated__/ApproveRequestMutation.graphql";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import { thumbUrl } from "@/utils/thumb";
+
+type PendingRequestNode = NonNullable<
+  NonNullable<RequestsQueryType["response"]["requests"]["edges"][number]>["node"]
+>;
 
 /**
  * Spark v2 — Client Approvals (/my-approvals).
@@ -978,18 +984,24 @@ const ClientRequestApprovalsInner: React.FC = () => {
     });
   }, []);
 
-  const data = useLazyLoadQuery<RequestsQueryType>(
+  // Only pending requests are listed, so ask the server for just those
+  // (statusSlug) rather than the newest-dated 300 of everything. Brand users
+  // get 200 rows a request; the hook walks the rest by cursor.
+  const { nodes: pendingNodes } = useAllConnectionPages<
+    RequestsQueryType,
+    PendingRequestNode
+  >(
     RequestsQuery,
-    { first: 300, filters: tenantId ? { tenantId } : null },
+    {
+      first: 300,
+      filters: { ...(tenantId ? { tenantId } : {}), statusSlug: "pending" },
+    },
+    (response) => response.requests,
     { fetchPolicy: "store-and-network" },
   );
 
   const rows: PendingRequest[] = useMemo(() => {
-    const nodes =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-    return nodes
+    return pendingNodes
       .filter(
         (n) =>
           (n.status?.slug ?? n.status?.name ?? "").toLowerCase() === "pending",
@@ -1014,7 +1026,7 @@ const ClientRequestApprovalsInner: React.FC = () => {
         };
       })
       .sort((a, b) => b.createdMs - a.createdMs); // newest submission first
-  }, [data]);
+  }, [pendingNodes]);
 
   const visible = useMemo(
     () => rows.filter((r) => !decidedIds.has(r.id)),
