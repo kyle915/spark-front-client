@@ -13,7 +13,9 @@ import { graphql } from "react-relay";
  *
  * `byStore` is the largest stores, then one `kind: "other"` row for the
  * rest, then one `kind: "missing"` row for recaps whose event has no store
- * recorded. `byState` has the same `missing` row for events with no state.
+ * recorded. A festival or event activation with no store is a
+ * `kind: "venue"` row named from its walk-in event title; it ranks with the
+ * stores by consumers. `byState` has the same `missing` row for events with no state.
  * `storeCount` / `stateCount` are how many named ones exist in all.
  *
  * Resolves to null when the client is out of scope or the rollup fails, so
