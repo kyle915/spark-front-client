@@ -1,13 +1,14 @@
 /**
  * Product questions on the check-in page: a BA at the table asks "what's in
  * OG Luxe?" and gets a 1–3 sentence answer drawn only from the brand's own
- * notes, catalog and training (spark-api `product-question`). Nothing here
+ * notes, catalog, training, documents and website (spark-api
+ * `product-question`), with where the answer came from. Nothing here
  * files or changes the shift.
  */
 import type { ProductQaState } from "./checkinTypes";
 import type { FetchLike } from "./timedFetch";
 
-export const NO_NOTES_YET = "Your lead hasn't added product notes yet.";
+export const NO_NOTES_YET = "No product info for this brand yet — check with your lead.";
 export const AI_UNAVAILABLE =
   "Product answers aren't available right now — check with your lead.";
 export const NOT_IN_NOTES = "I don't have that — check with your lead.";

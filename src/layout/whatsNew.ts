@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18b",
+    date: "November 18, 2026",
+    title: "Product answers from brand documents and websites",
+    items: [
+      "Ambassadors: product questions on the check-in page are now also answered from the brand's uploaded documents and its own website, and each answer says where it came from, such as a product page or a sell sheet.",
+      "Staff: on the BA product notes card under Walk-ups, Standing codes, add the brand's website, see every page and document Spark read, refresh them now, or exclude one. Your notes win when they disagree with the website.",
+    ],
+  },
+  {
     id: "2026-11-18a-1",
     date: "November 18, 2026",
     title: "Where to go next, and alerts",

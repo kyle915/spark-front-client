@@ -5875,6 +5875,9 @@ type Mutation {
   updateClockLink(input: UpdateClockLinkInput!): ClockLinkResponse!
   syncClockSheet(input: ClockLinkIdInput!): ClockLinkResponse!
   setBaProductNotes(tenantId: ID!, notes: String!): BaProductQa!
+  setBaBrandWebsite(tenantId: ID!, url: String!): BaProductQa!
+  refreshBaProductSources(tenantId: ID!, scope: String! = "all"): BaProductQa!
+  setBaProductSourceExcluded(tenantId: ID!, sourceId: ID!, excluded: Boolean!): BaProductQa!
   deleteClockSession(input: DeleteClockSessionInput!): ClockActionResponse!
   cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
 }
@@ -9048,6 +9051,14 @@ type BaProductQa {
   hasMaterial: Boolean!
   aiAvailable: Boolean!
   questions: [BaProductQuestionRow!]!
+  websiteUrl: String!
+  websitePages: Int!
+  websiteProducts: Int!
+  documentCount: Int!
+  websiteRefreshedAt: String!
+  websiteRefreshMessage: String!
+  documentsRefreshedAt: String!
+  sources: [BaProductSource!]!
 }
 
 type BaProductQuestionRow {
@@ -9056,6 +9067,22 @@ type BaProductQuestionRow {
   outcome: String!
   askedAt: String!
   eventName: String!
+  source: String!
+}
+
+type BaProductSource {
+  id: ID!
+  kind: String!
+  kindLabel: String!
+  title: String!
+  url: String!
+  label: String!
+  status: String!
+  error: String!
+  excluded: Boolean!
+  chars: Int!
+  extractedAt: String!
+  checkedAt: String!
 }
 
 input SetMyReportSubscriptionInput {

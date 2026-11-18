@@ -49,7 +49,8 @@ export function ProductQuestionsView({
       ) : (
         <>
           <p style={{ ...helperText, margin: "4px 0 0" }}>
-            Ask about {brand} products. Answers come only from {brand}'s own notes.
+            Ask about {brand} products. Answers come only from {brand}'s own notes, documents
+            and website.
           </p>
           <form
             onSubmit={(e) => {
@@ -118,7 +119,8 @@ export function ProductQuestionsView({
 
 /**
  * Mid-shift product questions for the BA at the table. Answers are short and
- * drawn only from the brand's notes, catalog and training — never the web.
+ * drawn only from the brand's notes, catalog, training, uploaded documents
+ * and its own website — never the open web.
  */
 export function ProductQuestionsBox({
   origin,
