@@ -4,8 +4,7 @@ import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
 import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
 import type { FileRecapCategoriesQuery as FileRecapCategoriesQueryType } from "@/api/queries/__generated__/FileRecapCategoriesQuery.graphql";
-import { ProductsQuery } from "@/api/queries/ProductsQuery";
-import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
+import { useTenantProducts } from "@/hooks/useTenantProducts";
 import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMutation";
 import type { UpdateCustomRecapMutation as UpdateCustomRecapMutationType } from "@/api/mutations/__generated__/UpdateCustomRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
@@ -325,23 +324,17 @@ const DropOffLocationsEditBridge = ({
   required?: boolean;
   label: string;
 }) => {
-  const data = useLazyLoadQuery<ProductsQueryType>(
-    ProductsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const productNodes = useTenantProducts(tenantId);
   const products = useMemo(
     () =>
-      (data.products?.edges ?? [])
-        .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+      productNodes
         .map((p) => ({
           id: String(p.id),
           name: p.name,
           category: p.productType?.name ?? null,
           imageUrl: p.image ?? null,
         })),
-    [data],
+    [productNodes],
   );
   return (
     <DropOffLocationsField
@@ -374,17 +367,11 @@ const ProductSamplesEditor = ({
   quantities: Record<string, string>;
   onChange: (productId: string, v: string) => void;
 }) => {
-  const data = useLazyLoadQuery<ProductsQueryType>(
-    ProductsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const productNodes = useTenantProducts(tenantId);
   const products = useMemo(
     () =>
-      (data.products?.edges ?? [])
-        .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
-    [data],
+      productNodes,
+    [productNodes],
   );
   const totalUnits = useMemo(
     () =>

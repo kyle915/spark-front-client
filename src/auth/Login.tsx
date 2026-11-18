@@ -8,6 +8,7 @@ import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
 import { playArrival } from "./arrivalSweep";
 import { AuthShell } from "./AuthShell";
+import { isGuardrailError } from "@/api/relay/guardrailErrors";
 
 /**
  * Sign in. A light form beside a dark brand panel.
@@ -64,6 +65,11 @@ const Login = () => {
       await requestMagicLink(email);
       setSentTo(email.trim());
     } catch (error: unknown) {
+      // Too many attempts: say it beside the form, where they are looking.
+      if (isGuardrailError(error)) {
+        setProblem(error.message);
+        return;
+      }
       const message = error instanceof Error ? error.message : String(error);
       showAlert(`Could not send the link: ${message}`, "error");
     } finally {

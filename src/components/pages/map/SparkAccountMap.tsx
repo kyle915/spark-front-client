@@ -22,8 +22,10 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkFilterBar from "@/shared/SparkFilterBar";
 import {
   ACCOUNT_MAP_PAGE_SIZE,
+  accountMapPageSize,
   accountMapTruncation,
 } from "./accountMapPages";
+import useSparkRole from "@/hooks/useSparkRole";
 import {
   buildStores,
   filterStores,
@@ -180,7 +182,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [stateFilter, setStateFilter] = useState("all");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
-  const [scanned, setScanned] = useState(ACCOUNT_MAP_PAGE_SIZE);
+  // Brand users (who cannot switch to Admin) get 200 rows a request; ask
+  // for exactly that so each offset step lands where the last page ended.
+  const { canToggleRole } = useSparkRole();
+  const pageSize = accountMapPageSize(!canToggleRole);
+  const [scanned, setScanned] = useState(pageSize);
   const [loadingRest, setLoadingRest] = useState(false);
   // This component only commits after the pin query resolves, so the
   // effect mounts Maps JS on the following paint — the store list first.
@@ -208,13 +214,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
   useEffect(() => {
     setExtraPins([]);
-    setScanned(ACCOUNT_MAP_PAGE_SIZE);
+    setScanned(pageSize);
     setLoadingRest(false);
-  }, [tenantId]);
+  }, [tenantId, pageSize]);
 
   const data = useLazyLoadQuery<AccountMapQueryType>(
     AccountMapQuery,
-    { first: 2000, offset: 0, tenantId: tenantId || null },
+    { first: pageSize, offset: 0, tenantId: tenantId || null },
     { fetchPolicy: "store-or-network" },
   );
   const list = useAccountList(tenantId || null);
@@ -222,30 +228,44 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const pinTotal = data?.accountMapPinTotal ?? null;
   const truncation = accountMapTruncation({ total: pinTotal, scanned });
 
-  const loadRest = useCallback(async () => {
+  /** Load pages after what is on screen, up to `upTo` rows scanned. */
+  const loadRest = useCallback(async (upTo: number = Number.POSITIVE_INFINITY) => {
     if (loadingRest || pinTotal == null || scanned >= pinTotal) return;
     setLoadingRest(true);
     try {
       let offset = scanned;
       const accumulated = [...extraPins];
-      while (offset < pinTotal) {
+      while (offset < pinTotal && offset < upTo) {
         const page = await fetchQuery<AccountMapQueryType>(
           environment,
           AccountMapQuery,
-          { first: ACCOUNT_MAP_PAGE_SIZE, offset, tenantId: tenantId || null },
+          { first: pageSize, offset, tenantId: tenantId || null },
           { fetchPolicy: "network-only" },
         ).toPromise();
         const rows = (page?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
         accumulated.push(...rows);
-        offset += ACCOUNT_MAP_PAGE_SIZE;
+        offset += pageSize;
         setExtraPins([...accumulated]);
         setScanned(offset);
-        if (rows.length === 0) break;
       }
+    } catch {
+      // The network layer already said why (e.g. a rate limit); keep the
+      // pins we have and leave "Load the rest" to try again.
     } finally {
       setLoadingRest(false);
     }
-  }, [extraPins, loadingRest, pinTotal, scanned, tenantId]);
+  }, [extraPins, loadingRest, pageSize, pinTotal, scanned, tenantId]);
+
+  // A brand user's first page is 200 rows; bring in the rest of what one
+  // admin page holds (2,000) without a click, so the map starts out the same.
+  const autoFilled = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${tenantId ?? ""}|${pageSize}`;
+    if (pageSize >= ACCOUNT_MAP_PAGE_SIZE || autoFilled.current === key) return;
+    if (pinTotal == null || scanned >= pinTotal) return;
+    autoFilled.current = key;
+    void loadRest(ACCOUNT_MAP_PAGE_SIZE);
+  }, [loadRest, pageSize, pinTotal, scanned, tenantId]);
 
   const stores = useMemo(() => {
     const first = (data?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));

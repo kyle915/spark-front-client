@@ -13,9 +13,12 @@ import { askAiSubjectFromTenant } from "./askAiSubjectName";
 export default function ActiveTenantAskAi({
   variant = "lime",
   className,
+  chat = false,
 }: {
   variant?: "lime" | "text";
   className?: string;
+  /** Open brand chat instead of the one-question pop-up. */
+  chat?: boolean;
 }) {
   const user = useAuthStore((state) => state.user);
   const tenantUuid = useAuthStore((state) => state.tenantUuid);
@@ -43,6 +46,7 @@ export default function ActiveTenantAskAi({
       })}
       variant={variant}
       className={className}
+      chat={chat}
     />
   );
 }
