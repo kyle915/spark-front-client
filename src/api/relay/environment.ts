@@ -2,6 +2,11 @@ import { Environment, Network, RecordSource, Store } from "relay-runtime";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import {
+  findGuardrailError,
+  guardrailFromStatus,
+  GuardrailError,
+} from "./guardrailErrors";
+import {
   isSettledMutation,
   scheduleCountsRefresh,
   startCountsHeartbeat,
@@ -40,6 +45,23 @@ async function fetchGraphQL(
       variables,
     }),
   });
+
+  // A bare HTTP 429 (no JSON body) reads as the GraphQL-level refusal.
+  const throttled = guardrailFromStatus(
+    response.status,
+    response.headers.get("Retry-After"),
+  );
+  if (throttled) {
+    return {
+      data: null,
+      errors: [
+        {
+          message: throttled.message,
+          extensions: { code: throttled.code, retryAfter: throttled.retryAfter },
+        },
+      ],
+    } as unknown as GraphQLResponse;
+  }
 
   const result = await response.json();
 
@@ -135,8 +157,32 @@ async function fetchGraphQL(
   return result;
 }
 
+/**
+ * Rate limits, export/bulk caps and oversized queries are the server saying
+ * "not now", not a broken page: one toast for the burst, and an error whose
+ * message is the server's own sentence so `onError` handlers and the page
+ * error boundary show it as-is. Mutations always fail on one (an export that
+ * was refused must not look like it started); a query fails only when the
+ * server sent no data.
+ */
+function surfaceGuardrail(
+  params: RequestParameters,
+  response: GraphQLResponse,
+): GraphQLResponse {
+  const body = response as { data?: unknown; errors?: unknown };
+  const hit = findGuardrailError(body.errors);
+  if (!hit) return response;
+  useAlertStore.getState().showGuardrail(hit);
+  if (body.data == null || params.operationKind === "mutation") {
+    throw new GuardrailError(hit);
+  }
+  return response;
+}
+
 function fetchRelay(params: RequestParameters, variables: Variables) {
-  const pending = fetchGraphQL(params, variables);
+  const pending = fetchGraphQL(params, variables).then((response) =>
+    surfaceGuardrail(params, response),
+  );
   // Anything that changed data may have changed a count somewhere: re-read
   // the shared counts so badges, tabs and tiles match without a reload.
   void pending

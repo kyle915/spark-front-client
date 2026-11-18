@@ -38,7 +38,13 @@ describe("list fetch caps (no silent truncation)", () => {
   it("account map still caps a page at 2000, labels a short page, and mounts Maps after the first query", () => {
     const map = src("../components/pages/map/SparkAccountMap.tsx");
     const query = src("./queries/AccountMapQuery.ts");
-    expect(map).toContain("first: 2000");
+    // 2,000 a page for admins; brand users are served 200 a request, so
+    // the map asks for (and steps offsets by) that.
+    expect(src("../components/pages/map/accountMapPages.ts")).toContain(
+      "ACCOUNT_MAP_PAGE_SIZE = 2000",
+    );
+    expect(map).toContain("accountMapPageSize(!canToggleRole)");
+    expect(map).toContain("offset += pageSize");
     expect(map).toContain("setMapsReady(true)");
     expect(map).toContain("accountMapTruncation");
     expect(map).toContain("Load the rest");
@@ -53,9 +59,12 @@ describe("list fetch caps (no silent truncation)", () => {
     );
   });
 
-  it("recap product pickers request 1000 SKUs", () => {
-    expect(src("../recap/RecapCustomView.tsx")).toContain("first: 1000");
-    expect(src("../recap/SparkRecapCreate.tsx")).toContain("first: 1000");
+  it("recap product pickers request 1000 SKUs, walked by cursor", () => {
+    expect(src("../recap/RecapCustomView.tsx")).toContain("useTenantProducts");
+    expect(src("../recap/SparkRecapCreate.tsx")).toContain("useTenantProducts");
+    const hook = src("../hooks/useTenantProducts.ts");
+    expect(hook).toContain("PRODUCT_PICKER_MAX = 1000");
+    expect(hook).toContain("useAllConnectionPages");
   });
 
   it("Client Today does not pull RequestsQuery first:2000", () => {
@@ -67,9 +76,12 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(dash).toContain("ClientWeekAheadQuery");
     expect(dash).toContain("requestDateKey");
     expect(dash).toContain("first: 1000");
+    expect(dash).toContain("useAllConnectionPages");
     expect(dash).toContain("horizonDays");
     const weekAhead = src("./queries/ClientWeekAheadQuery.ts");
     expect(weekAhead).toContain("ClientWeekAheadQuery");
+    expect(weekAhead).toContain("$after: String");
+    expect(weekAhead).toContain("hasNextPage");
     // Slim ahead list — no fat RequestsQuery fields.
     expect(weekAhead).not.toContain("recapsFiledCount");
     expect(weekAhead).not.toContain("first: 2000");
@@ -113,13 +125,35 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(favorites).not.toMatch(/first:\s*500\s*[,}]/);
   });
 
-  it("defers SparkTeam / RecentSubmissions first:500 (low-ROI until rows go missing)", () => {
+  it("defers SparkTeam first:500 (admin nav; one brand's users are few)", () => {
     expect(src("../components/pages/team/SparkTeam.tsx")).toMatch(
       /first:\s*500/,
     );
-    expect(
-      src("../components/pages/recent/SparkRecentSubmissions.tsx"),
-    ).toMatch(/first:\s*500/);
+  });
+
+  it("Recent submissions asks for the last 7 days and walks every page", () => {
+    const recent = src("../components/pages/recent/SparkRecentSubmissions.tsx");
+    expect(recent).toContain("createdWithinHours: 7 * 24");
+    expect(recent).toContain("useAllConnectionPages");
+  });
+
+  it("brand-reachable request lists over 200 rows walk pages (server clamps brand users to 200)", () => {
+    for (const rel of [
+      "../components/pages/dashboard-event/AttentionEngine.tsx",
+      "../components/pages/upcoming/SparkUpcomingEvents.tsx",
+      "../components/pages/approvals/SparkClientApprovals.tsx",
+      "../components/pages/alerts/SparkAlerts.tsx",
+      "../components/pages/reports/SparkReports.tsx",
+    ]) {
+      expect(src(rel), rel).toContain("useAllConnectionPages");
+    }
+    for (const rel of [
+      "./queries/HomeAttentionQuery.ts",
+      "./queries/ReportsRequestsChartQuery.ts",
+    ]) {
+      expect(src(rel), rel).toContain("$after: String");
+      expect(src(rel), rel).toContain("endCursor");
+    }
   });
 
   it("Reports charts do not pull fat RequestsQuery / classic-only RecapsQuery", () => {

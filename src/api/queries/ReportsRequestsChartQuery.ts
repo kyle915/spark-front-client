@@ -10,8 +10,12 @@ import { graphql } from "react-relay";
  * when a page of 2,000 is not everything.
  */
 export const ReportsRequestsChartQuery = graphql`
-  query ReportsRequestsChartQuery($first: Int, $filters: RequestFiltersInput) {
-    requests(first: $first, filters: $filters) {
+  query ReportsRequestsChartQuery(
+    $first: Int
+    $after: String
+    $filters: RequestFiltersInput
+  ) {
+    requests(first: $first, after: $after, filters: $filters) {
       totalCount
       edges {
         node {
@@ -22,6 +26,10 @@ export const ReportsRequestsChartQuery = graphql`
             name
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }

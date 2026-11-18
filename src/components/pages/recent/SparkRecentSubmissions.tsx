@@ -1,11 +1,15 @@
 import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+
+type RecentRow = NonNullable<
+  NonNullable<RequestsQueryType["response"]["requests"]["edges"][number]>["node"]
+>;
 
 /**
  * "Recent submissions" — requests created in the last 7 days. Helps
@@ -110,18 +114,25 @@ const Inner: React.FC = () => {
     }
   };
 
-  const data = useLazyLoadQuery<RequestsQueryType>(
+  // Only the last 7 days are shown, so ask the server for just those
+  // (createdWithinHours) instead of the newest-dated 500 of everything.
+  // Brand users get 200 rows a request; the hook walks the rest by cursor.
+  const { nodes: recent } = useAllConnectionPages<RequestsQueryType, RecentRow>(
     RequestsQuery,
-    { first: 500, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
+    {
+      first: 500,
+      filters: {
+        ...(tenantId ? { tenantId } : {}),
+        createdWithinHours: 7 * 24,
+      },
+    },
+    (response) => response.requests,
   );
 
   const rows: Row[] = useMemo(() => {
     const cutoff = Date.now() - 7 * 86_400_000;
     return (
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+      recent
         ?.filter((n) => {
           const t = new Date(n.createdAt ?? 0).getTime();
           return t > cutoff;
@@ -152,7 +163,7 @@ const Inner: React.FC = () => {
             (a.createdAgo.includes("m") ? 1 : 0),
         ) ?? []
     );
-  }, [data]);
+  }, [recent]);
 
   const pendingCount = rows.filter((r) => r.isPending).length;
 
