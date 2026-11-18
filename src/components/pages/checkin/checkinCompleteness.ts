@@ -9,9 +9,10 @@ import { isExpenseReceiptBucket } from "./photoBuckets";
  * This mirrors the checks `submit` already makes — it invents no new
  * required rules. Photo buckets stay advisory (their `min` is a suggestion,
  * never a gate), so an empty bucket is listed as something to check, not
- * as a reason Submit will refuse. A spend figure with no receipt photo in
- * the tenant's Product Spend / Receipts bucket is likewise listed here
- * while Submit itself still follows its existing photo rules.
+ * as a reason Submit will refuse. The one hard photo rule besides "at
+ * least one photo": a spend figure with no receipt photo in the tenant's
+ * Product Spend / Receipts bucket. Submit and the API both refuse that
+ * (see `spendNeedingReceipt`).
  */
 
 export type CompletenessField = {
@@ -63,14 +64,66 @@ function isEmpty(v: string | string[] | undefined): boolean {
   return v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === "");
 }
 
-function spendEntered(fields: CompletenessField[], values: CompletenessInput["values"]): boolean {
+/** The sentence a BA sees when spend is entered with no receipt photo.
+ *  Kept word for word with the API's refusal (recaps/receipt_gate.py), so
+ *  whichever layer catches it, the BA reads one message. */
+export function receiptRequiredMessage(amount: number): string {
+  const dollars = amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return "Add a photo of your receipt — you entered $" + dollars + " in product spend.";
+}
+
+/**
+ * Product spend the BA typed (shown spend fields only; hidden ones are never
+ * sent) and the receipt bucket it must be backed by. Null when there is no
+ * spend, or the page offers no receipt bucket to put a photo in — the API
+ * skips the rule then too, so the BA is never asked for the impossible.
+ */
+export function spendNeedingReceipt(
+  fields: CompletenessField[],
+  values: CompletenessInput["values"],
+  buckets: CompletenessBucket[],
+): { bucket: CompletenessBucket; amount: number; message: string } | null {
+  const bucket = buckets.find((b) => isExpenseReceiptBucket(b.name));
+  if (!bucket) return null;
+  let total = 0;
   for (const f of fields) {
-    if (isPhotoType(f.type) || !isSpendAmountField(f)) continue;
+    if (isPhotoType(f.type) || !isSpendAmountField(f) || !isFieldShown(f, values)) continue;
     const raw = values[f.id];
     const stored = spendAmountStored(Array.isArray(raw) ? "" : String(raw ?? ""));
-    if (stored != null && Number(stored) > 0) return true;
+    const n = stored == null ? 0 : Number(stored);
+    if (Number.isFinite(n) && n > 0) total += n;
   }
-  return false;
+  if (total <= 0) return null;
+  const amount = Math.round(total * 100) / 100;
+  return { bucket, amount, message: receiptRequiredMessage(amount) };
+}
+
+/**
+ * Why Submit must wait for the receipt, or null when it can go. Online, the
+ * receipt has to have LANDED: the leave-behind path files only finished
+ * uploads, and the API would refuse the recap without it. Offline, a
+ * receipt that failed for lack of signal is queued with the recap and sent
+ * before it, so it counts.
+ */
+export function receiptSubmitBlock(
+  need: { bucket: CompletenessBucket; message: string } | null,
+  photos: { category: string | null; state: CompletenessPhoto["state"]; unrecoverable?: boolean }[],
+  offline: boolean,
+): string | null {
+  if (!need) return null;
+  const inBucket = photos.filter((p) => p.category === need.bucket.id && !p.unrecoverable);
+  if (inBucket.some((p) => p.state === "done")) return null;
+  if (offline && inBucket.some((p) => p.state === "failed")) return null;
+  if (inBucket.some((p) => p.state === "uploading")) {
+    return "Your receipt photo is still uploading — one moment.";
+  }
+  if (inBucket.some((p) => p.state === "failed")) {
+    return "Your receipt photo didn't upload. Tap Retry, or check your signal.";
+  }
+  return need.message;
 }
 
 export function buildCompletenessItems(input: CompletenessInput): CompletenessItem[] {
@@ -142,17 +195,17 @@ export function buildCompletenessItems(input: CompletenessInput): CompletenessIt
         });
       }
     }
-    const receiptBucket = buckets.find((b) => isExpenseReceiptBucket(b.name));
-    if (receiptBucket && spendEntered(fields, values)) {
+    const receiptNeed = spendNeedingReceipt(fields, values, buckets);
+    if (receiptNeed) {
       const hasReceipt = photos.some(
-        (p) => p.category === receiptBucket.id && p.state !== "failed",
+        (p) => p.category === receiptNeed.bucket.id && p.state !== "failed",
       );
       if (!hasReceipt) {
         items.push({
-          id: `receipt:${receiptBucket.id}`,
+          id: `receipt:${receiptNeed.bucket.id}`,
           kind: "receipt-photo",
-          label: `Add a receipt photo to ${receiptBucket.name} for the spend you entered`,
-          target: `bucket:${receiptBucket.id}`,
+          label: receiptNeed.message,
+          target: `bucket:${receiptNeed.bucket.id}`,
         });
       }
     }

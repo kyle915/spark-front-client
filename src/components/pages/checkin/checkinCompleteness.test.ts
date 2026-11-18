@@ -1,5 +1,58 @@
 import { describe, it, expect } from "vitest";
-import { buildCompletenessItems, type CompletenessInput } from "./checkinCompleteness";
+import {
+  buildCompletenessItems,
+  receiptRequiredMessage,
+  receiptSubmitBlock,
+  spendNeedingReceipt,
+  type CompletenessInput,
+} from "./checkinCompleteness";
+
+describe("spend needs a receipt", () => {
+  const fields = [
+    { id: "f-spend", name: "Product spend amount", required: false, type: "text" },
+    { id: "f-notes", name: "Notes", required: false, type: "text" },
+  ];
+  const buckets = [
+    { id: "b-photos", name: "Sampling photos", min: 1 },
+    { id: "b-receipt", name: "Product Spend", min: 0 },
+  ];
+
+  it("uses the API's exact sentence", () => {
+    expect(receiptRequiredMessage(65)).toBe(
+      "Add a photo of your receipt — you entered $65.00 in product spend.",
+    );
+    expect(receiptRequiredMessage(1234.5)).toContain("$1,234.50");
+  });
+
+  it("needs a receipt only for spend over zero on a brand with a receipt bucket", () => {
+    expect(spendNeedingReceipt(fields, { "f-spend": "65.00" }, buckets)?.amount).toBe(65);
+    expect(spendNeedingReceipt(fields, { "f-spend": "" }, buckets)).toBeNull();
+    expect(spendNeedingReceipt(fields, { "f-spend": "0.00" }, buckets)).toBeNull();
+    expect(
+      spendNeedingReceipt(fields, { "f-spend": "65.00" }, [buckets[0]]),
+    ).toBeNull();
+  });
+
+  it("blocks submit until a receipt lands, but trusts a queued one offline", () => {
+    const need = spendNeedingReceipt(fields, { "f-spend": "65.00" }, buckets);
+    const photo = (category: string, state: "uploading" | "done" | "failed") => ({
+      category,
+      state,
+    });
+    expect(receiptSubmitBlock(need, [photo("b-photos", "done")], false)).toBe(
+      need?.message,
+    );
+    expect(receiptSubmitBlock(need, [photo("b-receipt", "done")], false)).toBeNull();
+    expect(receiptSubmitBlock(need, [photo("b-receipt", "uploading")], false)).toMatch(
+      /still uploading/,
+    );
+    expect(receiptSubmitBlock(need, [photo("b-receipt", "failed")], false)).toMatch(
+      /didn't upload/,
+    );
+    expect(receiptSubmitBlock(need, [photo("b-receipt", "failed")], true)).toBeNull();
+    expect(receiptSubmitBlock(null, [], false)).toBeNull();
+  });
+});
 
 const base: CompletenessInput = {
   fields: [

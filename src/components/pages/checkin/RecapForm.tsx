@@ -92,7 +92,11 @@ import {
   type StoreIdentityDraft,
 } from "./recapDraft";
 import { buildRecapDraftRequest } from "./recapServerDraft";
-import { buildCompletenessItems } from "./checkinCompleteness";
+import {
+  buildCompletenessItems,
+  receiptSubmitBlock,
+  spendNeedingReceipt,
+} from "./checkinCompleteness";
 import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
 import { RecapCheckNotes } from "./RecapCheckNotes";
 import { TallyPhotoCard, TallyProposal } from "./TallyPhotoCard";
@@ -364,6 +368,14 @@ export default function RecapForm({
   // image field, which is how adding template fields produces prompts instead
   // of buckets. Buckets are explicit brand config, so they win.
   const buckets = photoBuckets ?? [];
+  // Product spend typed → a receipt photo is required (the API enforces it
+  // too). Null when there's no spend or this brand has no receipt bucket.
+  const receiptNeed = spendNeedingReceipt(templateFields, values, buckets);
+  const receiptMissing =
+    receiptNeed != null &&
+    !photos.some(
+      (p) => p.category === receiptNeed.bucket.id && p.state !== "failed" && !p.unrecoverable,
+    );
   // Photos with no bucket. For every brand without buckets that is all of
   // them, so the generic grid and any image-type template field behave exactly
   // as they did before buckets existed.
@@ -974,6 +986,14 @@ export default function RecapForm({
     leaveBehindArmed.current = false;
     const offlineNow =
       (typeof navigator !== "undefined" && navigator.onLine === false) || allFailedOffline;
+    // Spend entered → the receipt photo must go with the recap. Checked before
+    // the leave-behind path can file without it (the API would refuse it).
+    const receiptBlock = receiptSubmitBlock(
+      spendNeedingReceipt(templateFields, valuesForSubmit, buckets),
+      photos,
+      offlineNow,
+    );
+    if (receiptBlock) return setErr(receiptBlock);
     if (donePhotos.length === 0) {
       if (!(failedCount > 0 && offlineNow)) {
         return setErr(
@@ -1551,6 +1571,19 @@ export default function RecapForm({
                   onKeep={keepPhotoCheck}
                   accent={accent}
                 />
+                {receiptMissing && receiptNeed?.bucket.id === b.id ? (
+                  <p
+                    role="status"
+                    style={{
+                      margin: "-8px 0 0",
+                      fontSize: 13,
+                      lineHeight: 1.35,
+                      color: "#92400e",
+                    }}
+                  >
+                    {receiptNeed.message}
+                  </p>
+                ) : null}
               </Fragment>
             ))}
           </div>
