@@ -15,3 +15,11 @@ describe("account map truncation", () => {
     expect(accountMapTruncation({ total: null, scanned: 2000 }).truncated).toBe(false);
   });
 });
+
+describe("account map page size", () => {
+  it("steps by what the server serves: 200 for brand users, 2,000 for admins", async () => {
+    const { accountMapPageSize } = await import("./accountMapPages");
+    expect(accountMapPageSize(true)).toBe(200);
+    expect(accountMapPageSize(false)).toBe(2000);
+  });
+});

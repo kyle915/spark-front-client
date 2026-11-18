@@ -1,5 +1,13 @@
 import { useState } from "react";
 import { useAlertStore } from "@/store/alertStore";
+import {
+  GUARDRAIL_FALLBACK,
+  GuardrailError,
+  findGuardrailError,
+  graphQLErrorMessage,
+  guardrailFromStatus,
+  isGuardrailError,
+} from "@/api/relay/guardrailErrors";
 
 /**
  * Spark v2 — "Email me a sign-in link" button.
@@ -27,9 +35,21 @@ export async function requestMagicLink(email: string): Promise<void> {
       variables: { input: { email: email.trim() } },
     }),
   });
+  const throttled = guardrailFromStatus(res.status, res.headers.get("Retry-After"));
+  if (throttled) {
+    throw new GuardrailError({
+      ...throttled,
+      code: "LOGIN_THROTTLED",
+      message: GUARDRAIL_FALLBACK.LOGIN_THROTTLED,
+    });
+  }
   const json = await res.json();
   if (json.errors?.length) {
-    throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+    // Too many sign-in attempts comes back as LOGIN_THROTTLED: raise it as
+    // such so the sign-in page can show it in place, without "Couldn't send:".
+    const hit = findGuardrailError(json.errors);
+    if (hit) throw new GuardrailError(hit);
+    throw new Error(graphQLErrorMessage(json.errors, "Could not send the link."));
   }
 }
 
@@ -51,28 +71,13 @@ export default function MagicLinkButton({
     }
     setBusy(true);
     try {
-      const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `
-            mutation RequestMagicLink($input: RequestMagicLinkInput!) {
-              requestMagicLink(input: $input) {
-                success
-                message
-              }
-            }
-          `,
-          variables: { input: { email: email.trim() } },
-        }),
-      });
-      const json = await res.json();
-      if (json.errors?.length) {
-        throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
-      }
+      await requestMagicLink(email);
       setSent(true);
     } catch (e) {
-      showAlert(`Couldn't send: ${(e as Error).message}`, "error");
+      showAlert(
+        isGuardrailError(e) ? e.message : `Couldn't send: ${(e as Error).message}`,
+        "error",
+      );
     } finally {
       setBusy(false);
     }

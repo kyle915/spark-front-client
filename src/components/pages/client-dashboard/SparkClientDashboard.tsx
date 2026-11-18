@@ -17,13 +17,14 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkSheet from "@/shared/SparkSheet";
-import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { DashboardSkeleton, PanelSkeleton } from "@/layout/PageSkeletons";
 import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
 import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
+
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
@@ -44,6 +45,12 @@ import {
 import { useBrandView } from "@/components/brandGroup/useBrandView";
 import { CountReel } from "@/motion/CountReel";
 import { ConsumersPerWeekTrend } from "@/components/charts/ConsumerCharts";
+
+type WeekAheadRow = NonNullable<
+  NonNullable<
+    ClientWeekAheadQueryType["response"]["requests"]["edges"][number]
+  >["node"]
+>;
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -113,14 +120,18 @@ const WeekAheadPanel: React.FC<{
   torch: boolean;
 }> = ({ tenantId, horizonDays, onHorizonDays, dateWindow }) => {
   const navigate = useNavigate();
-  const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
+  const { nodes: aheadRows } = useAllConnectionPages<
+    ClientWeekAheadQueryType,
+    WeekAheadRow
+  >(
     ClientWeekAheadQuery,
     {
       // Busy tenants can schedule hundreds of demos in a quarter window.
-      // Keep first:1000 — the query is already server-bounded to the
+      // Keep first: 1000 — the query is already server-bounded to the
       // visible horizon (startDate/endDate below), and lowering the cap
       // would silently truncate buckets/top-retailers for busy tenants
-      // at 90d, undercounting the panel.
+      // at 90d, undercounting the panel. Brand users get 200 rows a
+      // request, so the rest are walked in by cursor.
       first: 1000,
       filters: tenantId
         ? {
@@ -131,6 +142,7 @@ const WeekAheadPanel: React.FC<{
           }
         : null,
     },
+    (response) => response.requests,
     {
       fetchPolicy: "store-or-network",
       fetchKey: `${tenantId ?? ""}|${horizonDays}|${dateWindow.startDate}`,
@@ -192,10 +204,7 @@ const WeekAheadPanel: React.FC<{
         });
       }
     }
-    const rows =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const rows = aheadRows;
     const endExclusive = new Date(today);
     endExclusive.setDate(today.getDate() + horizonDays);
     for (const r of rows) {
@@ -223,15 +232,12 @@ const WeekAheadPanel: React.FC<{
       }
     }
     return buckets;
-  }, [data, horizonDays]);
+  }, [aheadRows, horizonDays]);
 
   // Top retailers in the selected horizon. Blank retailer names are
   // excluded so a missing account cannot become the top row.
   const topRetailers = useMemo(() => {
-    const rows =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const rows = aheadRows;
     return rankUpcomingRetailers(
       rows.map((r) => ({
         date: r.date,
@@ -239,7 +245,7 @@ const WeekAheadPanel: React.FC<{
       })),
       { today: startOfDay(new Date()), horizonDays, limit: 5 },
     );
-  }, [data, horizonDays]);
+  }, [aheadRows, horizonDays]);
 
   const maxWeekCount = Math.max(1, ...aheadBuckets.map((b) => b.count));
   const totalThisWeek = aheadBuckets.reduce((s, b) => s + b.count, 0);
@@ -458,7 +464,6 @@ const ClientInner: React.FC = () => {
     end.setDate(today.getDate() + horizonDays);
     return { startDate: isoDay(today), endDate: isoDay(end) };
   }, [horizonDays]);
-
 
   return (
     <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">

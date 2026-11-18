@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17e",
+    date: "November 17, 2026",
+    title: "Clearer messages when Spark is busy",
+    items: [
+      "If you make a lot of requests in a short time, export too often or select too many items at once, Spark now says so in plain words and tells you to try again shortly, instead of showing an error page.",
+      "Too many sign-in attempts shows a short wait message on the sign-in page.",
+      "Long lists on Home, Upcoming, Recent submissions, My approvals, Alerts, Reports and the Account Map load in full for brand users.",
+    ],
+  },
+  {
     id: "2026-11-17d",
     date: "November 17, 2026",
     title: "Spend needs a receipt photo",
