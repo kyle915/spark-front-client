@@ -5870,6 +5870,7 @@ type Mutation {
   createClockLink(input: CreateClockLinkInput!): ClockLinkResponse!
   updateClockLink(input: UpdateClockLinkInput!): ClockLinkResponse!
   syncClockSheet(input: ClockLinkIdInput!): ClockLinkResponse!
+  setBaProductNotes(tenantId: ID!, notes: String!): BaProductQa!
   deleteClockSession(input: DeleteClockSessionInput!): ClockActionResponse!
   cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
 }
@@ -6429,6 +6430,7 @@ type Query {
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   myReportSubscription(tenantId: ID = null): Boolean!
   checkinFieldIssues(tenantId: ID!, days: Int! = 7): [CheckinIssueSummary!]!
+  baProductQa(tenantId: ID!): BaProductQa
   tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
   tenantConsumerBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): ConsumerBreakdown
   tenantWhatChanged(tenantId: ID!, startDate: String = null, endDate: String = null): WhatChanged
@@ -8914,6 +8916,21 @@ type CheckinIssueSummary {
   events: Int!
   lastAt: String!
   lastDetail: String!
+}
+
+type BaProductQa {
+  notes: String!
+  hasMaterial: Boolean!
+  aiAvailable: Boolean!
+  questions: [BaProductQuestionRow!]!
+}
+
+type BaProductQuestionRow {
+  question: String!
+  answer: String!
+  outcome: String!
+  askedAt: String!
+  eventName: String!
 }
 
 input SetMyReportSubscriptionInput {
