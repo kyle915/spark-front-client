@@ -3,6 +3,7 @@ import { reportFieldIssue } from "./fieldIssues";
 import CheckinStepBar from "./CheckinStepBar";
 import { checkinSteps } from "./checkinSteps";
 import MyShiftsCard from "./MyShiftsCard";
+import ProductQuestionsBox from "./ProductQuestionsBox";
 import {
   useCallback,
   useEffect,
@@ -2187,6 +2188,20 @@ function CheckedInFlow({
           <p style={errText}>{msg}</p>
         ) : null}
       </div>
+
+      {/* "What's in this?" at the table: answers from the brand's own notes. */}
+      {!leftover ? (
+        <ProductQuestionsBox
+          origin={apiOrigin()}
+          code={code}
+          session={token}
+          brandName={ctx.brand.name || ""}
+          state={ctx.productQa}
+          recapOnly={ctx.recapOnly}
+          accent={accent}
+          fetchImpl={timedFetch}
+        />
+      ) : null}
 
       {/* The BA's own recent shifts: hours + review / approved / paid. */}
       <MyShiftsCard code={code} token={token} />

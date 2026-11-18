@@ -7,12 +7,31 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-17f",
+    id: "2026-11-17f-1",
     date: "November 17, 2026",
     title: "What consumers mention, month by month",
     items: [
       "Insights now shows which themes and other brands come up in consumer comments over the last six months, with a small column per month.",
       "Each theme says whether it is rising, falling or steady compared with the month before, with a comment as a shopper said it. Small changes are not called a trend.",
+    ],
+  },
+  {
+    id: "2026-11-18a",
+    date: "November 18, 2026",
+    title: "Product questions on the check-in page",
+    items: [
+      "Ambassadors: once you've checked in, ask a product question such as \"How much caffeine is in this?\" and get a short answer taken only from the brand's own notes. If the notes don't cover it, it says so — check with your lead.",
+      "Staff: write each brand's BA product notes and see what ambassadors have been asking under Walk-ups, Standing codes.",
+    ],
+  },
+  {
+    id: "2026-11-17f",
+    date: "November 17, 2026",
+    title: "An easier-to-read state map",
+    items: [
+      "On Geographic performance, states with more activity are now a darker blue and states with none are plain gray, so the busiest state stands out instead of fading away.",
+      "Each state with activity shows its number on the map, and a ranked list beside it gives every state's total and share.",
+      "When a brand runs in only a few neighboring states, the map zooms to them. Choose Show all states to see the whole country.",
     ],
   },
   {

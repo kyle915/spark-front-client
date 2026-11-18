@@ -125,6 +125,11 @@ export type UnfiledShift = {
   clockOutAt: string | null;
   clockState: string;
 };
+export type ProductQaState = {
+  hasMaterial: boolean;
+  hasNotes: boolean;
+  aiAvailable: boolean;
+};
 export type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
   // is no event yet, so nothing here may be dereferenced unguarded.
@@ -198,6 +203,9 @@ export type Context = {
   // the table, not at home, and the release QR is needed mid-shift by
   // definition.
   resources?: CheckinResource[];
+  // Product questions box (answers from this brand's notes only). Present
+  // only once the BA has identified; absent on older API builds.
+  productQa?: ProductQaState;
   // Standing link only: shifts this BA already clocked that still need a recap.
   unfiledShifts?: UnfiledShift[];
   // Legacy single-URL twin of `resources`, still sent by the API. Read only as
