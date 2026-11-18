@@ -386,6 +386,10 @@ const SparkClientDetail = lazyDefault(
 const SparkHelp = lazyDefault(
   () => import("@/components/pages/help/SparkHelp"),
 );
+// Connect Claude / ChatGPT through the official Spark MCP connection.
+const SparkAiConnector = lazyDefault(
+  () => import("@/components/pages/ai-connector/SparkAiConnector"),
+);
 const SparkFavorites = lazyDefault(
   () => import("@/components/pages/favorites/SparkFavorites"),
 );
@@ -1080,6 +1084,17 @@ const RequestsLinks = {
     {
       path: "/help",
       component: <SparkHelp />,
+      isPublic: false,
+    },
+    {
+      path: "/ai-connector",
+      component: <SparkAiConnector />,
+      isPublic: false,
+    },
+    {
+      // The API's OAuth metadata links brands here.
+      path: "/help/ai-connector",
+      component: <SparkAiConnector />,
       isPublic: false,
     },
     {

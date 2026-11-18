@@ -21,10 +21,10 @@ export const termsOfService: TermsOfServiceDocument = {
   platform: "SPARK BY IGNITE",
   operatedBy: "Ignite Productions LLC",
   website: "www.igniteproductions.co",
-  effectiveDate: "February 23, 2026",
-  lastUpdated: "February 23, 2026",
+  effectiveDate: "November 17, 2026",
+  lastUpdated: "November 17, 2026",
   introduction:
-    'These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your") and Ignite Productions LLC ("Ignite," "Company," "we," "us," or "our"), a Nevada limited liability company and Veteran-Owned Small Business (VOSB), governing your access to and use of the Spark by Ignite platform, including all associated mobile applications, web applications, dashboards, APIs, and related services (collectively, the "Platform" or "Spark").',
+    'These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your") and Ignite Productions LLC ("Ignite," "Company," "we," "us," or "our"), a Nevada limited liability company and Veteran-Owned Small Business (VOSB), governing your access to and use of the Spark by Ignite platform, including all associated mobile applications, web applications, dashboards, APIs, integrations (including the Spark MCP connection), and related services (collectively, the "Platform" or "Spark").',
 
   sections: [
     {
@@ -133,10 +133,16 @@ export const termsOfService: TermsOfServiceDocument = {
         "Attempt to circumvent, disable, or interfere with the GPS verification, security features, or access controls of the Platform",
         "Reverse engineer, decompile, disassemble, or attempt to derive the source code of the Platform",
         "Transmit any viruses, malware, or other harmful code through the Platform",
-        "Scrape, harvest, or collect data from the Platform through automated means",
+        "Scrape, harvest, or collect data from the Platform through automated means, except through an Approved Integration as described in Section 7.1",
         "Use the Platform in any manner that could damage, disable, overburden, or impair its functionality",
         "Upload false, misleading, or infringing content",
         "Interfere with system integrity or security",
+        "7.1 Automated Access and AI Applications",
+        'Automated access to the Platform, including through bots, scripts, crawlers, AI agents or assistants, headless browsers, browser extensions, or copied session or authentication tokens, is prohibited except through Ignite\'s official Spark MCP connection or another integration Ignite approves in writing (each, an "Approved Integration").',
+        "You may use an Approved Integration only with your own Platform account, and only to access data for the brands your account is authorized to view. You are responsible for all activity carried out through the applications you connect.",
+        "Rate limits, daily usage quotas, and other technical limits apply to Approved Integrations. You shall not attempt to circumvent them, including by using multiple accounts or connections.",
+        "Approved Integrations do not provide access to the personal information of brand ambassadors or other users, and you shall not use any integration or automated means to collect such information.",
+        "Ignite may suspend, limit, or revoke any connection or account, with or without notice, if Ignite believes it is being used for bulk extraction of data, to access data beyond your authorization, or otherwise in violation of these Terms.",
       ],
     },
     {
