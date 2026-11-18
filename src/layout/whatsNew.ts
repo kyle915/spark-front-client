@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17e",
+    date: "November 17, 2026",
+    title: "A simpler Upcoming page",
+    items: [
+      "Upcoming lists the next 7 days as a plain schedule: one list per day, with the time first, then the store and its address. Click any row to open it.",
+      "Only events that still need something show a status, such as Pending.",
+    ],
+  },
+  {
     id: "2026-11-17d",
     date: "November 17, 2026",
     title: "Spend needs a receipt photo",
