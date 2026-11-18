@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17f",
+    date: "November 17, 2026",
+    title: "An easier-to-read state map",
+    items: [
+      "On Geographic performance, states with more activity are now a darker blue and states with none are plain gray, so the busiest state stands out instead of fading away.",
+      "Each state with activity shows its number on the map, and a ranked list beside it gives every state's total and share.",
+      "When a brand runs in only a few neighboring states, the map zooms to them. Choose Show all states to see the whole country.",
+    ],
+  },
+  {
     id: "2026-11-17e",
     date: "November 17, 2026",
     title: "A simpler Upcoming page",
