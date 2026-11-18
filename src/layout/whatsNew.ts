@@ -17,6 +17,83 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-18b-1-2",
+    date: "November 18, 2026",
+    title: "Say your recap, and the form fills in",
+    items: [
+      "On the check-in recap, tap Record and talk through the shift. Spark fills in the whole form from what you said: counts, dropdowns, products, yes or no questions and notes.",
+      "Recording now works on iPhone Safari too.",
+      "Only empty boxes are filled. If you already typed an answer, it stays, and you can tap Replace to use what you said instead. Boxes filled by voice are marked so you can check them before you submit.",
+      "Spark never guesses: anything you didn't mention stays blank. Recordings are turned into text and not kept.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1-1",
+    date: "November 18, 2026",
+    title: "Hours check before payroll",
+    items: [
+      "Staff: the Payroll timesheet now checks each shift before you approve hours, and says how many need a look, such as \"7 of 212 shifts need a look\".",
+      "It flags shifts worked past their booking, punches far from the store, shifts that overlap, recaps filed before the clock-out, auto-closed or hand-edited punches, and mileage above what GPS tracked. Each flag shows the facts and a suggested next step.",
+      "Nothing is rejected for you. Mark a flag OK, reviewed and it stops asking unless the punches change. Turn on Needs a look to see only those BAs.",
+    ],
+  },
+  {
+    id: "2026-11-18r",
+    date: "November 18, 2026",
+    title: "Where to go next updates on its own",
+    items: [
+      "Store recommendations on your dashboard's Where to go next card now appear as soon as Spark works them out from approved recaps, instead of waiting for the Ignite team to review them.",
+    ],
+  },
+  {
+    id: "2026-11-18i",
+    date: "November 18, 2026",
+    title: "Insights uses your local date",
+    items: [
+      "Insights now asks for the right date range in the evening. Before, after about 5 PM Pacific it counted tomorrow as today, so the last 7, 30 or 90 days could start and end a day late.",
+    ],
+  },
+  {
+    id: "2026-11-17e-1",
+    date: "November 17, 2026",
+    title: "Clearer messages when Spark is busy",
+    items: [
+      "If you make a lot of requests in a short time, export too often or select too many items at once, Spark now says so in plain words and tells you to try again shortly, instead of showing an error page.",
+      "Too many sign-in attempts shows a short wait message on the sign-in page.",
+      "Long lists on Home, Upcoming, Recent submissions, My approvals, Alerts, Reports and the Account Map load in full for brand users.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1",
+    date: "November 18, 2026",
+    title: "Ask AI is now a chat",
+    items: [
+      "On your Home page, Ask AI opens a chat about your own program: ask things like which stores converted best last month, which stores to go back to in December, or what shoppers are saying about price.",
+      "Answers come only from your brand's data in Spark, with small source chips under each answer that open the page the numbers came from. If a figure can't be matched to your data, the answer isn't shown.",
+      "It's read only and never changes anything. Start a new chat any time, and clear your chat history whenever you like.",
+    ],
+  },
+  {
+    id: "2026-11-18b",
+    date: "November 18, 2026",
+    title: "Product answers from brand documents and websites",
+    items: [
+      "Ambassadors: product questions on the check-in page are now also answered from the brand's uploaded documents and its own website, and each answer says where it came from, such as a product page or a sell sheet.",
+      "Staff: on the BA product notes card under Walk-ups, Standing codes, add the brand's website, see every page and document Spark read, refresh them now, or exclude one. Your notes win when they disagree with the website.",
+    ],
+  },
+  {
+    id: "2026-11-18a-1",
+    date: "November 18, 2026",
+    title: "Where to go next, and alerts",
+    items: [
+      "Brand dashboards can show a Where to go next card: stores that converted well above your average and are worth a return visit, and stores to fix, such as no product on the shelf twice in 30 days or lots of sampling with few sales.",
+      "An Alerts card gives short notices about last week, such as product missing at a store or conversion dropping against the 4 weeks before.",
+      "Every number comes from approved recaps, visits with no product are left out of conversion, and the Ignite team reviews each one before it appears.",
+      "Staff: review and publish them under Client summaries, Store insights.",
+    ],
+  },
+  {
     id: "2026-11-17g-1",
     date: "November 17, 2026",
     title: "Campaign recap decks",

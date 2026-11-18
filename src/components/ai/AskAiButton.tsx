@@ -17,6 +17,7 @@ import {
 } from "@/motion/opsMotion";
 import SparkOverlay from "@/shared/SparkOverlay";
 import { askAiModalTitle } from "./askAiSubjectName";
+import BrandChatPanel from "./BrandChatPanel";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -315,6 +316,9 @@ const AskAiButton: React.FC<{
   eventId?: string | null;
   subjectLabel?: string;
   label?: string;
+  /** Brand dashboard: open brand chat (a conversation over the brand's own
+   * data, with sources) instead of the one-question pop-up. Tenant scope only. */
+  chat?: boolean;
 }> = ({
   tenantId,
   tenantName,
@@ -325,6 +329,7 @@ const AskAiButton: React.FC<{
   eventId,
   subjectLabel,
   label,
+  chat = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [origin, setOrigin] = useState<JumpOrigin | null>(null);
@@ -361,11 +366,22 @@ const AskAiButton: React.FC<{
               ? ghostTriggerBtn
               : triggerBtn
         }
-        title="Ask AI a question about this client's program"
+        title={
+          chat
+            ? "Ask questions about your program, answered from your own data"
+            : "Ask AI a question about this client's program"
+        }
       >
         {buttonLabel}
       </button>
-      {open && (
+      {open && chat && scope === "tenant" ? (
+        <BrandChatPanel
+          tenantId={tenantId}
+          origin={origin}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+      {open && !(chat && scope === "tenant") && (
         <AskAiModal
           tenantId={tenantId}
           tenantName={tenantName}

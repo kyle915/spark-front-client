@@ -30,6 +30,7 @@ import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientRepo
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQuery";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
 import "@/lib/sparkChartRegister";
 import { Bar } from "react-chartjs-2";
@@ -161,32 +162,31 @@ const ReportsRangeContext = createContext<ReportsRange>(
 );
 const useReportsRange = () => useContext(ReportsRangeContext);
 
-const useReportsRequestRows = () => {
+type ReportsRequestRow = NonNullable<
+  NonNullable<
+    ReportsRequestsChartQueryType["response"]["requests"]["edges"][number]
+  >["node"]
+>;
+
+/**
+ * Request rows behind the request charts, up to CHART_PAGE_SIZE. Brand users
+ * get 200 rows a request, so the rest are walked in by cursor; admins still
+ * get one request.
+ */
+const useReportsRequestPages = () => {
   const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<ReportsRequestsChartQueryType>(
+  return useAllConnectionPages<ReportsRequestsChartQueryType, ReportsRequestRow>(
     ReportsRequestsChartQuery,
     { first: CHART_PAGE_SIZE, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
-  return useMemo(
-    () =>
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
-    [data],
+    (response) => response.requests,
   );
 };
 
+const useReportsRequestRows = () => useReportsRequestPages().nodes;
+
 /** How many requests match in all, to say so when a page is not everything. */
-const useReportsRequestTotal = (): number | null => {
-  const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<ReportsRequestsChartQueryType>(
-    ReportsRequestsChartQuery,
-    { first: CHART_PAGE_SIZE, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
-  return data?.requests?.totalCount ?? null;
-};
+const useReportsRequestTotal = (): number | null =>
+  useReportsRequestPages().totalCount;
 
 const EventsPerWeekChart: React.FC = () => {
   const rows = useReportsRequestRows();
