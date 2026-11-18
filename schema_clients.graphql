@@ -5512,6 +5512,11 @@ input MoveCustomFieldToSectionInput {
 }
 
 type Mutation {
+  """
+  Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
+  stop working at once.
+  """
+  revokeAiConnection(id: ID!): RevokeAiConnectionResult!
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
@@ -6400,6 +6405,8 @@ type QuarterOption {
 }
 
 type Query {
+  """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
+  myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -8625,6 +8632,29 @@ type CalloutLink {
   state: String
   startDate: String
   endDate: String
+}
+
+type AiConnection {
+  id: ID!
+  appName: String!
+  brandName: String!
+  userEmail: String
+  createdAt: String!
+  lastUsedAt: String
+  callsLast30Days: Int!
+}
+
+type AiConnectorInfo {
+  connectorUrl: String!
+  helpUrl: String!
+  dailyCallLimit: Int!
+  isAdminView: Boolean!
+  connections: [AiConnection!]!
+}
+
+type RevokeAiConnectionResult {
+  ok: Boolean!
+  message: String!
 }
 
 type TenantWeeklySummary {

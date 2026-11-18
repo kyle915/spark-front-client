@@ -7,6 +7,25 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17h",
+    date: "November 17, 2026",
+    title: "Updated Terms, Privacy Policy and new legal pages",
+    items: [
+      "The Terms of Service are reorganized into parts for everyone, for brands, and for brand ambassadors, and the Privacy Policy now lists the services Spark uses and explains location, text messages and AI features.",
+      "New pages: an Acceptable Use Policy and a Data Processing Summary for brands. Each legal page links to the others.",
+    ],
+  },
+  {
+    id: "2026-11-17g",
+    date: "November 17, 2026",
+    title: "Connect Claude or ChatGPT",
+    items: [
+      "Brands can now ask Claude or ChatGPT about their program with their own Spark login: results, recaps, stores, upcoming events and what's waiting on approval. Open AI connector in the sidebar for the link and steps.",
+      "It reads your brand's data only, can't change anything, and never shares brand ambassadors' personal details. You can disconnect an app at any time from the same page.",
+      "Updated Terms of Service: automated access to Spark is allowed only through this connection or another integration Ignite approves in writing.",
+    ],
+  },
+  {
     id: "2026-11-17f-1",
     date: "November 17, 2026",
     title: "What consumers mention, month by month",

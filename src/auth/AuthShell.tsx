@@ -34,6 +34,12 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </span>
         </div>
         <div className="signin-entry">{children}</div>
+        <p className="signin-legal">
+          By signing in, you agree to the{" "}
+          <Link to="/terms-of-service">Terms of Service</Link> and{" "}
+          <Link to="/acceptable-use-policy">Acceptable Use Policy</Link> and
+          acknowledge the <Link to="/privacy-policy">Privacy Policy</Link>.
+        </p>
       </main>
 
       <footer className="signin-foot">
