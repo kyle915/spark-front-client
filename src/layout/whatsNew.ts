@@ -7,6 +7,14 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18r",
+    date: "November 18, 2026",
+    title: "Where to go next updates on its own",
+    items: [
+      "Store recommendations on your dashboard's Where to go next card now appear as soon as Spark works them out from approved recaps, instead of waiting for the Ignite team to review them.",
+    ],
+  },
+  {
     id: "2026-11-18i",
     date: "November 18, 2026",
     title: "Insights uses your local date",
