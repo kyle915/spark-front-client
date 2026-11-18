@@ -5537,6 +5537,7 @@ type Mutation {
   approvePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
   markPayrollPaid(input: ApprovePayrollInput!): PayrollActionResponse!
   unapprovePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
+  markHoursFlagReviewed(input: MarkHoursFlagReviewedInput!): HoursFlagReviewResponse!
   sendEventConfirmation(input: SendEventConfirmationInput!): SendEventConfirmationResponse!
   cancelEventConfirmationReminders(uuid: ID!, clientMutationId: ID = null): SendEventConfirmationResponse!
   createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
@@ -5630,6 +5631,8 @@ type Mutation {
   setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
   publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
+  askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
+  clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
   saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
@@ -6118,6 +6121,79 @@ type PayrollTimesheet {
   flaggedRows: Int!
 }
 
+type HoursCheckFlag {
+  code: String!
+  title: String!
+  severity: String!
+  summary: String!
+  action: String!
+  facts: [HoursFlagFact!]!
+  usesLocation: Boolean!
+  aiReason: String
+  reviewed: Boolean!
+  staleReview: Boolean!
+  reviewedBy: String
+  reviewedAt: String
+  reviewNote: String
+}
+
+type HoursCheckReport {
+  startDate: String!
+  endDate: String!
+  totalShifts: Int!
+  flaggedShifts: Int!
+  needsLookShifts: Int!
+  byRule: [HoursRuleCount!]!
+  thresholds: [HoursThreshold!]!
+  shifts: [HoursCheckShift!]!
+}
+
+type HoursCheckShift {
+  eventUuid: String!
+  eventName: String!
+  ambassadorUuid: String!
+  ambassadorName: String!
+  date: String
+  needsLook: Boolean!
+  flags: [HoursCheckFlag!]!
+}
+
+type HoursFlagFact {
+  label: String!
+  value: String!
+}
+
+type HoursFlagReviewResponse {
+  success: Boolean!
+  message: String!
+  reviewedBy: String
+  reviewedAt: String
+  clientMutationId: ID
+}
+
+type HoursRuleCount {
+  code: String!
+  title: String!
+  severity: String!
+  count: Int!
+  unreviewed: Int!
+}
+
+type HoursThreshold {
+  key: String!
+  value: Float!
+}
+
+input MarkHoursFlagReviewedInput {
+  tenantId: ID!
+  eventUuid: String!
+  ambassadorUuid: String!
+  code: String!
+  note: String = null
+  undo: Boolean! = false
+  clientMutationId: ID = null
+}
+
 type PayrollShiftRow {
   eventUuid: String!
   eventName: String!
@@ -6467,6 +6543,7 @@ type Query {
   programShareLink(tenantId: ID = null): ProgramShareLink!
   myNotificationPreferences: [NotificationPreferenceItem!]!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
+  payrollHoursCheck(startDate: String!, endDate: String!, tenantId: ID!, explain: Boolean! = false): HoursCheckReport!
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
   activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
@@ -6572,6 +6649,7 @@ type Query {
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
   tenantStoreInsights(tenantId: ID!): TenantStoreInsights
+  brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
   brandInsightReview: [BrandInsightReviewBrand!]
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
@@ -8790,6 +8868,55 @@ type StoreInsight {
 type TenantStoreInsights {
   recommendations: [StoreInsight!]!
   alerts: [StoreInsight!]!
+}
+
+type BrandChatClearResult {
+  ok: Boolean!
+  reason: String
+  cleared: Int!
+}
+
+type BrandChatLink {
+  label: String!
+  url: String!
+}
+
+type BrandChatReply {
+  ok: Boolean!
+  reason: String
+  conversationId: ID
+  turn: BrandChatTurnType
+  questionsLeftThisHour: Int!
+}
+
+type BrandChatSource {
+  tool: String!
+  label: String!
+  detail: String!
+  link: String!
+  linkLabel: String!
+}
+
+type BrandChatTurnType {
+  id: ID!
+  conversationId: ID!
+  question: String!
+  answer: String!
+  status: String!
+  sources: [BrandChatSource!]!
+  links: [BrandChatLink!]!
+  createdAt: String!
+}
+
+type BrandChatView {
+  ok: Boolean!
+  reason: String
+  brandName: String!
+  conversationId: ID
+  turns: [BrandChatTurnType!]!
+  suggestions: [String!]!
+  questionsPerHour: Int!
+  questionsLeftThisHour: Int!
 }
 
 type BrandInsightReviewItem {

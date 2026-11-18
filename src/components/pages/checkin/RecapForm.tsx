@@ -3,8 +3,16 @@ import { reportFieldIssue } from "./fieldIssues";
 import { numberHint, wantsDecimalKeypad } from "./numberSanity";
 import { isExpenseReceiptBucket } from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
-import { applyVoiceFills, type VoiceFill } from "./voiceDraft";
-import { VoiceRecapCard } from "./VoiceRecapCard";
+import {
+  mergeVoiceDraft,
+  notesFallback,
+  productReplaceKey,
+  sameAnswer,
+  type Answer,
+  type VoiceConflict,
+  type VoiceDraftResult,
+} from "./voiceDraft";
+import { VoiceConflictRow, VoiceFilledMark, VoiceRecapCard } from "./VoiceRecapCard";
 import { PHOTO_CAP } from "./photoCap";
 import {
   AUTO_RETRY_DELAYS_MS,
@@ -431,6 +439,101 @@ export default function RecapForm({
     setSamples((prev) => ({ ...prev, ...tallyProductShown }));
     setTallyFields({});
     setTallyProducts({});
+  };
+
+  // Voice recap: answers filled from what the BA said. Only empty boxes are
+  // filled; a box the BA already answered becomes a conflict they can
+  // Replace. The marker under a box shows while it still holds the voice
+  // answer, and goes away as soon as the BA edits it.
+  const [voiceFilled, setVoiceFilled] = useState<Record<string, Answer>>({});
+  const [voiceProducts, setVoiceProducts] = useState<Record<string, string>>({});
+  const [voiceCheck, setVoiceCheck] = useState<Set<string>>(() => new Set());
+  const [voiceConflicts, setVoiceConflicts] = useState<VoiceConflict[]>([]);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+  const samplesRef = useRef(samples);
+  samplesRef.current = samples;
+  const onVoiceDraft = (draft: VoiceDraftResult) => {
+    const merged = mergeVoiceDraft({
+      values: valuesRef.current,
+      samples: samplesRef.current,
+      draft,
+      fields: templateFields,
+      products: template?.products ?? [],
+    });
+    valuesRef.current = merged.values;
+    samplesRef.current = merged.samples;
+    setValues(merged.values);
+    setSamples(merged.samples);
+    setVoiceFilled((prev) => ({ ...prev, ...merged.filledFields }));
+    setVoiceProducts((prev) => ({ ...prev, ...merged.filledProducts }));
+    setVoiceCheck((prev) => {
+      const next = new Set(prev);
+      for (const id of Object.keys(merged.filledFields)) next.delete(id);
+      for (const id of merged.checkFields) next.add(id);
+      return next;
+    });
+    setVoiceConflicts(merged.conflicts);
+    return {
+      filled:
+        Object.keys(merged.filledFields).length + Object.keys(merged.filledProducts).length,
+      conflicts: merged.conflicts.length,
+    };
+  };
+  const onVoiceTextOnly = (words: string) => {
+    const fills = notesFallback(words, templateFields);
+    if (fills.length === 0) return false;
+    return onVoiceDraft({ available: true, reason: "", values: fills, productSamples: [] }).filled > 0;
+  };
+  const dropVoiceConflict = (conflict: VoiceConflict) =>
+    setVoiceConflicts((prev) =>
+      prev.filter((c) => !(c.kind === conflict.kind && c.id === conflict.id)),
+    );
+  const replaceWithVoice = (conflict: VoiceConflict) => {
+    const replaced = mergeVoiceDraft({
+      values: valuesRef.current,
+      samples: samplesRef.current,
+      draft:
+        conflict.kind === "field"
+          ? {
+              values: [{ fieldId: conflict.id, value: conflict.proposed, confidence: "high" }],
+              productSamples: [],
+            }
+          : {
+              values: [],
+              productSamples: [
+                { productId: conflict.id, value: String(conflict.proposed), confidence: "high" },
+              ],
+            },
+      fields: templateFields,
+      products: template?.products ?? [],
+      replaceIds: new Set([
+        conflict.kind === "field" ? conflict.id : productReplaceKey(conflict.id),
+      ]),
+    });
+    setValues(replaced.values);
+    setSamples(replaced.samples);
+    setVoiceFilled((prev) => ({ ...prev, ...replaced.filledFields }));
+    setVoiceProducts((prev) => ({ ...prev, ...replaced.filledProducts }));
+    dropVoiceConflict(conflict);
+  };
+  const voiceMark = (id: string) =>
+    voiceFilled[id] !== undefined && sameAnswer(values[id], voiceFilled[id]) ? (
+      <VoiceFilledMark check={voiceCheck.has(id)} />
+    ) : null;
+  const voiceProductMark = (id: string) =>
+    voiceProducts[id] !== undefined && sameAnswer(samples[id], voiceProducts[id]) ? (
+      <VoiceFilledMark check={false} />
+    ) : null;
+  const voiceConflictFor = (kind: VoiceConflict["kind"], id: string) => {
+    const conflict = voiceConflicts.find((c) => c.kind === kind && c.id === id);
+    return conflict ? (
+      <VoiceConflictRow
+        proposed={conflict.proposed}
+        onReplace={() => replaceWithVoice(conflict)}
+        onKeep={() => dropVoiceConflict(conflict)}
+      />
+    ) : null;
   };
 
   // Set once the recap is filed, so a late upload can't write a fresh draft
@@ -1352,12 +1455,25 @@ export default function RecapForm({
             origin={apiOrigin()}
             code={code}
             session={token}
-            fields={templateFields}
             accent={accent}
-            onApply={(fills: VoiceFill[]) =>
-              setValues((current) => applyVoiceFills(current, fills, templateFields))
-            }
+            onDraft={onVoiceDraft}
+            onTextOnly={onVoiceTextOnly}
           />
+          {!showProductGrid
+            ? voiceConflicts
+                .filter((c) => c.kind === "product")
+                .map((c) => {
+                  const product = (template?.products ?? []).find((p) => p.id === c.id);
+                  return (
+                    <div key={`vp-${c.id}`} style={{ marginTop: 10 }}>
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
+                        {product?.name ?? "Product"} count
+                      </p>
+                      {voiceConflictFor("product", c.id)}
+                    </div>
+                  );
+                })
+            : null}
         </div>
       ) : null}
       {token && (tallyFieldIds.length > 0 || showProductGrid) ? (
@@ -1408,6 +1524,8 @@ export default function RecapForm({
                 qtyLabel={template.sampleQtyLabel}
                 qtyTotalLabel={template.sampleQtyTotalLabel}
               />
+              {voiceMark(f.id)}
+              {voiceConflictFor("field", f.id)}
               {tallyFieldShown[f.id] !== undefined ? (
                 <TallyProposal
                   value={tallyFieldShown[f.id]}
@@ -1473,6 +1591,8 @@ export default function RecapForm({
                   onChange={(e) => setSamples((s) => ({ ...s, [p.id]: e.target.value }))}
                 />
               </div>
+              {voiceProductMark(p.id)}
+              {voiceConflictFor("product", p.id)}
               {tallyProductShown[p.id] !== undefined ? (
                 <TallyProposal
                   value={tallyProductShown[p.id]}

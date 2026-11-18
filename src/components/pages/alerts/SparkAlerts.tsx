@@ -1,11 +1,15 @@
 import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+
+type AlertRequestNode = NonNullable<
+  NonNullable<RequestsQueryType["response"]["requests"]["edges"][number]>["node"]
+>;
 
 /**
  * Spark v2 — Alerts / Notifications.
@@ -86,19 +90,18 @@ function timeAgo(iso: string): string {
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
+  // Same 300 rows as before; brand users get 200 a request, so the hook
+  // walks the rest by cursor.
+  const { nodes: requestNodes } = useAllConnectionPages<RequestsQueryType, AlertRequestNode>(
     RequestsQuery,
     { first: 300, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
+    (response) => response.requests,
   );
 
   const [readKeys, setReadKeys] = useState<Set<string>>(() => loadRead());
 
   const rows: Row[] = useMemo(() => {
-    const all =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const all = requestNodes;
 
     const cutoffMs = Date.now() - 48 * 60 * 60 * 1000;
     const out: Row[] = [];
@@ -162,7 +165,7 @@ const Inner: React.FC = () => {
         new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime(),
     );
     return out.slice(0, 60);
-  }, [data, readKeys]);
+  }, [requestNodes, readKeys]);
 
   const unread = rows.filter((r) => r.unread).length;
 
