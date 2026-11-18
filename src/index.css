@@ -1030,6 +1030,111 @@ thead .spark-table-sticky-date {
 .spark-inset-row:first-child {
   border-top: none;
 }
+
+/* Upcoming: a day's schedule as one hairline-divided list. Time sits in a
+   fixed tabular column, then the store, then where it is; status only
+   appears when a row is not the normal approved state. */
+.spark-upcoming-day {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--spark-text);
+  margin: 0 0 0.5rem 2px;
+}
+.spark-upcoming-day-meta {
+  font-weight: 400;
+  color: var(--spark-text-meta);
+}
+.spark-upcoming-list {
+  background: var(--spark-surface);
+  border: 1px solid var(--spark-border);
+  border-radius: var(--spark-radius-card, 14px);
+  overflow: hidden;
+}
+.spark-upcoming-list > li + li,
+.spark-upcoming-list > .spark-upcoming-row + .spark-upcoming-row {
+  border-top: 1px solid var(--spark-hairline);
+}
+.spark-upcoming-row {
+  display: grid;
+  /* Status keeps a fixed slot so the store and address columns line up
+     whether or not a row has a pill. */
+  grid-template-columns: 9.5rem minmax(0, 1fr) minmax(5.5rem, max-content);
+  align-items: center;
+  column-gap: 1rem;
+  min-height: 48px;
+  padding: 0.6rem 1rem;
+  color: var(--spark-text);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+a.spark-upcoming-row:hover {
+  background: rgba(var(--spark-ink-rgb), 0.035);
+}
+a.spark-upcoming-row:focus-visible {
+  outline: 2px solid var(--spark-text);
+  outline-offset: -2px;
+  background: rgba(var(--spark-ink-rgb), 0.035);
+}
+.spark-upcoming-time {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.spark-upcoming-start-full {
+  display: none;
+}
+.spark-upcoming-what {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  align-items: baseline;
+  column-gap: 1rem;
+  min-width: 0;
+}
+.spark-upcoming-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spark-upcoming-where {
+  font-size: 0.875rem;
+  color: var(--spark-text-meta);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spark-upcoming-status {
+  display: flex;
+  justify-content: flex-end;
+}
+/* Phone: time stacks start over end, store stacks over address. */
+@media (max-width: 639px) {
+  .spark-upcoming-row {
+    grid-template-columns: 4.75rem minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 0.75rem;
+    padding: 0.65rem 0.875rem;
+  }
+  .spark-upcoming-dash,
+  .spark-upcoming-start-short {
+    display: none;
+  }
+  .spark-upcoming-start-full {
+    display: inline;
+  }
+  .spark-upcoming-end {
+    display: block;
+    color: var(--spark-text-meta);
+  }
+  .spark-upcoming-what {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.125rem;
+  }
+}
 .spark-card-flat {
   background: rgba(var(--spark-ink-rgb), 0.025);
   border: 1px solid var(--spark-border);
