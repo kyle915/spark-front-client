@@ -8,6 +8,7 @@
     "build": "relay-compiler && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "legal:export": "node scripts/legal/export-legal.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

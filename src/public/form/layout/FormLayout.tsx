@@ -4,7 +4,6 @@ import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import { createContext, useEffect, useState } from "react";
-import { Link } from "react-router";
 
 export const PublicFormTenantContext = createContext<TenantPublic | null>(null);
 
@@ -148,18 +147,22 @@ export default function SparkFormLayout({
             © {new Date().getFullYear()} IGNITE PRODUCTIONS
           </span>
           <div className="flex items-center gap-4">
-            <Link
-              to="/privacy-policy"
+            <a
+              href="/privacy-policy"
+              target="_blank"
+              rel="noreferrer"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
               Privacy
-            </Link>
-            <Link
-              to="/terms-of-service"
+            </a>
+            <a
+              href="/terms-of-service"
+              target="_blank"
+              rel="noreferrer"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
               Terms
-            </Link>
+            </a>
           </div>
         </div>
       </footer>

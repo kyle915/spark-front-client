@@ -18,6 +18,44 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-17g-1",
+    date: "November 17, 2026",
+    title: "Campaign recap decks",
+    items: [
+      "Ignite can now build your end-of-program recap deck in Spark: headline numbers, where the program ran, what consumers said, the best photos from the field and suggested next steps.",
+      "When Ignite shares a deck with you, it appears under Recap decks in your program report, ready to download as a PDF.",
+      "Store visits where there was no product on hand are left out of the demo count and listed at the end of the deck. Totals still match your dashboard.",
+    ],
+  },
+  {
+    id: "2026-11-17h",
+    date: "November 17, 2026",
+    title: "Updated Terms, Privacy Policy and new legal pages",
+    items: [
+      "The Terms of Service are reorganized into parts for everyone, for brands, and for brand ambassadors, and the Privacy Policy now lists the services Spark uses and explains location, text messages and AI features.",
+      "New pages: an Acceptable Use Policy and a Data Processing Summary for brands. Each legal page links to the others.",
+    ],
+  },
+  {
+    id: "2026-11-17g",
+    date: "November 17, 2026",
+    title: "Connect Claude or ChatGPT",
+    items: [
+      "Brands can now ask Claude or ChatGPT about their program with their own Spark login: results, recaps, stores, upcoming events and what's waiting on approval. Open AI connector in the sidebar for the link and steps.",
+      "It reads your brand's data only, can't change anything, and never shares brand ambassadors' personal details. You can disconnect an app at any time from the same page.",
+      "Updated Terms of Service: automated access to Spark is allowed only through this connection or another integration Ignite approves in writing.",
+    ],
+  },
+  {
+    id: "2026-11-17f-1",
+    date: "November 17, 2026",
+    title: "What consumers mention, month by month",
+    items: [
+      "Insights now shows which themes and other brands come up in consumer comments over the last six months, with a small column per month.",
+      "Each theme says whether it is rising, falling or steady compared with the month before, with a comment as a shopper said it. Small changes are not called a trend.",
+    ],
+  },
+  {
     id: "2026-11-18a",
     date: "November 18, 2026",
     title: "Product questions on the check-in page",
