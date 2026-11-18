@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-17i",
+    date: "November 17, 2026",
+    title: "Launch a client: the new brand's products on the cloned form",
+    items: [
+      "When you launch a client from another brand's recap form, Products Sampled and any other product picker now list the new client's catalog, never the donor brand's products.",
+      "The preview shows exactly which products each picker will offer and every label swap, including swaps inside answer choices. Choices like \"Full can\" are left alone.",
+      "Launching without a catalog leaves those pickers empty and says so, instead of keeping the donor's products.",
+    ],
+  },
+  {
     id: "2026-11-17g-1",
     date: "November 17, 2026",
     title: "Campaign recap decks",
