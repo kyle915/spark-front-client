@@ -15,6 +15,56 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-18b-2",
+    date: "November 18, 2026",
+    title: "Connect an AI app with Google",
+    items: [
+      "When you connect Claude, ChatGPT or another AI app to Spark, choose Continue with Google on the Spark page. Spark signs you in with Google, then brings you back to pick the brand.",
+    ],
+  },
+  {
+    id: "2026-11-18c",
+    date: "November 18, 2026",
+    title: "Search your field photos",
+    items: [
+      "The Photos page has a search box. Type what you want in plain words, like “best crowd photos at Kroger in Texas”, and Spark turns it into filters you can see and remove.",
+      "One tap narrows to consumers engaging, product on the table, shelf displays or signage, and you can hide blurry or dark photos.",
+      "Spark tags each photo once: what it shows, which of your products are in it, roughly how busy it was and the setting. It never identifies anyone.",
+      "Brands see photos from their own approved recaps only, and receipts never appear. Staff can also include recaps waiting for approval and add photos to a recap deck.",
+    ],
+  },
+  {
+    id: "2026-11-17i",
+    date: "November 17, 2026",
+    title: "Launch a client: the new brand's products on the cloned form",
+    items: [
+      "When you launch a client from another brand's recap form, Products Sampled and any other product picker now list the new client's catalog, never the donor brand's products.",
+      "The preview shows exactly which products each picker will offer and every label swap, including swaps inside answer choices. Choices like \"Full can\" are left alone.",
+      "Launching without a catalog leaves those pickers empty and says so, instead of keeping the donor's products.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1-2",
+    date: "November 18, 2026",
+    title: "Say your recap, and the form fills in",
+    items: [
+      "On the check-in recap, tap Record and talk through the shift. Spark fills in the whole form from what you said: counts, dropdowns, products, yes or no questions and notes.",
+      "Recording now works on iPhone Safari too.",
+      "Only empty boxes are filled. If you already typed an answer, it stays, and you can tap Replace to use what you said instead. Boxes filled by voice are marked so you can check them before you submit.",
+      "Spark never guesses: anything you didn't mention stays blank. Recordings are turned into text and not kept.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1-1",
+    date: "November 18, 2026",
+    title: "Hours check before payroll",
+    items: [
+      "Staff: the Payroll timesheet now checks each shift before you approve hours, and says how many need a look, such as \"7 of 212 shifts need a look\".",
+      "It flags shifts worked past their booking, punches far from the store, shifts that overlap, recaps filed before the clock-out, auto-closed or hand-edited punches, and mileage above what GPS tracked. Each flag shows the facts and a suggested next step.",
+      "Nothing is rejected for you. Mark a flag OK, reviewed and it stops asking unless the punches change. Turn on Needs a look to see only those BAs.",
+    ],
+  },
+  {
     id: "2026-11-18r",
     date: "November 18, 2026",
     title: "Where to go next updates on its own",

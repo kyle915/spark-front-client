@@ -22,6 +22,15 @@ import {
   type GalleryViewState,
 } from "./photoGallery";
 import { buildDeckHtml, openDeck } from "./photoDeck";
+import {
+  EMPTY_LIBRARY_FILTERS,
+  EMPTY_OPTIONS,
+  isSearching,
+  type LibraryFilters,
+  type LibraryOptions,
+} from "./photoLibrary";
+import { AddToDeck, LibraryGrid, LibrarySearchBar } from "./PhotoLibrarySearch";
+import useSparkRole from "@/hooks/useSparkRole";
 
 const PAGE_SIZE = 60;
 
@@ -224,13 +233,25 @@ const Grid: React.FC<{
 };
 
 /**
- * Every approved field photo for the brand in one place: filter, select,
- * download as a zip, or turn the selection into a print-ready photo deck.
- * Needs tenantPhotoGallery on the server (spark-api #1361).
+ * Every approved field photo for the brand in one place: search in plain
+ * words or by tag, filter, select, download as a zip, or turn the selection
+ * into a print-ready photo deck. Staff can also put photos on a recap deck
+ * and include recaps waiting for approval. Brands only ever see their own
+ * approved recaps; receipts never show.
+ * Needs tenantPhotoGallery (spark-api #1361) and photoLibrary on the server.
  */
 const SparkPhotoGallery: React.FC = () => {
   const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
+  const { isAdmin } = useSparkRole();
+  const [library, setLibrary] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  const [libraryOptions, setLibraryOptions] = useState<LibraryOptions>(EMPTY_OPTIONS);
+  const [includePending, setIncludePending] = useState(false);
+  const searching = isSearching(library);
+  const changeLibrary = (next: LibraryFilters) => {
+    setLibrary(next);
+    setPage(0);
+  };
   const [filters, setFilters] = useState<Filters>({
     range: "90",
     state: "",
@@ -309,7 +330,10 @@ const SparkPhotoGallery: React.FC = () => {
       }),
     );
     if (!ok) {
-      showAlert("Your browser blocked the deck window. Allow pop-ups for Spark and try again.", "error");
+      showAlert(
+        "Your browser blocked the deck window. Allow pop-ups for Spark and try again.",
+        "error",
+      );
     }
   };
 
@@ -358,34 +382,45 @@ const SparkPhotoGallery: React.FC = () => {
         <SparkPageHeader
           eyebrow="RECAPS"
           title="Photos"
-          support="Field photos from approved recaps, best photos first. Filter, pick the ones you want, then download them or build a photo deck."
+          support="Field photos from approved recaps, best photos first. Search in plain words or by what is in the photo, pick the ones you want, then download them or build a photo deck."
         />
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="pill-group" role="group" aria-label="Which photos to show">
-            {(
-              [
-                ["best", "Best photos"],
-                ["all", "All photos"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => chooseView(key)}
-                aria-pressed={view.view === key}
-                className={`pill-btn whitespace-nowrap ${view.view === key ? "on" : ""}`}
-              >
-                {label}
-              </button>
-            ))}
+        {tenantId ? (
+          <LibrarySearchBar
+            tenantId={String(tenantId)}
+            filters={library}
+            options={libraryOptions}
+            onFilters={changeLibrary}
+          />
+        ) : null}
+
+        {!searching ? (
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="pill-group" role="group" aria-label="Which photos to show">
+              {(
+                [
+                  ["best", "Best photos"],
+                  ["all", "All photos"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => chooseView(key)}
+                  aria-pressed={view.view === key}
+                  className={`pill-btn whitespace-nowrap ${view.view === key ? "on" : ""}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {noBestNote ? (
+              <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+                No best photos picked for these filters yet, so all photos are shown.
+              </p>
+            ) : null}
           </div>
-          {noBestNote ? (
-            <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-              No best photos picked for these filters yet, so all photos are shown.
-            </p>
-          ) : null}
-        </div>
+        ) : null}
 
         <div className="spark-card p-3 flex items-center gap-2 flex-wrap">
           <select
@@ -400,39 +435,57 @@ const SparkPhotoGallery: React.FC = () => {
               </option>
             ))}
           </select>
-          <select
-            aria-label="State"
-            style={fieldStyle}
-            value={filters.state}
-            onChange={(e) => update({ state: e.target.value })}
-          >
-            <option value="">All states</option>
-            {choices.states.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Photo type"
-            style={fieldStyle}
-            value={filters.category}
-            onChange={(e) => update({ category: e.target.value })}
-          >
-            <option value="">All photo types</option>
-            {choices.categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <input
-            aria-label="Search store or address"
-            placeholder="Search store or address"
-            style={{ ...fieldStyle, flex: "1 1 200px", minWidth: 160 }}
-            value={storeDraft}
-            onChange={(e) => setStoreDraft(e.target.value)}
-          />
+          {!searching ? (
+            <>
+              <select
+                aria-label="State"
+                style={fieldStyle}
+                value={filters.state}
+                onChange={(e) => update({ state: e.target.value })}
+              >
+                <option value="">All states</option>
+                {choices.states.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Photo type"
+                style={fieldStyle}
+                value={filters.category}
+                onChange={(e) => update({ category: e.target.value })}
+              >
+                <option value="">All photo types</option>
+                {choices.categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <input
+                aria-label="Search store or address"
+                placeholder="Search store or address"
+                style={{ ...fieldStyle, flex: "1 1 200px", minWidth: 160 }}
+                value={storeDraft}
+                onChange={(e) => setStoreDraft(e.target.value)}
+              />
+            </>
+          ) : null}
+          {searching && isAdmin ? (
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={includePending}
+                onChange={(e) => {
+                  setIncludePending(e.target.checked);
+                  setPage(0);
+                }}
+                style={{ accentColor: "var(--spark-lime)" }}
+              />
+              Include recaps waiting for approval
+            </label>
+          ) : null}
         </div>
 
         {chosen.length > 0 ? (
@@ -446,7 +499,10 @@ const SparkPhotoGallery: React.FC = () => {
               type="button"
               onClick={makeDeck}
               className="px-3 py-1.5 rounded-xl font-semibold"
-              style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
+              style={{
+                background: "var(--spark-lime)",
+                color: "var(--spark-on-accent)",
+              }}
             >
               Build photo deck
             </button>
@@ -473,6 +529,13 @@ const SparkPhotoGallery: React.FC = () => {
             >
               {zipping ? "Preparing zip…" : "Download (.zip)"}
             </button>
+            {isAdmin && tenantId ? (
+              <AddToDeck
+                tenantId={String(tenantId)}
+                photoIds={chosen.map((p) => p.id)}
+                onDone={(message, ok) => showAlert(message, ok ? "success" : "warning")}
+              />
+            ) : null}
             <button
               type="button"
               onClick={() => setSelected(new Map())}
@@ -492,18 +555,35 @@ const SparkPhotoGallery: React.FC = () => {
               </p>
             }
           >
-            <Grid
-              tenantId={String(tenantId)}
-              filters={filters}
-              view={view}
-              onNoBestPhotos={showAll}
-              page={page}
-              onPage={setPage}
-              onChoices={setChoices}
-              selected={selected}
-              onToggle={toggle}
-              onSelectMany={selectMany}
-            />
+            {searching ? (
+              <LibraryGrid
+                tenantId={String(tenantId)}
+                filters={library}
+                dates={rangeDates(filters.range)}
+                approvedOnly={!(isAdmin && includePending)}
+                picksOnly={false}
+                showApproval={isAdmin}
+                page={page}
+                onPage={setPage}
+                onOptions={setLibraryOptions}
+                selected={selected}
+                onToggle={toggle}
+                onSelectMany={selectMany}
+              />
+            ) : (
+              <Grid
+                tenantId={String(tenantId)}
+                filters={filters}
+                view={view}
+                onNoBestPhotos={showAll}
+                page={page}
+                onPage={setPage}
+                onChoices={setChoices}
+                selected={selected}
+                onToggle={toggle}
+                onSelectMany={selectMany}
+              />
+            )}
           </Suspense>
         ) : (
           <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
