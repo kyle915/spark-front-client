@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18b",
+    date: "November 18, 2026",
+    title: "Ask AI is now a chat",
+    items: [
+      "On your Home page, Ask AI opens a chat about your own program: ask things like which stores converted best last month, which stores to go back to in December, or what shoppers are saying about price.",
+      "Answers come only from your brand's data in Spark, with small source chips under each answer that open the page the numbers came from. If a figure can't be matched to your data, the answer isn't shown.",
+      "It's read only and never changes anything. Start a new chat any time, and clear your chat history whenever you like.",
+    ],
+  },
+  {
     id: "2026-11-18a-1",
     date: "November 18, 2026",
     title: "Where to go next, and alerts",
