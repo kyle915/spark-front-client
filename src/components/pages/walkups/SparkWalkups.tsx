@@ -18,6 +18,7 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 import SidebarTabCount from "@/shared/SidebarTabCount";
 import StandingCheckinLink from "./StandingCheckinLink";
 import CheckinIssuesCard from "./CheckinIssuesCard";
+import BaProductNotesCard from "./BaProductNotesCard";
 import ClockLinks from "./ClockLinks";
 
 /**
@@ -433,6 +434,7 @@ export default function SparkWalkups() {
         <Suspense fallback={null}>
           <StandingCheckinLink />
           <CheckinIssuesCard />
+          <BaProductNotesCard />
         </Suspense>
       ) : tab === "clock" ? (
         <ClockLinks />
