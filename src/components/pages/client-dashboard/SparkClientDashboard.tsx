@@ -478,8 +478,8 @@ const ClientInner: React.FC = () => {
             title="Home"
             support="What happened in the last 30 days, and what's coming up."
             action={
-              <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
-                <ActiveTenantAskAi />
+              <Suspense fallback={<AskAiButton tenantId={tenantId} chat />}>
+                <ActiveTenantAskAi chat />
               </Suspense>
             }
           />

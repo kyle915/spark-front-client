@@ -136,9 +136,20 @@ const components: Components = {
   ),
 };
 
-const AiMarkdown: React.FC<{ children: string }> = ({ children }) => (
+// Brand chat shows no links or images the model wrote: links into Spark
+// come as source chips built on the server.
+const plainComponents: Components = {
+  ...components,
+  a: ({ children }) => <span>{children}</span>,
+  img: () => null,
+};
+
+const AiMarkdown: React.FC<{ children: string; links?: boolean }> = ({
+  children,
+  links = true,
+}) => (
   <div style={{ color: "var(--spark-text)" }}>
-    <ReactMarkdown components={components}>{children}</ReactMarkdown>
+    <ReactMarkdown components={links ? components : plainComponents}>{children}</ReactMarkdown>
   </div>
 );
 
