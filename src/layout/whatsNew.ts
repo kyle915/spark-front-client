@@ -7,6 +7,15 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18s",
+    date: "November 18, 2026",
+    title: "Walk-up recaps land under the right store",
+    items: [
+      "Walk-up check-ins now ask BAs for the store name on Retail Sampling shifts, so their recaps count under that store and state on your dashboard instead of No store recorded. Event activations still only ask for the venue.",
+      "When a BA checks in at an address your team has worked before, Spark fills in the store and state from that earlier visit.",
+    ],
+  },
+  {
     id: "2026-11-18v",
     date: "November 18, 2026",
     title: "Festivals show by venue",

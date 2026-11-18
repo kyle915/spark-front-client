@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  STORE_NAME_REQUIRED_ERROR,
   identifyPlaceKind,
   identifySubmitLabel,
   programChoiceList,
@@ -7,6 +8,7 @@ import {
   programRequiredHint,
   recapOnlyIntro,
   revealProgramPicker,
+  storeNameRequired,
 } from "./programPickerGate";
 
 const torch = [
@@ -120,5 +122,32 @@ describe("revealProgramPicker", () => {
     revealProgramPicker(el, { reduceMotion: true });
     expect(el.scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "center" });
     expect(() => revealProgramPicker(null)).not.toThrow();
+  });
+});
+
+describe("storeNameRequired", () => {
+  it("asks for the store on retail sampling, not on activations or seeding", () => {
+    expect(storeNameRequired({ program: { name: "Retail Sampling" }, hasPrograms: true })).toBe(true);
+    expect(storeNameRequired({ program: { name: "Event Activation" }, hasPrograms: true })).toBe(false);
+    expect(storeNameRequired({ program: { name: "Guerilla Activation" }, hasPrograms: true })).toBe(false);
+    expect(storeNameRequired({ program: { name: "Product Seeding" }, hasPrograms: true })).toBe(false);
+  });
+
+  it("trusts the API flag on a picked program", () => {
+    expect(
+      storeNameRequired({ program: { name: "Retail", storeNameRequired: false }, hasPrograms: true }),
+    ).toBe(false);
+  });
+
+  it("uses the link default when there is no picker, and waits for a pick when there is", () => {
+    expect(storeNameRequired({ linkDefault: true, hasPrograms: false })).toBe(true);
+    expect(storeNameRequired({ linkDefault: false, hasPrograms: false })).toBe(false);
+    expect(storeNameRequired({ linkDefault: true, hasPrograms: true })).toBe(false);
+  });
+
+  it("matches the API's error copy", () => {
+    expect(STORE_NAME_REQUIRED_ERROR).toBe(
+      "Enter the store name so your work counts for the right store.",
+    );
   });
 });

@@ -197,6 +197,9 @@ export type Context = {
   eventTypes?: EventTypeOption[];
   // Brand heading for that picker (Torch: "What's your execution type?").
   programPickerTitle?: string;
+  // The link's default program is retail sampling, so a new walk-up must name
+  // the store. A picked program carries its own `storeNameRequired`.
+  storeNameRequired?: boolean;
   // The brand's BA references, in order — training deck, photo-release QR,
   // the /training/<code> hub. Rendered on the landing screen AND once clocked
   // in: "what am I supposed to say about this SKU" is a question a BA has at
