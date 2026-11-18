@@ -7,7 +7,7 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-18a",
+    id: "2026-11-18a-1",
     date: "November 18, 2026",
     title: "Where to go next, and alerts",
     items: [
@@ -15,6 +15,15 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "An Alerts card gives short notices about last week, such as product missing at a store or conversion dropping against the 4 weeks before.",
       "Every number comes from approved recaps, visits with no product are left out of conversion, and the Ignite team reviews each one before it appears.",
       "Staff: review and publish them under Client summaries, Store insights.",
+    ],
+  },
+  {
+    id: "2026-11-18a",
+    date: "November 18, 2026",
+    title: "Product questions on the check-in page",
+    items: [
+      "Ambassadors: once you've checked in, ask a product question such as \"How much caffeine is in this?\" and get a short answer taken only from the brand's own notes. If the notes don't cover it, it says so — check with your lead.",
+      "Staff: write each brand's BA product notes and see what ambassadors have been asking under Walk-ups, Standing codes.",
     ],
   },
   {
