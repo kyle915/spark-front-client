@@ -6526,6 +6526,18 @@ type Query {
   tenantStoreLinks(tenantId: ID!): [StoreLink!]!
   monthHighlight(tenantId: ID!, month: String!): MonthHighlight
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
+
+  """
+  Search a brand's recap photos. Structured filters plus free text over each photo's caption, tags, products, store, city and state.
+  Never a receipt; brand users see their own approved recaps only.
+  Sorted by relevance (with text) or quality. At most 120 a page.
+  """
+  photoLibrary(tenantId: ID!, filters: PhotoLibraryFilterInput = null, first: Int! = 60, offset: Int! = 0): PhotoLibraryPage!
+
+  """
+  Typed words → photo library filters, for the search box. Without the model the words are searched as typed (`ok` false, with a reason).
+  """
+  interpretPhotoSearch(tenantId: ID!, text: String!): PhotoSearchInterpretation!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantBoothDayCounting(tenantId: ID!): Boolean!
   programShareLink(tenantId: ID = null): ProgramShareLink!
@@ -8543,6 +8555,90 @@ type PhotoGalleryPage {
   photos: [GalleryPhoto!]!
   categories: [String!]!
   states: [String!]!
+}
+
+input PhotoLibraryFilterInput {
+  text: String = null
+  shows: [String!] = null
+  crowdSizes: [String!] = null
+  settings: [String!] = null
+  productIds: [String!] = null
+  store: String = null
+  states: [String!] = null
+  startDate: String = null
+  endDate: String = null
+  minQuality: Int = null
+  peoplePresent: Boolean = null
+  hideIssues: Boolean! = false
+  approvedOnly: Boolean! = true
+  picksOnly: Boolean! = false
+  sort: String = null
+}
+
+type PhotoLibraryOption {
+  key: String!
+  label: String!
+}
+
+type LibraryPhoto {
+  id: String!
+  url: String!
+  caption: String!
+  category: String!
+  shows: [String!]!
+  showLabels: [String!]!
+  crowdSize: String!
+  crowdLabel: String!
+  setting: String!
+  settingLabel: String!
+  peoplePresent: Boolean
+  qualityScore: Int
+  issues: [String!]!
+  products: [String!]!
+  store: String!
+  city: String!
+  state: String!
+  eventDate: String!
+  recapUuid: String!
+  isPick: Boolean!
+  approved: Boolean!
+  tagged: Boolean!
+}
+
+type PhotoLibraryPage {
+  total: Int!
+  inScope: Int!
+  tagged: Int!
+  photos: [LibraryPhoto!]!
+  states: [String!]!
+  products: [PhotoLibraryOption!]!
+  showOptions: [PhotoLibraryOption!]!
+  crowdOptions: [PhotoLibraryOption!]!
+  settingOptions: [PhotoLibraryOption!]!
+  approvedOnly: Boolean!
+}
+
+type PhotoLibraryFilters {
+  text: String!
+  shows: [String!]!
+  crowdSizes: [String!]!
+  settings: [String!]!
+  productIds: [String!]!
+  store: String!
+  states: [String!]!
+  startDate: String
+  endDate: String
+  minQuality: Int
+  peoplePresent: Boolean
+  hideIssues: Boolean!
+  sort: String!
+}
+
+type PhotoSearchInterpretation {
+  ok: Boolean!
+  reason: String!
+  filters: PhotoLibraryFilters!
+  chips: [String!]!
 }
 
 type EfficiencyRow {
