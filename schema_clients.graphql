@@ -5627,6 +5627,9 @@ type Mutation {
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
+  publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
+  generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
   saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
@@ -6553,6 +6556,8 @@ type Query {
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
+  tenantStoreInsights(tenantId: ID!): TenantStoreInsights
+  brandInsightReview: [BrandInsightReviewBrand!]
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
@@ -8670,6 +8675,58 @@ type CalloutLink {
   state: String
   startDate: String
   endDate: String
+}
+
+type StoreInsight {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  periodStart: String!
+  periodEnd: String!
+  isDraft: Boolean!
+}
+
+type TenantStoreInsights {
+  recommendations: [StoreInsight!]!
+  alerts: [StoreInsight!]!
+}
+
+type BrandInsightReviewItem {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  template: String!
+  factsText: String!
+  source: String!
+  status: String!
+  periodStart: String!
+  periodEnd: String!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
+}
+
+type BrandInsightReviewBrand {
+  tenantId: ID!
+  tenantName: String!
+  drafts: Int!
+  items: [BrandInsightReviewItem!]!
+}
+
+type BrandInsightResult {
+  ok: Boolean!
+  reason: String
+  item: BrandInsightReviewItem
+}
+
+type BrandInsightBatchResult {
+  ok: Boolean!
+  reason: String
+  count: Int!
 }
 
 type AiConnection {

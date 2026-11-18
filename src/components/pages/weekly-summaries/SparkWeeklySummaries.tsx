@@ -1,4 +1,5 @@
 import { Suspense, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -28,6 +29,7 @@ import {
   writtenLine,
   type SummaryPeriod,
 } from "@/lib/weeklySummary";
+import StoreInsightsReview from "@/components/pages/weekly-summaries/StoreInsightsReview";
 
 /**
  * Client summaries: Ignite staff only (route is wrapped in AdminOnly, and
@@ -316,43 +318,62 @@ const WeekBody: React.FC<{
   );
 };
 
+type View = SummaryPeriod | "insights";
+
+const VIEW_LABELS: Record<View, string> = {
+  week: "Weekly",
+  month: "Monthly",
+  insights: "Store insights",
+};
+
 export default function SparkWeeklySummaries() {
-  const [period, setPeriod] = useState<SummaryPeriod>("week");
+  const [params, setParams] = useSearchParams();
+  const view: View = params.get("view") === "insights" ? "insights" : params.get("view") === "month" ? "month" : "week";
+  const period: SummaryPeriod = view === "month" ? "month" : "week";
   const [weekStart, setWeekStart] = useState<string | null>(null);
-  const choose = (next: SummaryPeriod) => {
-    if (next === period) return;
+  const choose = (next: View) => {
+    if (next === view) return;
     // Start each view on its own last finished week or month.
     setWeekStart(null);
-    setPeriod(next);
+    const nextParams = new URLSearchParams(params);
+    if (next === "week") nextParams.delete("view");
+    else nextParams.set("view", next);
+    setParams(nextParams, { replace: true });
   };
   return (
     <Layout>
       <div className="spark-scale max-w-3xl flex flex-col gap-5">
         <SparkPageHeader
           title="Client summaries"
-          support="A short summary of each brand's week, and an email draft for each month, by event date. Written by AI from approved recaps. Read it, fix the wording, then copy it. Nothing is sent from this page."
+          support="A short summary of each brand's week, an email draft for each month, and store recommendations and alerts for each brand's dashboard. Written from approved recaps. Nothing is sent from this page."
         />
         <p className="text-xs sm:hidden" style={META}>
-          Written by AI from approved recaps. Nothing is sent from this page.
+          Written from approved recaps. Nothing is sent from this page.
         </p>
-        <div className="pill-group self-start" role="group" aria-label="Period">
-          {(["week", "month"] as const).map((key) => (
+        <div className="pill-group self-start" role="group" aria-label="View">
+          {(["week", "month", "insights"] as const).map((key) => (
             <button
               key={key}
               type="button"
-              aria-pressed={period === key}
+              aria-pressed={view === key}
               onClick={() => choose(key)}
-              className={`pill-btn ${period === key ? "on" : ""}`}
+              className={`pill-btn ${view === key ? "on" : ""}`}
             >
-              {key === "week" ? "Weekly" : "Monthly"}
+              {VIEW_LABELS[key]}
             </button>
           ))}
         </div>
+        {view === "insights" ? (
+          <p className="text-sm" style={SECONDARY}>
+            Where to go next and alerts, worked out each day from approved recaps. A brand sees a
+            finding only once it is published here. Publishing sends nothing.
+          </p>
+        ) : null}
         <ErrorBoundary
-          key={`${period}|${weekStart ?? "latest"}`}
+          key={`${view}|${weekStart ?? "latest"}`}
           fallback={
             <p className="text-sm" style={META}>
-              Client summaries could not load.
+              {view === "insights" ? "Store insights could not load." : "Client summaries could not load."}
             </p>
           }
         >
@@ -363,7 +384,11 @@ export default function SparkWeeklySummaries() {
               </p>
             }
           >
-            <WeekBody period={period} weekStart={weekStart} onWeek={setWeekStart} />
+            {view === "insights" ? (
+              <StoreInsightsReview />
+            ) : (
+              <WeekBody period={period} weekStart={weekStart} onWeek={setWeekStart} />
+            )}
           </Suspense>
         </ErrorBoundary>
       </div>

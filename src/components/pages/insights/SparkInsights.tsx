@@ -16,6 +16,7 @@ import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
+import StoreInsightsCards from "@/components/ai/StoreInsightsCards";
 import WhatChangedLine from "@/components/explain/WhatChangedLine";
 import Callouts from "@/components/explain/Callouts";
 import { LatestMonthHighlight } from "@/components/explain/MonthHighlight";
@@ -772,6 +773,8 @@ export function InsightsBody({
       )}
 
       {tenantId && !omitNarration && <WeeklySummaryCard tenantId={tenantId} />}
+
+      {tenantId && !omitNarration && <StoreInsightsCards tenantId={tenantId} />}
 
       {/* Pace, markets, year-over-year, AI, geo, and the timeline. Gated on
           state rather than <details> so none of their queries fire until
