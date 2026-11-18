@@ -1,0 +1,163 @@
+/* Terms clickwrap after sign-in. Uses the signed-in app's tokens so it
+   follows the person's light / dark appearance; the fallbacks are the light
+   palette for the moment before the theme attributes are on <html>. */
+.legal-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+  background: var(--spark-bg, #f6f6f2);
+  color: var(--spark-text, #14160f);
+  font-family: var(--font-body, 'Inter', 'Helvetica Neue', Arial, sans-serif);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.legal-gate-card {
+  width: 100%;
+  max-width: 560px;
+  margin: auto 0;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--spark-surface, #ffffff);
+  border: 1px solid var(--spark-border, #dcddd5);
+  border-radius: 12px;
+}
+
+.legal-gate-mark { display: block; margin-bottom: 4px; }
+
+.legal-gate-title {
+  margin: 0;
+  font-family: var(--font-display, 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.legal-gate-lede { margin: 0; color: var(--spark-text-secondary, rgba(20, 22, 15, 0.78)); }
+
+.legal-gate-changed {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--spark-text, #14160f);
+  background: var(--spark-surface-2, #f1f1ec);
+  border-radius: 0 8px 8px 0;
+}
+.legal-gate-changed-label { font-weight: 600; }
+
+.legal-gate-summary {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--spark-text-secondary, rgba(20, 22, 15, 0.78));
+}
+
+.legal-gate-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.legal-gate-links a {
+  color: var(--spark-text, #14160f);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.legal-gate-links a:hover { text-decoration-thickness: 2px; }
+
+.legal-gate-effective {
+  margin: -6px 0 0;
+  font-size: 13px;
+  color: var(--spark-text-meta, rgba(20, 22, 15, 0.64));
+}
+
+.legal-gate-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--spark-border, #dcddd5);
+  border-radius: 8px;
+}
+.legal-gate-agree input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--spark-text, #14160f);
+  cursor: pointer;
+}
+.legal-gate-agree label { cursor: pointer; font-weight: 500; }
+
+.legal-gate-error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--spark-flag-ink, #a8340f);
+}
+
+.legal-gate-continue {
+  height: 48px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--spark-text, #14160f);
+  color: var(--spark-bg, #f6f6f2);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.legal-gate-continue:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.legal-gate-signout {
+  align-self: center;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  color: var(--spark-text-secondary, rgba(20, 22, 15, 0.78));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.legal-gate a:focus-visible,
+.legal-gate button:focus-visible,
+.legal-gate input:focus-visible {
+  outline: 2px solid var(--spark-text, #14160f);
+  outline-offset: 3px;
+}
+
+.legal-gate-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 480px) {
+  .legal-gate { padding: 16px; }
+  .legal-gate-card { padding: 24px 20px; }
+  .legal-gate-title { font-size: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legal-gate-continue { transition: none; }
+}

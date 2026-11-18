@@ -5511,7 +5511,54 @@ input MoveCustomFieldToSectionInput {
   sectionId: ID!
 }
 
+type AcceptLegalTermsResponse {
+  success: Boolean!
+  message: String!
+  code: String
+  status: LegalStatus
+}
+
+type LegalAcceptanceReport {
+  currentVersion: String!
+  totalUsers: Int!
+  acceptedCount: Int!
+  pendingCount: Int!
+  rows: [LegalAcceptanceReportRow!]!
+}
+
+type LegalAcceptanceReportRow {
+  userUuid: String!
+  email: String!
+  name: String!
+  role: String!
+  status: String!
+  acceptedVersion: String
+  acceptedAt: DateTime
+  ipAddress: String!
+  userAgent: String!
+}
+
+type LegalDocumentStatus {
+  document: String!
+  title: String!
+  path: String!
+  version: String!
+  acceptedVersion: String
+  acceptedAt: DateTime
+  needsAcceptance: Boolean!
+}
+
+type LegalStatus {
+  required: Boolean!
+  needsAcceptance: Boolean!
+  currentVersion: String!
+  isUpdate: Boolean!
+  changeSummary: String
+  documents: [LegalDocumentStatus!]!
+}
+
 type Mutation {
+  acceptLegalTerms(version: String!): AcceptLegalTermsResponse!
   """
   Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
   stop working at once.
@@ -6412,6 +6459,8 @@ type QuarterOption {
 }
 
 type Query {
+  myLegalStatus: LegalStatus!
+  legalAcceptanceReport(pendingOnly: Boolean! = false, search: String = null): LegalAcceptanceReport!
   """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
   myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!

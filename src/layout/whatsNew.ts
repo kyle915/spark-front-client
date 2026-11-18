@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-18c",
+    date: "November 18, 2026",
+    title: "Accepting the Terms",
+    items: [
+      "The first time you sign in after this update, Spark asks you to accept the Terms of Service and Acceptable Use Policy and confirm you've read the Privacy Policy. It takes one click, and links open each document in a new tab.",
+      "If the terms change later, Spark asks again once and says what changed.",
+      "Staff: see who has accepted, and when, under System, Legal acceptances.",
+    ],
+  },
+  {
     id: "2026-11-18b",
     date: "November 18, 2026",
     title: "Product answers from brand documents and websites",

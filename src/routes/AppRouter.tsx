@@ -14,6 +14,7 @@ import Login from "@/auth/Login";
 import PrivateRoute from "@routes/PrivateRoute";
 import { appRoutes, prefetchHotRoutes } from "@/routes/AppRoutes";
 import TenantRoute from "@/layout/TenantGuard";
+import { LegalGate } from "@/legal/acceptance/LegalGate";
 import GoogleCalendarCallback from "@/auth/GoogleCalendarCallback";
 import VerifyAccount from "@/auth/VerifyAccount";
 import { AppShellSkeleton } from "@/layout/PageSkeletons";
@@ -103,7 +104,11 @@ const AppRouter = () => {
           element={
             <PrivateRoute
               component={
-                <TenantRoute component={<AuthenticatedShell />} />
+                // Terms clickwrap first: admin and brand users must accept
+                // the current Terms before any page (or its data) loads.
+                <LegalGate>
+                  <TenantRoute component={<AuthenticatedShell />} />
+                </LegalGate>
               }
             />
           }
