@@ -8,8 +8,12 @@ import { graphql } from "react-relay";
  * retailer name for today→+7d.
  */
 export const ClientWeekAheadQuery = graphql`
-  query ClientWeekAheadQuery($first: Int, $filters: RequestFiltersInput) {
-    requests(first: $first, filters: $filters) {
+  query ClientWeekAheadQuery(
+    $first: Int
+    $after: String
+    $filters: RequestFiltersInput
+  ) {
+    requests(first: $first, after: $after, filters: $filters) {
       edges {
         node {
           id
@@ -19,6 +23,10 @@ export const ClientWeekAheadQuery = graphql`
             name
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }

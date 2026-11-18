@@ -1,17 +1,22 @@
 import { Link } from "react-router";
 import { Suspense, useMemo } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { useAllEventPages } from "@/hooks/useAllEventPages";
+import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import { addDaysIso, opsTodayIso, venueDayOf } from "@/utils/venueDay";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import UpcomingList, { UpcomingSkeleton, type UpcomingRow } from "./UpcomingList";
+
+type UpcomingRequestRow = NonNullable<
+  NonNullable<RequestsQueryType["response"]["requests"]["edges"][number]>["node"]
+>;
 
 /**
  * "Upcoming" — next 7 days, grouped by day. Combines two sources:
@@ -61,24 +66,27 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
   // The API filters by UTC day, so ask for a day either side of the window
   // and keep rows whose venue day falls inside it. Every page is loaded: the
   // list returns at most 100 a request.
-  const { events, loadingMore } = useAllEventPages({
+  const { events, loadingMore: loadingMoreEvents } = useAllEventPages({
     ...(tenantId ? { tenantId } : {}),
     startDate: addDaysIso(today, -1),
     endDate: addDaysIso(end, 1),
   });
 
-  const requestsData = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    {
-      first: 500,
-      filters: {
-        ...(tenantId ? { tenantId } : {}),
-        startDate: addDaysIso(today, -1),
-        endDate: addDaysIso(end, 1),
+  // Brand users get 200 rows a request; walk the rest by cursor.
+  const { nodes: requests, loadingMore: loadingMoreRequests } =
+    useAllConnectionPages<RequestsQueryType, UpcomingRequestRow>(
+      RequestsQuery,
+      {
+        first: 500,
+        filters: {
+          ...(tenantId ? { tenantId } : {}),
+          startDate: addDaysIso(today, -1),
+          endDate: addDaysIso(end, 1),
+        },
       },
-    },
-    { fetchPolicy: "store-or-network" },
-  );
+      (response) => response.requests,
+    );
+  const loadingMore = loadingMoreEvents || loadingMoreRequests;
 
   const rows: UpcomingRow[] = useMemo(() => {
     const out: UpcomingRow[] = [];
@@ -108,10 +116,6 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
     //    been promoted to events yet. Avoid duplicates by checking the
     //    event.uuid set we already added.
     const seenEventUuids = new Set(out.map((r) => r.uuid));
-    const requests =
-      requestsData?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     for (const r of requests) {
       // Request times are venue wall-clock strings: read the day off them.
       const day = venueDayOf(r);
@@ -140,7 +144,7 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
     return out.sort(
       (a, b) => a.date.localeCompare(b.date) || a.sortAt.localeCompare(b.sortAt),
     );
-  }, [events, requestsData, today, end]);
+  }, [events, requests, today, end]);
 
   return (
     <>

@@ -51,8 +51,16 @@ type DonorOption = {
   fieldCount: number;
 };
 
-type PreviewField = { name: string; type: string; required: boolean; options: string[] };
+type PreviewField = {
+  name: string;
+  type: string;
+  required: boolean;
+  options: string[];
+  fromCatalog: boolean;
+};
 type PreviewSection = { name: string; fields: PreviewField[] };
+type PreviewProductField = { name: string; options: string[]; donorOptions: string[] };
+type PreviewSwapChange = { kind: string; field: string; before: string; after: string };
 type LaunchPreview = {
   slug: string;
   existingTenant: { name: string } | null;
@@ -64,6 +72,9 @@ type LaunchPreview = {
   locationMode: string;
   catalogCount: number;
   errors: string[];
+  productFields: PreviewProductField[];
+  swapChanges: PreviewSwapChange[];
+  warnings: string[];
 };
 
 type LaunchResult = {
@@ -205,8 +216,11 @@ export default function SparkNewClient() {
             preview {
               slug existingTenant { name } existingCheckinCode checkinUrl
               sparkFormUrl locationMode catalogCount errors
-              sections { name fields { name type required options } }
+              sections { name fields { name type required options fromCatalog } }
               photoBuckets { name helper min }
+              productFields { name options donorOptions }
+              swapChanges { kind field before after }
+              warnings
             }
           }
         }`,
@@ -303,7 +317,8 @@ export default function SparkNewClient() {
         sparkFormUrl: result.sparkFormUrl ?? `https://client.igniteproductions.co/spark-form/${draft.slug.trim().toLowerCase()}`,
         tenantName: result.tenant.name,
       });
-      showAlert(`${result.tenant.name} is live.${inviteNote}`, result.warnings.length ? "warning" : "success");
+      const warningNote = result.warnings.length ? ` ${result.warnings.join(" ")}` : "";
+      showAlert(`${result.tenant.name} is live.${inviteNote}${warningNote}`, result.warnings.length ? "warning" : "success");
     } catch (err) {
       showAlert(`Couldn't launch ${draft.name}: ${(err as Error).message}`, "error");
     } finally {
@@ -445,7 +460,9 @@ export default function SparkNewClient() {
                 <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                   Pick a donor tenant&apos;s recap form. Fields, photo buckets, and
                   location mode are cloned onto the new tenant — the donor is
-                  never changed. Products Sampled pills read the new catalog.
+                  never changed. Products Sampled (and any other product picker)
+                  is filled from the new catalog, never the donor&apos;s products.
+                  Label swaps also apply to choice options.
                 </p>
                 <div>
                   <label className="label-mini block mb-1.5">Donor template</label>
@@ -548,12 +565,63 @@ export default function SparkNewClient() {
                     <p>Request form: {preview.sparkFormUrl}</p>
                     <p>Location mode: {preview.locationMode || "—"} · Catalog rows: {preview.catalogCount}</p>
                     <p>Photo buckets: {preview.photoBuckets.map((b) => b.name).join(", ") || "—"}</p>
+                    {preview.warnings.length > 0 && (
+                      <ul className="space-y-1" style={{ color: "#ef5a2a" }}>
+                        {preview.warnings.map((w) => (
+                          <li key={w}>{w}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {preview.productFields.map((pf) => (
+                      <div key={pf.name} className="rounded-xl p-4" style={{ border: "1px solid var(--spark-border)" }}>
+                        <p className="font-semibold">
+                          {pf.name}: {pf.options.length} option{pf.options.length === 1 ? "" : "s"} from the new catalog
+                        </p>
+                        {pf.options.length ? (
+                          <ul className="mt-2 space-y-1" style={{ color: "var(--spark-text-secondary)" }}>
+                            {pf.options.map((opt) => (
+                              <li key={opt}>{opt}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-2" style={{ color: "#ef5a2a" }}>
+                            No products yet. Options will be empty until the catalog is added.
+                          </p>
+                        )}
+                        {pf.donorOptions.length > 0 && (
+                          <p className="mt-2 text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                            Replaces the donor&apos;s {pf.donorOptions.length} option{pf.donorOptions.length === 1 ? "" : "s"}: {pf.donorOptions.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                    {preview.swapChanges.length > 0 && (
+                      <div className="rounded-xl p-4" style={{ border: "1px solid var(--spark-border)" }}>
+                        <p className="font-semibold">Label swaps</p>
+                        <ul className="mt-2 space-y-1" style={{ color: "var(--spark-text-secondary)" }}>
+                          {preview.swapChanges.map((c) => (
+                            <li key={`${c.kind}:${c.field}:${c.before}`}>
+                              {c.kind === "option" ? `Option in ${c.field}: ` : c.kind === "template" ? "Form name: " : "Field: "}
+                              {c.before} → {c.after}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {preview.sections.map((section) => (
                       <div key={section.name} className="rounded-xl p-4" style={{ border: "1px solid var(--spark-border)" }}>
                         <p className="font-semibold">{section.name}</p>
                         <ul className="mt-2 space-y-1" style={{ color: "var(--spark-text-secondary)" }}>
                           {section.fields.map((f) => (
-                            <li key={f.name}>{f.name} <span className="mono text-[10px]">[{f.type}]{f.required ? " *" : ""}</span></li>
+                            <li key={f.name}>
+                              {f.name} <span className="mono text-xs">[{f.type}]{f.required ? " *" : ""}</span>
+                              {!f.fromCatalog && f.options.length > 0 && (
+                                <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}> · {f.options.join(", ")}</span>
+                              )}
+                              {f.fromCatalog && (
+                                <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}> · new catalog</span>
+                              )}
+                            </li>
                           ))}
                         </ul>
                       </div>

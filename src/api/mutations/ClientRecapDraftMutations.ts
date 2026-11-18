@@ -20,7 +20,10 @@ export const CreateClientRecapDraftMutation = graphql`
   }
 `;
 
-/** Save staff edits: title, summary, takeaways and which photos are used. */
+/**
+ * Save staff edits: title, summary, takeaways, which photos are used, the
+ * next steps, the quotes taken out and the no-product visits counted back in.
+ */
 export const UpdateClientRecapDraftMutation = graphql`
   mutation ClientRecapDraftMutationsUpdateMutation(
     $uuid: String!
@@ -28,6 +31,9 @@ export const UpdateClientRecapDraftMutation = graphql`
     $summary: String
     $takeaways: [String!]
     $photoIds: [ID!]
+    $nextSteps: [String!]
+    $hiddenQuotes: [String!]
+    $keptVisits: [String!]
   ) {
     updateClientRecapDraft(
       uuid: $uuid
@@ -35,6 +41,9 @@ export const UpdateClientRecapDraftMutation = graphql`
       summary: $summary
       takeaways: $takeaways
       photoIds: $photoIds
+      nextSteps: $nextSteps
+      hiddenQuotes: $hiddenQuotes
+      keptVisits: $keptVisits
     ) {
       ok
       reason
@@ -55,6 +64,24 @@ export const UpdateClientRecapDraftMutation = graphql`
           isPick
         }
         updatedAt
+      }
+    }
+  }
+`;
+
+/**
+ * "ready" shares the deck with the brand's users (it shows under their
+ * reports; nothing is emailed). "draft" takes it back. Staff only.
+ */
+export const SetClientRecapDeckStatusMutation = graphql`
+  mutation ClientRecapDraftMutationsStatusMutation($uuid: String!, $status: String!) {
+    setClientRecapDeckStatus(uuid: $uuid, status: $status) {
+      ok
+      reason
+      draft {
+        uuid
+        status
+        readyAt
       }
     }
   }

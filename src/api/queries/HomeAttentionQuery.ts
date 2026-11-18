@@ -5,8 +5,12 @@ import { graphql } from "react-relay";
  * every admin page — the sidebar badges use SidebarCountsQuery scalars.
  */
 export const HomeAttentionQuery = graphql`
-  query HomeAttentionQuery($first: Int, $filters: RequestFiltersInput) {
-    requests(first: $first, filters: $filters) {
+  query HomeAttentionQuery(
+    $first: Int
+    $after: String
+    $filters: RequestFiltersInput
+  ) {
+    requests(first: $first, after: $after, filters: $filters) {
       edges {
         node {
           id
@@ -18,6 +22,10 @@ export const HomeAttentionQuery = graphql`
             name
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }

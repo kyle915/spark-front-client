@@ -5512,6 +5512,11 @@ input MoveCustomFieldToSectionInput {
 }
 
 type Mutation {
+  """
+  Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
+  stop working at once.
+  """
+  revokeAiConnection(id: ID!): RevokeAiConnectionResult!
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
@@ -5532,6 +5537,7 @@ type Mutation {
   approvePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
   markPayrollPaid(input: ApprovePayrollInput!): PayrollActionResponse!
   unapprovePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
+  markHoursFlagReviewed(input: MarkHoursFlagReviewedInput!): HoursFlagReviewResponse!
   sendEventConfirmation(input: SendEventConfirmationInput!): SendEventConfirmationResponse!
   cancelEventConfirmationReminders(uuid: ID!, clientMutationId: ID = null): SendEventConfirmationResponse!
   createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
@@ -5622,6 +5628,11 @@ type Mutation {
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
+  publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
+  generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
+  askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
+  clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
   saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
@@ -5652,7 +5663,8 @@ type Mutation {
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
   setRecapPhotoPick(fileId: ID!, choice: String!): RecapPhotoPicksResult!
   createClientRecapDraft(tenantId: ID!, startDate: String!, endDate: String!): ClientRecapDraftResult!
-  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null): ClientRecapDraftResult!
+  updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null, nextSteps: [String!] = null, hiddenQuotes: [String!] = null, keptVisits: [String!] = null): ClientRecapDraftResult!
+  setClientRecapDeckStatus(uuid: String!, status: String!): ClientRecapDraftResult!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
@@ -5866,6 +5878,9 @@ type Mutation {
   updateClockLink(input: UpdateClockLinkInput!): ClockLinkResponse!
   syncClockSheet(input: ClockLinkIdInput!): ClockLinkResponse!
   setBaProductNotes(tenantId: ID!, notes: String!): BaProductQa!
+  setBaBrandWebsite(tenantId: ID!, url: String!): BaProductQa!
+  refreshBaProductSources(tenantId: ID!, scope: String! = "all"): BaProductQa!
+  setBaProductSourceExcluded(tenantId: ID!, sourceId: ID!, excluded: Boolean!): BaProductQa!
   deleteClockSession(input: DeleteClockSessionInput!): ClockActionResponse!
   cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
 }
@@ -6104,6 +6119,79 @@ type PayrollTimesheet {
   totalHours: Float!
   totalEstimatedPay: Float
   flaggedRows: Int!
+}
+
+type HoursCheckFlag {
+  code: String!
+  title: String!
+  severity: String!
+  summary: String!
+  action: String!
+  facts: [HoursFlagFact!]!
+  usesLocation: Boolean!
+  aiReason: String
+  reviewed: Boolean!
+  staleReview: Boolean!
+  reviewedBy: String
+  reviewedAt: String
+  reviewNote: String
+}
+
+type HoursCheckReport {
+  startDate: String!
+  endDate: String!
+  totalShifts: Int!
+  flaggedShifts: Int!
+  needsLookShifts: Int!
+  byRule: [HoursRuleCount!]!
+  thresholds: [HoursThreshold!]!
+  shifts: [HoursCheckShift!]!
+}
+
+type HoursCheckShift {
+  eventUuid: String!
+  eventName: String!
+  ambassadorUuid: String!
+  ambassadorName: String!
+  date: String
+  needsLook: Boolean!
+  flags: [HoursCheckFlag!]!
+}
+
+type HoursFlagFact {
+  label: String!
+  value: String!
+}
+
+type HoursFlagReviewResponse {
+  success: Boolean!
+  message: String!
+  reviewedBy: String
+  reviewedAt: String
+  clientMutationId: ID
+}
+
+type HoursRuleCount {
+  code: String!
+  title: String!
+  severity: String!
+  count: Int!
+  unreviewed: Int!
+}
+
+type HoursThreshold {
+  key: String!
+  value: Float!
+}
+
+input MarkHoursFlagReviewedInput {
+  tenantId: ID!
+  eventUuid: String!
+  ambassadorUuid: String!
+  code: String!
+  note: String = null
+  undo: Boolean! = false
+  clientMutationId: ID = null
 }
 
 type PayrollShiftRow {
@@ -6400,6 +6488,8 @@ type QuarterOption {
 }
 
 type Query {
+  """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
+  myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6436,11 +6526,24 @@ type Query {
   tenantStoreLinks(tenantId: ID!): [StoreLink!]!
   monthHighlight(tenantId: ID!, month: String!): MonthHighlight
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
+
+  """
+  Search a brand's recap photos. Structured filters plus free text over each photo's caption, tags, products, store, city and state.
+  Never a receipt; brand users see their own approved recaps only.
+  Sorted by relevance (with text) or quality. At most 120 a page.
+  """
+  photoLibrary(tenantId: ID!, filters: PhotoLibraryFilterInput = null, first: Int! = 60, offset: Int! = 0): PhotoLibraryPage!
+
+  """
+  Typed words → photo library filters, for the search box. Without the model the words are searched as typed (`ok` false, with a reason).
+  """
+  interpretPhotoSearch(tenantId: ID!, text: String!): PhotoSearchInterpretation!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantBoothDayCounting(tenantId: ID!): Boolean!
   programShareLink(tenantId: ID = null): ProgramShareLink!
   myNotificationPreferences: [NotificationPreferenceItem!]!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
+  payrollHoursCheck(startDate: String!, endDate: String!, tenantId: ID!, explain: Boolean! = false): HoursCheckReport!
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
   activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
@@ -6540,10 +6643,14 @@ type Query {
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
   tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
   tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
+  tenantMentionTrends(tenantId: ID!, endDate: String = null, months: Int = null): TenantMentionTrends!
   recapShelfReadings(recapId: ID!): RecapShelfReadings!
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
+  tenantStoreInsights(tenantId: ID!): TenantStoreInsights
+  brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
+  brandInsightReview: [BrandInsightReviewBrand!]
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
@@ -6553,6 +6660,8 @@ type Query {
   clientRecapDraft(uuid: String!): ClientRecapDraftResult!
   clientRecapDrafts(tenantId: ID!, first: Int! = 20): [ClientRecapDraftSummary!]!
   clientRecapDraftPdf(uuid: String!): ClientRecapDraftPdf!
+  clientRecapDecks(tenantId: ID!, first: Int! = 20): [ClientRecapDeckSummary!]!
+  clientRecapDeckPdf(uuid: String!): ClientRecapDraftPdf!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
@@ -7370,6 +7479,22 @@ type ClientRecapDraftPhoto {
   isPick: Boolean!
 }
 
+type ClientRecapVisit {
+  key: String!
+  day: String!
+  store: String!
+  state: String!
+  reason: String!
+  label: String!
+  evidence: String!
+  kept: Boolean!
+}
+
+type ClientRecapQuoteChoice {
+  text: String!
+  hidden: Boolean!
+}
+
 type ClientRecapDraftType {
   uuid: String!
   tenantId: String!
@@ -7389,6 +7514,17 @@ type ClientRecapDraftType {
   photos: [ClientRecapDraftPhoto!]!
   createdAt: String!
   updatedAt: String!
+  status: String!
+  canEdit: Boolean!
+  buildNote: String!
+  readyAt: String!
+  nextSteps: [String!]!
+  deckNumbers: [ClientRecapNumber!]!
+  noProductNote: String!
+  leftOutVisits: [ClientRecapVisit!]!
+  visitsToCheck: [ClientRecapVisit!]!
+  leftOutCount: Int!
+  quoteChoices: [ClientRecapQuoteChoice!]!
 }
 
 type ClientRecapDraftResult {
@@ -7403,6 +7539,14 @@ type ClientRecapDraftSummary {
   title: String!
   period: String!
   updatedAt: String!
+}
+
+type ClientRecapDeckSummary {
+  uuid: String!
+  tenantName: String!
+  title: String!
+  period: String!
+  readyAt: String!
 }
 
 type ClientRecapDraftPdf {
@@ -8413,6 +8557,90 @@ type PhotoGalleryPage {
   states: [String!]!
 }
 
+input PhotoLibraryFilterInput {
+  text: String = null
+  shows: [String!] = null
+  crowdSizes: [String!] = null
+  settings: [String!] = null
+  productIds: [String!] = null
+  store: String = null
+  states: [String!] = null
+  startDate: String = null
+  endDate: String = null
+  minQuality: Int = null
+  peoplePresent: Boolean = null
+  hideIssues: Boolean! = false
+  approvedOnly: Boolean! = true
+  picksOnly: Boolean! = false
+  sort: String = null
+}
+
+type PhotoLibraryOption {
+  key: String!
+  label: String!
+}
+
+type LibraryPhoto {
+  id: String!
+  url: String!
+  caption: String!
+  category: String!
+  shows: [String!]!
+  showLabels: [String!]!
+  crowdSize: String!
+  crowdLabel: String!
+  setting: String!
+  settingLabel: String!
+  peoplePresent: Boolean
+  qualityScore: Int
+  issues: [String!]!
+  products: [String!]!
+  store: String!
+  city: String!
+  state: String!
+  eventDate: String!
+  recapUuid: String!
+  isPick: Boolean!
+  approved: Boolean!
+  tagged: Boolean!
+}
+
+type PhotoLibraryPage {
+  total: Int!
+  inScope: Int!
+  tagged: Int!
+  photos: [LibraryPhoto!]!
+  states: [String!]!
+  products: [PhotoLibraryOption!]!
+  showOptions: [PhotoLibraryOption!]!
+  crowdOptions: [PhotoLibraryOption!]!
+  settingOptions: [PhotoLibraryOption!]!
+  approvedOnly: Boolean!
+}
+
+type PhotoLibraryFilters {
+  text: String!
+  shows: [String!]!
+  crowdSizes: [String!]!
+  settings: [String!]!
+  productIds: [String!]!
+  store: String!
+  states: [String!]!
+  startDate: String
+  endDate: String
+  minQuality: Int
+  peoplePresent: Boolean
+  hideIssues: Boolean!
+  sort: String!
+}
+
+type PhotoSearchInterpretation {
+  ok: Boolean!
+  reason: String!
+  filters: PhotoLibraryFilters!
+  chips: [String!]!
+}
+
 type EfficiencyRow {
   label: String!
   recaps: Int!
@@ -8500,6 +8728,35 @@ type ProductRegionState {
   spokenPositive: Int!
   spokenNegative: Int!
   spokenRecaps: Int!
+}
+
+type TenantMentionTrends {
+  status: String!
+  months: [String!]!
+  recapCounts: [Int!]!
+  compareMonth: String
+  priorMonth: String
+  minMonthRecaps: Int!
+  minTrendMentions: Int!
+  themes: [MentionSeries!]!
+  brands: [MentionSeries!]!
+  otherCount: Int!
+  headlines: [String!]!
+  taggedAt: String
+}
+
+type MentionSeries {
+  key: String!
+  label: String!
+  polarity: String!
+  counts: [Int!]!
+  total: Int!
+  current: Int!
+  previous: Int!
+  currentShare: Int!
+  previousShare: Int!
+  direction: String!
+  quote: String!
 }
 
 type TenantProductRegions {
@@ -8595,6 +8852,130 @@ type CalloutLink {
   state: String
   startDate: String
   endDate: String
+}
+
+type StoreInsight {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  periodStart: String!
+  periodEnd: String!
+  isDraft: Boolean!
+}
+
+type TenantStoreInsights {
+  recommendations: [StoreInsight!]!
+  alerts: [StoreInsight!]!
+}
+
+type BrandChatClearResult {
+  ok: Boolean!
+  reason: String
+  cleared: Int!
+}
+
+type BrandChatLink {
+  label: String!
+  url: String!
+}
+
+type BrandChatReply {
+  ok: Boolean!
+  reason: String
+  conversationId: ID
+  turn: BrandChatTurnType
+  questionsLeftThisHour: Int!
+}
+
+type BrandChatSource {
+  tool: String!
+  label: String!
+  detail: String!
+  link: String!
+  linkLabel: String!
+}
+
+type BrandChatTurnType {
+  id: ID!
+  conversationId: ID!
+  question: String!
+  answer: String!
+  status: String!
+  sources: [BrandChatSource!]!
+  links: [BrandChatLink!]!
+  createdAt: String!
+}
+
+type BrandChatView {
+  ok: Boolean!
+  reason: String
+  brandName: String!
+  conversationId: ID
+  turns: [BrandChatTurnType!]!
+  suggestions: [String!]!
+  questionsPerHour: Int!
+  questionsLeftThisHour: Int!
+}
+
+type BrandInsightReviewItem {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  template: String!
+  factsText: String!
+  source: String!
+  status: String!
+  periodStart: String!
+  periodEnd: String!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
+}
+
+type BrandInsightReviewBrand {
+  tenantId: ID!
+  tenantName: String!
+  drafts: Int!
+  items: [BrandInsightReviewItem!]!
+}
+
+type BrandInsightResult {
+  ok: Boolean!
+  reason: String
+  item: BrandInsightReviewItem
+}
+
+type BrandInsightBatchResult {
+  ok: Boolean!
+  reason: String
+  count: Int!
+}
+
+type AiConnection {
+  id: ID!
+  appName: String!
+  brandName: String!
+  userEmail: String
+  createdAt: String!
+  lastUsedAt: String
+  callsLast30Days: Int!
+}
+
+type AiConnectorInfo {
+  connectorUrl: String!
+  helpUrl: String!
+  dailyCallLimit: Int!
+  isAdminView: Boolean!
+  connections: [AiConnection!]!
+}
+
+type RevokeAiConnectionResult {
+  ok: Boolean!
+  message: String!
 }
 
 type TenantWeeklySummary {
@@ -8893,6 +9274,14 @@ type BaProductQa {
   hasMaterial: Boolean!
   aiAvailable: Boolean!
   questions: [BaProductQuestionRow!]!
+  websiteUrl: String!
+  websitePages: Int!
+  websiteProducts: Int!
+  documentCount: Int!
+  websiteRefreshedAt: String!
+  websiteRefreshMessage: String!
+  documentsRefreshedAt: String!
+  sources: [BaProductSource!]!
 }
 
 type BaProductQuestionRow {
@@ -8901,6 +9290,22 @@ type BaProductQuestionRow {
   outcome: String!
   askedAt: String!
   eventName: String!
+  source: String!
+}
+
+type BaProductSource {
+  id: ID!
+  kind: String!
+  kindLabel: String!
+  title: String!
+  url: String!
+  label: String!
+  status: String!
+  error: String!
+  excluded: Boolean!
+  chars: Int!
+  extractedAt: String!
+  checkedAt: String!
 }
 
 input SetMyReportSubscriptionInput {

@@ -121,6 +121,8 @@
 }
 .signin-foot { font-size: 13px; color: var(--si-ink-3); display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .signin-foot a { color: inherit; }
+.signin-legal { font-size: 12px; line-height: 1.5; color: var(--si-ink-3); margin: 20px 0 0; max-width: 44ch; }
+.signin-legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .signin-foot a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .signin-mark { display: block; line-height: 0; }
 .signin-mark img, .signin-wordmark { max-width: 100%; }

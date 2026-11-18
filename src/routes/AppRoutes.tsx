@@ -386,6 +386,10 @@ const SparkClientDetail = lazyDefault(
 const SparkHelp = lazyDefault(
   () => import("@/components/pages/help/SparkHelp"),
 );
+// Connect Claude / ChatGPT through the official Spark MCP connection.
+const SparkAiConnector = lazyDefault(
+  () => import("@/components/pages/ai-connector/SparkAiConnector"),
+);
 const SparkFavorites = lazyDefault(
   () => import("@/components/pages/favorites/SparkFavorites"),
 );
@@ -485,11 +489,21 @@ const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ConnectAi = lazyDefault(() => import("@/auth/ConnectAi"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
-const PrivacyPolicyView = lazyDefault(
-  () => import("@/utils/PrivacyPolicyView"),
+const PrivacyPolicyView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "PrivacyPolicyPage",
 );
-const TermsOfServiceView = lazyDefault(
-  () => import("@/utils/TermsOfServiceView"),
+const TermsOfServiceView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "TermsOfServicePage",
+);
+const AcceptableUsePolicyView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "AcceptableUsePolicyPage",
+);
+const DataProcessingView = lazyNamed(
+  () => import("@/legal/LegalPages"),
+  "DataProcessingPage",
 );
 const IndependentContractorAgreementPage = lazyDefault(
   () => import("@/utils/IndependentContractorAgreement"),
@@ -623,6 +637,16 @@ const PublicRoutes = {
     {
       path: "/terms-of-service",
       component: <TermsOfServiceView />,
+      isPublic: true,
+    },
+    {
+      path: "/acceptable-use-policy",
+      component: <AcceptableUsePolicyView />,
+      isPublic: true,
+    },
+    {
+      path: "/data-processing",
+      component: <DataProcessingView />,
       isPublic: true,
     },
   ],
@@ -1088,6 +1112,17 @@ const RequestsLinks = {
     {
       path: "/help",
       component: <SparkHelp />,
+      isPublic: false,
+    },
+    {
+      path: "/ai-connector",
+      component: <SparkAiConnector />,
+      isPublic: false,
+    },
+    {
+      // The API's OAuth metadata links brands here.
+      path: "/help/ai-connector",
+      component: <SparkAiConnector />,
       isPublic: false,
     },
     {
