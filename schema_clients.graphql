@@ -8727,6 +8727,7 @@ type BrandInsightBatchResult {
   ok: Boolean!
   reason: String
   count: Int!
+}
 
 type AiConnection {
   id: ID!
