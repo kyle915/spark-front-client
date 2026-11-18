@@ -479,6 +479,17 @@ export default function PublicJobBoard() {
                     {formError}
                   </p>
                 ) : null}
+                <p style={{ fontSize: 12, lineHeight: 1.45, color: "#57534e", margin: "14px 0 0" }}>
+                  By booking, you agree to the{" "}
+                  <a href="/terms-of-service" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy-policy" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+                    Privacy Policy
+                  </a>
+                  , and Ignite may text you about your gigs. Msg &amp; data rates may apply. Reply STOP to opt out.
+                </p>
                 <button
                   type="submit"
                   disabled={submitting}

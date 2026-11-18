@@ -5512,6 +5512,11 @@ input MoveCustomFieldToSectionInput {
 }
 
 type Mutation {
+  """
+  Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
+  stop working at once.
+  """
+  revokeAiConnection(id: ID!): RevokeAiConnectionResult!
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
@@ -6401,6 +6406,8 @@ type QuarterOption {
 }
 
 type Query {
+  """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
+  myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6541,6 +6548,7 @@ type Query {
   tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
   tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
   tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
+  tenantMentionTrends(tenantId: ID!, endDate: String = null, months: Int = null): TenantMentionTrends!
   recapShelfReadings(recapId: ID!): RecapShelfReadings!
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
@@ -8540,6 +8548,35 @@ type ProductRegionState {
   spokenRecaps: Int!
 }
 
+type TenantMentionTrends {
+  status: String!
+  months: [String!]!
+  recapCounts: [Int!]!
+  compareMonth: String
+  priorMonth: String
+  minMonthRecaps: Int!
+  minTrendMentions: Int!
+  themes: [MentionSeries!]!
+  brands: [MentionSeries!]!
+  otherCount: Int!
+  headlines: [String!]!
+  taggedAt: String
+}
+
+type MentionSeries {
+  key: String!
+  label: String!
+  polarity: String!
+  counts: [Int!]!
+  total: Int!
+  current: Int!
+  previous: Int!
+  currentShare: Int!
+  previousShare: Int!
+  direction: String!
+  quote: String!
+}
+
 type TenantProductRegions {
   status: String!
   commentsStatus: String!
@@ -8633,6 +8670,29 @@ type CalloutLink {
   state: String
   startDate: String
   endDate: String
+}
+
+type AiConnection {
+  id: ID!
+  appName: String!
+  brandName: String!
+  userEmail: String
+  createdAt: String!
+  lastUsedAt: String
+  callsLast30Days: Int!
+}
+
+type AiConnectorInfo {
+  connectorUrl: String!
+  helpUrl: String!
+  dailyCallLimit: Int!
+  isAdminView: Boolean!
+  connections: [AiConnection!]!
+}
+
+type RevokeAiConnectionResult {
+  ok: Boolean!
+  message: String!
 }
 
 type TenantWeeklySummary {

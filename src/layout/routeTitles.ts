@@ -12,6 +12,8 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/client-dashboard": { parent: "Spark", title: "Dashboard" },
   "/today": { parent: "Today", title: "Today" },
   "/upcoming": { parent: "Today", title: "Upcoming" },
+  "/ai-connector": { parent: "Workspace", title: "AI connector" },
+  "/help/ai-connector": { parent: "Workspace", title: "AI connector" },
   "/live-board": { parent: "Today", title: "On the Clock" },
   "/schedule": { parent: "Today", title: "Staffing Board" },
   "/event-confirmation": { parent: "Today", title: "Event Confirmation" },

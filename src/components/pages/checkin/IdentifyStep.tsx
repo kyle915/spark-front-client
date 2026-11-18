@@ -788,7 +788,16 @@ export default function IdentifyStep({
       <input style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone"} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       {recapOnly ? null : (
         <p style={{ fontSize: 12, lineHeight: 1.4, margin: "-2px 0 0", color: "#57534e" }}>
-          Ignite may text this number about your shift and recap. Reply STOP to opt out.
+          Ignite may text this number about your shift and recap. Msg frequency varies; msg &amp; data rates may
+          apply. Reply STOP to opt out, HELP for help. By continuing you agree to the{" "}
+          <a href="/terms-of-service#sms" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+            Terms
+          </a>{" "}
+          and{" "}
+          <a href="/privacy-policy" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+            Privacy Policy
+          </a>
+          .
         </p>
       )}
       <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
