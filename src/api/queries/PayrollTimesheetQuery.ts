@@ -16,6 +16,7 @@ export const PayrollTimesheetQuery = graphql`
         ambassadorUuid
         name
         email
+        phone
         shifts
         hours
         estimatedShifts

@@ -19,6 +19,11 @@ import { PayrollHoursCheckQuery } from "@/api/queries/PayrollHoursCheckQuery";
 import type { PayrollHoursCheckQuery as HoursCheckQueryType } from "@api/queries/__generated__/PayrollHoursCheckQuery.graphql";
 import { BaFlagChip, HoursCheckSummary } from "./HoursCheck";
 import { shiftsByAmbassador } from "./hoursCheckData";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
+import { PayrollTimesheetExportQuery } from "@/api/queries/PayrollTimesheetExportQuery";
+import type { PayrollTimesheetExportQuery as ExportQueryType } from "@api/queries/__generated__/PayrollTimesheetExportQuery.graphql";
+import { timesheetCsv } from "./timesheetCsv";
 
 /**
  * Payroll timesheet — per-BA worked hours + estimated pay for a pay period,
@@ -42,6 +47,7 @@ const ymd = (d: Date): string => {
 function downloadCsv(sheet: Sheet) {
   const header = [
     "BA",
+    "Phone",
     "Email",
     "Shifts",
     "Hours",
@@ -55,6 +61,7 @@ function downloadCsv(sheet: Sheet) {
     lines.push(
       [
         esc(r.name),
+        esc(r.phone || ""),
         esc(r.email || ""),
         String(r.shifts),
         String(r.hours),
@@ -65,7 +72,7 @@ function downloadCsv(sheet: Sheet) {
     );
   }
   lines.push(
-    [esc("TOTAL"), "", "", String(sheet.totalHours), "",
+    [esc("TOTAL"), "", "", "", String(sheet.totalHours), "",
      sheet.totalEstimatedPay == null ? "" : String(sheet.totalEstimatedPay), ""].join(","),
   );
   const blob = new Blob([lines.join("\n")], { type: "text/csv" });
@@ -73,6 +80,16 @@ function downloadCsv(sheet: Sheet) {
   const a = document.createElement("a");
   a.href = url;
   a.download = `payroll_${sheet.startDate}_to_${sheet.endDate}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function saveCsv(text: string, filename: string) {
+  const blob = new Blob([text], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -118,6 +135,26 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
   const [commitMarkPaid, paying] = useMutation<MarkPaidType>(MarkPayrollPaidMutation);
   const [commitUnapprove, unapproving] = useMutation<UnapproveType>(UnapprovePayrollHoursMutation);
   const busy = approving || paying || unapproving;
+  // Per-shift time sheet: name, phone, date, location, clock in/out, hours.
+  const [exporting, setExporting] = useState(false);
+  const downloadTimesheet = async () => {
+    setExporting(true);
+    try {
+      const res = await fetchQuery<ExportQueryType>(
+        environment,
+        PayrollTimesheetExportQuery,
+        { startDate, endDate, tenantId: tenantId || null },
+      ).toPromise();
+      saveCsv(
+        timesheetCsv(res?.payrollTimesheetExport ?? []),
+        `timesheet_${startDate}_to_${endDate}.csv`,
+      );
+    } catch {
+      showAlert("Couldn't build the time sheet. Try again.", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const runPayroll = (
     kind: "approve" | "paid" | "unapprove",
@@ -229,6 +266,15 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
           >
             ↓ Download CSV
           </button>
+          <button
+            onClick={() => void downloadTimesheet()}
+            disabled={exporting}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+            style={{ background: "transparent", color: "var(--spark-text)", border: "1px solid var(--spark-border)" }}
+            title="One line per shift: name, phone, date, location, clock in, clock out, hours"
+          >
+            {exporting ? "Building…" : "↓ Time sheet (per shift)"}
+          </button>
         </div>
       </div>
 
@@ -287,8 +333,13 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
                       <BaFlagChip shifts={flagsByBa.get(r.ambassadorUuid)} />
                     </span>
                   </p>
+                  {r.phone ? (
+                    <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                      {r.phone}
+                    </p>
+                  ) : null}
                   {r.email ? (
-                    <p className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>
+                    <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
                       {r.email}
                     </p>
                   ) : null}

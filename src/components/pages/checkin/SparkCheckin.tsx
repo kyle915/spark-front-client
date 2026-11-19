@@ -2,6 +2,14 @@ import { timedFetch } from "./timedFetch";
 import { reportFieldIssue } from "./fieldIssues";
 import CheckinStepBar from "./CheckinStepBar";
 import { checkinSteps } from "./checkinSteps";
+import TimesheetIdentify from "./TimesheetIdentify";
+import {
+  TIMESHEET_CLOCKED_IN_HINT,
+  TIMESHEET_DONE_BODY,
+  TIMESHEET_DONE_TITLE,
+  TIMESHEET_INTRO,
+  workedHours,
+} from "./timesheetOnly";
 import MyShiftsCard from "./MyShiftsCard";
 import ProductQuestionsBox from "./ProductQuestionsBox";
 import {
@@ -681,10 +689,20 @@ export default function SparkCheckin() {
               clockState: ctx.session?.clock.state,
               hasRecap,
               recapOnly: Boolean(ctx.recapOnly),
+              timesheetOnly: Boolean(ctx.timesheetOnly),
             })}
           />
         )}
-        {!identified ? (
+        {!identified && ctx.timesheetOnly && !ctx.recapOnly ? (
+          <TimesheetIdentify
+            code={code}
+            accent={accent}
+            storeKey={storeKey}
+            onDone={setToken}
+            eventTypes={ctx.eventTypes || []}
+            programPickerTitle={ctx.programPickerTitle || ""}
+          />
+        ) : !identified ? (
           <IdentifyStep
             code={code}
             accent={accent}
@@ -743,7 +761,11 @@ function Header({ ctx }: { ctx: Context }) {
     return (
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>Start your shift</h1>
-        <div style={{ color: "#44403c", fontSize: 13, opacity: 1 }}>Clock in, work, then file your recap — all from this page.</div>
+        <div style={{ color: "#44403c", fontSize: 13, opacity: 1 }}>
+          {ctx.timesheetOnly
+            ? TIMESHEET_INTRO
+            : "Clock in, work, then file your recap — all from this page."}
+        </div>
       </div>
     );
   }
@@ -802,9 +824,12 @@ function CheckedInFlow({
   onPriorRecapOpen: (open: boolean) => void;
 }) {
   const today = todayISO();
+  // Time-sheet-only: a clock with no recap. Every recap path below is off.
+  const ts = Boolean(ctx.timesheetOnly) && !ctx.recapOnly;
   // Prior calendar day restored from an earlier visit: the gate is the page
   // until they open that recap. A date picked on this visit is not leftover.
   const leftover =
+    !ts &&
     ctx.mode === "tenant" &&
     showNewDayGate({
       eventDate: ctx.event?.date,
@@ -827,7 +852,7 @@ function CheckedInFlow({
   // — jumping straight to RecapForm used to 400 with needs_payable_mileage.
   // Past-day sessions also skip the clock UI and open the recap directly.
   const bootRecapOnly = Boolean(ctx.recapOnly) && !hasRecap && !leftover;
-  const bootPastRecap = pastDay && !hasRecap && !leftover;
+  const bootPastRecap = !ts && pastDay && !hasRecap && !leftover;
   const bootNeedMiles =
     (bootRecapOnly || bootPastRecap) &&
     shouldCollectPayableMileage({
@@ -924,7 +949,7 @@ function CheckedInFlow({
     if (showRecap || showMileageStep) return;
     // A restored prior-day shift must not reopen yesterday's report. The gate leads.
     // A date picked this visit is not that case — its recap should reopen.
-    if (leftover) return;
+    if (leftover || ts) return;
     const open = readOpenRecap(code, token);
     if (open === "existing" || (open === "new" && ctx.recapOnly)) openRecap(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1733,6 +1758,46 @@ function CheckedInFlow({
     );
   }
 
+  if (ts && effectiveClock === "clocked_out") {
+    const outAt = ctx.session?.clock.clockOutAt ?? queuedClockOut?.clockedOutAt ?? null;
+    const hours = workedHours(clockInAt, outAt);
+    return (
+      <div style={{ ...card, textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 6 }} aria-hidden>
+          ✓
+        </div>
+        <h2 style={{ ...h2, marginBottom: 6 }}>{TIMESHEET_DONE_TITLE}</h2>
+        <p style={{ color: "#44403c", fontSize: 14, opacity: 1 }}>
+          {queuedClockOut ? offlineClockOutBanner(queuedClockOut.clockedOutAt) : TIMESHEET_DONE_BODY}
+        </p>
+        {ctx.event?.date ? (
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 8 }}>
+            {fmtDay(ctx.event.date)}
+            {ctx.event.address ? ` · ${ctx.event.address}` : ""}
+          </p>
+        ) : null}
+        {clockInAt ? (
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 4 }}>
+            In {fmtTime(clockInAt)}
+            {outAt ? ` · Out ${fmtTime(outAt)}` : ""}
+            {hours != null ? ` · ${hours} hr${hours === 1 ? "" : "s"}` : ""}
+          </p>
+        ) : null}
+        {ctx.mode === "tenant" ? (
+          <button
+            type="button"
+            onClick={() => requestStartAnother()}
+            style={{ ...secondaryBtn, marginTop: 18, width: "100%" }}
+          >
+            Start another shift
+          </button>
+        ) : null}
+        {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
+        {switchNotice}
+      </div>
+    );
+  }
+
   if (hasRecap && clockState !== "clocked_in" && !leftover) {
     return (
       <div style={{ ...card, textAlign: "center" }}>
@@ -1866,6 +1931,29 @@ function CheckedInFlow({
       compact
         ? { ...base, flex: 1, minHeight: 44, padding: "10px 12px", fontSize: 14 }
         : base;
+    if (ts) {
+      return (
+        <>
+          {effectiveClock === "not_started" && !pastDay ? (
+            <ActionMorphButton
+              style={fit(primaryBtn(accent))}
+              disabled={busy !== ""}
+              onClick={() => clock("in")}
+              phase={inPhase}
+              pendingLabel="Clocking in…"
+              successLabel="Clocked in"
+            >
+              Clock in
+            </ActionMorphButton>
+          ) : null}
+          {effectiveClock === "clocked_in" ? (
+            <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("out")}>
+              {busy === "out" ? "Clocking out…" : "Clock out"}
+            </button>
+          ) : null}
+        </>
+      );
+    }
     return (
       <>
           {effectiveClock === "not_started" && !leftover && pastDay ? (
@@ -1994,7 +2082,9 @@ function CheckedInFlow({
               <div style={{ color: "#44403c", fontSize: 13, marginTop: 2 }}>
                 {queuedClock
                   ? "Saved on this phone. It will send when you're back online."
-                  : hasRecap
+                  : ts
+                    ? TIMESHEET_CLOCKED_IN_HINT
+                    : hasRecap
                     ? "Your hours are running. Clock out when you finish."
                     : "Your hours are running. Your recap is still open."}
               </div>
@@ -2191,7 +2281,7 @@ function CheckedInFlow({
       </div>
 
       {/* "What's in this?" at the table: answers from the brand's own notes. */}
-      {!leftover ? (
+      {!leftover && !ts ? (
         <ProductQuestionsBox
           origin={apiOrigin()}
           code={code}
@@ -2364,7 +2454,7 @@ function CheckedInFlow({
           {pastDay ? PAST_DAY_NO_CLOCK : "Clock in when you arrive to start your shift."}
         </p>
       ) : null}
-      {effectiveClock === "clocked_in" && !hasRecap ? (
+      {effectiveClock === "clocked_in" && !hasRecap && !ts ? (
         <p style={{ color: "#44403c", fontSize: 13, opacity: 1, textAlign: "center" }}>
           {draftWaiting
             ? "Next: continue your recap. Answers stay on this phone — reopen this check-in link if you leave."
