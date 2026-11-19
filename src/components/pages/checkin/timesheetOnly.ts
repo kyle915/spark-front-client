@@ -46,6 +46,10 @@ export function timesheetIdentifyBody(v: TimesheetIdentifyInput): Record<string,
     phone: v.phone.trim(),
     eventDate: v.today,
     address: v.location.trim(),
+    // The page is always dated today and shows that date above Continue, so
+    // tapping Continue is the "my shift is today" confirmation the server asks
+    // for before it opens a new walk-in shift (CHECKIN_REQUIRE_SHIFT_TODAY).
+    shiftIsToday: true,
     ...(v.needsProgram && v.eventTypeId ? { eventTypeId: v.eventTypeId } : {}),
   };
 }

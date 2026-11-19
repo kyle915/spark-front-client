@@ -29,6 +29,7 @@ describe("timesheet-only identify", () => {
       phone: "(555) 010-0142",
       eventDate: "2026-11-19",
       address: "100 Example Ave, Springfield, IL",
+      shiftIsToday: true,
     });
     expect(body).not.toHaveProperty("storeName");
     expect(timesheetIdentifyBody({ ...base, needsProgram: true, eventTypeId: "4" })).toMatchObject({
