@@ -75,6 +75,16 @@ import {
 } from "./checkinSession";
 import PlanGigPicker from "./PlanGigPicker";
 import {
+  SHIFT_LATER_BACK,
+  SHIFT_LATER_BODY,
+  SHIFT_LATER_TITLE,
+  SHIFT_TODAY_HINT,
+  SHIFT_TODAY_NO,
+  SHIFT_TODAY_YES,
+  needsShiftTodayConfirm,
+  shiftTodayQuestion,
+} from "./shiftTodayConfirm";
+import {
   PLAN_GIG_MISSING_ERROR,
   PLAN_GIG_NONE,
   fetchPlanGigs,
@@ -188,6 +198,30 @@ function CheckinStoreSuggestions({
   );
 }
 
+// "Is your shift today?" panel — same quiet bordered box as the store
+// distance check, in neutral stone rather than warning orange: it's a
+// question, not a problem.
+const shiftAskBox = {
+  marginTop: 12,
+  padding: "14px 14px 14px",
+  borderRadius: 12,
+  border: "1px solid rgba(0,0,0,0.15)",
+  background: "#faf7f1",
+} as const;
+const shiftAskTitle = {
+  margin: 0,
+  fontSize: 16,
+  fontWeight: 700,
+  color: "#1c1917",
+  lineHeight: 1.35,
+} as const;
+const shiftAskBody = {
+  margin: "6px 0 0",
+  fontSize: 14,
+  color: "#44403c",
+  lineHeight: 1.45,
+} as const;
+
 // ── Step 1: identify ────────────────────────────────────────────────────────
 export default function IdentifyStep({
   code,
@@ -285,6 +319,17 @@ export default function IdentifyStep({
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /**
+   * The API said this check-in would open a new event and asked "Is your
+   * shift today?". Holds the day asked about and the tap that got us here,
+   * so "Yes" can send the same check-in again with the answer.
+   */
+  const [shiftDayAsk, setShiftDayAsk] = useState<{
+    date: string;
+    overrides?: { eventDate?: string; address?: string; market?: string };
+  } | null>(null);
+  /** The BA said the shift is another day: nothing was created. */
+  const [shiftLater, setShiftLater] = useState(false);
   const [locating, setLocating] = useState(false);
   /** GPS from "Use my current location" — required for proximity confirm. */
   const [gpsFix, setGpsFix] = useState<LatLng | null>(null);
@@ -554,8 +599,13 @@ export default function IdentifyStep({
     onDone(json.sessionToken);
   };
 
-  const submit = async (overrides?: { eventDate?: string; address?: string; market?: string }) => {
+  const submit = async (
+    overrides?: { eventDate?: string; address?: string; market?: string },
+    opts?: { shiftIsToday?: boolean },
+  ) => {
     setErr(null);
+    setShiftDayAsk(null);
+    setShiftLater(false);
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!recapOnly && !phone.trim()) return setErr("Enter a phone number.");
     const today = todayISO();
@@ -666,6 +716,8 @@ export default function IdentifyStep({
           phone,
           email,
           eventDate: date,
+          // Only after the BA answered "Yes, I'm working now".
+          ...(opts?.shiftIsToday ? { shiftIsToday: true } : {}),
           ...(hasPrograms ? { eventTypeId } : {}),
           ...(onGig
             ? { planEventId: onGig.id }
@@ -696,6 +748,15 @@ export default function IdentifyStep({
         body: JSON.stringify(identifyBody),
       });
       const json = await res.json();
+      if (needsShiftTodayConfirm(res.status, json)) {
+        // Nothing was created. Ask, then send again with the answer.
+        setShiftDayAsk({
+          date: String(json.shiftDate || date || todayISO()),
+          overrides,
+        });
+        setBusy(false);
+        return;
+      }
       if (!res.ok || !json.sessionToken) {
         setErr(json.message || "Couldn't start your check-in.");
         setBusy(false);
@@ -1254,7 +1315,56 @@ export default function IdentifyStep({
       ) : null}
 
       {err ? <p style={errText}>{err}</p> : null}
-      {openShift ? null : (
+      {shiftDayAsk ? (
+        <div
+          role="alertdialog"
+          aria-labelledby="shift-today-title"
+          aria-describedby="shift-today-hint"
+          style={shiftAskBox}
+        >
+          <p id="shift-today-title" style={shiftAskTitle}>
+            {shiftTodayQuestion(shiftDayAsk.date, todayISO())}
+          </p>
+          <p id="shift-today-hint" style={shiftAskBody}>
+            {SHIFT_TODAY_HINT}
+          </p>
+          <button
+            type="button"
+            style={{ ...primaryBtn(accent), width: "100%", flex: "none", marginTop: 12 }}
+            disabled={busy}
+            onClick={() => void submit(shiftDayAsk.overrides, { shiftIsToday: true })}
+          >
+            {busy ? "Starting…" : SHIFT_TODAY_YES}
+          </button>
+          <button
+            type="button"
+            style={{ ...secondaryBtn, width: "100%", flex: "none", marginTop: 8, minHeight: 48 }}
+            disabled={busy}
+            onClick={() => {
+              setShiftDayAsk(null);
+              setShiftLater(true);
+            }}
+          >
+            {SHIFT_TODAY_NO}
+          </button>
+        </div>
+      ) : null}
+      {shiftLater ? (
+        <div role="status" aria-labelledby="shift-later-title" style={shiftAskBox}>
+          <p id="shift-later-title" style={shiftAskTitle}>
+            {SHIFT_LATER_TITLE}
+          </p>
+          <p style={shiftAskBody}>{SHIFT_LATER_BODY}</p>
+          <button
+            type="button"
+            style={{ ...secondaryBtn, width: "100%", flex: "none", marginTop: 12, minHeight: 48 }}
+            onClick={() => setShiftLater(false)}
+          >
+            {SHIFT_LATER_BACK}
+          </button>
+        </div>
+      ) : null}
+      {openShift || shiftDayAsk || shiftLater ? null : (
         <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
           {identifySubmitLabel({
             busy,
@@ -1267,7 +1377,7 @@ export default function IdentifyStep({
       {/* Standing tenant links (date pickable): discoverable past-day path that
           skips hours / clock-in after identify. Hidden once that path is on,
           and on per-event codes that have no date picker. */}
-      {!pastRecap && !openShift && needsEventDetails ? (
+      {!pastRecap && !openShift && !shiftDayAsk && !shiftLater && needsEventDetails ? (
         <button
           type="button"
           style={{
