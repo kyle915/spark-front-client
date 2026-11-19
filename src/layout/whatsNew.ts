@@ -7,6 +7,16 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-19a",
+    date: "November 19, 2026",
+    title: "Walk-up links check the shift is today",
+    items: [
+      "When a BA's check-in would start a new walk-in event, the walk-up link now asks “Is your shift today?” first. If they tap No, it tells them to open the link when their shift starts, and nothing is created or clocked.",
+      "Joining an event that's already on the tracker, filing a past-day recap and recap-only links don't ask.",
+      "Short walk-in shifts, clocked in and out within 20 minutes, no longer get the “your recap isn't in yet” texts. Booked shifts still do.",
+    ],
+  },
+  {
     id: "2026-11-18s",
     date: "November 18, 2026",
     title: "Walk-up recaps land under the right store",
