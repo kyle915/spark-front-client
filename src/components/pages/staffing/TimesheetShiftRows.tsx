@@ -106,6 +106,11 @@ const Body: React.FC<Props> = ({ startDate, endDate, tenantId, ambassadorUuid, h
                 {s.tenantName ? (
                   <span style={{ color: "var(--spark-text-meta)" }}> · {s.tenantName}</span>
                 ) : null}
+                {s.address && !(s.eventName || "").includes(s.address) ? (
+                  <div className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                    Location: {s.address}
+                  </div>
+                ) : null}
               </td>
               <td className="px-2 py-2 whitespace-nowrap">
                 {fmtTime(s.clockInAt, s.timeZone)}

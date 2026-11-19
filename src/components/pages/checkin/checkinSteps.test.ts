@@ -39,4 +39,12 @@ describe("checkinSteps", () => {
     expect(s.map((x) => x.label)).toEqual(["Your info", "Recap"]);
     expect(states(s)).toBe("done,current");
   });
+  it("time-sheet-only links have no recap step", () => {
+    const s = checkinSteps({ identified: true, clockState: "clocked_in", hasRecap: false, timesheetOnly: true });
+    expect(s.map((x) => x.label)).toEqual(["Your info", "Clock in", "Clock out"]);
+    expect(states(s)).toBe("done,done,current");
+    expect(
+      states(checkinSteps({ identified: true, clockState: "clocked_out", hasRecap: false, timesheetOnly: true })),
+    ).toBe("done,done,done");
+  });
 });

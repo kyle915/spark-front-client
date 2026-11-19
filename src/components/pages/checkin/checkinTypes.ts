@@ -181,6 +181,9 @@ export type Context = {
   needsEventDetails?: boolean;
   // 3rd-party / agency URL: skip punch, go name + date + store + questions.
   recapOnly?: boolean;
+  // Time-sheet-only brand: the link is a plain time clock — name + phone,
+  // GPS location, clock in, clock out, done. No recap step at all.
+  timesheetOnly?: boolean;
   recentLocations?: StoreOption[];
   // Roaming brands (Feel Free) pick a MARKET instead of typing a store
   // address: the event is keyed on the market so a whole crew shares one, and

@@ -7,6 +7,17 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-19t",
+    date: "November 19, 2026",
+    title: "Time-sheet-only check-in links",
+    items: [
+      "A client's check-in link can now be a plain time clock. Workers enter their name and mobile number, Spark fills in their location from the phone, and they clock in and clock out. There's no recap step.",
+      "If a worker turns location off, they type the address instead. These are event locations, so the link never asks for a store name.",
+      "Nothing chases a recap for these shifts: no recap texts, and they never appear on Missing Recaps.",
+      "The Timesheet page now shows each worker's phone, and a new Time sheet (per shift) download lists name, phone, date, location, clock in, clock out and hours for every confirmed shift.",
+    ],
+  },
+  {
     id: "2026-11-19a",
     date: "November 19, 2026",
     title: "Walk-up links check the shift is today",
