@@ -1,6 +1,7 @@
 import { Environment, Network, RecordSource, Store } from "relay-runtime";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { noteLegalGate } from "@/legal/acceptance/legalGateStore";
 import {
   findGuardrailError,
   guardrailFromStatus,
@@ -64,6 +65,9 @@ async function fetchGraphQL(
   }
 
   const result = await response.json();
+
+  // Terms not accepted yet (LEGAL_ACCEPTANCE_REQUIRED): show the clickwrap.
+  noteLegalGate(result);
 
   // Check for token expiration error
   if (result.errors) {
@@ -140,7 +144,9 @@ async function fetchGraphQL(
             }
           );
 
-          return await retryResponse.json();
+          const retried = await retryResponse.json();
+          noteLegalGate(retried);
+          return retried;
         } else {
           throw new Error("Refresh failed");
         }

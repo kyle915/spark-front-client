@@ -352,6 +352,9 @@ const SparkWeeklySummaries = lazyDefault(
 const SparkSystemHealth = lazyDefault(
   () => import("@/components/pages/system-health/SparkSystemHealth"),
 );
+const SparkLegalAcceptances = lazyDefault(
+  () => import("@/components/pages/legal-acceptances/SparkLegalAcceptances"),
+);
 const SparkPendingAmbassadors = lazyDefault(
   () => import("@/components/pages/people/SparkPendingAmbassadors"),
 );
@@ -405,6 +408,9 @@ const SparkBilling = lazyDefault(
 const SparkPnl = lazyDefault(() => import("@/components/pages/pnl/SparkPnl"));
 const SparkFieldSamplingReport = lazyDefault(
   () => import("@/components/pages/field-sampling-report/SparkFieldSamplingReport"),
+);
+const SparkReceiptChecks = lazyDefault(
+  () => import("@/components/pages/receiptChecks/SparkReceiptChecks"),
 );
 const SparkReceipts = lazyDefault(
   () => import("@/components/pages/receipts/SparkReceipts"),
@@ -915,6 +921,17 @@ const RequestsLinks = {
       isPublic: false,
     },
     {
+      // Staff-only receipt spend + fraud / quality flags on recaps. Every
+      // field behind it answers only for Ignite staff.
+      path: "/receipt-checks",
+      component: (
+        <AdminOnly>
+          <SparkReceiptChecks />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
       // Walk-up self-serve clock-ins queue. Admin-only — ops confirm/reject
       // clock-ins created from an event code (no prior assignment).
       path: "/walkups",
@@ -1014,6 +1031,16 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkSystemHealth />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Staff only: who accepted the Terms, which version, when, from where.
+      path: "/legal-acceptances",
+      component: (
+        <AdminOnly>
+          <SparkLegalAcceptances />
         </AdminOnly>
       ),
       isPublic: false,

@@ -5511,7 +5511,54 @@ input MoveCustomFieldToSectionInput {
   sectionId: ID!
 }
 
+type AcceptLegalTermsResponse {
+  success: Boolean!
+  message: String!
+  code: String
+  status: LegalStatus
+}
+
+type LegalAcceptanceReport {
+  currentVersion: String!
+  totalUsers: Int!
+  acceptedCount: Int!
+  pendingCount: Int!
+  rows: [LegalAcceptanceReportRow!]!
+}
+
+type LegalAcceptanceReportRow {
+  userUuid: String!
+  email: String!
+  name: String!
+  role: String!
+  status: String!
+  acceptedVersion: String
+  acceptedAt: DateTime
+  ipAddress: String!
+  userAgent: String!
+}
+
+type LegalDocumentStatus {
+  document: String!
+  title: String!
+  path: String!
+  version: String!
+  acceptedVersion: String
+  acceptedAt: DateTime
+  needsAcceptance: Boolean!
+}
+
+type LegalStatus {
+  required: Boolean!
+  needsAcceptance: Boolean!
+  currentVersion: String!
+  isUpdate: Boolean!
+  changeSummary: String
+  documents: [LegalDocumentStatus!]!
+}
+
 type Mutation {
+  acceptLegalTerms(version: String!): AcceptLegalTermsResponse!
   """
   Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
   stop working at once.
@@ -5674,6 +5721,7 @@ type Mutation {
   setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
   exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
+  resolveRecapFlag(input: ResolveRecapFlagInput!): ResolveRecapFlagPayload!
   sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
   generateFieldSamplingCalloutSummary(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingCalloutSummary!
   register(input: ClientRegisterInput!): RegisterResponse!
@@ -6492,6 +6540,8 @@ type QuarterOption {
 }
 
 type Query {
+  myLegalStatus: LegalStatus!
+  legalAcceptanceReport(pendingOnly: Boolean! = false, search: String = null): LegalAcceptanceReport!
   """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
   myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
@@ -6659,6 +6709,9 @@ type Query {
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
+  recapReceiptAudit(recapId: ID!): RecapReceiptAudit
+  recapStaffFlags(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, kind: String = null, unresolvedOnly: Boolean! = true, first: Int! = 200): [RecapStaffFlag!]!
+  receiptSpendSummary(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, includeCsv: Boolean! = false): ReceiptSpendSummary
   recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   recapPhotoPicks(recapId: ID!): RecapPhotoPicksResult!
@@ -7378,6 +7431,104 @@ type RecapFlagExplanation {
   summary: String
   source: String!
   flagCount: Int!
+}
+
+type ReceiptLineItem {
+  name: String!
+  qty: Float
+  unitPrice: String
+  amount: String!
+  isBrand: Boolean!
+}
+
+type RecapReceiptReading {
+  id: ID!
+  fileId: ID!
+  fileUrl: String
+  status: String!
+  merchant: String!
+  storeNumber: String!
+  address: String!
+  city: String!
+  stateCode: String!
+  ticketNumber: String!
+  register: String!
+  receiptDate: String!
+  purchaseTime: String!
+  subtotal: String
+  fees: String
+  tax: String
+  total: String
+  cardLast4: String!
+  confidence: Float
+  arithmeticOk: Boolean
+  arithmeticNote: String!
+  lineItems: [ReceiptLineItem!]!
+  model: String!
+  readAt: String
+  error: String!
+  countedHere: Boolean!
+  alsoOnRecapUuids: [String!]!
+}
+
+type RecapStaffFlag {
+  id: ID!
+  recapId: ID!
+  recapUuid: String!
+  tenantId: ID!
+  tenantName: String!
+  eventName: String!
+  eventDate: String!
+  kind: String!
+  kindLabel: String!
+  severity: String!
+  explanation: String!
+  otherRecapUuid: String
+  createdAt: String
+  resolvedAt: String
+  resolvedByName: String
+  resolutionNote: String!
+  autoCleared: Boolean!
+}
+
+type ReceiptSpendTotals {
+  product: String!
+  other: String!
+  unitemized: String!
+  fees: String!
+  tax: String!
+  total: String!
+  receipts: Int!
+}
+
+type RecapReceiptAudit {
+  readings: [RecapReceiptReading!]!
+  flags: [RecapStaffFlag!]!
+  totals: ReceiptSpendTotals!
+  waitingCount: Int!
+  flagsEnabled: Boolean!
+}
+
+type ReceiptSpendRecapRow {
+  recapId: ID!
+  recapUuid: String!
+  eventName: String!
+  eventDate: String!
+  openFlags: [String!]!
+  totals: ReceiptSpendTotals!
+}
+
+type ReceiptSpendSummary {
+  totals: ReceiptSpendTotals!
+  recaps: [ReceiptSpendRecapRow!]!
+  receiptRows: Int!
+  csv: String
+}
+
+type ResolveRecapFlagPayload {
+  success: Boolean!
+  message: String!
+  flag: RecapStaffFlag
 }
 
 type RecapStandardMetric {
@@ -8203,6 +8354,12 @@ type RetailerOption {
   id: ID!
   name: String!
   address: String!
+}
+
+input ResolveRecapFlagInput {
+  flagId: ID!
+  note: String! = ""
+  reopen: Boolean! = false
 }
 
 input ReviewReceiptInput {
