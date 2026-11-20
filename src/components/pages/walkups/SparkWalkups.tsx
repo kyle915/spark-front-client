@@ -20,6 +20,7 @@ import StandingCheckinLink from "./StandingCheckinLink";
 import CheckinIssuesCard from "./CheckinIssuesCard";
 import BaProductNotesCard from "./BaProductNotesCard";
 import ClockLinks from "./ClockLinks";
+import { programChangeNote } from "./walkupProgramChange";
 
 /**
  * Walk-ups queue — tenant-wide review of self-serve clock-ins created from an
@@ -315,6 +316,14 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
                 )}
                 <span>{r.hasRecap ? "✓ recap filed" : "no recap"}</span>
               </div>
+              {programChangeNote(r) ? (
+                <p
+                  className="text-[12px] mt-1.5"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  {programChangeNote(r)}
+                </p>
+              ) : null}
             </div>
             {!r.isApproved && (
               <div className="flex items-center gap-2 shrink-0">

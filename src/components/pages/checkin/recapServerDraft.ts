@@ -13,6 +13,9 @@ export type RecapDraftRequest = {
     session: string;
     scope: DraftScope;
     draft: RecapDraft;
+    /** The form these answers belong to; a stale tab's save is refused
+     *  after the BA switched program. */
+    templateId?: string;
   };
 };
 
@@ -25,6 +28,7 @@ export function buildRecapDraftRequest(opts: {
   session: string;
   scope: DraftScope;
   draft: RecapDraft;
+  templateId?: string;
 }): RecapDraftRequest {
   const { photos, ...rest } = opts.draft;
   const draft: RecapDraft = photos ? { ...rest, photos } : rest;
@@ -34,6 +38,7 @@ export function buildRecapDraftRequest(opts: {
       session: opts.session,
       scope: opts.scope,
       draft,
+      ...(opts.templateId ? { templateId: opts.templateId } : {}),
     },
   };
 }

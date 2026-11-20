@@ -45,6 +45,7 @@ import {
   card,
   errText,
   h2,
+  helperText,
   input,
   primaryBtn,
   resourceCard,
@@ -140,6 +141,8 @@ import { shouldShowSamplingStopCard } from "./samplingStops";
 import PayableMileageStep from "./PayableMileageStep";
 import IdentifyStep from "./IdentifyStep";
 import RecapForm from "./RecapForm";
+import ProgramSwitch from "./ProgramSwitch";
+import { showProgramSwitch } from "./programSwitchRules";
 import {
   payableMileageComplete,
   shouldCollectPayableMileage,
@@ -632,6 +635,10 @@ export default function SparkCheckin() {
   // True only while they chose to file the prior day's recap. Until then the
   // new-day gate is the page, so yesterday's event title stays off screen.
   const [priorRecapOpen, setPriorRecapOpen] = useState(false);
+  // "Wrong program? Change it": the recap form is closed while the switch
+  // runs, then remounted on the new program's form (epoch bump).
+  const [programSwitching, setProgramSwitching] = useState(false);
+  const [programEpoch, setProgramEpoch] = useState(0);
   useEffect(() => {
     if (!priorDaySession) setPriorRecapOpen(false);
   }, [priorDaySession]);
@@ -719,17 +726,46 @@ export default function SparkCheckin() {
             storeNameRequiredByDefault={Boolean(ctx.storeNameRequired)}
           />
         ) : (
-          <CheckedInFlow
-            code={code}
-            token={token as string}
-            ctx={ctx}
-            accent={accent}
-            clockState={clockState}
-            hasRecap={hasRecap}
-            onRefresh={refresh}
-            onStartAnother={startAnother}
-            onPriorRecapOpen={setPriorRecapOpen}
-          />
+          <>
+            {showProgramSwitch({
+              programs: ctx.eventTypes,
+              currentId: ctx.event?.eventType?.id,
+              hasRecap,
+              timesheetOnly: Boolean(ctx.timesheetOnly),
+              recapQueued: Boolean(readPendingRecap(code)),
+              leftover: Boolean(priorDaySession),
+            }) ? (
+              <div style={{ marginBottom: 12 }}>
+                <ProgramSwitch
+                  code={code}
+                  token={token as string}
+                  ctx={ctx}
+                  accent={accent}
+                  onSwitchStart={() => setProgramSwitching(true)}
+                  onSwitchEnd={async (changed) => {
+                    if (changed) {
+                      await refresh();
+                      setProgramEpoch((n) => n + 1);
+                    }
+                    setProgramSwitching(false);
+                  }}
+                />
+              </div>
+            ) : null}
+            <CheckedInFlow
+              code={code}
+              token={token as string}
+              ctx={ctx}
+              accent={accent}
+              clockState={clockState}
+              hasRecap={hasRecap}
+              onRefresh={refresh}
+              onStartAnother={startAnother}
+              onPriorRecapOpen={setPriorRecapOpen}
+              programSwitching={programSwitching}
+              programEpoch={programEpoch}
+            />
+          </>
         )}
         {hidePriorEvent ? (
           <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
@@ -812,6 +848,8 @@ function CheckedInFlow({
   onRefresh,
   onStartAnother,
   onPriorRecapOpen,
+  programSwitching = false,
+  programEpoch = 0,
 }: {
   code: string;
   token: string;
@@ -823,6 +861,10 @@ function CheckedInFlow({
   hasRecap: boolean;
   onRefresh: () => Promise<void>;
   onPriorRecapOpen: (open: boolean) => void;
+  /** A program switch is running: keep the recap form closed. */
+  programSwitching?: boolean;
+  /** Bumped after a switch so the recap form remounts on the new form. */
+  programEpoch?: number;
 }) {
   const today = todayISO();
   // Time-sheet-only: a clock with no recap. Every recap path below is off.
@@ -1635,10 +1677,18 @@ function CheckedInFlow({
     );
   }
 
+  if (showRecap && programSwitching) {
+    return (
+      <div style={card}>
+        <p style={{ ...helperText, margin: 0 }}>Switching your program…</p>
+      </div>
+    );
+  }
+
   if (showRecap) {
     return (
       <RecapForm
-        key={`recap-${recapFormKey}`}
+        key={`recap-${recapFormKey}-${programEpoch}`}
         onDraftAdopted={() => setRecapFormKey((k) => k + 1)}
         code={code}
         token={token}

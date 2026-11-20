@@ -238,6 +238,50 @@ describe("pending recap queue", () => {
     });
   });
 
+  it("sends the form id with a queued recap so a stale form is refused, not filed", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await enqueueRecap(
+      {
+        code: "TH-2HRV3D",
+        token: "tok",
+        fieldValues: [],
+        files: [
+          {
+            id: "p1",
+            blobName: "blob-1",
+            category: null,
+            filename: "a.jpg",
+            contentType: "image/jpeg",
+          },
+        ],
+        productSamples: [],
+        totalEngagements: null,
+        templateId: "21",
+        nowMs: THREE_PM_MS,
+      },
+      storage,
+      photos,
+    );
+    const calls: Record<string, unknown>[] = [];
+    const result = await flushPendingRecap(
+      {
+        code: "TH-2HRV3D",
+        postRecap: async (body) => {
+          calls.push(body);
+          return { ok: false, status: 422, message: "Your program was changed" };
+        },
+        putPhoto: async () => ({ blobName: "x" }),
+      },
+      storage,
+      photos,
+    );
+    expect(calls[0]).toMatchObject({ templateId: "21" });
+    // Refused for good, and the answers stay on the phone.
+    expect(result).toBe("rejected");
+    expect(readPendingRecap("TH-2HRV3D", storage)?.rejected?.status).toBe(422);
+  });
+
   it("treats already-filed as success so a double flush cannot double-submit", async () => {
     const storage = new MemoryStorage();
     const photos = memoryPhotoStore();

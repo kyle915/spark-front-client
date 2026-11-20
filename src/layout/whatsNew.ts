@@ -14,6 +14,18 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-20p",
+    date: "November 20, 2026",
+    title: "BAs can fix a wrong program on the check-in page",
+    staffOnly: true,
+    items: [
+      "On a walk-up link with more than one program, the check-in page now shows the BA's program with a “Wrong program? Change it” link until their recap is filed. They pick the right program, confirm, and get that program's recap form. Their clock-in, hours and location stay as they were.",
+      "Answers that exist on both forms carry over, and photos are kept. A photo whose section isn't on the new form moves to Other photos. Switching to Retail Sampling asks for the store name if the shift doesn't have one.",
+      "The BA can only switch a walk-in shift their own check-in started that nobody else is on. Scheduled events and shifts other BAs have joined tell them to message their lead instead.",
+      "The Walk-ups card shows “Program changed by BA from … to … at …” when a BA switched.",
+    ],
+  },
+  {
     id: "2026-11-20o",
     date: "November 20, 2026",
     title: "Walk-up recaps survive a bad connection",
