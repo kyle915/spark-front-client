@@ -145,6 +145,28 @@ export function classifyRecapResponse(res: {
   return "transient";
 }
 
+/**
+ * A live Submit that got this status back should go to the on-phone queue
+ * rather than show an error over the form. Same line the queue itself draws
+ * (classifyRecapResponse "transient"): no answer, a timeout, a rate limit,
+ * or any 5xx — including a Cloud Run 500/502/504 HTML page the phone can't
+ * even read. The live path used to queue only 0/408/429/502/503/504, so a
+ * plain 500 left the BA staring at "Couldn't submit" with no retry.
+ */
+export function shouldQueueRecapResponse(status: number): boolean {
+  return classifyRecapResponse({ ok: false, status }) === "transient";
+}
+
+/** Background retry for a queued recap while the page is open. `online` and
+ *  `visibilitychange` were the only triggers, and neither fires for a phone
+ *  that keeps one weak bar with the page in front of the BA. */
+export const QUEUE_RETRY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000, 300_000];
+
+export function queueRetryDelayMs(attempt: number): number {
+  const i = Math.max(0, Math.min(attempt, QUEUE_RETRY_DELAYS_MS.length - 1));
+  return QUEUE_RETRY_DELAYS_MS[i];
+}
+
 export const NO_PHOTOS_SENT_MESSAGE =
   "None of the photos for this recap could be uploaded from this phone";
 
@@ -302,8 +324,8 @@ export function livePhotoStore(): PhotoBlobStore {
 export function offlineRecapBanner(iso: string): string {
   const when = formatSavedClockTime(iso);
   return when
-    ? `No service — recap saved. We'll send when you're back. Time saved: ${when}.`
-    : "No service — recap saved. We'll send when you're back.";
+    ? `Saved on your phone — we'll send your recap when you have signal. You don't need to fill it in again. Saved at ${when}.`
+    : "Saved on your phone — we'll send your recap when you have signal. You don't need to fill it in again.";
 }
 
 export function readPendingRecap(
@@ -361,6 +383,9 @@ export async function enqueueRecap(
     submittedAt?: string;
     nowMs?: number;
     photoFiles?: Record<string, File>;
+    /** The key the live send already used, so a queued retry of a send whose
+     *  answer was lost is recognised by the server instead of filed again. */
+    id?: string;
   },
   storage: StorageLike = liveStorage(),
   photos: PhotoBlobStore = livePhotoStore(),
@@ -370,7 +395,10 @@ export async function enqueueRecap(
   const submittedAt = args.submittedAt ?? new Date(nowMs).toISOString();
   const pending: PendingRecap = {
     v: 1,
-    id: existing && existing.token === args.token ? existing.id : newIdempotencyKey(),
+    id:
+      existing && existing.token === args.token
+        ? existing.id
+        : args.id || newIdempotencyKey(),
     code: args.code,
     token: args.token,
     submittedAt: existing && existing.token === args.token ? existing.submittedAt : submittedAt,

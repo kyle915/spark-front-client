@@ -44,7 +44,7 @@ describe("offlineRecapBanner", () => {
     const iso = new Date(THREE_PM).toISOString();
     const when = formatSavedClockTime(iso);
     expect(offlineRecapBanner(iso)).toBe(
-      `No service — recap saved. We'll send when you're back. Time saved: ${when}.`,
+      `Saved on your phone — we'll send your recap when you have signal. You don't need to fill it in again. Saved at ${when}.`,
     );
   });
 });

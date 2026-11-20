@@ -69,6 +69,12 @@ import {
 } from "./leftoverCheckin";
 import {
   hasLookupPhone,
+  IDENTITY_ASK_HINT,
+  identityAskQuestion,
+  identityConfirmHint,
+  isUsCellPhone,
+  PHONE_INCOMPLETE_ERROR,
+  TODAY_RECAP_ELSEWHERE,
   lookupShiftsByPhone,
   resumeOpenShift,
   type OpenShift,
@@ -319,6 +325,16 @@ export default function IdentifyStep({
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  /** The API matched this name to a BA with another number ("Is this you?"). */
+  const [identityAsk, setIdentityAsk] = useState<{
+    hint: string;
+    overrides?: { eventDate?: string; address?: string; market?: string };
+    opts?: { shiftIsToday?: boolean };
+  } | null>(null);
+  const identityKey = `${firstName.trim().toLowerCase()}|${lastName.trim().toLowerCase()}|${phone.replace(/\D/g, "")}`;
+  /** identityKey the BA said "No, I'm new here" for. Any edit asks again. */
+  const newIdentityFor = useRef<string | null>(null);
   /**
    * The API said this check-in would open a new event and asked "Is your
    * shift today?". Holds the day asked about and the tap that got us here,
@@ -608,6 +624,10 @@ export default function IdentifyStep({
     setShiftLater(false);
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!recapOnly && !phone.trim()) return setErr("Enter a phone number.");
+    if (!recapOnly && !isUsCellPhone(phone)) {
+      phoneRef.current?.focus();
+      return setErr(PHONE_INCOMPLETE_ERROR);
+    }
     const today = todayISO();
     const pickedRaw = overrides?.eventDate ?? eventDate;
     // Past-recap intent must not fall back to today — that would re-open the clock path.
@@ -718,6 +738,8 @@ export default function IdentifyStep({
           eventDate: date,
           // Only after the BA answered "Yes, I'm working now".
           ...(opts?.shiftIsToday ? { shiftIsToday: true } : {}),
+          // Only after "No, I'm new here" for this exact name + number.
+          ...(newIdentityFor.current === identityKey ? { newIdentityConfirmed: true } : {}),
           ...(hasPrograms ? { eventTypeId } : {}),
           ...(onGig
             ? { planEventId: onGig.id }
@@ -737,7 +759,13 @@ export default function IdentifyStep({
                   }),
                 }),
         }
-      : { firstName, lastName, phone, email };
+      : {
+          firstName,
+          lastName,
+          phone,
+          email,
+          ...(newIdentityFor.current === identityKey ? { newIdentityConfirmed: true } : {}),
+        };
     setBusy(true);
     try {
       // Timed: a stalled request must fail so the offline queue below can
@@ -748,6 +776,13 @@ export default function IdentifyStep({
         body: JSON.stringify(identifyBody),
       });
       const json = await res.json();
+      const hint = identityConfirmHint(res.status, json);
+      if (hint) {
+        // Nothing was created. Ask before making a second account.
+        setIdentityAsk({ hint, overrides, opts });
+        setBusy(false);
+        return;
+      }
       if (needsShiftTodayConfirm(res.status, json)) {
         // Nothing was created. Ask, then send again with the answer.
         setShiftDayAsk({
@@ -862,7 +897,7 @@ export default function IdentifyStep({
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
       </div>
-      <input style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone"} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <input ref={phoneRef} style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone (10 digits)"} inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => { setPhone(e.target.value); setIdentityAsk(null); }} />
       {recapOnly ? null : (
         <p style={{ fontSize: 12, lineHeight: 1.4, margin: "-2px 0 0", color: "#57534e" }}>
           Ignite may text this number about your shift and recap. Msg frequency varies; msg &amp; data rates may
@@ -1285,7 +1320,7 @@ export default function IdentifyStep({
           </label>
           <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "0 0 6px" }}>
             {pastRecap
-              ? `The day you forgot to file. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days (not today).`
+              ? `The day you forgot to file. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days (not today). ${TODAY_RECAP_ELSEWHERE}`
               : recapOnly
                 ? `The day the sampling happened. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days.`
                 : `Working a past shift? Change this to the day you actually worked. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days.`}
@@ -1315,6 +1350,41 @@ export default function IdentifyStep({
       ) : null}
 
       {err ? <p style={errText}>{err}</p> : null}
+      {identityAsk ? (
+        <div role="alertdialog" aria-labelledby="identity-ask-title" style={shiftAskBox}>
+          <p id="identity-ask-title" style={shiftAskTitle}>
+            {identityAskQuestion(identityAsk.hint)}
+          </p>
+          <p style={shiftAskBody}>{IDENTITY_ASK_HINT}</p>
+          <button
+            type="button"
+            style={{ ...primaryBtn(accent), width: "100%", flex: "none", marginTop: 12 }}
+            disabled={busy}
+            onClick={() => {
+              const hint = identityAsk.hint;
+              setIdentityAsk(null);
+              setPhone("");
+              setErr(`Type your full cell number — the one ending in ${hint}.`);
+              window.setTimeout(() => phoneRef.current?.focus(), 30);
+            }}
+          >
+            {`Yes — use my number ending in ${identityAsk.hint}`}
+          </button>
+          <button
+            type="button"
+            style={{ ...secondaryBtn, width: "100%", flex: "none", marginTop: 8, minHeight: 48 }}
+            disabled={busy}
+            onClick={() => {
+              const ask = identityAsk;
+              setIdentityAsk(null);
+              newIdentityFor.current = identityKey;
+              void submit(ask.overrides, ask.opts);
+            }}
+          >
+            No, I'm someone else
+          </button>
+        </div>
+      ) : null}
       {shiftDayAsk ? (
         <div
           role="alertdialog"
@@ -1364,7 +1434,7 @@ export default function IdentifyStep({
           </button>
         </div>
       ) : null}
-      {openShift || shiftDayAsk || shiftLater ? null : (
+      {openShift || shiftDayAsk || shiftLater || identityAsk ? null : (
         <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
           {identifySubmitLabel({
             busy,
@@ -1377,7 +1447,7 @@ export default function IdentifyStep({
       {/* Standing tenant links (date pickable): discoverable past-day path that
           skips hours / clock-in after identify. Hidden once that path is on,
           and on per-event codes that have no date picker. */}
-      {!pastRecap && !openShift && !shiftDayAsk && !shiftLater && needsEventDetails ? (
+      {!pastRecap && !openShift && !shiftDayAsk && !shiftLater && !identityAsk && needsEventDetails ? (
         <button
           type="button"
           style={{

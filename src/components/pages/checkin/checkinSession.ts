@@ -63,6 +63,43 @@ export function shouldKeepCachedSession(opts: {
 }
 
 /** Ten digits is the shortest number the API can match to a walk-up stub. */
+/**
+ * A US cell: 10 digits once a leading country code 1 is dropped.
+ *
+ * The walk-up identity is keyed on this number. One digit short is, to the
+ * server, a different person — a fresh account with no open shift and no
+ * recap draft (FAMUS, Nov 2026).
+ */
+export function isUsCellPhone(phone: string | null | undefined): boolean {
+  let digits = (phone || "").replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  return digits.length === 10;
+}
+
+export const PHONE_INCOMPLETE_ERROR =
+  "Enter your full 10-digit cell number — the same one you used before.";
+
+/** The identify response is the API asking "Is this you?". */
+export function identityConfirmHint(status: number, json: unknown): string | null {
+  if (status !== 400 || !json || typeof json !== "object") return null;
+  const j = json as { error?: unknown; phoneHint?: unknown };
+  if (j.error !== "confirm_identity") return null;
+  const hint = typeof j.phoneHint === "string" ? j.phoneHint.replace(/\D/g, "").slice(-2) : "";
+  return hint || null;
+}
+
+export function identityAskQuestion(hint: string): string {
+  return `Is this you? You've checked in before with a number ending in ${hint}.`;
+}
+
+export const IDENTITY_ASK_HINT =
+  "Use that same number so your shift, hours and saved recap come back. A different number starts a brand-new account.";
+
+/** Under the past-day date picker: that path can't be today, and a BA who
+ *  lost the page mid-shift should not pick yesterday to get her recap in. */
+export const TODAY_RECAP_ELSEWHERE =
+  "Finishing today's recap? Go back and check in with the same phone number you used this morning — your shift and saved answers will come back.";
+
 export function hasLookupPhone(phone: string | null | undefined): boolean {
   return (phone || "").replace(/\D/g, "").length >= 10;
 }

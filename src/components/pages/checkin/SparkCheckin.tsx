@@ -88,6 +88,7 @@ import {
   clearRecapRejection,
   offlineRecapBanner,
   readPendingRecap,
+  queueRetryDelayMs,
   rejectedRecapBanner,
   type PendingRecap,
 } from "./offlineRecap";
@@ -931,6 +932,9 @@ function CheckedInFlow({
   const [queuedMileage, setQueuedMileage] = useState<PendingMileage | null>(() =>
     readPendingMileage(code),
   );
+  const [sendingQueuedRecap, setSendingQueuedRecap] = useState(false);
+  // Bumped to remount RecapForm after it adopts an earlier session's draft.
+  const [recapFormKey, setRecapFormKey] = useState(0);
   // Local draft (typed answers) — same phone, same session token. Lets the
   // clocked-in CTA say Continue instead of File when they already started.
   const [draftWaiting, setDraftWaiting] = useState(
@@ -1233,9 +1237,24 @@ function CheckedInFlow({
     };
     document.addEventListener("visibilitychange", onVis);
     run();
+    // Keep trying on a backoff while the page is up; a refused recap waits
+    // for the BA instead (see above).
+    let attempt = 0;
+    let timer: number | undefined;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        if (document.visibilityState === "visible") run();
+        attempt += 1;
+        schedule();
+      }, queueRetryDelayMs(attempt));
+    };
+    if (queuedClock || queuedClockOut || queuedMileage || (queuedRecap && !queuedRecap.rejected)) {
+      schedule();
+    }
     return () => {
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVis);
+      if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [
     queuedClock,
@@ -1619,6 +1638,8 @@ function CheckedInFlow({
   if (showRecap) {
     return (
       <RecapForm
+        key={`recap-${recapFormKey}`}
+        onDraftAdopted={() => setRecapFormKey((k) => k + 1)}
         code={code}
         token={token}
         template={ctx.template ?? null}
@@ -2235,9 +2256,30 @@ function CheckedInFlow({
           </p>
         ) : null}
         {queuedRecap && !queuedRecap.rejected ? (
-          <p style={{ ...errText, color: "#92400e" }}>
+          <div style={{ ...errText, color: "#92400e" }} role="status">
             {offlineRecapBanner(queuedRecap.submittedAt)}
-          </p>
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                disabled={sendingQueuedRecap}
+                onClick={() => {
+                  setSendingQueuedRecap(true);
+                  void tryFlushRecap().finally(() => setSendingQueuedRecap(false));
+                }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #92400e",
+                  color: "#92400e",
+                  borderRadius: 8,
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                {sendingQueuedRecap ? "Sending…" : "Send now"}
+              </button>
+            </div>
+          </div>
         ) : null}
         {queuedRecap?.rejected ? (
           <div
