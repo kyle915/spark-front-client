@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FEEDBACK_RECIPIENTS, feedbackMailto } from "./whatsNew";
+import { FEEDBACK_RECIPIENTS, WHATS_NEW, feedbackMailto, whatsNewFor } from "./whatsNew";
 
 describe("feedbackMailto", () => {
   it("addresses both product owners and carries the page", () => {
@@ -19,5 +19,15 @@ describe("feedbackMailto", () => {
       feedbackMailto({ pageTitle: "Recaps", pageUrl: "https://x/recaps/list" }),
     );
     expect(decoded).not.toContain("Client:");
+  });
+});
+
+describe("whatsNewFor", () => {
+  it("keeps staff-only notes out of client view", () => {
+    expect(whatsNewFor(false)).toEqual(WHATS_NEW);
+    const client = whatsNewFor(true);
+    expect(client.some((e) => e.staffOnly)).toBe(false);
+    expect(client.length).toBe(WHATS_NEW.filter((e) => !e.staffOnly).length);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-20r")?.staffOnly).toBe(true);
   });
 });

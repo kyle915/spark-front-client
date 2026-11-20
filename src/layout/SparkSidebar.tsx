@@ -43,6 +43,7 @@ import {
   Plus,
   GraduationCap,
   Receipt,
+  ShieldCheck,
   Package,
   Store,
   Truck,
@@ -142,6 +143,12 @@ const SECTIONS: NavSection[] = [
         label: "Receipts",
         Icon: Receipt,
         to: "/receipts",
+        adminOnly: true,
+      },
+      {
+        label: "Receipt checks",
+        Icon: ShieldCheck,
+        to: "/receipt-checks",
         adminOnly: true,
       },
       {

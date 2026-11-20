@@ -22,6 +22,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/recaps/templates": { parent: "Build", title: "Recap Templates" },
   "/recap/create": { parent: "Recaps", title: "New Recap" },
   "/receipts": { parent: "Recaps", title: "Receipts" },
+  "/receipt-checks": { parent: "Recaps", title: "Receipt checks" },
   "/photos": { parent: "Recaps", title: "Photos" },
   "/requests/list": { parent: "Requests", title: "Master Tracker", clientTitle: "My Requests" },
   "/requests/create": { parent: "Requests", title: "Create Request" },

@@ -3,9 +3,29 @@
  * Newest first. Bump the first entry's `id` when adding one; the unread dot
  * clears once a person opens the list.
  */
-export type WhatsNewEntry = { id: string; date: string; title: string; items: string[] };
+export type WhatsNewEntry = {
+  id: string;
+  date: string;
+  title: string;
+  items: string[];
+  /** Ignite staff only: hidden in client view (brand users read this panel too). */
+  staffOnly?: boolean;
+};
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    id: "2026-11-20r",
+    date: "November 20, 2026",
+    title: "Receipt checks for staff",
+    staffOnly: true,
+    items: [
+      "Spark now reads each receipt photo on a recap: store and store number, ticket, time, every line, fees, tax and total. It checks that the lines add up.",
+      "A custom recap shows a Receipts panel (staff only) with what was read, the spend it adds up to, and any flags to look at.",
+      "Flags cover the same receipt on two recaps, a receipt from a different store than the event, a clock-in of a few minutes on a recap that reports sales or consumers, a recap filed a week or more late by staff, and duplicate photos. Resolve each one with a short note.",
+      "The new Receipt checks page (Recaps → Receipt checks) totals receipt spend for a brand and date range, each receipt counted once and split into brand product, other items, fees and tax, lists flagged recaps, and exports a CSV with one row per receipt for billing.",
+      "Brand users never see flags or this page.",
+    ],
+  },
   {
     id: "2026-11-18c-1",
     date: "November 18, 2026",
@@ -369,17 +389,23 @@ export const WHATS_NEW: WhatsNewEntry[] = [
 
 const KEY = "@spark.whatsNew.seen";
 
-export function hasUnseenWhatsNew(): boolean {
+/** The entries this viewer may see: staff-only notes stay out of client view. */
+export function whatsNewFor(isClient: boolean): WhatsNewEntry[] {
+  return isClient ? WHATS_NEW.filter((e) => !e.staffOnly) : WHATS_NEW;
+}
+
+export function hasUnseenWhatsNew(isClient = false): boolean {
   try {
-    return window.localStorage.getItem(KEY) !== WHATS_NEW[0]?.id;
+    return window.localStorage.getItem(KEY) !== whatsNewFor(isClient)[0]?.id;
   } catch {
     return false;
   }
 }
 
-export function markWhatsNewSeen(): void {
+export function markWhatsNewSeen(isClient = false): void {
   try {
-    if (WHATS_NEW[0]) window.localStorage.setItem(KEY, WHATS_NEW[0].id);
+    const latest = whatsNewFor(isClient)[0];
+    if (latest) window.localStorage.setItem(KEY, latest.id);
   } catch {
     /* storage unavailable */
   }

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import SparkOverlay from "@/shared/SparkOverlay";
 import {
   SHORTCUTS,
-  WHATS_NEW,
+  whatsNewFor,
   feedbackMailto,
   hasUnseenWhatsNew,
   markWhatsNewSeen,
@@ -183,12 +183,12 @@ export const SparkTopbar: React.FC = () => {
   }, [menuOpen]);
   const clientName = tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug);
   const [panel, setPanel] = useState<null | "whatsNew" | "shortcuts">(null);
-  const [unseenNews, setUnseenNews] = useState(() => hasUnseenWhatsNew());
+  const [unseenNews, setUnseenNews] = useState(() => hasUnseenWhatsNew(isClient));
   const openPanel = (which: "whatsNew" | "shortcuts") => {
     setMenuOpen(false);
     setPanel(which);
     if (which === "whatsNew") {
-      markWhatsNewSeen();
+      markWhatsNewSeen(isClient);
       setUnseenNews(false);
     }
   };
@@ -496,7 +496,7 @@ export const SparkTopbar: React.FC = () => {
           {panel === "whatsNew" ? (
             <>
               <h2 className="text-xl font-semibold">What's new in Spark</h2>
-              {WHATS_NEW.map((entry) => (
+              {whatsNewFor(isClient).map((entry) => (
                 <section key={entry.id} className="mt-4">
                   <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
                     {entry.date}
