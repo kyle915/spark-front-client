@@ -311,6 +311,7 @@ const SECTIONS: NavSection[] = [
     adminOnly: true,
     items: [
       { label: "System Health", Icon: Activity, to: "/system-health" },
+      { label: "Legal acceptances", Icon: ListChecks, to: "/legal-acceptances" },
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
       { label: "Billing", Icon: DollarSign, to: "/billing" },
