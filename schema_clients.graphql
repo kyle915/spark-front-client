@@ -5674,6 +5674,7 @@ type Mutation {
   setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
   exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
+  resolveRecapFlag(input: ResolveRecapFlagInput!): ResolveRecapFlagPayload!
   sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
   generateFieldSamplingCalloutSummary(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingCalloutSummary!
   register(input: ClientRegisterInput!): RegisterResponse!
@@ -6659,6 +6660,9 @@ type Query {
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
+  recapReceiptAudit(recapId: ID!): RecapReceiptAudit
+  recapStaffFlags(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, kind: String = null, unresolvedOnly: Boolean! = true, first: Int! = 200): [RecapStaffFlag!]!
+  receiptSpendSummary(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, includeCsv: Boolean! = false): ReceiptSpendSummary
   recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   recapPhotoPicks(recapId: ID!): RecapPhotoPicksResult!
@@ -7378,6 +7382,104 @@ type RecapFlagExplanation {
   summary: String
   source: String!
   flagCount: Int!
+}
+
+type ReceiptLineItem {
+  name: String!
+  qty: Float
+  unitPrice: String
+  amount: String!
+  isBrand: Boolean!
+}
+
+type RecapReceiptReading {
+  id: ID!
+  fileId: ID!
+  fileUrl: String
+  status: String!
+  merchant: String!
+  storeNumber: String!
+  address: String!
+  city: String!
+  stateCode: String!
+  ticketNumber: String!
+  register: String!
+  receiptDate: String!
+  purchaseTime: String!
+  subtotal: String
+  fees: String
+  tax: String
+  total: String
+  cardLast4: String!
+  confidence: Float
+  arithmeticOk: Boolean
+  arithmeticNote: String!
+  lineItems: [ReceiptLineItem!]!
+  model: String!
+  readAt: String
+  error: String!
+  countedHere: Boolean!
+  alsoOnRecapUuids: [String!]!
+}
+
+type RecapStaffFlag {
+  id: ID!
+  recapId: ID!
+  recapUuid: String!
+  tenantId: ID!
+  tenantName: String!
+  eventName: String!
+  eventDate: String!
+  kind: String!
+  kindLabel: String!
+  severity: String!
+  explanation: String!
+  otherRecapUuid: String
+  createdAt: String
+  resolvedAt: String
+  resolvedByName: String
+  resolutionNote: String!
+  autoCleared: Boolean!
+}
+
+type ReceiptSpendTotals {
+  product: String!
+  other: String!
+  unitemized: String!
+  fees: String!
+  tax: String!
+  total: String!
+  receipts: Int!
+}
+
+type RecapReceiptAudit {
+  readings: [RecapReceiptReading!]!
+  flags: [RecapStaffFlag!]!
+  totals: ReceiptSpendTotals!
+  waitingCount: Int!
+  flagsEnabled: Boolean!
+}
+
+type ReceiptSpendRecapRow {
+  recapId: ID!
+  recapUuid: String!
+  eventName: String!
+  eventDate: String!
+  openFlags: [String!]!
+  totals: ReceiptSpendTotals!
+}
+
+type ReceiptSpendSummary {
+  totals: ReceiptSpendTotals!
+  recaps: [ReceiptSpendRecapRow!]!
+  receiptRows: Int!
+  csv: String
+}
+
+type ResolveRecapFlagPayload {
+  success: Boolean!
+  message: String!
+  flag: RecapStaffFlag
 }
 
 type RecapStandardMetric {
@@ -8203,6 +8305,12 @@ type RetailerOption {
   id: ID!
   name: String!
   address: String!
+}
+
+input ResolveRecapFlagInput {
+  flagId: ID!
+  note: String! = ""
+  reopen: Boolean! = false
 }
 
 input ReviewReceiptInput {

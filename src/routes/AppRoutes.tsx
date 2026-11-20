@@ -406,6 +406,9 @@ const SparkPnl = lazyDefault(() => import("@/components/pages/pnl/SparkPnl"));
 const SparkFieldSamplingReport = lazyDefault(
   () => import("@/components/pages/field-sampling-report/SparkFieldSamplingReport"),
 );
+const SparkReceiptChecks = lazyDefault(
+  () => import("@/components/pages/receiptChecks/SparkReceiptChecks"),
+);
 const SparkReceipts = lazyDefault(
   () => import("@/components/pages/receipts/SparkReceipts"),
 );
@@ -910,6 +913,17 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkReceipts />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Staff-only receipt spend + fraud / quality flags on recaps. Every
+      // field behind it answers only for Ignite staff.
+      path: "/receipt-checks",
+      component: (
+        <AdminOnly>
+          <SparkReceiptChecks />
         </AdminOnly>
       ),
       isPublic: false,
