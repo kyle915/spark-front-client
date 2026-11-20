@@ -352,6 +352,9 @@ const SparkWeeklySummaries = lazyDefault(
 const SparkSystemHealth = lazyDefault(
   () => import("@/components/pages/system-health/SparkSystemHealth"),
 );
+const SparkLegalAcceptances = lazyDefault(
+  () => import("@/components/pages/legal-acceptances/SparkLegalAcceptances"),
+);
 const SparkPendingAmbassadors = lazyDefault(
   () => import("@/components/pages/people/SparkPendingAmbassadors"),
 );
@@ -1014,6 +1017,16 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkSystemHealth />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Staff only: who accepted the Terms, which version, when, from where.
+      path: "/legal-acceptances",
+      component: (
+        <AdminOnly>
+          <SparkLegalAcceptances />
         </AdminOnly>
       ),
       isPublic: false,
