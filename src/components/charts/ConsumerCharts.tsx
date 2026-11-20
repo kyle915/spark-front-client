@@ -13,17 +13,19 @@ import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
 import type { TenantSkuPulseQuery as TenantSkuPulseQueryType } from "@api/queries/__generated__/TenantSkuPulseQuery.graphql";
 import { labelsEveryRow } from "@/lib/chartRows";
 import {
+  barLabel,
+  barTitle,
   contextIndexes,
   lastWeeksWindow,
   perEvent,
   perEventSentence,
   productSplit,
   rankedSplit,
-  shortLabel,
   weeklyTrend,
   type RankedSplit,
 } from "@/lib/consumerBreakdown";
 import type { ChartKind } from "@/lib/dashboardExplain";
+import type { ChartOptions, TooltipItem } from "chart.js";
 import { barSeries, chartOptions, lineSeries, valueLabels } from "@/lib/sparkChart";
 
 const lastValue = valueLabels("last");
@@ -167,6 +169,28 @@ const RankedSplitChart: React.FC<{
   ask: Window & { chart: ChartKind };
 }> = ({ title, measure, split, empty, noun, where, ask }) => {
   const { bars, aside } = split;
+  // The tooltip names the whole row (the axis may cut it) and says when it
+  // is an event venue rather than a store.
+  const options = useMemo(() => {
+    const base = chartOptions<"bar">({ horizontal: true });
+    const tooltip = base.plugins?.tooltip;
+    return {
+      ...base,
+      plugins: {
+        ...base.plugins,
+        tooltip: {
+          ...tooltip,
+          callbacks: {
+            ...tooltip?.callbacks,
+            title: (items: TooltipItem<"bar">[]) => {
+              const bar = bars[items[0]?.dataIndex ?? -1];
+              return bar ? barTitle(bar) : "";
+            },
+          },
+        },
+      },
+    } as ChartOptions<"bar">;
+  }, [bars]);
   if (bars.length === 0) return <Nothing title={title}>{empty}</Nothing>;
   // One row is a sentence, not a one-bar chart.
   if (bars.length === 1 && !aside) {
@@ -186,7 +210,7 @@ const RankedSplitChart: React.FC<{
       <ChartBlock title={title} height={splitHeight(bars.length)}>
         <Bar
           data={{
-            labels: bars.map((b) => shortLabel(b.label)),
+            labels: bars.map((b) => barLabel(b)),
             datasets: [
               barSeries({
                 label: measure,
@@ -196,7 +220,7 @@ const RankedSplitChart: React.FC<{
               }),
             ],
           }}
-          options={chartOptions<"bar">({ horizontal: true })}
+          options={options}
           plugins={labelsEveryRow(bars.length) ? [everyValue] : []}
         />
       </ChartBlock>
@@ -205,6 +229,11 @@ const RankedSplitChart: React.FC<{
           {aside.count
             ? `The other ${count(aside.count)} ${noun}${aside.count === 1 ? "" : "s"} add ${count(aside.value)}.`
             : `Other ${noun}s add ${count(aside.value)}.`}
+        </p>
+      ) : null}
+      {split.hasVenue ? (
+        <p className="text-xs" style={META}>
+          Festivals and event activations are shown by venue, marked (venue).
         </p>
       ) : null}
       <AskAboutChart {...ask} title={title} />
@@ -240,7 +269,7 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       />
       <StoreChartLinks
         tenantId={tenantId}
-        labels={split.bars.filter((b) => !b.context).map((b) => b.label)}
+        labels={split.bars.filter((b) => !b.context && !b.venue).map((b) => b.label)}
       />
     </div>
   );

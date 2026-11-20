@@ -1,3 +1,8 @@
+import {
+    graphQLErrorMessage,
+    guardrailFromStatus,
+} from '@/api/relay/guardrailErrors';
+
 export async function login(username: string, password: string) {
     const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
         method: 'POST',
@@ -31,10 +36,17 @@ export async function login(username: string, password: string) {
             },
         }),
     });
+    // Too many attempts: a bare 429, or a LOGIN_THROTTLED GraphQL error.
+    const throttled = guardrailFromStatus(res.status, res.headers.get('Retry-After'));
+    if (throttled) {
+        throw new Error(
+            'Too many sign-in attempts. Please wait a few minutes and try again.',
+        );
+    }
     const { data, errors } = await res.json();
 
     if (errors?.length) {
-        throw new Error(errors[0].message);
+        throw new Error(graphQLErrorMessage(errors, 'Login failed'));
     }
 
     const result = data?.tokenAuth;

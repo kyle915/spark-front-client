@@ -7,6 +7,7 @@
  */
 import {
   eventTypeIsActivation,
+  eventTypeIsRetailSampling,
   programLabel,
   type ProgramOption,
 } from "./eventTypeDescriptor";
@@ -66,6 +67,27 @@ export function identifyPlaceKind(opts: {
 }): IdentifyPlaceKind {
   if (eventTypeIsActivation(opts.programName)) return "venue";
   return opts.recapOnly ? "typedStore" : "store";
+}
+
+/** Same words as the API's error, so the BA reads one message either way. */
+export const STORE_NAME_REQUIRED_ERROR =
+  "Enter the store name so your work counts for the right store.";
+
+/**
+ * Must the BA name the store before starting? Retail sampling only: the picked
+ * program's own flag (or its name), else the link's default program when the
+ * link offers no picker. With a picker and nothing picked yet, the program
+ * question comes first.
+ */
+export function storeNameRequired(opts: {
+  program?: Pick<ProgramOption, "name" | "storeNameRequired"> | null;
+  linkDefault?: boolean;
+  hasPrograms: boolean;
+}): boolean {
+  if (opts.program) {
+    return opts.program.storeNameRequired ?? eventTypeIsRetailSampling(opts.program.name);
+  }
+  return !opts.hasPrograms && Boolean(opts.linkDefault);
 }
 
 /** Subtitle under "File a recap" on a no-clock standing link. */

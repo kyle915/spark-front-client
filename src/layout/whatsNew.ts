@@ -7,13 +7,137 @@ export type WhatsNewEntry = { id: string; date: string; title: string; items: st
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-18c",
+    id: "2026-11-18c-1",
     date: "November 18, 2026",
     title: "Accepting the Terms",
     items: [
       "The first time you sign in after this update, Spark asks you to accept the Terms of Service and Acceptable Use Policy and confirm you've read the Privacy Policy. It takes one click, and links open each document in a new tab.",
       "If the terms change later, Spark asks again once and says what changed.",
       "Staff: see who has accepted, and when, under System, Legal acceptances.",
+    ],
+  },
+  {
+    id: "2026-11-19t",
+    date: "November 19, 2026",
+    title: "Time-sheet-only check-in links",
+    items: [
+      "A client's check-in link can now be a plain time clock. Workers enter their name and mobile number, Spark fills in their location from the phone, and they clock in and clock out. There's no recap step.",
+      "If a worker turns location off, they type the address instead. These are event locations, so the link never asks for a store name.",
+      "Nothing chases a recap for these shifts: no recap texts, and they never appear on Missing Recaps.",
+      "The Timesheet page now shows each worker's phone, and a new Time sheet (per shift) download lists name, phone, date, location, clock in, clock out and hours for every confirmed shift.",
+    ],
+  },
+  {
+    id: "2026-11-19a",
+    date: "November 19, 2026",
+    title: "Walk-up links check the shift is today",
+    items: [
+      "When a BA's check-in would start a new walk-in event, the walk-up link now asks “Is your shift today?” first. If they tap No, it tells them to open the link when their shift starts, and nothing is created or clocked.",
+      "Joining an event that's already on the tracker, filing a past-day recap and recap-only links don't ask.",
+      "Short walk-in shifts, clocked in and out within 20 minutes, no longer get the “your recap isn't in yet” texts. Booked shifts still do.",
+    ],
+  },
+  {
+    id: "2026-11-18s",
+    date: "November 18, 2026",
+    title: "Walk-up recaps land under the right store",
+    items: [
+      "Walk-up check-ins now ask BAs for the store name on Retail Sampling shifts, so their recaps count under that store and state on your dashboard instead of No store recorded. Event activations still only ask for the venue.",
+      "When a BA checks in at an address your team has worked before, Spark fills in the store and state from that earlier visit.",
+    ],
+  },
+  {
+    id: "2026-11-18v",
+    date: "November 18, 2026",
+    title: "Festivals show by venue",
+    items: [
+      "Consumers sampled by store now shows festivals and events by their venue name instead of No store recorded. Venues are marked (venue) so they are not mistaken for stores.",
+    ],
+  },
+  {
+    id: "2026-11-18b-2",
+    date: "November 18, 2026",
+    title: "Connect an AI app with Google",
+    items: [
+      "When you connect Claude, ChatGPT or another AI app to Spark, choose Continue with Google on the Spark page. Spark signs you in with Google, then brings you back to pick the brand.",
+    ],
+  },
+  {
+    id: "2026-11-18c",
+    date: "November 18, 2026",
+    title: "Search your field photos",
+    items: [
+      "The Photos page has a search box. Type what you want in plain words, like “best crowd photos at Kroger in Texas”, and Spark turns it into filters you can see and remove.",
+      "One tap narrows to consumers engaging, product on the table, shelf displays or signage, and you can hide blurry or dark photos.",
+      "Spark tags each photo once: what it shows, which of your products are in it, roughly how busy it was and the setting. It never identifies anyone.",
+      "Brands see photos from their own approved recaps only, and receipts never appear. Staff can also include recaps waiting for approval and add photos to a recap deck.",
+    ],
+  },
+  {
+    id: "2026-11-17i",
+    date: "November 17, 2026",
+    title: "Launch a client: the new brand's products on the cloned form",
+    items: [
+      "When you launch a client from another brand's recap form, Products Sampled and any other product picker now list the new client's catalog, never the donor brand's products.",
+      "The preview shows exactly which products each picker will offer and every label swap, including swaps inside answer choices. Choices like \"Full can\" are left alone.",
+      "Launching without a catalog leaves those pickers empty and says so, instead of keeping the donor's products.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1-2",
+    date: "November 18, 2026",
+    title: "Say your recap, and the form fills in",
+    items: [
+      "On the check-in recap, tap Record and talk through the shift. Spark fills in the whole form from what you said: counts, dropdowns, products, yes or no questions and notes.",
+      "Recording now works on iPhone Safari too.",
+      "Only empty boxes are filled. If you already typed an answer, it stays, and you can tap Replace to use what you said instead. Boxes filled by voice are marked so you can check them before you submit.",
+      "Spark never guesses: anything you didn't mention stays blank. Recordings are turned into text and not kept.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1-1",
+    date: "November 18, 2026",
+    title: "Hours check before payroll",
+    items: [
+      "Staff: the Payroll timesheet now checks each shift before you approve hours, and says how many need a look, such as \"7 of 212 shifts need a look\".",
+      "It flags shifts worked past their booking, punches far from the store, shifts that overlap, recaps filed before the clock-out, auto-closed or hand-edited punches, and mileage above what GPS tracked. Each flag shows the facts and a suggested next step.",
+      "Nothing is rejected for you. Mark a flag OK, reviewed and it stops asking unless the punches change. Turn on Needs a look to see only those BAs.",
+    ],
+  },
+  {
+    id: "2026-11-18r",
+    date: "November 18, 2026",
+    title: "Where to go next updates on its own",
+    items: [
+      "Store recommendations on your dashboard's Where to go next card now appear as soon as Spark works them out from approved recaps, instead of waiting for the Ignite team to review them.",
+    ],
+  },
+  {
+    id: "2026-11-18i",
+    date: "November 18, 2026",
+    title: "Insights uses your local date",
+    items: [
+      "Insights now asks for the right date range in the evening. Before, after about 5 PM Pacific it counted tomorrow as today, so the last 7, 30 or 90 days could start and end a day late.",
+    ],
+  },
+  {
+    id: "2026-11-17e-1",
+    date: "November 17, 2026",
+    title: "Clearer messages when Spark is busy",
+    items: [
+      "If you make a lot of requests in a short time, export too often or select too many items at once, Spark now says so in plain words and tells you to try again shortly, instead of showing an error page.",
+      "Too many sign-in attempts shows a short wait message on the sign-in page.",
+      "Long lists on Home, Upcoming, Recent submissions, My approvals, Alerts, Reports and the Account Map load in full for brand users.",
+    ],
+  },
+  {
+    id: "2026-11-18b-1",
+    date: "November 18, 2026",
+    title: "Ask AI is now a chat",
+    items: [
+      "On your Home page, Ask AI opens a chat about your own program: ask things like which stores converted best last month, which stores to go back to in December, or what shoppers are saying about price.",
+      "Answers come only from your brand's data in Spark, with small source chips under each answer that open the page the numbers came from. If a figure can't be matched to your data, the answer isn't shown.",
+      "It's read only and never changes anything. Start a new chat any time, and clear your chat history whenever you like.",
     ],
   },
   {

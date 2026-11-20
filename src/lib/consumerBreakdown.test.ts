@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  barLabel,
+  barTitle,
   contextIndexes,
   isCutOff,
   lastWeeksWindow,
@@ -69,6 +71,34 @@ describe("rankedSplit", () => {
     expect(split.bars.map((b) => b.label)).toEqual(["A", "B"]);
     expect(split.aside).toEqual({ count: 40, value: 2000 });
     expect(split.bars.reduce((s, b) => s + b.value, 0) + (split.aside?.value ?? 0)).toBe(split.total);
+  });
+
+  it("ranks event venues with the stores by consumers and marks them", () => {
+    const venue = (label: string, consumers: number): SplitRow => ({ label, kind: "venue", consumers });
+    const split = rankedSplit(
+      [
+        venue("BBQ Fest", 5000),
+        named("Costco", 900),
+        venue("Savor St Pete", 850),
+        named("Sunoco", 28),
+        { label: "", kind: "missing", consumers: 70 },
+      ],
+      { missingLabel: "No store recorded", namedCount: 4 },
+    );
+    expect(split.bars.map((b) => [b.label, b.value, Boolean(b.venue), b.context])).toEqual([
+      ["BBQ Fest", 5000, true, false],
+      ["Costco", 900, false, false],
+      ["Savor St Pete", 850, true, false],
+      ["Sunoco", 28, false, false],
+      ["No store recorded", 70, false, true],
+    ]);
+    expect(split.hasVenue).toBe(true);
+    expect(split.total).toBe(6848);
+    expect(split.bars.reduce((s, b) => s + b.value, 0)).toBe(split.total);
+  });
+
+  it("has no venue when every row is a store", () => {
+    expect(rankedSplit([named("Costco", 5)], { missingLabel: "x" }).hasVenue).toBe(false);
   });
 
   it("is empty when nothing was sampled", () => {
@@ -223,5 +253,20 @@ describe("perEvent", () => {
   it("is null when there is nothing to divide", () => {
     expect(perEvent(0, 5)).toBeNull();
     expect(perEvent(100, 0)).toBeNull();
+  });
+});
+
+describe("barLabel / barTitle", () => {
+  it("leaves a store's label as the short name", () => {
+    expect(barLabel({ label: "Costco" })).toBe("Costco");
+    expect(barTitle({ label: "Costco" })).toBe("Costco");
+  });
+
+  it("marks a venue and keeps the whole label inside the column", () => {
+    expect(barLabel({ label: "BBQ Fest", venue: true })).toBe("BBQ Fest (venue)");
+    const long = barLabel({ label: "Savor St Pete Food Festival", venue: true });
+    expect(long.endsWith(" (venue)")).toBe(true);
+    expect(long.length).toBeLessThanOrEqual(18);
+    expect(barTitle({ label: "Savor St Pete", venue: true })).toBe("Savor St Pete · event venue");
   });
 });

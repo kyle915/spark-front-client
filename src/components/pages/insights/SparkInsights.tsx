@@ -555,7 +555,10 @@ export function InsightsBody({
       const daysBack = range === "7d" ? 7 : range === "30d" ? 30 : 90;
       start.setDate(today.getDate() - daysBack);
     }
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    // Local calendar date, not the UTC one: toISOString() rolls to tomorrow
+    // after 5 PM Pacific, which asked for a range ending a day late.
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const startDate = fmt(start);
     const endDate = fmt(today);
     const filters: DashboardFilters = {

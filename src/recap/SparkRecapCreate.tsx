@@ -6,8 +6,7 @@ import { CustomRecapTemplatesWithFieldsQuery } from "@/api/queries/CustomRecapTe
 import { AmbassadorPicker } from "./AmbassadorPicker";
 export { AmbassadorPicker };
 import type { CustomRecapTemplatesWithFieldsQuery as CustomRecapTemplatesWithFieldsQueryType } from "@/api/queries/__generated__/CustomRecapTemplatesWithFieldsQuery.graphql";
-import { ProductsQuery } from "@/api/queries/ProductsQuery";
-import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
+import { useTenantProducts } from "@/hooks/useTenantProducts";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import { CreateCustomRecapMutation } from "@/api/mutations/CreateCustomRecapMutation";
 import { ParseConnecteamRecapPdfMutation } from "@/api/mutations/ParseConnecteamRecapPdfMutation";
@@ -1575,23 +1574,17 @@ const DropOffLocationsOpsField: React.FC<{
   onChange: (v: string) => void;
   tenantId: string | null;
 }> = ({ label, required, value, onChange, tenantId }) => {
-  const data = useLazyLoadQuery<ProductsQueryType>(
-    ProductsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const productNodes = useTenantProducts(tenantId);
   const products = useMemo(
     () =>
-      (data.products?.edges ?? [])
-        .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+      productNodes
         .map((p) => ({
           id: String(p.id),
           name: p.name,
           category: p.productType?.name ?? null,
           imageUrl: p.image ?? null,
         })),
-    [data],
+    [productNodes],
   );
   return (
     <DropOffLocationsField
@@ -1625,23 +1618,17 @@ const ProductsSampledPillsField: React.FC<{
   onQtyChange,
   qtyContextName,
 }) => {
-  const data = useLazyLoadQuery<ProductsQueryType>(
-    ProductsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const productNodes = useTenantProducts(tenantId);
   const products = useMemo(
     () =>
-      (data.products?.edges ?? [])
-        .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+      productNodes
         .map((p) => ({
           id: String(p.id),
           name: p.name,
           category: p.productType?.name ?? null,
           image: p.image ?? null,
         })),
-    [data],
+    [productNodes],
   );
 
   // Live catalog wins over frozen CustomField.options so a SKU added in
@@ -1812,17 +1799,11 @@ const ProductSamplesSection: React.FC<{
   // for a generous page so a full SKU list shows without paging (mirrors
   // SparkRequestCreate's products picker). store-or-network keeps it warm
   // across template switches.
-  const data = useLazyLoadQuery<ProductsQueryType>(
-    ProductsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const productNodes = useTenantProducts(tenantId);
   const products = useMemo(
     () =>
-      (data.products?.edges ?? [])
-        .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
-    [data],
+      productNodes,
+    [productNodes],
   );
 
   // Running total of units across all SKUs — a quick gut-check for the BA

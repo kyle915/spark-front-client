@@ -5,11 +5,13 @@
  * file. Nothing here changes a number: it only decides what is drawn as a
  * bar, what is folded, and how a row with nothing recorded is named.
  */
-import { foldToOther } from "@/lib/sparkChart";
-
 export type SplitRow = {
   label: string;
-  /** "named" a real store / state, "other" a folded tail, "missing" nothing recorded. */
+  /**
+   * "named" a real store / state, "venue" a festival or event activation
+   * named by its event title, "other" a folded tail, "missing" nothing
+   * recorded.
+   */
   kind: string;
   consumers: number;
 };
@@ -19,6 +21,8 @@ export type RankedBar = {
   value: number;
   /** Drawn quiet: context, not a ranked item. */
   context: boolean;
+  /** A festival or event venue, not a store: ranked like one, marked as a venue. */
+  venue?: boolean;
 };
 
 export type RankedSplit = {
@@ -27,6 +31,8 @@ export type RankedSplit = {
   total: number;
   /** How many named rows exist in all (the bars show the largest few). */
   namedCount: number;
+  /** Whether any bar drawn is an event venue. */
+  hasVenue: boolean;
   /**
    * The folded tail when it is too large to draw beside the rows it would
    * dwarf. Said in words under the chart instead of as a bar.
@@ -40,10 +46,14 @@ export const TOP_ROWS = 6;
 /** A folded tail this many times the top row is said in words, not drawn. */
 const OTHER_BAR_LIMIT = 1.5;
 
+/** Rows that name a place: a store / state, or an event venue. */
+const isLabeled = (r: SplitRow) => r.kind === "named" || r.kind === "venue";
+
 /**
- * A ranked list: the largest `keep` named rows, then "Other", then the
- * rows with nothing recorded under `missingLabel`, which is always last
- * and never the top bar however large it is.
+ * A ranked list: the largest `keep` named rows (event venues rank with
+ * them), then "Other", then the rows with nothing recorded under
+ * `missingLabel`, which is always last and never the top bar however large
+ * it is.
  */
 export function rankedSplit(
   rows: readonly SplitRow[],
@@ -51,17 +61,19 @@ export function rankedSplit(
 ): RankedSplit {
   const keep = opts.keep ?? TOP_ROWS;
   const sum = (list: readonly SplitRow[]) => list.reduce((s, r) => s + r.consumers, 0);
-  const named = rows.filter((r) => r.kind === "named" && r.consumers > 0);
+  const named = rows.filter((r) => isLabeled(r) && r.consumers > 0);
   const missing = sum(rows.filter((r) => r.kind === "missing"));
   const alreadyFolded = sum(rows.filter((r) => r.kind === "other"));
   const namedCount = Math.max(opts.namedCount ?? 0, named.length);
 
-  const folded = foldToOther(
-    named.map((r) => ({ label: r.label, value: r.consumers })),
-    keep,
-  );
-  const head = folded.slice(0, Math.min(keep, named.length));
-  const tail = folded.slice(head.length).reduce((s, r) => s + r.value, 0) + alreadyFolded;
+  // Largest first (a stable sort keeps the server's order for ties).
+  const sorted = [...named].sort((a, b) => b.consumers - a.consumers);
+  const head = sorted.slice(0, keep).map((r) => ({
+    label: r.label,
+    value: r.consumers,
+    venue: r.kind === "venue",
+  }));
+  const tail = sum(sorted.slice(keep)) + alreadyFolded;
   // A tail the server already folded hides how many rows are in it unless
   // the caller knows the full count.
   const tailCount =
@@ -69,7 +81,12 @@ export function rankedSplit(
       ? null
       : Math.max(0, namedCount - head.length);
 
-  const bars: RankedBar[] = head.map((r) => ({ ...r, context: false }));
+  const bars: RankedBar[] = head.map(({ label, value, venue }) => ({
+    label,
+    value,
+    context: false,
+    ...(venue ? { venue: true } : {}),
+  }));
   const top = head[0]?.value ?? 0;
   const drawTail = tail > 0 && tail <= top * OTHER_BAR_LIMIT;
   if (drawTail) bars.push({ label: "Other", value: tail, context: true });
@@ -79,6 +96,7 @@ export function rankedSplit(
     bars,
     total: sum(rows),
     namedCount,
+    hasVenue: head.some((r) => r.venue),
     aside: tail > 0 && !drawTail ? { count: tailCount, value: tail } : null,
   };
 }
@@ -92,6 +110,22 @@ export function shortLabel(label: string, max = 18): string {
   if (clean.length <= max) return clean;
   return `${clean.slice(0, max - 1).replace(/[\s—–\-·,]+$/, "")}…`;
 }
+
+/** Marks an event venue on the chart's axis, after the name. */
+export const VENUE_MARK = " (venue)";
+
+/**
+ * A bar's axis label: the short name, with "(venue)" after an event venue
+ * so it is not read as a store. The whole label still fits the column.
+ */
+export function barLabel(bar: Pick<RankedBar, "label" | "venue">, max = 18): string {
+  if (!bar.venue) return shortLabel(bar.label, max);
+  return `${shortLabel(bar.label, Math.max(4, max - VENUE_MARK.length))}${VENUE_MARK}`;
+}
+
+/** A bar's tooltip title: the full name, and "event venue" for a venue. */
+export const barTitle = (bar: Pick<RankedBar, "label" | "venue">): string =>
+  bar.venue ? `${bar.label.trim()} · event venue` : bar.label.trim();
 
 /** Indexes of the context bars, for `barSeries({ quiet })`. */
 export const contextIndexes = (bars: readonly RankedBar[]): number[] =>

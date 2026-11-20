@@ -59,6 +59,8 @@ export type ProgramOption = {
   name: string;
   label?: string;
   description?: string;
+  /** Retail sampling: a new walk-up check-in must name the store (API flag). */
+  storeNameRequired?: boolean;
 };
 
 /** BA-facing title for a program: brand label, else the event type name. */
@@ -95,4 +97,19 @@ export function eventTypeSkipsIdentifyLocation(
   name: string | null | undefined,
 ): boolean {
   return /product\s*seeding/i.test(name ?? "");
+}
+
+/**
+ * In-store sampling ("Retail Sampling"): the BA is standing in a store, so its
+ * name is asked for. Activations, guerilla shifts and product seeding are not.
+ * Mirrors `is_retail_sampling_type` in the API, which has the final say.
+ */
+export function eventTypeIsRetailSampling(name: string | null | undefined): boolean {
+  const n = name ?? "";
+  if (!/\bretail\b/i.test(n)) return false;
+  return (
+    !eventTypeIsActivation(n) &&
+    !/\bguerr?ill?a\b/i.test(n) &&
+    !eventTypeSkipsIdentifyLocation(n)
+  );
 }
