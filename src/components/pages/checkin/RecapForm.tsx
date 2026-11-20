@@ -91,6 +91,7 @@ import {
 import {
   asRecapDraft,
   clearDraft,
+  draftHasAnswers,
   draftSavedLabel,
   pickRestoredDraft,
   readDraft,
@@ -128,8 +129,16 @@ import {
   formatUploadProgress,
 } from "./uploadProgress";
 import {
+  adoptOtherSessionDraft,
+  findOtherSessionDraft,
+  otherSessionDraftBanner,
+  restoredDraftBanner,
+  type OtherSessionDraft,
+} from "./draftRecovery";
+import {
   flushPendingClock,
   isOfflineClockFailure,
+  newIdempotencyKey,
   offlineClockBanner,
   readPendingClock,
 } from "./offlineClock";
@@ -140,6 +149,7 @@ import {
   putCheckinPhoto,
   NO_SIGNAL_PHOTO_MESSAGE,
   readPendingRecap,
+  shouldQueueRecapResponse,
 } from "./offlineRecap";
 import {
   flushPendingMileage,
@@ -174,6 +184,7 @@ export default function RecapForm({
   onCancel,
   onSubmitted,
   onQueued,
+  onDraftAdopted,
 }: {
   code: string;
   token: string;
@@ -193,6 +204,9 @@ export default function RecapForm({
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
   onQueued: () => void;
+  /** Called after an earlier session's draft was copied under this one; the
+   *  parent remounts the form so it opens with those answers and photos. */
+  onDraftAdopted?: () => void;
 }) {
   // Prefill the brand into an "Event Name" field. Spark already knows the
   // brand, and every Total Wireless recap wants the same answer — making the
@@ -209,6 +223,17 @@ export default function RecapForm({
   const restored = useRef<RecapDraft | null>(
     pickRestoredDraft(readDraft(code, token, draftScope), asRecapDraft(serverDraft)),
   );
+
+  // Answers this phone kept from ANOTHER session on this link — a BA who lost
+  // the page and identified again gets a new session and an empty form.
+  // Offered, not applied: it might be a different shift's leftovers.
+  const [otherDraft, setOtherDraft] = useState<OtherSessionDraft | null>(() =>
+    draftScope === "shift" && !draftHasAnswers(restored.current)
+      ? findOtherSessionDraft(code, token)
+      : null,
+  );
+  const [adopting, setAdopting] = useState(false);
+  const restoredOnOpen = useRef(draftHasAnswers(restored.current));
 
   const [values, setValues] = useState<Record<string, string | string[]>>(() => {
     const seed: Record<string, string | string[]> = {};
@@ -1167,6 +1192,13 @@ export default function RecapForm({
     const submittedAt = new Date().toISOString();
     const coBrandsBody = coBrand.payload();
 
+    // One key for this tap, carried by the live send AND by any queued
+    // retry of it. If the first answer is lost on the way back, the server
+    // recognises the retry instead of filing the recap twice.
+    const pendingBefore = readPendingRecap(code);
+    const submitKey =
+      pendingBefore && pendingBefore.token === token ? pendingBefore.id : newIdempotencyKey();
+
     const queueThisSubmit = async (opts: { includeUploading?: boolean; silent?: boolean } = {}) => {
       const photoFiles: Record<string, File> = {};
       const files = photos
@@ -1202,6 +1234,7 @@ export default function RecapForm({
         secondShift: Boolean(forceNew && shiftLabel),
         submittedAt,
         photoFiles,
+        id: submitKey,
       });
       // Draft stays until the server ACKs — flushQueuedRecap clears it.
       if (!opts.silent) onQueued();
@@ -1259,10 +1292,10 @@ export default function RecapForm({
         await holdActionSuccess();
         return;
       }
-      const existing = readPendingRecap(code);
+      const existing = pendingBefore;
       const recapBody = {
         session: token,
-        idempotencyKey: existing && existing.token === token ? existing.id : undefined,
+        idempotencyKey: submitKey,
         fieldValues,
         files: donePhotos.map((p) => ({
           blobName: p.blobName,
@@ -1281,8 +1314,12 @@ export default function RecapForm({
       };
       const posted = await postCheckinRecap(code, recapBody);
       if (!posted.ok && !posted.already) {
-        if (isOfflineClockFailure({ status: posted.status })) {
+        if (shouldQueueRecapResponse(posted.status)) {
+          // No answer, a gateway page, or a server fault: the recap is fine,
+          // the trip wasn't. Keep it on the phone and send it again.
           await queueThisSubmit();
+          setSubmitPhase("success");
+          await holdActionSuccess();
           return;
         }
         setErr(posted.message || "Couldn't submit your recap.");
@@ -1316,13 +1353,22 @@ export default function RecapForm({
       await holdActionSuccess();
       await onSubmitted();
     } catch (error) {
-      if (isOfflineClockFailure({ error })) {
+      // Whatever went wrong on the way (a dropped connection, a page that
+      // was not JSON, a timeout), the answers must end up held on this
+      // phone with a way forward — never a spinner and never gone.
+      try {
         await queueThisSubmit();
         setSubmitPhase("success");
         await holdActionSuccess();
         return;
+      } catch {
+        /* could not even store it — say so below; the draft is still saved */
       }
-      setErr("Network error. Try again.");
+      setErr(
+        isOfflineClockFailure({ error })
+          ? "No signal. Your answers are saved on this phone — tap Submit again when you have bars."
+          : "Couldn't send your recap. Your answers are saved on this phone — tap Submit to try again.",
+      );
       setBusy(false);
       setSubmitPhase("idle");
     }
@@ -1390,6 +1436,63 @@ export default function RecapForm({
         <p style={{ ...errText, color: "#92400e", margin: 0 }}>
           {pendingRecapBanner(pendingRecap)}
         </p>
+      ) : null}
+      {restoredOnOpen.current && restored.current?.savedAt ? (
+        <p
+          role="status"
+          style={{
+            margin: 0,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "#ecfccb",
+            color: "#365314",
+            fontSize: 14,
+            lineHeight: 1.4,
+          }}
+        >
+          {restoredDraftBanner(restored.current.savedAt)}
+        </p>
+      ) : null}
+      {otherDraft ? (
+        <div
+          role="status"
+          style={{
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #a3a3a3",
+            background: "#fff",
+            color: "#1c1917",
+            fontSize: 14,
+            lineHeight: 1.4,
+          }}
+        >
+          {otherSessionDraftBanner(otherDraft)}
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              type="button"
+              disabled={adopting}
+              style={{ ...primaryBtn(accent), minHeight: 44, padding: "10px 12px", fontSize: 14 }}
+              onClick={() => {
+                setAdopting(true);
+                void adoptOtherSessionDraft(code, otherDraft.tail, token).then((ok) => {
+                  setAdopting(false);
+                  if (ok) onDraftAdopted?.();
+                  else setErr("Couldn't bring those answers over on this phone.");
+                });
+              }}
+            >
+              {adopting ? "Restoring…" : "Restore my answers"}
+            </button>
+            <button
+              type="button"
+              disabled={adopting}
+              style={{ ...secondaryBtn, minHeight: 44, padding: "10px 12px", fontSize: 14 }}
+              onClick={() => setOtherDraft(null)}
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
       ) : null}
       {payableMiles != null && Number.isFinite(payableMiles) ? (
         <div

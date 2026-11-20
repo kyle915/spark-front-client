@@ -4,7 +4,12 @@
  * shell so a BA can Add to Home Screen and reopen the clock / recap form
  * with no bars. Does not claim admin or client-portal navigations.
  */
-const CACHE = "spark-checkin-shell-v1";
+const CACHE = "spark-checkin-shell-v2";
+// A navigation that has not answered by now falls back to the cached shell.
+// Network-first with no deadline meant one bar of signal held a reload on a
+// blank white page for as long as the browser cared to wait — exactly when a
+// BA is mid-recap. The network answer still refreshes the cache when it lands.
+const NAV_TIMEOUT_MS = 4000;
 const SHELL = ["/", "/index.html", "/legal/spark-logo.png", "/legal/ignite-square-orange.png"];
 
 self.addEventListener("install", (event) => {
@@ -32,6 +37,51 @@ function isCheckinNav(request, url) {
   return request.mode === "navigate" && url.pathname.startsWith("/checkin");
 }
 
+/** Only a real copy of our own page is worth keeping as the offline shell —
+ *  never a captive-portal login page or a gateway error. */
+function cacheableShell(res) {
+  return Boolean(res && res.ok && !res.redirected && res.type === "basic");
+}
+
+function checkinNavigation(request) {
+  const network = fetch(request).then((res) => {
+    if (cacheableShell(res)) {
+      const copy = res.clone();
+      void caches.open(CACHE).then((cache) => cache.put("/index.html", copy)).catch(() => {});
+    }
+    return res;
+  });
+  const cached = () => caches.match("/index.html").then((hit) => hit || caches.match("/"));
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (res) => {
+      if (settled || !res) return false;
+      settled = true;
+      resolve(res);
+      return true;
+    };
+    const timer = setTimeout(() => {
+      void cached().then((hit) => {
+        if (!finish(hit)) {
+          // Nothing cached yet: keep waiting on the network.
+        }
+      });
+    }, NAV_TIMEOUT_MS);
+    network.then(
+      (res) => {
+        clearTimeout(timer);
+        finish(res);
+      },
+      () => {
+        clearTimeout(timer);
+        void cached().then((hit) => {
+          if (!finish(hit)) finish(Response.error());
+        });
+      },
+    );
+  });
+}
+
 function isShellAsset(url) {
   if (url.origin !== self.location.origin) return false;
   return (
@@ -54,17 +104,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isCheckinNav(request, url)) {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          void caches.open(CACHE).then((cache) => cache.put("/index.html", copy)).catch(() => {});
-          return res;
-        })
-        .catch(() =>
-          caches.match("/index.html").then((hit) => hit || caches.match("/")),
-        ),
-    );
+    event.respondWith(checkinNavigation(request));
     return;
   }
 

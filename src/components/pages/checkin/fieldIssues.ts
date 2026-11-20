@@ -18,6 +18,8 @@ export type FieldIssueKind =
   | "punch_not_saved"
   | "storage_unavailable"
   | "recap_submit_failed"
+  // The page hit an error it could not render past (CheckinErrorBoundary).
+  | "page_crashed"
   // Not a failure: the ambassador pressed Clock in / Clock out. Recorded so
   // an attempt that never lands still leaves a trace.
   | "punch_tapped";

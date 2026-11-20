@@ -14,6 +14,18 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-20o",
+    date: "November 20, 2026",
+    title: "Walk-up recaps survive a bad connection",
+    items: [
+      "If a BA's phone loses signal while they submit a recap, the check-in page now keeps it on the phone and says so: “Saved on your phone — we'll send your recap when you have signal.” It retries on its own and has a Send now button. A blank or error page no longer makes it look like their answers are gone.",
+      "If the page itself breaks, the BA sees “Your recap is saved on this phone” with Try again instead of a white screen, and staff get a note in the check-in issues log.",
+      "A recap that is sent twice because the first answer never reached the phone is filed once.",
+      "Walk-up links now require a full 10-digit cell number. If someone types a number that doesn't match but their name matches a BA who has worked the brand, the link asks “Is this you?” and shows the last two digits, so a typo doesn't create a second account.",
+      "When a BA has to check in again on the same phone, the recap form offers to restore the answers and photos they had already entered.",
+    ],
+  },
+  {
     id: "2026-11-20r",
     date: "November 20, 2026",
     title: "Receipt checks for staff",

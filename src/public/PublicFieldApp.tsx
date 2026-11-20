@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { registerCheckinPwa } from "./registerCheckinPwa";
+import CheckinErrorBoundary from "@/components/pages/checkin/CheckinErrorBoundary";
 
 /**
  * Field-facing public app — /checkin, /spark-form, /r/:token, /training.
@@ -35,6 +36,9 @@ export default function PublicFieldApp() {
 
   return (
     <BrowserRouter>
+      {/* A throw in a field page, or a lazy chunk that never downloaded on
+          one bar, used to unmount everything: a blank white page mid-recap. */}
+      <CheckinErrorBoundary>
       <Suspense fallback={<Fallback />}>
         <Routes>
           <Route path="/checkin/:code" element={<SparkCheckin />} />
@@ -45,6 +49,7 @@ export default function PublicFieldApp() {
           <Route path="/clock/:token" element={<PublicClock />} />
         </Routes>
       </Suspense>
+      </CheckinErrorBoundary>
     </BrowserRouter>
   );
 }
