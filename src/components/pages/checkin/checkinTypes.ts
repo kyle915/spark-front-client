@@ -2,6 +2,7 @@ import type { CoBrandOptions } from "./coBrandRecap";
 import type { ProgramOption } from "./eventTypeDescriptor";
 import type { ShowWhen } from "./fieldConditions";
 import type { PayableMileageState } from "./payableMileage";
+import type { ProgramChangeResult, ProgramChangeState } from "./programSwitchRules";
 import type { RecapDraft } from "./recapDraft";
 
 // Types mirroring the backend payload (ambassadors/checkin_web.build_public_context).
@@ -142,6 +143,8 @@ export type Context = {
     date?: string | null;
     storeManagerName?: string | null;
     storeManagerPhone?: string | null;
+    /** The program (event type) this event runs; decides the recap form. */
+    eventType?: { id: string; name: string } | null;
   };
   brand: {
     name: string;
@@ -173,7 +176,11 @@ export type Context = {
     mileage?: Mileage;
     stops?: SamplingStop[];
     payableMileage?: PayableMileageState;
+    /** Multi-program links only: may this BA switch the shift's program? */
+    programChange?: ProgramChangeState;
   };
+  /** Present on the change-program response: what carried over. */
+  programChange?: ProgramChangeResult;
   // Tenant-link mode — ONE durable link shared across every activation, so BAs
   // never type an event code. `needsEventDetails` means ask for store + date on
   // the identify step; the API then finds-or-creates the event.

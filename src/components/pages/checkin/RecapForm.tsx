@@ -600,6 +600,7 @@ export default function RecapForm({
         session: token,
         scope: draftScope,
         draft: photosRestored.current ? saved : { ...saved, photos: undefined },
+        templateId: template?.id,
       });
       if (!photosRestored.current) {
         delete (req.body.draft as { photos?: unknown }).photos;
@@ -616,6 +617,7 @@ export default function RecapForm({
     [
       code,
       token,
+      template?.id,
       draftScope,
       values,
       samples,
@@ -1226,6 +1228,7 @@ export default function RecapForm({
         files,
         productSamples,
         totalEngagements,
+        templateId: template?.id,
         usedCorpoCard,
         ...storeFields,
         coBrands: coBrandsBody,
@@ -1304,6 +1307,7 @@ export default function RecapForm({
         })),
         productSamples,
         totalEngagements,
+        templateId: template?.id,
         usedCorpoCard,
         ...storeFields,
         ...(coBrandsBody ? { coBrands: coBrandsBody } : {}),

@@ -21,6 +21,9 @@ export const WalkupShiftsQuery = graphql`
       distanceFromVenueMi
       hasRecap
       createdAt
+      programChangedFrom
+      programChangedTo
+      programChangedAt
     }
   }
 `;

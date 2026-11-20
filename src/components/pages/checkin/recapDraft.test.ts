@@ -125,5 +125,19 @@ describe("server draft save is not a submit", () => {
     expect(req.body).not.toHaveProperty("files");
     expect(req.body.draft.values.notes).toBe("Busy aisle, 40 samples");
     expect(req.body.scope).toBe("shift");
+    expect(req.body).not.toHaveProperty("templateId");
+  });
+
+  it("names the form the answers belong to, so a stale tab is refused after a program switch", () => {
+    const storage = new MemoryStorage();
+    writeDraft(CODE, THURSDAY, answers, "shift", storage);
+    const req = buildRecapDraftRequest({
+      code: CODE,
+      session: THURSDAY,
+      scope: "shift",
+      draft: readDraft(CODE, THURSDAY, "shift", storage) as RecapDraft,
+      templateId: "21",
+    });
+    expect(req.body.templateId).toBe("21");
   });
 });

@@ -101,6 +101,9 @@ export type PendingRecap = {
   files: PendingRecapFile[];
   productSamples: { productId: string; quantity: number }[];
   totalEngagements: number | null;
+  /** The recap form these answers were typed into. A recap queued before the
+   *  BA switched program is refused instead of filed against the new form. */
+  templateId?: string;
   forceNew?: boolean;
   shiftLabel?: string;
   secondShift?: boolean;
@@ -373,6 +376,7 @@ export async function enqueueRecap(
     files: PendingRecapFile[];
     productSamples: PendingRecap["productSamples"];
     totalEngagements: number | null;
+    templateId?: string;
     forceNew?: boolean;
     shiftLabel?: string;
     secondShift?: boolean;
@@ -407,6 +411,7 @@ export async function enqueueRecap(
     files: args.files,
     productSamples: args.productSamples,
     totalEngagements: args.totalEngagements,
+    ...(args.templateId ? { templateId: args.templateId } : {}),
     forceNew: args.forceNew,
     shiftLabel: args.shiftLabel,
     secondShift: args.secondShift,
@@ -687,6 +692,7 @@ async function flushRecapOnce(
       })),
       productSamples: pending.productSamples,
       totalEngagements: pending.totalEngagements,
+      ...(pending.templateId ? { templateId: pending.templateId } : {}),
       usedCorpoCard: pending.usedCorpoCard,
       ...(pending.storeName
         ? { storeName: pending.storeName, storeNumber: pending.storeNumber ?? "" }
