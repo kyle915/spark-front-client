@@ -145,6 +145,8 @@ import IdentifyStep from "./IdentifyStep";
 import RecapForm from "./RecapForm";
 import ProgramSwitch from "./ProgramSwitch";
 import { showProgramSwitch } from "./programSwitchRules";
+import StoreFix from "./StoreFix";
+import { showStoreFix } from "./storeFixRules";
 import {
   payableMileageComplete,
   shouldCollectPayableMileage,
@@ -761,6 +763,24 @@ export default function SparkCheckin() {
                     }
                     setProgramSwitching(false);
                   }}
+                />
+              </div>
+            ) : null}
+            {showStoreFix({
+              state: ctx.session?.storeChange,
+              clockState,
+              hasRecap,
+              recapOnly: Boolean(ctx.recapOnly),
+              recapQueued: Boolean(readPendingRecap(code)),
+              leftover: Boolean(priorDaySession),
+            }) ? (
+              <div style={{ marginBottom: 12 }}>
+                <StoreFix
+                  code={code}
+                  token={token as string}
+                  ctx={ctx}
+                  accent={accent}
+                  onMoved={refresh}
                 />
               </div>
             ) : null}

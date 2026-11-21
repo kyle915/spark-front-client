@@ -24,6 +24,13 @@ export const WalkupShiftsQuery = graphql`
       programChangedFrom
       programChangedTo
       programChangedAt
+      storeChangedFrom
+      storeChangedTo
+      storeChangedAt
+      storeChangeDistanceKm
+      storeChangeFarOverride
+      storeChangeCreatedStore
+      storeChangeRetailerUuid
     }
   }
 `;
