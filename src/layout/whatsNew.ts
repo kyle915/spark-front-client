@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-21g",
+    date: "November 21, 2026",
+    title: "Easier to check in at a second location",
+    items: [
+      "After clocking out, the \"Check-in for another gig\" button now sits right under the time clock instead of at the bottom of the page, so BAs moving to a new store can find it.",
+      "The \"Clocking in for a new shift? Tap here\" link is now dark text on every brand, so it no longer disappears on light brand colours.",
+    ],
+    staffOnly: true,
+  },
+  {
     id: "2026-11-21p",
     date: "November 21, 2026",
     title: "BAs can preview the recap before they clock in",
