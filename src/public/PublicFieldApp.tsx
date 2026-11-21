@@ -12,6 +12,9 @@ import CheckinErrorBoundary from "@/components/pages/checkin/CheckinErrorBoundar
  */
 
 const SparkCheckin = lazy(() => import("@/components/pages/checkin/SparkCheckin"));
+const SparkRecapPreview = lazy(
+  () => import("@/components/pages/checkin/SparkRecapPreview"),
+);
 const SparkPublicExpressForm = lazy(
   () => import("@/public/form/SparkPublicExpressForm"),
 );
@@ -42,6 +45,9 @@ export default function PublicFieldApp() {
       <Suspense fallback={<Fallback />}>
         <Routes>
           <Route path="/checkin/:code" element={<SparkCheckin />} />
+          {/* Read-only recap preview from the shift reminder email. No login,
+              no identify, no clock — see SparkRecapPreview. */}
+          <Route path="/checkin/:code/preview" element={<SparkRecapPreview />} />
           <Route path="/spark-form/:tenantSlug" element={<SparkPublicExpressForm />} />
           <Route path="/r/:token" element={<PublicRecap />} />
           <Route path="/training/:code" element={<TrainingHub />} />

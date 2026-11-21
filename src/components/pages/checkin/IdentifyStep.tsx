@@ -80,6 +80,8 @@ import {
   type OpenShift,
 } from "./checkinSession";
 import PlanGigPicker from "./PlanGigPicker";
+import { RecapPreviewButton } from "./RecapPreview";
+import { PREVIEW_BUTTON_HINT } from "./recapPreviewModel";
 import {
   SHIFT_LATER_BACK,
   SHIFT_LATER_BODY,
@@ -228,6 +230,13 @@ const shiftAskBody = {
   lineHeight: 1.45,
 } as const;
 
+const previewHint = {
+  margin: "6px 0 0",
+  fontSize: 13,
+  lineHeight: 1.45,
+  color: "#57534e",
+} as const;
+
 // ── Step 1: identify ────────────────────────────────────────────────────────
 export default function IdentifyStep({
   code,
@@ -242,6 +251,7 @@ export default function IdentifyStep({
   eventTypes = [],
   programPickerTitle = "",
   storeNameRequiredByDefault = false,
+  onPreviewRecap,
 }: {
   code: string;
   accent: string;
@@ -255,6 +265,12 @@ export default function IdentifyStep({
   eventTypes?: EventTypeOption[];
   programPickerTitle?: string;
   storeNameRequiredByDefault?: boolean;
+  /**
+   * Opens the read-only recap preview (no identify, no clock). Absent for
+   * links with no recap (time-sheet-only). Called with the picked program on
+   * a multi-program link, else null.
+   */
+  onPreviewRecap?: (programId: string | null) => void;
 }) {
   // Repeat BAs are the norm on a standing link — the same crew works these
   // stores week after week. Remember who they said they were so the second
@@ -893,6 +909,12 @@ export default function IdentifyStep({
             ? "Your name on this recap. Phone is optional."
             : "Tell us who you are so your lead can confirm your hours. Already clocked in? Use the same phone number to pick up your shift."}
       </p>
+      {onPreviewRecap && !hasPrograms && !openShift && !pastRecap ? (
+        <div style={{ margin: "0 0 14px" }}>
+          <RecapPreviewButton onClick={() => onPreviewRecap(null)} />
+          <p style={previewHint}>{PREVIEW_BUTTON_HINT}</p>
+        </div>
+      ) : null}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
@@ -1070,6 +1092,12 @@ export default function IdentifyStep({
             </select>
           )}
           </div>
+          {onPreviewRecap && eventTypeId ? (
+            <div style={{ marginTop: 12 }}>
+              <RecapPreviewButton onClick={() => onPreviewRecap(eventTypeId)} />
+              <p style={previewHint}>{PREVIEW_BUTTON_HINT}</p>
+            </div>
+          ) : null}
         </>
       ) : null}
 
