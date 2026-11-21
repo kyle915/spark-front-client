@@ -14,6 +14,19 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-21s",
+    date: "November 21, 2026",
+    title: "BAs can fix a wrong store after clocking in",
+    staffOnly: true,
+    items: [
+      "Once a BA has clocked in on a walk-up link, the check-in page shows the store and address the shift is logged at, with a “Wrong store? Fix it” link until their recap is filed. Time-sheet brands see “Wrong location? Fix it” with the address only.",
+      "Tapping it uses the phone's location: “You're at 123 Main St. Is this where you're working?” The store name is filled in when Spark already knows a store there. The BA can search the brand's stores or type an address instead, including when location is off.",
+      "If the chosen address is more than 1 km from the phone, the BA has to tap “I'm sure” before the shift moves, and the Walk-ups card says they did. The clock-in time, hours and mileage stay as they were.",
+      "A store Spark has never seen is added to the brand's retailers once (never twice). The Walk-ups card shows “Store changed by BA from … to … at …”, and “New store created by the BA, not yet reviewed” with a link to rename or merge it.",
+      "Only walk-in shifts the BA's own check-in started that nobody else is on can be moved. Scheduled events and shared shifts tell the BA to message their lead. If another walk-up is already open at the corrected store that day, the two are not merged.",
+    ],
+  },
+  {
     id: "2026-11-21g",
     date: "November 21, 2026",
     title: "Easier to check in at a second location",

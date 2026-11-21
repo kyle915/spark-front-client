@@ -11222,6 +11222,13 @@ type WalkupShiftType {
   programChangedFrom: String
   programChangedTo: String
   programChangedAt: String
+  storeChangedFrom: String
+  storeChangedTo: String
+  storeChangedAt: String
+  storeChangeDistanceKm: Float
+  storeChangeFarOverride: Boolean!
+  storeChangeCreatedStore: Boolean!
+  storeChangeRetailerUuid: String
 }
 
 type WingspanPayment {

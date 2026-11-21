@@ -3,6 +3,7 @@ import type { ProgramOption } from "./eventTypeDescriptor";
 import type { ShowWhen } from "./fieldConditions";
 import type { PayableMileageState } from "./payableMileage";
 import type { ProgramChangeResult, ProgramChangeState } from "./programSwitchRules";
+import type { StoreChangeResult, StoreChangeState } from "./storeFixRules";
 import type { RecapDraft } from "./recapDraft";
 
 // Types mirroring the backend payload (ambassadors/checkin_web.build_public_context).
@@ -178,9 +179,13 @@ export type Context = {
     payableMileage?: PayableMileageState;
     /** Multi-program links only: may this BA switch the shift's program? */
     programChange?: ProgramChangeState;
+    /** May this BA move the shift to another store ("Wrong store? Fix it")? */
+    storeChange?: StoreChangeState;
   };
   /** Present on the change-program response: what carried over. */
   programChange?: ProgramChangeResult;
+  /** Present on the change-store response: what moved. */
+  storeChange?: StoreChangeResult;
   // Tenant-link mode — ONE durable link shared across every activation, so BAs
   // never type an event code. `needsEventDetails` means ask for store + date on
   // the identify step; the API then finds-or-creates the event.

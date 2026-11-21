@@ -1,4 +1,5 @@
 import { Suspense, useState } from "react";
+import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { WalkupShiftsQuery } from "@/api/queries/WalkupShiftsQuery";
 import type { WalkupShiftsQuery as WalkupShiftsQueryType } from "@api/queries/__generated__/WalkupShiftsQuery.graphql";
@@ -21,6 +22,7 @@ import CheckinIssuesCard from "./CheckinIssuesCard";
 import BaProductNotesCard from "./BaProductNotesCard";
 import ClockLinks from "./ClockLinks";
 import { programChangeNote } from "./walkupProgramChange";
+import { createdStoreLink, storeChangeNote, storeChangeOverrideNote } from "./walkupStoreChange";
 
 /**
  * Walk-ups queue — tenant-wide review of self-serve clock-ins created from an
@@ -316,6 +318,25 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
                 )}
                 <span>{r.hasRecap ? "✓ recap filed" : "no recap"}</span>
               </div>
+              {storeChangeNote(r) ? (
+                <div className="text-[12px] mt-1.5" style={{ color: "var(--spark-text-meta)" }}>
+                  <p>{storeChangeNote(r)}</p>
+                  {storeChangeOverrideNote(r) ? (
+                    <p style={{ color: "var(--spark-orange)" }}>{storeChangeOverrideNote(r)}</p>
+                  ) : null}
+                  {createdStoreLink(r) ? (
+                    <p>
+                      New store created by the BA, not yet reviewed.{" "}
+                      <Link
+                        to={createdStoreLink(r) as string}
+                        style={{ color: "var(--spark-text)", textDecoration: "underline" }}
+                      >
+                        Review store
+                      </Link>
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {programChangeNote(r) ? (
                 <p
                   className="text-[12px] mt-1.5"
