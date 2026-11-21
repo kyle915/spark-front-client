@@ -14,6 +14,18 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-21p",
+    date: "November 21, 2026",
+    title: "BAs can preview the recap before they clock in",
+    staffOnly: true,
+    items: [
+      "The walk-up check-in page has a “Preview the recap” button. On a link with more than one program it appears once the BA picks their event type; on a single-program link it is there from the start. It opens every recap question in order (with the answer choices), which ones are required, and the photos to take. Nothing can be typed, and opening it doesn't check the BA in or start a shift.",
+      "The preview starts with a “Before your shift” checklist built from the form: the numbers to keep count of, the answers to be ready for, and each photo section with how many to take.",
+      "Shift confirmation and reminder emails now have a “Preview your recap” button that opens the same preview with no login, for that shift's program. The check-in link stays in the email, worded for the day of the shift.",
+      "Once opened, the preview works with no signal on that phone. Time-sheet-only brands have no recap, so they don't get the button or the email link.",
+    ],
+  },
+  {
     id: "2026-11-20p",
     date: "November 20, 2026",
     title: "BAs can fix a wrong program on the check-in page",

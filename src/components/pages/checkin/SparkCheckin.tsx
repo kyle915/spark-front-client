@@ -138,6 +138,8 @@ import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import { shouldShowSamplingStopCard } from "./samplingStops";
+import { RecapPreviewButton, RecapPreviewSheet } from "./RecapPreview";
+import { previewFromContext } from "./recapPreviewModel";
 import PayableMileageStep from "./PayableMileageStep";
 import IdentifyStep from "./IdentifyStep";
 import RecapForm from "./RecapForm";
@@ -639,6 +641,11 @@ export default function SparkCheckin() {
   // runs, then remounted on the new program's form (epoch bump).
   const [programSwitching, setProgramSwitching] = useState(false);
   const [programEpoch, setProgramEpoch] = useState(0);
+  // Read-only recap preview sheet. `false` = closed; otherwise the program to
+  // show (null = the link's default / ask). Opening it never identifies,
+  // clocks in, or creates anything.
+  const [previewOpen, setPreviewOpen] = useState<false | { programId: string | null }>(false);
+  const closePreview = useCallback(() => setPreviewOpen(false), []);
   useEffect(() => {
     if (!priorDaySession) setPriorRecapOpen(false);
   }, [priorDaySession]);
@@ -724,6 +731,11 @@ export default function SparkCheckin() {
             eventTypes={ctx.eventTypes || []}
             programPickerTitle={ctx.programPickerTitle || ""}
             storeNameRequiredByDefault={Boolean(ctx.storeNameRequired)}
+            onPreviewRecap={
+              ctx.recapOnly || ctx.timesheetOnly
+                ? undefined
+                : (programId) => setPreviewOpen({ programId })
+            }
           />
         ) : (
           <>
@@ -752,6 +764,11 @@ export default function SparkCheckin() {
                 />
               </div>
             ) : null}
+            {clockState === "not_started" && !ctx.recapOnly && !hasRecap && previewFromContext(ctx) ? (
+              <div style={{ marginBottom: 12 }}>
+                <RecapPreviewButton onClick={() => setPreviewOpen({ programId: null })} />
+              </div>
+            ) : null}
             <CheckedInFlow
               code={code}
               token={token as string}
@@ -774,6 +791,17 @@ export default function SparkCheckin() {
           Spark by Ignite
         </p>
       </div>
+      {previewOpen ? (
+        <RecapPreviewSheet
+          code={code}
+          programId={previewOpen.programId}
+          // After identify the page holds the event's real form; before it,
+          // the sheet asks the public preview endpoint.
+          payload={identified ? previewFromContext(ctx) : null}
+          accent={accent}
+          onClose={closePreview}
+        />
+      ) : null}
     </Shell>
   );
 }

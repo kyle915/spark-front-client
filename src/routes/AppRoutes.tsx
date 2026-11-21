@@ -442,6 +442,10 @@ const SparkClientLive = lazyDefault(
 const SparkCheckin = lazyDefault(
   () => import("@/components/pages/checkin/SparkCheckin"),
 );
+// Read-only recap preview (shift reminder email link) — no login, no clock.
+const SparkRecapPreview = lazyDefault(
+  () => import("@/components/pages/checkin/SparkRecapPreview"),
+);
 // Authenticated campaign report view (per-request). Linked from the Master
 // Tracker "Report" row action. Public twin is /report/:token below.
 const CampaignReportAdminView = lazyDefault(
@@ -1008,6 +1012,12 @@ const RequestsLinks = {
       // Public, no-login BA web check-in for one event (walk-up code = link).
       path: "/checkin/:code",
       component: <SparkCheckin />,
+      isPublic: true,
+    },
+    {
+      // Public, no-login read-only recap preview for one check-in link.
+      path: "/checkin/:code/preview",
+      component: <SparkRecapPreview />,
       isPublic: true,
     },
     {
