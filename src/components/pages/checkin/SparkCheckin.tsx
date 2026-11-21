@@ -2400,26 +2400,8 @@ function CheckedInFlow({
         ) : null}
       </div>
 
-      {/* "What's in this?" at the table: answers from the brand's own notes. */}
-      {!leftover && !ts ? (
-        <ProductQuestionsBox
-          origin={apiOrigin()}
-          code={code}
-          session={token}
-          brandName={ctx.brand.name || ""}
-          state={ctx.productQa}
-          recapOnly={ctx.recapOnly}
-          accent={accent}
-          fetchImpl={timedFetch}
-        />
-      ) : null}
-
-      {/* The BA's own recent shifts: hours + review / approved / paid. */}
-      <MyShiftsCard code={code} token={token} />
-
-      {switchNotice}
-
-      {/* Another gig — deliberately outside the Time Clock card so it cannot
+      {/* Another gig — directly under the Time Clock card (not at the bottom of
+          the page, where BAs never found it) but outside it, so it cannot
           be mistaken for an action on this shift. Same start-another flow as
           before; Clock in / File recap above stay with the current shift. */}
       {effectiveClock === "clocked_out" && !hasRecap && ctx.mode === "tenant" && !leftover ? (
@@ -2445,6 +2427,26 @@ function CheckedInFlow({
         </div>
       ) : null}
 
+      {/* "What's in this?" at the table: answers from the brand's own notes. */}
+      {!leftover && !ts ? (
+        <ProductQuestionsBox
+          origin={apiOrigin()}
+          code={code}
+          session={token}
+          brandName={ctx.brand.name || ""}
+          state={ctx.productQa}
+          recapOnly={ctx.recapOnly}
+          accent={accent}
+          fetchImpl={timedFetch}
+        />
+      ) : null}
+
+      {/* The BA's own recent shifts: hours + review / approved / paid. */}
+      <MyShiftsCard code={code} token={token} />
+
+      {switchNotice}
+
+
       {/* Same-day wrong store / new shift. A new calendar day uses the gate
           above instead of this link. */}
       {ctx.mode === "tenant" && !leftover && (clockState === "clocked_in" || clockState === "not_started") ? (
@@ -2457,7 +2459,9 @@ function CheckedInFlow({
             fontSize: 15,
             fontWeight: 700,
             lineHeight: 1.35,
-            color: accent,
+            // Dark ink, not the brand accent: a light accent (Long Drink's
+            // lime) on the cream page made this link close to invisible.
+            color: "#1c1917",
             textDecoration: "underline",
             textUnderlineOffset: 3,
             cursor: "pointer",
