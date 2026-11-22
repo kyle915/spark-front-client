@@ -240,6 +240,12 @@ const SECTIONS: NavSection[] = [
         clientLabel: "Demo Costs",
       },
       {
+        label: "Budget Pacing & ROI",
+        Icon: BarChart3,
+        to: "/roi-pacing",
+        clientLabel: "Budget Pacing & ROI",
+      },
+      {
         label: "Finance Queue",
         Icon: ShieldCheck,
         to: "/finance-queue",

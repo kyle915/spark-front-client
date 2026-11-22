@@ -8,6 +8,7 @@ import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import TodayAttentionPanels, { OnTheSheets } from "@/components/dashboard/TodayAttentionPanels";
+import TodayAttentionStrip from "@/components/dashboard/TodayAttentionStrip";
 import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
 import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
@@ -161,6 +162,8 @@ function DashboardInner() {
           <Suspense fallback={null}>
             <TodaysSnapshot />
           </Suspense>
+
+          <TodayAttentionStrip />
 
           <Suspense fallback={null}>
             <TodayAttentionPanels staff={!isClient} />

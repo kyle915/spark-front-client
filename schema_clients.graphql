@@ -4049,6 +4049,43 @@ input DeleteUserInput {
   userId: ID!
 }
 
+type DemoBudgetPacingAndLeaderboard {
+  month: String!
+  monthEnd: String!
+  targetAmount: String
+  spentAmount: String!
+  committedAmount: String!
+  projectedAmount: String!
+  elapsedDays: Int!
+  daysInMonth: Int!
+  elapsedPct: String!
+  expectedSpendToDate: String
+  paceStatus: String!
+  paceNote: String!
+  visitCount: Int!
+  incompleteCostVisits: Int!
+  canEditBudget: Boolean!
+  targets: [DemoBudgetTargetItem!]!
+  leaderboard: [RoiLeaderboardRow!]!
+  groupBy: String!
+  sortBy: String!
+}
+
+type DemoBudgetTargetItem {
+  uuid: String!
+  scopeType: String!
+  scopeKey: String!
+  scopeLabel: String!
+  targetAmount: String!
+  notes: String!
+}
+
+type DemoBudgetTargetResult {
+  ok: Boolean!
+  reason: String
+  target: DemoBudgetTargetItem
+}
+
 input DetachRequestsFromPlanInput {
   clientMutationId: ID = null
   requestIds: [ID!]!
@@ -6642,6 +6679,8 @@ type Mutation {
   setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
   publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
+  upsertDemoBudgetTarget(targetAmount: String!, month: String = null, scopeType: String! = "workspace", scopeKey: String! = "", scopeLabel: String! = "", notes: String! = "", tenantId: ID = null): DemoBudgetTargetResult!
+  deleteDemoBudgetTarget(uuid: String!, tenantId: ID = null): DemoBudgetTargetResult!
   askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
   clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
@@ -8030,6 +8069,8 @@ type Query {
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantStoreInsights(tenantId: ID!): TenantStoreInsights
   brandInsightReview: [BrandInsightReviewBrand!]
+  demoBudgetPacingAndLeaderboard(month: String = null, groupBy: String! = "retailer", sortBy: String! = "units_per_dollar", tenantId: ID = null): DemoBudgetPacingAndLeaderboard
+  todayAttentionQueue(tenantId: ID = null): TodayAttentionQueue
   brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
   recapReceiptAudit(recapId: ID!): RecapReceiptAudit
@@ -9759,6 +9800,18 @@ type RevokeAiConnectionResult {
   message: String!
 }
 
+type RoiLeaderboardRow {
+  groupKey: String!
+  groupLabel: String!
+  visitCount: Int!
+  demoDollars: String!
+  units: Int
+  salesDollars: String
+  unitsPerDollar: String
+  revenuePerDollar: String
+  note: String!
+}
+
 enum RoleFilterEnum {
   AMBASSADOR
   CLIENT
@@ -11400,6 +11453,28 @@ type TimeZoneResponse {
   message: String!
   clientMutationId: ID
   timezone: TimeZone
+}
+
+type TodayAttentionBucket {
+  key: String!
+  label: String!
+  count: Int!
+  items: [TodayAttentionItem!]!
+}
+
+type TodayAttentionItem {
+  bucket: String!
+  title: String!
+  subtitle: String!
+  severity: String!
+  actionUrl: String!
+  actionLabel: String!
+  refId: String!
+}
+
+type TodayAttentionQueue {
+  totalCount: Int!
+  buckets: [TodayAttentionBucket!]!
 }
 
 "\nthe data that was used to create the token.\n"
