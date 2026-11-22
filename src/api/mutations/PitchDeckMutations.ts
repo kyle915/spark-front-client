@@ -28,6 +28,7 @@ export const PitchDeckMutationsCreateDeckMutation = graphql`
     $periodEnd: String
     $retailerFilter: String
     $marketFilter: String
+    $providerUuid: String
     $includeCosts: Boolean!
     $passcode: String
     $expiresInDays: Int
@@ -42,6 +43,7 @@ export const PitchDeckMutationsCreateDeckMutation = graphql`
       periodEnd: $periodEnd
       retailerFilter: $retailerFilter
       marketFilter: $marketFilter
+      providerUuid: $providerUuid
       includeCosts: $includeCosts
       passcode: $passcode
       expiresInDays: $expiresInDays

@@ -214,6 +214,7 @@ const BuyerReportBody: React.FC<{
       <BuyerPitchDeckShareCard
         retailerFilter={retailerFilter}
         marketFilter={marketFilter}
+        providerUuid={providerUuid}
       />
 
       {/* Store Table */}

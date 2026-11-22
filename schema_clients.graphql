@@ -6714,7 +6714,7 @@ type Mutation {
   upsertDemoBudgetTarget(targetAmount: String!, month: String = null, scopeType: String! = "workspace", scopeKey: String! = "", scopeLabel: String! = "", notes: String! = "", tenantId: ID = null): DemoBudgetTargetResult!
   deleteDemoBudgetTarget(uuid: String!, tenantId: ID = null): DemoBudgetTargetResult!
   togglePhotoWallPin(photoId: String!, pinned: Boolean = null, note: String = null): PhotoWallPinResult!
-  createBuyerPitchDeck(title: String!, subtitle: String = null, buyerName: String = null, introNote: String = null, periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, includeCosts: Boolean! = false, passcode: String = null, expiresInDays: Int = null, pinnedPhotoIds: [String!] = null): BuyerPitchDeckCreateResult!
+  createBuyerPitchDeck(title: String!, subtitle: String = null, buyerName: String = null, introNote: String = null, periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null, includeCosts: Boolean! = false, passcode: String = null, expiresInDays: Int = null, pinnedPhotoIds: [String!] = null): BuyerPitchDeckCreateResult!
   revokeBuyerPitchDeck(deckUuid: String!): BuyerPitchDeckRevokeResult!
   askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
   clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!

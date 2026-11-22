@@ -1,12 +1,16 @@
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
+import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Link } from "react-router";
+import environment from "@/api/relay/environment";
 import { PitchDeckQueriesPhotoWallQuery } from "@/api/queries/PitchDeckQueries";
 import type { PitchDeckQueriesPhotoWallQuery as PhotoWallQueryType } from "@/api/queries/__generated__/PitchDeckQueriesPhotoWallQuery.graphql";
 import { PitchDeckMutationsTogglePinMutation } from "@/api/mutations/PitchDeckMutations";
 import type { PitchDeckMutationsTogglePinMutation as TogglePinType } from "@/api/mutations/__generated__/PitchDeckMutationsTogglePinMutation.graphql";
 import { PhotoLightbox, type PhotoLightboxItem } from "@/shared/PhotoLightbox";
 import { thumbUrl } from "@/utils/thumb";
+
+const PAGE_SIZE = 60;
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const FIELD_STYLE = {
@@ -24,6 +28,8 @@ const PINNED_BTN_STYLE = {
   color: "var(--spark-text)",
   border: "1px solid var(--spark-border)",
 } as const;
+
+type PhotoRow = PhotoWallQueryType["response"]["photoWall"]["photos"][number];
 
 const PhotoWallBody: React.FC<{
   retailer: string;
@@ -44,38 +50,50 @@ const PhotoWallBody: React.FC<{
   fetchKey,
   bump,
 }) => {
+  const vars = {
+    startDate: null as string | null,
+    endDate: null as string | null,
+    retailer: retailer || null,
+    market: market || null,
+    sku: sku || null,
+    category: category || null,
+    search: search || null,
+    pinnedOnly,
+    first: PAGE_SIZE,
+    offset: 0,
+  };
   const data = useLazyLoadQuery<PhotoWallQueryType>(
     PitchDeckQueriesPhotoWallQuery,
-    {
-      startDate: null,
-      endDate: null,
-      retailer: retailer || null,
-      market: market || null,
-      sku: sku || null,
-      category: category || null,
-      search: search || null,
-      pinnedOnly,
-      first: 60,
-      offset: 0,
-    },
+    vars,
     { fetchPolicy: "network-only", fetchKey },
   );
   const wall = data.photoWall;
+  const [photos, setPhotos] = useState<PhotoRow[]>(() => [...wall.photos]);
+  const [total, setTotal] = useState(wall.total);
+  const [pinnedCount, setPinnedCount] = useState(wall.pinnedCount);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [commitPin, pinInFlight] = useMutation<TogglePinType>(
     PitchDeckMutationsTogglePinMutation,
   );
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
 
+  useEffect(() => {
+    setPhotos([...wall.photos]);
+    setTotal(wall.total);
+    setPinnedCount(wall.pinnedCount);
+    setLightboxIndex(null);
+  }, [wall, fetchKey]);
+
   const lightboxPhotos: PhotoLightboxItem[] = useMemo(
     () =>
-      wall.photos.map((p) => ({
+      photos.map((p) => ({
         url: p.url,
         thumb: thumbUrl(p.url, 400) || p.url,
         caption: [p.store, p.category, p.caption].filter(Boolean).join(" · "),
         name: p.store || p.category,
       })),
-    [wall.photos],
+    [photos],
   );
 
   const togglePin = (photoId: string, currentlyPinned: boolean) => {
@@ -98,6 +116,33 @@ const PhotoWallBody: React.FC<{
     });
   };
 
+  const loadMore = async () => {
+    if (loadingMore || photos.length >= total) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchQuery<PhotoWallQueryType>(
+        environment,
+        PitchDeckQueriesPhotoWallQuery,
+        { ...vars, offset: photos.length, first: PAGE_SIZE },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const next = res?.photoWall;
+      if (next) {
+        setTotal(next.total);
+        setPinnedCount(next.pinnedCount);
+        setPhotos((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          const appended = next.photos.filter((p) => !seen.has(p.id));
+          return [...prev, ...appended];
+        });
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const hasMore = photos.length < total;
+
   return (
     <div className="space-y-5 max-w-6xl">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
@@ -112,8 +157,9 @@ const PhotoWallBody: React.FC<{
             Curate demo proof for buyer decks
           </h1>
           <p className="text-xs mt-1" style={META}>
-            <strong className="mono">{wall.total}</strong> photos ·{" "}
-            <strong className="mono">{wall.pinnedCount}</strong> pinned ·{" "}
+            Showing <strong className="mono">{photos.length}</strong> of{" "}
+            <strong className="mono">{total}</strong> photos ·{" "}
+            <strong className="mono">{pinnedCount}</strong> pinned ·{" "}
             <Link to="/buyer-report" className="underline underline-offset-2">
               Build a Buyer Pitch Deck
             </Link>
@@ -135,7 +181,7 @@ const PhotoWallBody: React.FC<{
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {wall.photos.map((photo, idx) => (
+        {photos.map((photo, idx) => (
           <article
             key={photo.id}
             className="rounded-xl overflow-hidden flex flex-col"
@@ -180,10 +226,28 @@ const PhotoWallBody: React.FC<{
         ))}
       </div>
 
-      {wall.photos.length === 0 && (
+      {photos.length === 0 && (
         <p className="text-sm" style={META}>
           No approved in-store demo photos match these filters yet.
         </p>
+      )}
+
+      {hasMore && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            disabled={loadingMore}
+            onClick={() => void loadMore()}
+            className="px-4 py-2 rounded-xl text-xs font-bold"
+            style={PRIMARY_BTN_STYLE}
+          >
+            {loadingMore
+              ? "Loading…"
+              : `Load more (${Math.min(PAGE_SIZE, total - photos.length)} of ${
+                  total - photos.length
+                } remaining)`}
+          </button>
+        </div>
       )}
 
       {lightboxIndex !== null && lightboxPhotos[lightboxIndex] && (

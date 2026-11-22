@@ -26,14 +26,16 @@ const PRIMARY_BTN_STYLE = {
 type Props = {
   retailerFilter: string;
   marketFilter: string;
+  providerUuid: string;
 };
 
 const DecksList: React.FC<{
   retailerFilter: string;
   marketFilter: string;
+  providerUuid: string;
   fetchKey: number;
   bump: () => void;
-}> = ({ retailerFilter, marketFilter, fetchKey, bump }) => {
+}> = ({ retailerFilter, marketFilter, providerUuid, fetchKey, bump }) => {
   const data = useLazyLoadQuery<DecksQueryType>(
     PitchDeckQueriesBuyerPitchDecksQuery,
     {},
@@ -67,6 +69,7 @@ const DecksList: React.FC<{
         periodEnd: null,
         retailerFilter: retailerFilter || null,
         marketFilter: marketFilter || null,
+        providerUuid: providerUuid || null,
         includeCosts,
         passcode: passcode.trim() || null,
         expiresInDays: Number.isFinite(days) ? days : null,
@@ -257,6 +260,7 @@ const DecksList: React.FC<{
 export const BuyerPitchDeckShareCard: React.FC<Props> = ({
   retailerFilter,
   marketFilter,
+  providerUuid,
 }) => {
   const [fetchKey, setFetchKey] = useState(0);
   return (
@@ -270,6 +274,7 @@ export const BuyerPitchDeckShareCard: React.FC<Props> = ({
       <DecksList
         retailerFilter={retailerFilter}
         marketFilter={marketFilter}
+        providerUuid={providerUuid}
         fetchKey={fetchKey}
         bump={() => setFetchKey((k) => k + 1)}
       />
