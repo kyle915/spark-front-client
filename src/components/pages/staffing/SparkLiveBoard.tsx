@@ -1,10 +1,16 @@
 import { Link } from "react-router";
 import { shiftTime } from "@/components/dashboard/todayAttention";
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
+import { NoShowCascadeAlertsQuery } from "@/api/queries/NoShowCascadeAlertsQuery";
+import type { NoShowCascadeAlertsQuery as NoShowCascadeAlertsQueryType } from "@api/queries/__generated__/NoShowCascadeAlertsQuery.graphql";
+import { TriggerNoShowCascadeMutation } from "@/api/mutations/TriggerNoShowCascadeMutation";
+import type { TriggerNoShowCascadeMutation as TriggerNoShowCascadeMutationType } from "@api/mutations/__generated__/TriggerNoShowCascadeMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import AdminPunchControls from "@/components/staffing/AdminPunchControls";
 
 /**
@@ -65,6 +71,72 @@ const clockLabel = (ba: BA): string => {
   if (inAt && outAt) return `${inAt} → ${outAt}`;
   if (inAt) return `in at ${inAt}`;
   return "";
+};
+
+const ACTIVE_CASCADE = new Set(["open", "dispatched"]);
+
+const TriggerBackupAlertButton: React.FC<{
+  eventUuid: string;
+  eventName: string;
+  hasCascade: boolean;
+  onDone: () => void;
+}> = ({ eventUuid, eventName, hasCascade, onDone }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [commit, busy] = useMutation<TriggerNoShowCascadeMutationType>(
+    TriggerNoShowCascadeMutation,
+  );
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      {hasCascade ? (
+        <span
+          className="mono text-[9px]"
+          style={{
+            letterSpacing: "0.1em",
+            color: "var(--spark-orange)",
+            border: "1px solid rgba(239,90,42,0.45)",
+            borderRadius: 999,
+            padding: "2px 8px",
+          }}
+          title="Backup cascade open for this shift"
+        >
+          CASCADE
+        </span>
+      ) : null}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          commit({
+            variables: { input: { eventId: eventUuid } },
+            onCompleted: (resp) => {
+              const r = resp.triggerNoShowCascade;
+              if (!r?.success) {
+                showAlert(r?.message ?? "Could not trigger cascade.", "error");
+                return;
+              }
+              showAlert(r.message ?? "Backup alert sent.", "success");
+              onDone();
+            },
+            onError: (err) => showAlert(err.message, "error"),
+          })
+        }
+        className="mono text-[9px] uppercase"
+        style={{
+          letterSpacing: "0.08em",
+          padding: "3px 8px",
+          borderRadius: 6,
+          border: "1px solid var(--spark-border)",
+          background: "transparent",
+          color: "var(--spark-text-secondary)",
+          cursor: busy ? "wait" : "pointer",
+        }}
+        title={`Trigger backup BA cascade for ${eventName}`}
+      >
+        {busy ? "…" : "Backup alert"}
+      </button>
+    </div>
+  );
 };
 
 const BARow: React.FC<{
@@ -180,10 +252,12 @@ const Inner: React.FC<{
   refreshKey: number;
   tenantId: string;
   bump: () => void;
+  staffTools: boolean;
 }> = ({
   refreshKey,
   tenantId,
   bump,
+  staffTools,
 }) => {
   const data = useLazyLoadQuery<LiveShiftBoardQueryType>(
     LiveShiftBoardQuery,
@@ -191,6 +265,21 @@ const Inner: React.FC<{
     { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
   );
   const shifts: Shift[] = (data?.liveShiftBoard ?? []).filter(Boolean) as Shift[];
+
+  const cascadeData = useLazyLoadQuery<NoShowCascadeAlertsQueryType>(
+    NoShowCascadeAlertsQuery,
+    { tenantId, first: 100 },
+    { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
+  );
+
+  const cascadeEventNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const a of cascadeData?.noShowCascadeAlerts ?? []) {
+      if (!a || !ACTIVE_CASCADE.has(a.status)) continue;
+      if (a.eventName) names.add(a.eventName.trim().toLowerCase());
+    }
+    return names;
+  }, [cascadeData]);
 
   const { onClock, noShows, pending } = useMemo(() => {
     let oc = 0;
@@ -298,6 +387,16 @@ const Inner: React.FC<{
                     {s.endTime ? `–${shiftTime(s.endLocal ?? s.endTime)}` : ""}
                   </p>
                 </div>
+                {staffTools && s.noShows > 0 ? (
+                  <TriggerBackupAlertButton
+                    eventUuid={s.eventUuid}
+                    eventName={s.eventName}
+                    hasCascade={cascadeEventNames.has(
+                      (s.eventName ?? "").trim().toLowerCase(),
+                    )}
+                    onDone={bump}
+                  />
+                ) : null}
               </div>
               <div className="flex flex-col">
                 {s.assigned.map((ba) => (
@@ -320,6 +419,7 @@ const Inner: React.FC<{
 export default function SparkLiveBoard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { tenantId } = useAuthStore();
+  const { canToggleRole } = useSparkRole();
 
   // Live board: auto-refresh every 60s so it stays current without a reload.
   useEffect(() => {
@@ -387,6 +487,7 @@ export default function SparkLiveBoard() {
             refreshKey={refreshKey}
             tenantId={tenantId}
             bump={() => setRefreshKey((k) => k + 1)}
+            staffTools={canToggleRole}
           />
         </Suspense>
       )}

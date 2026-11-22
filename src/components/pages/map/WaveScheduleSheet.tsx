@@ -8,6 +8,9 @@ import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { CreateRequestsWaveMutation } from "@/api/mutations/CreateRequestsWaveMutation";
 import type { CreateRequestsWaveMutation as CreateRequestsWaveMutationType } from "@api/mutations/__generated__/CreateRequestsWaveMutation.graphql";
+import { RequestIgniteStaffingMutation } from "@/api/mutations/RequestIgniteStaffingMutation";
+import type { RequestIgniteStaffingMutation as RequestIgniteStaffingMutationType } from "@api/mutations/__generated__/RequestIgniteStaffingMutation.graphql";
+import { buildIgniteStaffingRequestFromWave } from "./waveScheduleIgniteStaffing";
 import { useTenantProducts } from "@/hooks/useTenantProducts";
 import { useAlertStore } from "@/store/alertStore";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
@@ -72,6 +75,8 @@ const WaveScheduleSheetBody: React.FC<{
   const [commitWave, isSubmitting] = useMutation<CreateRequestsWaveMutationType>(
     CreateRequestsWaveMutation,
   );
+  const [commitIgniteStaffing, igniteStaffingBusy] =
+    useMutation<RequestIgniteStaffingMutationType>(RequestIgniteStaffingMutation);
 
   const requestTypes = useMemo(
     () =>
@@ -227,6 +232,40 @@ const WaveScheduleSheetBody: React.FC<{
   };
 
   const overnight = isOvernightShift(startTime, endTime);
+
+  const selectedRequestTypeName = useMemo(() => {
+    const rt = requestTypes.find((r) => r.id === requestTypeId);
+    return rt?.name ?? "";
+  }, [requestTypes, requestTypeId]);
+
+  const requestIgniteStaffing = () => {
+    if (activeRows.length === 0) {
+      showAlert("Add at least one visit to the wave preview first.", "warning");
+      return;
+    }
+    const payload = buildIgniteStaffingRequestFromWave({
+      tenantId,
+      activationTypeName: selectedRequestTypeName,
+      notes,
+      activeRows,
+    });
+    commitIgniteStaffing({
+      variables: { input: payload },
+      onCompleted: (resp) => {
+        const r = resp.requestIgniteStaffing;
+        if (!r?.success) {
+          showAlert(r?.message ?? "Could not request Ignite staffing.", "error");
+          return;
+        }
+        showAlert(
+          r.message ?? "Ignite staffing requested — ops will follow up.",
+          "success",
+        );
+      },
+      onError: (err) =>
+        showAlert(err.message || "Could not request Ignite staffing.", "error"),
+    });
+  };
 
   const runWaveMutation = (dryRun: boolean) => {
     if (!requestTypeId) {
@@ -842,6 +881,18 @@ const WaveScheduleSheetBody: React.FC<{
         className="flex flex-wrap items-center justify-between gap-3 pt-3"
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
+        <button
+          type="button"
+          disabled={
+            isSubmitting || igniteStaffingBusy || activeRows.length === 0
+          }
+          onClick={requestIgniteStaffing}
+          className="spark-btn-ghost text-xs font-semibold"
+          style={{ color: "#14532d" }}
+          title="Ask Ignite ops to staff this wave — no billing on your account"
+        >
+          {igniteStaffingBusy ? "Sending…" : "Request Ignite Staffing"}
+        </button>
         <button
           type="button"
           disabled={isSubmitting || activeRows.length === 0}
