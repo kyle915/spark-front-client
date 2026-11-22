@@ -37,7 +37,17 @@ import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 // or a recap with HEIC photos never download them.
 
 import { lazy, type ComponentType } from "react";
-import { Navigate } from "react-router";
+import { Navigate, useParams } from "react-router";
+
+const BaLegacyRedirect = () => {
+  const { uuid } = useParams<{ uuid: string }>();
+  return (
+    <Navigate
+      to={uuid ? `/talent?ba=${encodeURIComponent(uuid)}` : "/talent"}
+      replace
+    />
+  );
+};
 
 // A failed dynamic import almost always means a STALE CHUNK: the tab is still
 // running an older index.html (in memory) whose hashed chunk filenames were
@@ -602,6 +612,11 @@ const PublicRoutes = {
       isPublic: true,
     },
     {
+      path: "/jobs/release/:releaseToken",
+      component: <PublicJobBoard />,
+      isPublic: true,
+    },
+    {
       path: "/jobs/:token",
       component: <PublicJobBoard />,
       isPublic: true,
@@ -1101,10 +1116,9 @@ const RequestsLinks = {
       isPublic: false,
     },
     {
-      // Retired → /talent (see /ba above). The talent roster opens each
-      // BA's full profile in a modal on click.
+      // Retired → /talent?ba=:uuid so BAProfileModal auto-opens on arrival.
       path: "/ba/:uuid",
-      component: <Navigate to="/talent" replace />,
+      component: <BaLegacyRedirect />,
       isPublic: false,
     },
     {

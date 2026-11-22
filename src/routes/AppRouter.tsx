@@ -20,7 +20,7 @@ import VerifyAccount from "@/auth/VerifyAccount";
 import { AppShellSkeleton } from "@/layout/PageSkeletons";
 import { LayoutChrome } from "@/layout/Layout";
 import { LayoutShellContext } from "@/layout/LayoutShellContext";
-import environment from "@/api/relay/environment";
+import environment, { useWorkspaceEpoch } from "@/api/relay/environment";
 import { prefetchHotRelayData } from "@/lib/prefetchHotRelayData";
 
 const rootPath = "/";
@@ -47,16 +47,19 @@ const HotRelayPrefetch = () => {
  * page-level `<Layout>` to passthrough so sidebar / topbar / chat
  * polling survive client-side navigations.
  */
-const AuthenticatedShell = () => (
-  <LayoutShellContext.Provider value={true}>
-    <HotRelayPrefetch />
-    <LayoutChrome>
-      <Suspense fallback={<RouteFallback />}>
-        <Outlet />
-      </Suspense>
-    </LayoutChrome>
-  </LayoutShellContext.Provider>
-);
+const AuthenticatedShell = () => {
+  const workspaceEpoch = useWorkspaceEpoch();
+  return (
+    <LayoutShellContext.Provider value={true}>
+      <HotRelayPrefetch />
+      <LayoutChrome>
+        <Suspense key={workspaceEpoch} fallback={<RouteFallback />}>
+          <Outlet />
+        </Suspense>
+      </LayoutChrome>
+    </LayoutShellContext.Provider>
+  );
+};
 
 const AppRouter = () => {
   // Warm the hot-path chunks (tracker / dashboard / request views) during

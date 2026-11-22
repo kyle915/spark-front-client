@@ -67,24 +67,20 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(hook).toContain("useAllConnectionPages");
   });
 
-  it("Client Today does not pull RequestsQuery first:2000", () => {
+  it("Client Today reads server TenantRequestsRollupQuery instead of walking request rows", () => {
     const dash = src(
       "../components/pages/client-dashboard/SparkClientDashboard.tsx",
     );
     expect(dash).not.toContain("first: 2000");
+    expect(dash).not.toContain("first: 1000");
     expect(dash).not.toContain('from "@/api/queries/RequestsQuery"');
-    expect(dash).toContain("ClientWeekAheadQuery");
+    expect(dash).toContain("TenantRequestsRollupQuery");
     expect(dash).toContain("requestDateKey");
-    expect(dash).toContain("first: 1000");
-    expect(dash).toContain("useAllConnectionPages");
     expect(dash).toContain("horizonDays");
-    const weekAhead = src("./queries/ClientWeekAheadQuery.ts");
-    expect(weekAhead).toContain("ClientWeekAheadQuery");
-    expect(weekAhead).toContain("$after: String");
-    expect(weekAhead).toContain("hasNextPage");
-    // Slim ahead list — no fat RequestsQuery fields.
-    expect(weekAhead).not.toContain("recapsFiledCount");
-    expect(weekAhead).not.toContain("first: 2000");
+    const rollup = src("./queries/TenantRequestsRollupQuery.ts");
+    expect(rollup).toMatch(
+      /tenantRequestsRollup[\s\S]*totalCount[\s\S]*byDay[\s\S]*topRetailers/,
+    );
   });
 
   it("Master Tracker rows use slim TrackerListQuery", () => {
@@ -143,38 +139,29 @@ describe("list fetch caps (no silent truncation)", () => {
       "../components/pages/upcoming/SparkUpcomingEvents.tsx",
       "../components/pages/approvals/SparkClientApprovals.tsx",
       "../components/pages/alerts/SparkAlerts.tsx",
-      "../components/pages/reports/SparkReports.tsx",
     ]) {
       expect(src(rel), rel).toContain("useAllConnectionPages");
     }
-    for (const rel of [
-      "./queries/HomeAttentionQuery.ts",
-      "./queries/ReportsRequestsChartQuery.ts",
-    ]) {
+    for (const rel of ["./queries/HomeAttentionQuery.ts"]) {
       expect(src(rel), rel).toContain("$after: String");
       expect(src(rel), rel).toContain("endCursor");
     }
   });
 
-  it("Reports charts do not pull fat RequestsQuery / classic-only RecapsQuery", () => {
+  it("Reports charts read server rollups instead of walking request/recap connection rows", () => {
     const reports = src("../components/pages/reports/SparkReports.tsx");
     expect(reports).not.toContain('from "@/api/queries/RequestsQuery"');
     expect(reports).not.toContain('from "@/api/queries/RecapsQuery"');
-    expect(reports).toContain("ReportsRequestsChartQuery");
+    expect(reports).not.toContain("ReportsRequestsChartQuery");
+    expect(reports).toContain("TenantRequestsRollupQuery");
     // Consumer charts read one server rollup, not a page of recap rows: the
     // recap lists return 50 rows a page, which cut those charts short.
     expect(reports).not.toContain("ReportsEngagementsChartQuery");
     expect(reports).toContain("useConsumerBreakdown");
-    expect(reports).toContain("isCutOff");
-    const requestsChart = src("./queries/ReportsRequestsChartQuery.ts");
-    expect(requestsChart).toContain("ReportsRequestsChartQuery");
-    // Assert the operation selection stays slim (not comment text).
-    expect(requestsChart).toMatch(
-      /query ReportsRequestsChartQuery[\s\S]*createdAt[\s\S]*requestType/,
+    const rollup = src("./queries/TenantRequestsRollupQuery.ts");
+    expect(rollup).toMatch(
+      /tenantRequestsRollup[\s\S]*byDay[\s\S]*byRequestType/,
     );
-    expect(requestsChart).not.toMatch(/\bopenShifts\b/);
-    expect(requestsChart).not.toMatch(/\bproducts\b/);
-    expect(requestsChart).toContain("totalCount");
     const breakdown = src("./queries/ConsumerBreakdownQuery.ts");
     expect(breakdown).toMatch(/tenantConsumerBreakdown[\s\S]*byWeek[\s\S]*byStore[\s\S]*byState/);
   });

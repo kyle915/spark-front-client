@@ -58,6 +58,7 @@ export default function PublicFieldApp() {
           <Route path="/spark-form/:tenantSlug" element={<SparkPublicExpressForm />} />
           <Route path="/r/:token" element={<PublicRecap />} />
           <Route path="/training/:code" element={<TrainingHub />} />
+          <Route path="/jobs/release/:releaseToken" element={<PublicJobBoard />} />
           <Route path="/jobs/:token" element={<PublicJobBoard />} />
           <Route path="/clock/:token" element={<PublicClock />} />
         </Routes>

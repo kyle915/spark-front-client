@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import {
   SPARK_SPRING_DURATION_S,
   SPARK_SPRING_EASE,
@@ -10,21 +10,13 @@ import {
 } from "@/motion/opsMotion";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
-import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
-import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
-import { RequestSearchQuery } from "@/api/queries/RequestSearchQuery";
-import type { RequestSearchQuery as RequestSearchQueryType } from "@api/queries/__generated__/RequestSearchQuery.graphql";
-import { RecapsSearchQuery } from "@/api/queries/RecapsSearchQuery";
-import type { RecapsSearchQuery as RecapsSearchQueryType } from "@api/queries/__generated__/RecapsSearchQuery.graphql";
-import { EventSearchQuery } from "@/api/queries/EventSearchQuery";
-import type { EventSearchQuery as EventSearchQueryType } from "@api/queries/__generated__/EventSearchQuery.graphql";
-import { ClientSearchQuery } from "@/api/queries/ClientSearchQuery";
-import type { ClientSearchQuery as ClientSearchQueryType } from "@api/queries/__generated__/ClientSearchQuery.graphql";
-import { RetailersSearchQuery } from "@/api/queries/RetailersSearchQuery";
-import type { RetailersSearchQuery as RetailersSearchQueryType } from "@api/queries/__generated__/RetailersSearchQuery.graphql";
+import { JumpSearchQuery } from "@/api/queries/JumpSearchQuery";
+import type { JumpSearchQuery as JumpSearchQueryType } from "@api/queries/__generated__/JumpSearchQuery.graphql";
 import {
+  ArrowLeftRight,
   Building2,
   LayoutDashboard,
+  Link2,
   ListChecks,
   Calendar,
   MapPin,
@@ -37,6 +29,7 @@ import {
   Bell,
   Settings,
   Plus,
+  QrCode,
   Star,
   CalendarClock,
   Clock,
@@ -45,8 +38,14 @@ import {
   Store,
 } from "lucide-react";
 import { showsMissingRecaps } from "@/field/missingRecaps";
+import { fetchSwitchableTenants } from "@/hooks/useAdoptRecordTenant";
 import useSparkRole from "@/hooks/useSparkRole";
+import type { SwitchableTenant } from "@/lib/tenantDeepLink";
+import { storeHref } from "@/lib/storeProfile";
+import { padIndex } from "@/shared/sparkStat";
+import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
+import { checkinUrl, sparkFormUrl } from "@/utils/publicHosts";
 import {
   JUMP_GROUP_LABEL,
   JUMP_GROUP_ORDER,
@@ -55,16 +54,16 @@ import {
   rememberJumpRecent,
   type JumpRecent,
 } from "./jumpRecents";
-import { padIndex } from "@/shared/sparkStat";
+import { tenantMatchesQuery } from "./tenantPickerPrefs";
+import { switchWorkspace } from "./workspaceSwitch";
 
 /**
  * Spark v2 — Command Palette (⌘K).
  *
- * Apple Spotlight pattern. Press ⌘K (or Ctrl+K) anywhere to open a fuzzy
- * search modal that jumps to any route.
- *
- * Entries are static for v1; we'll layer in dynamic entries (tenant
- * switcher, recent recaps, specific requests by ID) as follow-ups.
+ * Batched single-query Jump search (`JumpSearchQuery`) + executable workspace
+ * actions (zero-reload client switch, copy standing check-in link, copy public
+ * request link, new request at store) + direct `/store/:storeKey` and
+ * `/talent?ba=:uuid` routing.
  */
 
 type CommandEntry = {
@@ -81,6 +80,8 @@ type CommandEntry = {
   }>;
   keywords?: string;
   state?: { clientName?: string; clientEmail?: string };
+  actionBadge?: string;
+  run?: () => void | Promise<void>;
 };
 
 const ENTRIES: CommandEntry[] = [
@@ -121,7 +122,6 @@ const score = (entry: CommandEntry, q: string) => {
   if (!q) return 1;
   const target = `${entry.label} ${entry.hint} ${entry.keywords ?? ""}`.toLowerCase();
   if (target.includes(q)) return 2;
-  // basic letter-by-letter fuzzy
   let i = 0;
   for (const c of target) {
     if (c === q[i]) i++;
@@ -130,10 +130,60 @@ const score = (entry: CommandEntry, q: string) => {
   return 0;
 };
 
+const formatShortDate = (raw: string | null | undefined): string => {
+  if (!raw) return "";
+  const parsed = new Date(raw.length === 10 ? `${raw}T00:00:00` : raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+async function copyLinkToClipboard(url: string, successMessage: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(url);
+    useAlertStore.getState().showAlert(successMessage, "success");
+  } catch {
+    useAlertStore.getState().showAlert(url, "info");
+  }
+}
+
+type MatchedClientTenant = {
+  id: string;
+  uuid: string;
+  name: string;
+  slug: string | null;
+  checkinCode: string | null;
+};
+
+type SearchBuckets = {
+  recaps: CommandEntry[];
+  events: CommandEntry[];
+  stores: CommandEntry[];
+  storeRequestActions: CommandEntry[];
+  requests: CommandEntry[];
+  clients: CommandEntry[];
+  clientTenants: MatchedClientTenant[];
+  people: CommandEntry[];
+};
+
+const EMPTY_BUCKETS: SearchBuckets = {
+  recaps: [],
+  events: [],
+  stores: [],
+  storeRequestActions: [],
+  requests: [],
+  clients: [],
+  clientTenants: [],
+  people: [],
+};
+
 export const CommandPalette: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isClient } = useSparkRole();
-  const { tenantSlug, tenantMeta } = useAuthStore();
+  const { user, tenantId, tenantUuid, tenantSlug, tenantMeta } = useAuthStore();
   const missingRecapsOn = showsMissingRecaps(
     tenantSlug,
     tenantMeta?.requestUrlName,
@@ -176,325 +226,376 @@ export const CommandPalette: React.FC = () => {
     }
   }, [open]);
 
-  // Live ambassador search — fires for 2+ chars, debounced, best-effort
-  // (a failed fetch just means no BA rows; page entries still work).
-  // Results become ordinary CommandEntry rows appended after the page
-  // matches, so the existing keyboard navigation needs no changes.
   const [recents, setRecents] = useState<JumpRecent[]>([]);
   useEffect(() => {
     if (open) setRecents(loadJumpRecents());
   }, [open]);
 
-  const [baEntries, setBaEntries] = useState<CommandEntry[]>([]);
+  // Switchable tenants (served from Relay store when TenantPicker already loaded).
+  const [tenants, setTenants] = useState<SwitchableTenant[]>([]);
   useEffect(() => {
-    const q = query.trim();
-    if (!open || q.length < 2) {
-      setBaEntries([]);
-      return;
-    }
+    if (!open) return;
     let cancelled = false;
-    const t = window.setTimeout(() => {
-      fetchQuery<AmbassadorsListQueryType>(
-        environment,
-        AmbassadorsListQuery,
-        { filters: { name: q }, first: 6 },
-      )
-        .toPromise()
-        .then((data) => {
-          if (cancelled) return;
-          const rows = (data?.ambassadors?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map((n) => {
-              const name = [n.user?.firstName, n.user?.lastName]
-                .filter(Boolean)
-                .join(" ")
-                .trim();
-              return {
-                id: `ba-${n.uuid}`,
-                label: name || n.user?.email || "Ambassador",
-                hint: `Ambassador · ${n.user?.email ?? ""}`,
-                to: `/ba/${n.uuid}`,
-                Icon: Users,
-              } as CommandEntry;
-            });
-          setBaEntries(rows);
-        })
-        .catch(() => {
-          if (!cancelled) setBaEntries([]);
-        });
-    }, 220);
+    fetchSwitchableTenants(environment, user?.uuid)
+      .then((list) => {
+        if (!cancelled) setTenants(list);
+      })
+      .catch(() => {
+        if (!cancelled) setTenants([]);
+      });
     return () => {
       cancelled = true;
-      window.clearTimeout(t);
     };
-  }, [open, query]);
+  }, [open, user?.uuid]);
 
-  // Live request search — same debounce contract as the BA search above.
-  // filters.name matches the request's name OR its retailer server-side.
-  const [requestEntries, setRequestEntries] = useState<CommandEntry[]>([]);
+  // Single composite GraphQL search replacing 6 parallel queries per keystroke.
+  const [searchBuckets, setSearchBuckets] = useState<SearchBuckets>(EMPTY_BUCKETS);
   useEffect(() => {
     const q = query.trim();
     if (!open || q.length < 2) {
-      setRequestEntries([]);
+      setSearchBuckets(EMPTY_BUCKETS);
       return;
     }
     let cancelled = false;
-    const t = window.setTimeout(() => {
-      fetchQuery<RequestSearchQueryType>(environment, RequestSearchQuery, {
-        filters: { name: q },
+    const timer = window.setTimeout(() => {
+      fetchQuery<JumpSearchQueryType>(environment, JumpSearchQuery, {
+        q,
+        tenantId: tenantId || null,
         first: 6,
       })
         .toPromise()
         .then((data) => {
           if (cancelled) return;
-          const rows = (data?.requests?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map((n) => {
-              const when = n.date
-                ? new Date(n.date).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "";
+          const payload = data?.jumpSearch;
+          if (!payload) {
+            setSearchBuckets(EMPTY_BUCKETS);
+            return;
+          }
+
+          const recaps: CommandEntry[] = payload.recaps.map((r) => ({
+            id: r.kind === "custom" ? `crecap-${r.uuid}` : `recap-${r.uuid}`,
+            label: r.name || "Recap",
+            hint: [
+              "Recap",
+              r.approved ? "APPROVED" : "DRAFT",
+              formatShortDate(r.eventDate),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            to:
+              r.kind === "custom"
+                ? `/recap/view-custom/${r.uuid}`
+                : `/recap/view/${r.uuid}`,
+            Icon: CheckCircle2,
+          }));
+
+          const events: CommandEntry[] = payload.events.map((ev) => ({
+            id: `event-${ev.uuid}`,
+            label: ev.name || "Event",
+            hint: [
+              "Event",
+              (ev.address || ev.retailerName || "").trim(),
+              formatShortDate(ev.date),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            to: `/event/view/${ev.uuid}`,
+            Icon: Calendar,
+          }));
+
+          const stores: CommandEntry[] = payload.stores.map((s) => {
+            const directHref = storeHref(s.storeKey);
+            const fallbackParams = new URLSearchParams({ q: s.name || "" });
+            const where =
+              s.address || [s.city, s.state].filter(Boolean).join(", ");
+            return {
+              id: `store-${s.key}`,
+              label: s.name || "Store",
+              hint: [directHref ? "Store profile" : "Store", where]
+                .filter(Boolean)
+                .join(" · "),
+              to: directHref ?? `/account-map?${fallbackParams.toString()}`,
+              Icon: Store,
+            };
+          });
+
+          const storeRequestActions: CommandEntry[] = payload.stores
+            .slice(0, 3)
+            .map((s) => {
+              const reqParams = new URLSearchParams({ venue: s.name });
+              if (s.address) reqParams.set("address", s.address);
+              const where =
+                s.address || [s.city, s.state].filter(Boolean).join(", ");
               return {
-                id: `req-${n.uuid}`,
-                label: n.name || "Request",
-                hint: ["Request", n.retailer?.name, when]
+                id: `action-new-req-${s.key}`,
+                label: `New request at ${s.name}`,
+                hint: ["Action · Prefill request", where]
                   .filter(Boolean)
                   .join(" · "),
-                to: `/request/view/${n.uuid}`,
-                Icon: FileText,
-              } as CommandEntry;
+                to: `/requests/create?${reqParams.toString()}`,
+                Icon: Plus,
+                actionBadge: "↵ CREATE",
+              };
             });
-          setRequestEntries(rows);
-        })
-        .catch(() => {
-          if (!cancelled) setRequestEntries([]);
-        });
-    }, 220);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [open, query]);
 
-  // Live event search. `events(q)` is a contains match on the event name;
-  // address deepens the hint for store-ish queries.
-  const [eventEntries, setEventEntries] = useState<CommandEntry[]>([]);
-  useEffect(() => {
-    const q = query.trim();
-    if (!open || q.length < 2) {
-      setEventEntries([]);
-      return;
-    }
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      fetchQuery<EventSearchQueryType>(environment, EventSearchQuery, {
-        q,
-        first: 6,
-      })
-        .toPromise()
-        .then((data) => {
-          if (cancelled) return;
-          const rows = (data?.events?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map((n) => {
-              const when = n.date
-                ? new Date(n.date).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "";
-              const place = (n.address || n.request?.retailer?.name || "").trim();
-              return {
-                id: `event-${n.uuid}`,
-                label: n.name || "Event",
-                hint: ["Event", place, when].filter(Boolean).join(" · "),
-                to: `/event/view/${n.uuid}`,
-                Icon: Calendar,
-              } as CommandEntry;
-            });
-          setEventEntries(rows);
-        })
-        .catch(() => {
-          if (!cancelled) setEventEntries([]);
-        });
-    }, 220);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [open, query]);
+          const requests: CommandEntry[] = payload.requests.map((req) => ({
+            id: `req-${req.uuid}`,
+            label: req.name || "Request",
+            hint: ["Request", req.retailerName, formatShortDate(req.date)]
+              .filter(Boolean)
+              .join(" · "),
+            to: `/request/view/${req.uuid}`,
+            Icon: FileText,
+          }));
 
-  // Live store / retailer search → Account Map, prefilled search.
-  const [storeEntries, setStoreEntries] = useState<CommandEntry[]>([]);
-  useEffect(() => {
-    const q = query.trim();
-    if (!open || q.length < 2) {
-      setStoreEntries([]);
-      return;
-    }
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      fetchQuery<RetailersSearchQueryType>(environment, RetailersSearchQuery, {
-        q,
-        first: 6,
-        filters: {},
-      })
-        .toPromise()
-        .then((data) => {
-          if (cancelled) return;
-          const rows = (data?.retailers?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map((n) => {
-              const params = new URLSearchParams({ q: n.name || "" });
-              return {
-                id: `store-${n.uuid}`,
-                label: n.name || "Store",
-                hint: ["Store", n.address].filter(Boolean).join(" · "),
-                to: `/account-map?${params.toString()}`,
-                Icon: Store,
-              } as CommandEntry;
-            });
-          setStoreEntries(rows);
-        })
-        .catch(() => {
-          if (!cancelled) setStoreEntries([]);
-        });
-    }, 220);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [open, query]);
-
-  // Live client search. `clients(q)` matches the client name. No tenant
-  // filter: spark-admin Jump can open any brand. Client-role never runs this.
-  const [clientEntries, setClientEntries] = useState<CommandEntry[]>([]);
-  useEffect(() => {
-    const q = query.trim();
-    if (!open || isClient || q.length < 2) {
-      setClientEntries([]);
-      return;
-    }
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      fetchQuery<ClientSearchQueryType>(environment, ClientSearchQuery, {
-        q,
-        filters: {},
-        first: 6,
-      })
-        .toPromise()
-        .then((data) => {
-          if (cancelled) return;
-          const rows = (data?.clients?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map((n) => {
-              return {
-                id: `client-${n.uuid}`,
-                label: n.name || "Client",
-                hint: ["Client", n.email].filter(Boolean).join(" · "),
-                to: n.tenantId ? `/clients/${n.tenantId}` : "/clients",
+          const clients: CommandEntry[] = isClient
+            ? []
+            : payload.clients.map((c) => ({
+                id: `client-${c.uuid}`,
+                label: c.name || "Client",
+                hint: ["Client", c.tenantName, c.email]
+                  .filter(Boolean)
+                  .join(" · "),
+                to: c.tenantId ? `/clients/${c.tenantId}` : "/clients",
                 state: {
-                  clientName: n.name ?? "",
-                  clientEmail: n.email ?? "",
+                  clientName: c.name ?? "",
+                  clientEmail: c.email ?? "",
                 },
                 Icon: Building2,
-              } as CommandEntry;
-            });
-          setClientEntries(rows);
-        })
-        .catch(() => {
-          if (!cancelled) setClientEntries([]);
-        });
-    }, 220);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [open, query, isClient]);
+              }));
 
-  // Live recap search — covers BOTH recap families (legacy fixed-form
-  // and per-tenant custom templates) in one round trip, so a Borjomi
-  // custom recap is as findable as a Liquid Death legacy one. Same
-  // debounce/best-effort contract as the searches above.
-  const [recapEntries, setRecapEntries] = useState<CommandEntry[]>([]);
-  useEffect(() => {
-    const q = query.trim();
-    if (!open || q.length < 2) {
-      setRecapEntries([]);
-      return;
-    }
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      fetchQuery<RecapsSearchQueryType>(environment, RecapsSearchQuery, {
-        q,
-        first: 4,
-      })
-        .toPromise()
-        .then((data) => {
-          if (cancelled) return;
-          const fmt = (d: string | null | undefined) =>
-            d
-              ? new Date(d).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                })
-              : "";
-          const legacy = (data?.recaps?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map(
-              (n) =>
-                ({
-                  id: `recap-${n.uuid}`,
-                  label: n.name || "Recap",
-                  hint: [
-                    "Recap",
-                    n.approved ? "APPROVED" : "DRAFT",
-                    fmt(n.event?.date),
-                  ]
-                    .filter(Boolean)
-                    .join(" · "),
-                  to: `/recap/view/${n.uuid}`,
-                  Icon: CheckCircle2,
-                }) as CommandEntry,
-            );
-          const custom = (data?.customRecaps?.edges ?? [])
-            .map((e) => e?.node)
-            .filter((n): n is NonNullable<typeof n> => Boolean(n))
-            .map(
-              (n) =>
-                ({
-                  id: `crecap-${n.uuid}`,
-                  label: n.name || "Recap",
-                  hint: [
-                    "Recap",
-                    n.approved ? "APPROVED" : "DRAFT",
-                    fmt(n.event?.date),
-                  ]
-                    .filter(Boolean)
-                    .join(" · "),
-                  to: `/recap/view-custom/${n.uuid}`,
-                  Icon: CheckCircle2,
-                }) as CommandEntry,
-            );
-          setRecapEntries([...legacy, ...custom]);
+          const seenClientTenants = new Set<string>();
+          const clientTenants: MatchedClientTenant[] = [];
+          if (!isClient) {
+            for (const c of payload.clients) {
+              const tId = (c.tenantId ?? "").trim();
+              const tUuid = (c.tenantUuid ?? "").trim();
+              const tName = (c.tenantName ?? "").trim();
+              if (!tId || !tUuid || !tName || seenClientTenants.has(tUuid)) {
+                continue;
+              }
+              seenClientTenants.add(tUuid);
+              clientTenants.push({
+                id: tId,
+                uuid: tUuid,
+                name: tName,
+                slug: (c.slug ?? "").trim() || null,
+                checkinCode: (c.checkinCode ?? "").trim() || null,
+              });
+            }
+          }
+
+          const people: CommandEntry[] = isClient
+            ? []
+            : payload.ambassadors.map((ba) => ({
+                id: `ba-${ba.uuid}`,
+                label: ba.name || ba.email || "Ambassador",
+                hint: ["Ambassador", ba.email].filter(Boolean).join(" · "),
+                to: `/talent?ba=${encodeURIComponent(ba.uuid)}`,
+                Icon: Users,
+              }));
+
+          setSearchBuckets({
+            recaps,
+            events,
+            stores,
+            storeRequestActions,
+            requests,
+            clients,
+            clientTenants,
+            people,
+          });
         })
         .catch(() => {
-          if (!cancelled) setRecapEntries([]);
+          if (!cancelled) setSearchBuckets(EMPTY_BUCKETS);
         });
-    }, 220);
+    }, 200);
     return () => {
       cancelled = true;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
     };
-  }, [open, query]);
+  }, [open, query, tenantId, isClient]);
+
+  const activeTenantNode = useMemo(
+    () => tenants.find((t) => t.uuid === tenantUuid) ?? null,
+    [tenants, tenantUuid],
+  );
+  const activeCheckinCode = (
+    tenantMeta?.checkinCode ??
+    activeTenantNode?.checkinCode ??
+    ""
+  ).trim();
+  const activeRequestSlug = (
+    tenantMeta?.requestUrlName ??
+    activeTenantNode?.requestUrlName ??
+    ""
+  ).trim();
+
+  const actionEntries = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    const out: CommandEntry[] = [];
+
+    if (activeCheckinCode) {
+      const url = checkinUrl(activeCheckinCode);
+      const entry: CommandEntry = {
+        id: "action-copy-checkin-link",
+        label: "Copy standing check-in link",
+        hint: `Action · ${url}`,
+        to: "",
+        Icon: QrCode,
+        keywords: "copy standing check-in checkin link walkup qr ba",
+        actionBadge: "↵ COPY",
+        run: () => copyLinkToClipboard(url, "Copied standing check-in link."),
+      };
+      if (!q || score(entry, q) > 0) out.push(entry);
+    }
+
+    if (activeRequestSlug) {
+      const url = sparkFormUrl(activeRequestSlug);
+      const entry: CommandEntry = {
+        id: "action-copy-public-request-link",
+        label: "Copy public request link",
+        hint: `Action · ${url}`,
+        to: "",
+        Icon: Link2,
+        keywords: "copy public request link spark-form external form url",
+        actionBadge: "↵ COPY",
+        run: () => copyLinkToClipboard(url, "Copied public request link."),
+      };
+      if (!q || score(entry, q) > 0) out.push(entry);
+    }
+
+    if (
+      q.length >= 2 &&
+      (tenants.length > 1 || searchBuckets.clientTenants.length > 0)
+    ) {
+      const strippedSwitchQuery = q
+        .replace(/^(switch(?:\s+client|\s+to)?|client:?|workspace:?)\s*/i, "")
+        .trim();
+      const matchedTenants = tenants
+        .filter((t) => t.uuid !== tenantUuid && Boolean(t.name))
+        .filter((t) => {
+          if (strippedSwitchQuery && tenantMatchesQuery(t, strippedSwitchQuery)) {
+            return true;
+          }
+          return tenantMatchesQuery(t, q);
+        })
+        .slice(0, 5);
+
+      const seenSwitchUuids = new Set<string>();
+      for (const t of matchedTenants) {
+        seenSwitchUuids.add(t.uuid);
+        out.push({
+          id: `action-switch-client-${t.uuid}`,
+          label: `Switch client: ${t.name}`,
+          hint: [
+            "Action · Instant workspace switch",
+            t.tenantSlug || t.requestUrlName,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          to: "",
+          Icon: ArrowLeftRight,
+          keywords: `switch client workspace ${t.name ?? ""} ${t.tenantSlug ?? ""}`,
+          actionBadge: "↵ SWITCH",
+          run: () => {
+            switchWorkspace(t, {
+              pathname: location.pathname,
+              search: location.search,
+              hash: location.hash,
+              isClient,
+              navigate,
+            });
+          },
+        });
+      }
+
+      for (const ct of searchBuckets.clientTenants.slice(0, 3)) {
+        if (ct.uuid !== tenantUuid && !seenSwitchUuids.has(ct.uuid)) {
+          seenSwitchUuids.add(ct.uuid);
+          out.push({
+            id: `action-switch-client-${ct.uuid}`,
+            label: `Switch client: ${ct.name}`,
+            hint: ["Action · Instant workspace switch", ct.slug]
+              .filter(Boolean)
+              .join(" · "),
+            to: "",
+            Icon: ArrowLeftRight,
+            keywords: `switch client workspace ${ct.name} ${ct.slug ?? ""}`,
+            actionBadge: "↵ SWITCH",
+            run: () => {
+              switchWorkspace(
+                {
+                  id: ct.id,
+                  uuid: ct.uuid,
+                  name: ct.name,
+                  tenantSlug: ct.slug,
+                  requestUrlName: ct.slug,
+                  checkinCode: ct.checkinCode,
+                },
+                {
+                  pathname: location.pathname,
+                  search: location.search,
+                  hash: location.hash,
+                  isClient,
+                  navigate,
+                },
+              );
+            },
+          });
+        }
+        if (ct.uuid !== tenantUuid && ct.checkinCode) {
+          const url = checkinUrl(ct.checkinCode);
+          out.push({
+            id: `action-copy-checkin-${ct.uuid}`,
+            label: `Copy standing check-in link · ${ct.name}`,
+            hint: `Action · ${url}`,
+            to: "",
+            Icon: QrCode,
+            keywords: `copy standing check-in checkin link ${ct.name} ${ct.checkinCode}`,
+            actionBadge: "↵ COPY",
+            run: () =>
+              copyLinkToClipboard(
+                url,
+                `Copied ${ct.name} standing check-in link.`,
+              ),
+          });
+        }
+        if (ct.uuid !== tenantUuid && ct.slug) {
+          const url = sparkFormUrl(ct.slug);
+          out.push({
+            id: `action-copy-public-req-${ct.uuid}`,
+            label: `Copy public request link · ${ct.name}`,
+            hint: `Action · ${url}`,
+            to: "",
+            Icon: Link2,
+            keywords: `copy public request link spark-form ${ct.name} ${ct.slug}`,
+            actionBadge: "↵ COPY",
+            run: () =>
+              copyLinkToClipboard(
+                url,
+                `Copied ${ct.name} public request link.`,
+              ),
+          });
+        }
+      }
+    }
+
+    return [...out, ...searchBuckets.storeRequestActions];
+  }, [
+    query,
+    activeCheckinCode,
+    activeRequestSlug,
+    tenants,
+    tenantUuid,
+    location.pathname,
+    location.search,
+    location.hash,
+    isClient,
+    navigate,
+    searchBuckets.clientTenants,
+    searchBuckets.storeRequestActions,
+  ]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -524,22 +625,19 @@ export const CommandPalette: React.FC = () => {
       }));
     return [
       ...recentEntries,
-      ...recapEntries,
-      ...eventEntries,
-      ...storeEntries,
-      ...requestEntries,
-      ...clientEntries,
-      ...baEntries,
+      ...actionEntries,
+      ...searchBuckets.recaps,
+      ...searchBuckets.events,
+      ...searchBuckets.stores,
+      ...searchBuckets.requests,
+      ...searchBuckets.clients,
+      ...searchBuckets.people,
       ...pages,
     ];
   }, [
     query,
-    baEntries,
-    requestEntries,
-    eventEntries,
-    storeEntries,
-    clientEntries,
-    recapEntries,
+    actionEntries,
+    searchBuckets,
     recents,
     isClient,
     missingRecapsOn,
@@ -556,12 +654,19 @@ export const CommandPalette: React.FC = () => {
   );
 
   const select = (entry: CommandEntry) => {
-    rememberJumpRecent({
-      id: entry.id.replace(/^recent-/, ""),
-      label: entry.label,
-      hint: entry.hint,
-      to: entry.to,
-    });
+    if (entry.run) {
+      void entry.run();
+      setOpen(false);
+      return;
+    }
+    if (!entry.id.startsWith("action-")) {
+      rememberJumpRecent({
+        id: entry.id.replace(/^recent-/, ""),
+        label: entry.label,
+        hint: entry.hint,
+        to: entry.to,
+      });
+    }
     navigate(entry.to, entry.state ? { state: entry.state } : undefined);
     setOpen(false);
   };
@@ -625,7 +730,7 @@ export const CommandPalette: React.FC = () => {
             setActive(0);
           }}
           onKeyDown={onKey}
-          placeholder="Jump to a recap, store, event, or screen…"
+          placeholder="Jump to a recap, store, event, action, or screen…"
           className="w-full text-base"
           style={{
             background: "transparent",
@@ -731,7 +836,7 @@ export const CommandPalette: React.FC = () => {
                               color: "var(--spark-orange)",
                             }}
                           >
-                            ↵ OPEN
+                            {entry.actionBadge ?? "↵ OPEN"}
                           </span>
                         )}
                       </motion.button>

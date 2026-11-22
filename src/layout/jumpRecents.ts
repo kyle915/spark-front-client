@@ -10,6 +10,12 @@ export type JumpRecent = {
 
 let memory: JumpRecent[] = [];
 
+function normalizeRecentHref(to: string): string {
+  return to.replace(/^\/ba\/([^/?#]+)$/, (_m, uuid: string) => {
+    return `/talent?ba=${encodeURIComponent(uuid)}`;
+  });
+}
+
 function readStore(): JumpRecent[] {
   try {
     const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
@@ -27,6 +33,7 @@ function readStore(): JumpRecent[] {
               typeof (row as JumpRecent).label === "string",
           ),
       )
+      .map((row) => ({ ...row, to: normalizeRecentHref(row.to) }))
       .slice(0, MAX_RECENTS);
     return memory;
   } catch {
@@ -39,9 +46,15 @@ export function loadJumpRecents(): JumpRecent[] {
 }
 
 export function rememberJumpRecent(entry: JumpRecent): JumpRecent[] {
+  const normalized: JumpRecent = {
+    ...entry,
+    to: normalizeRecentHref(entry.to),
+  };
   const next = [
-    entry,
-    ...readStore().filter((row) => row.id !== entry.id && row.to !== entry.to),
+    normalized,
+    ...readStore().filter(
+      (row) => row.id !== normalized.id && row.to !== normalized.to,
+    ),
   ].slice(0, MAX_RECENTS);
   memory = next;
   try {
@@ -63,6 +76,7 @@ export function clearJumpRecents(): void {
 
 export type JumpGroupId =
   | "recents"
+  | "actions"
   | "recaps"
   | "events"
   | "stores"
@@ -73,6 +87,7 @@ export type JumpGroupId =
 
 export const JUMP_GROUP_LABEL: Record<JumpGroupId, string> = {
   recents: "Recents",
+  actions: "Actions",
   recaps: "Recaps",
   events: "Events",
   stores: "Stores",
@@ -84,6 +99,7 @@ export const JUMP_GROUP_LABEL: Record<JumpGroupId, string> = {
 
 export const JUMP_GROUP_ORDER: JumpGroupId[] = [
   "recents",
+  "actions",
   "recaps",
   "events",
   "stores",
@@ -95,6 +111,7 @@ export const JUMP_GROUP_ORDER: JumpGroupId[] = [
 
 export function jumpGroupOf(id: string): JumpGroupId {
   if (id.startsWith("recent-")) return "recents";
+  if (id.startsWith("action-")) return "actions";
   if (id.startsWith("recap-") || id.startsWith("crecap-")) return "recaps";
   if (id.startsWith("event-")) return "events";
   if (id.startsWith("store-")) return "stores";

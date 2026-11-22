@@ -5849,6 +5849,64 @@ type JobTitleDetailResponse {
   jobTitle: JobTitle
 }
 
+type JumpAmbassadorHit {
+  uuid: String!
+  name: String!
+  email: String
+}
+
+type JumpClientHit {
+  uuid: String!
+  name: String!
+  email: String
+  tenantId: ID
+  tenantUuid: String
+  tenantName: String
+  slug: String
+  checkinCode: String
+}
+
+type JumpEventHit {
+  uuid: String!
+  name: String!
+  date: String
+  address: String
+  retailerName: String
+}
+
+type JumpRecapHit {
+  uuid: String!
+  kind: String!
+  name: String!
+  approved: Boolean!
+  eventDate: String
+}
+
+type JumpRequestHit {
+  uuid: String!
+  name: String!
+  date: String
+  retailerName: String
+}
+
+type JumpSearchResult {
+  requests: [JumpRequestHit!]!
+  events: [JumpEventHit!]!
+  stores: [JumpStoreHit!]!
+  recaps: [JumpRecapHit!]!
+  ambassadors: [JumpAmbassadorHit!]!
+  clients: [JumpClientHit!]!
+}
+
+type JumpStoreHit {
+  key: String!
+  storeKey: String
+  name: String!
+  address: String
+  city: String
+  state: String
+}
+
 type LaunchBucketPreview {
   name: String!
   helper: String
@@ -7570,6 +7628,8 @@ type Query {
   planRecapSuggestions(planId: String!): [PlanRecapSuggestion!]!
   fieldMarketingPlanResults(planId: String!): PlanResults!
   fieldMarketingEventRecaps(tenantId: ID = null, month: String = null, start: String = null, end: String = null, markets: [String!] = null, types: [String!] = null, attached: String = null): FieldMarketingEventRecaps!
+  jumpSearch(q: String!, tenantId: ID = null, first: Int = null): JumpSearchResult!
+  tenantRequestsRollup(tenantId: ID = null, startDate: Date = null, endDate: Date = null, dateField: String! = "date"): TenantRequestsRollup!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
@@ -8973,6 +9033,11 @@ type RequestCountableEdge {
   node: Request!
 }
 
+type RequestDayBucket {
+  date: String!
+  count: Int!
+}
+
 type RequestDetailResponse {
   success: Boolean!
   message: String!
@@ -9060,6 +9125,11 @@ input RequestMagicLinkInput {
   clientMutationId: ID = null
   email: String!
   redirect: String = null
+}
+
+type RequestNamedBucket {
+  name: String!
+  count: Int!
 }
 
 input RequestPasswordResetInput {
@@ -10732,6 +10802,13 @@ type TenantProgramMetrics {
   firstTimeBase: Int!
   brandAwareConsumers: Int!
   willingToPurchase: Int!
+}
+
+type TenantRequestsRollup {
+  totalCount: Int!
+  byDay: [RequestDayBucket!]!
+  byRequestType: [RequestNamedBucket!]!
+  topRetailers: [RequestNamedBucket!]!
 }
 
 type TenantSentiment {
