@@ -6,6 +6,7 @@ import environment from "@/api/relay/environment";
 import { providerSubmitUrl } from "@/utils/publicHosts";
 import {
   computeVisitMeterProgress,
+  currentDateInTimezone,
   formatPilotCountdown,
   planBadgeMeta,
   subscriptionStatusBadge,
@@ -99,10 +100,10 @@ const PlansAndBillingBody: React.FC<{
 
   // Schedule standalone visit state (shows live cap enforcement!)
   const [schedStore, setSchedStore] = useState("");
-  const [schedCity, setSchedCity] = useState("Austin");
-  const [schedState, setSchedState] = useState("TX");
-  const [schedDate, setSchedDate] = useState(
-    () => new Date().toISOString().slice(0, 10),
+  const [schedCity, setSchedCity] = useState("");
+  const [schedState, setSchedState] = useState("");
+  const [schedDate, setSchedDate] = useState(() =>
+    currentDateInTimezone(usage.businessTimezone),
   );
   const [mintedVisitLink, setMintedVisitLink] = useState<string | null>(null);
 

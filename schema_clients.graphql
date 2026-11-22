@@ -3327,6 +3327,33 @@ input CreateRequestWithDependenciesInput {
   coBrands: [CoBrandInput!] = null
 }
 
+input CreateRequestsWaveInput {
+  requestTypeId: ID!
+  items: [WaveRequestItemInput!]!
+  tenantId: ID = null
+  eventTypeId: ID = null
+  defaultTimezoneId: ID = null
+  schedulingStatus: String! = "needs_scheduling"
+  productIds: [ID!] = null
+  notes: String! = ""
+  dryRun: Boolean! = false
+  rollbackOnError: Boolean! = true
+  clientMutationId: ID = null
+}
+
+type CreateRequestsWaveResponse {
+  success: Boolean!
+  message: String!
+  totalRows: Int!
+  successCount: Int!
+  failedCount: Int!
+  skippedCount: Int!
+  rolledBack: Boolean!
+  errors: [String!]
+  rows: [RequestBatchRowResult!]
+  clientMutationId: ID
+}
+
 input CreateRetailerInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -6487,6 +6514,8 @@ type Mutation {
   markPayrollPaid(input: ApprovePayrollInput!): PayrollActionResponse!
   unapprovePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
   markHoursFlagReviewed(input: MarkHoursFlagReviewedInput!): HoursFlagReviewResponse!
+  saveStoreLogisticsNotes(input: SaveStoreLogisticsNotesInput!): SaveStoreLogisticsNotesPayload!
+  createRequestsWave(input: CreateRequestsWaveInput!): CreateRequestsWaveResponse!
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
@@ -6881,7 +6910,7 @@ type Mutation {
   completeRebookStoreAction(actionUuid: String!, samplesDistributed: Int = null, consumersSampled: Int = null, repObservedUnits: Int = null, customRecapId: Int = null, notes: String! = ""): PilotMutationOutcome!
   createWorkspaceSharedLink(resourceType: String! = "visit", visitUuid: String = null): PilotMutationOutcome!
   revokeWorkspaceSharedLink(token: String!): PilotMutationOutcome!
-  startSelfServeOnboarding(email: String! = "", password: String! = "", firstName: String! = "", lastName: String! = "", brandName: String! = "", businessTimezone: String! = "America/Chicago", acceptTerms: Boolean! = true, forceNewWorkspace: Boolean! = false): OnboardingSessionPayload!
+  startSelfServeOnboarding(email: String! = "", password: String! = "", firstName: String! = "", lastName: String! = "", brandName: String! = "", businessTimezone: String! = "America/Chicago", acceptTerms: Boolean! = true, forceNewWorkspace: Boolean! = false, invitationToken: String = null): OnboardingSessionPayload!
   selectOnboardingStarterProgram(starterKey: String!, customProgramName: String! = "", starterSkuName: String! = ""): PilotMutationOutcome!
   onboardingInviteContributor(email: String!, workspaceRole: String! = "field_contributor", providerName: String! = ""): PilotMutationOutcome!
   scheduleStandaloneVisit(storeName: String!, visitDate: String!, address: String! = "", city: String! = "", stateCode: String! = "", providerUuid: String = null, eventTypeId: Int = null, notes: String! = ""): PilotMutationOutcome!
@@ -7816,6 +7845,7 @@ type Query {
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
   payrollTimesheetExport(startDate: String!, endDate: String!, tenantId: ID = null): [PayrollShiftRow!]!
   payrollHoursCheck(startDate: String!, endDate: String!, tenantId: ID!, explain: Boolean! = false): HoursCheckReport!
+  resolveStoreKey(tenantId: ID!, storeKey: String = null, requestId: ID = null, recapId: ID = null, storeName: String = null, address: String = null): String
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
   activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
@@ -9816,6 +9846,22 @@ type SaveRecapMetricMappingResult {
   mapping: RecapTemplateMetricMapping
 }
 
+input SaveStoreLogisticsNotesInput {
+  tenantId: ID!
+  storeKey: String!
+  notes: String!
+  clientMutationId: ID = null
+}
+
+type SaveStoreLogisticsNotesPayload {
+  success: Boolean!
+  message: String!
+  storeKey: String
+  logisticsNotes: String!
+  logisticsNotesUpdatedAt: String
+  clientMutationId: ID
+}
+
 type SavedImportMappingItem {
   uuid: String!
   providerUuid: String!
@@ -10612,6 +10658,8 @@ type StoreProfile {
   comments: [StoreComment!]!
   photos: [StorePhoto!]!
   staff: StoreStaffView
+  logisticsNotes: String!
+  logisticsNotesUpdatedAt: String
 }
 
 type StoreStaffView {
@@ -10634,6 +10682,7 @@ type StoreTotals {
 }
 
 type StoreVisit {
+  eventId: ID!
   eventUuid: String!
   requestUuid: String
   title: String!
@@ -12157,12 +12206,12 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  firstName: String
-  id: ID!
-  email: String!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  email: String!
+  firstName: String
+  id: ID!
   lastName: String
   archived: Boolean!
   verified: Boolean!
@@ -12236,6 +12285,22 @@ type WalkupShiftType {
   storeChangeFarOverride: Boolean!
   storeChangeCreatedStore: Boolean!
   storeChangeRetailerUuid: String
+}
+
+input WaveRequestItemInput {
+  storeName: String!
+  date: String!
+  startTime: String!
+  endTime: String!
+  address: String! = ""
+  city: String! = ""
+  state: String! = ""
+  storeNumber: String! = ""
+  latitude: Float = null
+  longitude: Float = null
+  timezoneId: ID = null
+  timezoneCode: String = null
+  name: String = null
 }
 
 type WeeklyBuyerReport {

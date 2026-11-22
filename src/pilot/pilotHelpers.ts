@@ -541,4 +541,35 @@ export function formatPilotCountdown(
   return `${diffDays} day${diffDays === 1 ? "" : "s"} left in 60-day Pro pilot (ends ${pilotEndsAtIso.slice(0, 10)})`;
 }
 
+/**
+ * Compute `YYYY-MM-DD` in the workspace's business timezone rather than UTC so
+ * afternoon/evening US field submissions never roll over into tomorrow's date.
+ */
+export function currentDateInTimezone(
+  tzName: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  const cleanTz = (tzName || "").trim() || "America/Chicago";
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: cleanTz,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now);
+    const year = parts.find((p) => p.type === "year")?.value;
+    const month = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    if (year && month && day) {
+      return `${year}-${month}-${day}`;
+    }
+  } catch {
+    // Fall back to local calendar date if an unrecognized IANA zone was supplied.
+  }
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 

@@ -10,6 +10,7 @@ import {
   applyWorkspaceContextSelection,
   buildInitialShiftFormState,
   computeVisitMeterProgress,
+  currentDateInTimezone,
   evidenceBadgeMeta,
   exceptionStatusLabel,
   formatCoveragePercent,
@@ -257,5 +258,15 @@ describe("pilotHelpers", () => {
       "https://client.igniteproductions.co/workspace-share/wsl_demo123",
     );
     expect(isPublicFieldPath("/workspace-share/wsl_demo123")).toBe(true);
+
+    // Late-evening US shift (`2026-11-23T02:30:00Z`) stays `2026-11-22` in Pacific/Central timezones
+    const lateEveningUtc = new Date("2026-11-23T02:30:00Z");
+    expect(currentDateInTimezone("America/Los_Angeles", lateEveningUtc)).toBe(
+      "2026-11-22",
+    );
+    expect(currentDateInTimezone("America/Chicago", lateEveningUtc)).toBe(
+      "2026-11-22",
+    );
+    expect(currentDateInTimezone("UTC", lateEveningUtc)).toBe("2026-11-23");
   });
 });

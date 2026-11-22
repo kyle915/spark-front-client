@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { fetchQuery, commitMutation } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import environment from "@/api/relay/environment";
@@ -13,6 +13,7 @@ import {
 } from "@/utils/publicHosts";
 import {
   applyWorkspaceContextSelection,
+  currentDateInTimezone,
   planBadgeMeta,
 } from "./pilotHelpers";
 import {
@@ -75,6 +76,14 @@ async function loadSwitchableTenants(
 const UnauthenticatedSignupStep: React.FC<{
   onAuthenticated: () => void;
 }> = ({ onAuthenticated }) => {
+  const [searchParams] = useSearchParams();
+  const invitationToken =
+    (
+      searchParams.get("invitation_token") ||
+      searchParams.get("invite") ||
+      ""
+    ).trim() || undefined;
+
   const catalogData = useLazyLoadQuery<CatalogQueryType>(
     PilotQueriesStarterCatalogQuery,
     {},
@@ -88,7 +97,7 @@ const UnauthenticatedSignupStep: React.FC<{
   const [password, setPassword] = useState("");
   const [brandName, setBrandName] = useState("");
   const [businessTimezone, setBusinessTimezone] = useState("America/Chicago");
-  const [acceptTerms, setAcceptTerms] = useState(true);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +106,10 @@ const UnauthenticatedSignupStep: React.FC<{
     setError(null);
     if (!catalog.signupEnabled) {
       setError("Self-service signup is currently disabled.");
+      return;
+    }
+    if (!acceptTerms) {
+      setError("Please review and accept the Spark Terms of Service to continue.");
       return;
     }
     setSubmitting(true);
@@ -111,6 +124,7 @@ const UnauthenticatedSignupStep: React.FC<{
         businessTimezone,
         acceptTerms,
         forceNewWorkspace: false,
+        invitationToken,
       },
       onCompleted: async (resp) => {
         const out = resp.startSelfServeOnboarding;
@@ -354,13 +368,17 @@ const AuthenticatedOnboardingWizard: React.FC<{
   const [inviteRole, setInviteRole] = useState("field_contributor");
   const [inviteProviderName, setInviteProviderName] = useState("");
 
-  // Quick field submission helper for first visit without Ignite staffing
-  const [quickStore, setQuickStore] = useState("Sunset Market #14");
-  const [quickCity, setQuickCity] = useState("Austin");
-  const [quickState, setQuickState] = useState("TX");
-  const [quickSamples, setQuickSamples] = useState("84");
-  const quickConsumers = "68";
-  const [quickUnits, setQuickUnits] = useState("19");
+  // Quick field submission helper for first visit without Ignite staffing (starts empty — never pre-fills fabricated KPIs)
+  const [quickStore, setQuickStore] = useState("");
+  const [quickCity, setQuickCity] = useState("");
+  const [quickState, setQuickState] = useState("");
+  const [quickVisitDate, setQuickVisitDate] = useState(() =>
+    currentDateInTimezone(st.businessTimezone),
+  );
+  const [quickSamples, setQuickSamples] = useState("");
+  const [quickConsumers, setQuickConsumers] = useState("");
+  const [quickUnits, setQuickUnits] = useState("");
+  const [quickNotes, setQuickNotes] = useState("");
   const [submittingField, setSubmittingField] = useState(false);
 
   const [banner, setBanner] = useState<string | null>(null);
@@ -424,6 +442,34 @@ const AuthenticatedOnboardingWizard: React.FC<{
       setError("Select a starter program in Step 2 first to mint your mobile recap link.");
       return;
     }
+    const cleanStore = quickStore.trim();
+    if (!cleanStore) {
+      setError("Enter the real store or venue name before logging a field recap.");
+      return;
+    }
+    const samplesTrim = quickSamples.trim();
+    const consumersTrim = quickConsumers.trim();
+    const unitsTrim = quickUnits.trim();
+    if (!samplesTrim || !consumersTrim || !unitsTrim) {
+      setError(
+        "Enter actual Samples, Consumers Sampled, and Observed Units from the shift before submitting.",
+      );
+      return;
+    }
+    const samplesNum = Number(samplesTrim);
+    const consumersNum = Number(consumersTrim);
+    const unitsNum = Number(unitsTrim);
+    if (
+      !Number.isInteger(samplesNum) ||
+      samplesNum < 0 ||
+      !Number.isInteger(consumersNum) ||
+      consumersNum < 0 ||
+      !Number.isInteger(unitsNum) ||
+      unitsNum < 0
+    ) {
+      setError("Samples, Consumers Sampled, and Observed Units must be non-negative whole numbers.");
+      return;
+    }
     setError(null);
     setSubmittingField(true);
     try {
@@ -433,15 +479,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            storeName: quickStore.trim(),
+            storeName: cleanStore,
             city: quickCity.trim(),
             stateCode: quickState.trim().toUpperCase(),
-            visitDate: new Date().toISOString().slice(0, 10),
-            samplesDistributed: Number(quickSamples) || 0,
-            consumersSampled: Number(quickConsumers) || 0,
-            repObservedUnits: Number(quickUnits) || 0,
-            photos: ["https://client.igniteproductions.co/demo-table-setup.jpg"],
-            notes: "First standalone team demo logged via mobile recap link.",
+            visitDate:
+              quickVisitDate.trim() ||
+              currentDateInTimezone(st.businessTimezone),
+            samplesDistributed: samplesNum,
+            consumersSampled: consumersNum,
+            repObservedUnits: unitsNum,
+            notes: quickNotes.trim(),
           }),
         },
       );
@@ -745,15 +792,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
         {st.submissionCode ? (
           <form
             onSubmit={handleQuickFieldSubmit}
-            className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end pt-2 border-t border-white/10"
+            className="grid grid-cols-1 md:grid-cols-8 gap-3 items-end pt-2 border-t border-white/10"
           >
             <label className="md:col-span-2 space-y-1">
-              <span className="text-[11px] text-slate-400">Store / Venue</span>
+              <span className="text-[11px] text-slate-400">Store / Venue *</span>
               <input
                 type="text"
                 required
                 value={quickStore}
                 onChange={(e) => setQuickStore(e.target.value)}
+                placeholder="e.g. Store name & #"
                 className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
               />
             </label>
@@ -764,32 +812,65 @@ const AuthenticatedOnboardingWizard: React.FC<{
                   type="text"
                   value={quickCity}
                   onChange={(e) => setQuickCity(e.target.value)}
+                  placeholder="City"
                   className="w-2/3 rounded-lg px-2.5 py-2 text-xs bg-black/50 text-white border border-white/15"
                 />
                 <input
                   type="text"
                   value={quickState}
                   onChange={(e) => setQuickState(e.target.value)}
+                  placeholder="ST"
                   maxLength={2}
                   className="w-1/3 rounded-lg px-2 py-2 text-xs bg-black/50 text-white border border-white/15 uppercase"
                 />
               </div>
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">Samples</span>
+              <span className="text-[11px] text-slate-400">Visit Date ({st.businessTimezone}) *</span>
+              <input
+                type="date"
+                required
+                value={quickVisitDate}
+                onChange={(e) => setQuickVisitDate(e.target.value)}
+                className="w-full rounded-lg px-2.5 py-2 text-xs bg-black/50 text-white border border-white/15"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[11px] text-slate-400">Samples *</span>
               <input
                 type="number"
+                required
+                min={0}
+                step={1}
                 value={quickSamples}
                 onChange={(e) => setQuickSamples(e.target.value)}
+                placeholder="0"
                 className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">Observed Units</span>
+              <span className="text-[11px] text-slate-400">Consumers *</span>
               <input
                 type="number"
+                required
+                min={0}
+                step={1}
+                value={quickConsumers}
+                onChange={(e) => setQuickConsumers(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[11px] text-slate-400">Observed Units *</span>
+              <input
+                type="number"
+                required
+                min={0}
+                step={1}
                 value={quickUnits}
                 onChange={(e) => setQuickUnits(e.target.value)}
+                placeholder="0"
                 className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
               />
             </label>
@@ -801,6 +882,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
             >
               {submittingField ? "Submitting…" : "Log Field Recap"}
             </button>
+            <label className="md:col-span-8 space-y-1">
+              <span className="text-[11px] text-slate-400">Shift notes (optional)</span>
+              <input
+                type="text"
+                value={quickNotes}
+                onChange={(e) => setQuickNotes(e.target.value)}
+                placeholder="Optional field notes from the visit"
+                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+              />
+            </label>
           </form>
         ) : null}
 

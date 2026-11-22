@@ -590,6 +590,7 @@ export const PilotMutationsStartSelfServeOnboardingMutation = graphql`
     $businessTimezone: String!
     $acceptTerms: Boolean!
     $forceNewWorkspace: Boolean!
+    $invitationToken: String
   ) {
     startSelfServeOnboarding(
       email: $email
@@ -600,6 +601,7 @@ export const PilotMutationsStartSelfServeOnboardingMutation = graphql`
       businessTimezone: $businessTimezone
       acceptTerms: $acceptTerms
       forceNewWorkspace: $forceNewWorkspace
+      invitationToken: $invitationToken
     ) {
       ok
       error
