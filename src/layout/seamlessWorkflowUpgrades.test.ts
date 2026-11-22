@@ -2,6 +2,26 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { commitLocalUpdate } from "relay-runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockRefreshSidebarCounts, mockResetHotRelayDataPrefetch } = vi.hoisted(
+  () => ({
+    mockRefreshSidebarCounts: vi.fn(() => Promise.resolve(undefined)),
+    mockResetHotRelayDataPrefetch: vi.fn(),
+  }),
+);
+vi.mock("@/hooks/useSidebarCounts", () => ({
+  refreshSidebarCounts: mockRefreshSidebarCounts,
+}));
+vi.mock("@/lib/prefetchHotRelayData", () => ({
+  resetHotRelayDataPrefetch: mockResetHotRelayDataPrefetch,
+}));
+vi.mock("@api/auth/me", () => ({
+  fetchMe: vi.fn(),
+}));
+vi.mock("@api/auth/login", () => ({
+  login: vi.fn(),
+}));
+
 import environment, {
   executeAuthenticatedGraphQL,
   resetRelayStore,
@@ -185,6 +205,8 @@ describe("4.2 Jump batched search, instant actions, and BA/store routing", () =>
     expect(palette).toContain("New request at");
     expect(palette).toContain("/talent?ba=");
     expect(palette).toContain("storeHref");
+    expect(palette).toContain("`/clients/${c.tenantId}`");
+    expect(palette).not.toContain("`/clients/${c.tenantUuid}`");
   });
 });
 

@@ -44,8 +44,11 @@ export const JumpSearchQuery = graphql`
         uuid
         name
         email
+        tenantId
         tenantUuid
         tenantName
+        slug
+        checkinCode
       }
     }
   }

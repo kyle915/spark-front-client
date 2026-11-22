@@ -149,6 +149,14 @@ async function copyLinkToClipboard(url: string, successMessage: string): Promise
   }
 }
 
+type MatchedClientTenant = {
+  id: string;
+  uuid: string;
+  name: string;
+  slug: string | null;
+  checkinCode: string | null;
+};
+
 type SearchBuckets = {
   recaps: CommandEntry[];
   events: CommandEntry[];
@@ -156,6 +164,7 @@ type SearchBuckets = {
   storeRequestActions: CommandEntry[];
   requests: CommandEntry[];
   clients: CommandEntry[];
+  clientTenants: MatchedClientTenant[];
   people: CommandEntry[];
 };
 
@@ -166,6 +175,7 @@ const EMPTY_BUCKETS: SearchBuckets = {
   storeRequestActions: [],
   requests: [],
   clients: [],
+  clientTenants: [],
   people: [],
 };
 
@@ -346,13 +356,34 @@ export const CommandPalette: React.FC = () => {
                 hint: ["Client", c.tenantName, c.email]
                   .filter(Boolean)
                   .join(" · "),
-                to: c.tenantUuid ? `/clients/${c.tenantUuid}` : "/clients",
+                to: c.tenantId ? `/clients/${c.tenantId}` : "/clients",
                 state: {
                   clientName: c.name ?? "",
                   clientEmail: c.email ?? "",
                 },
                 Icon: Building2,
               }));
+
+          const seenClientTenants = new Set<string>();
+          const clientTenants: MatchedClientTenant[] = [];
+          if (!isClient) {
+            for (const c of payload.clients) {
+              const tId = (c.tenantId ?? "").trim();
+              const tUuid = (c.tenantUuid ?? "").trim();
+              const tName = (c.tenantName ?? "").trim();
+              if (!tId || !tUuid || !tName || seenClientTenants.has(tUuid)) {
+                continue;
+              }
+              seenClientTenants.add(tUuid);
+              clientTenants.push({
+                id: tId,
+                uuid: tUuid,
+                name: tName,
+                slug: (c.slug ?? "").trim() || null,
+                checkinCode: (c.checkinCode ?? "").trim() || null,
+              });
+            }
+          }
 
           const people: CommandEntry[] = isClient
             ? []
@@ -371,6 +402,7 @@ export const CommandPalette: React.FC = () => {
             storeRequestActions,
             requests,
             clients,
+            clientTenants,
             people,
           });
         })
@@ -433,7 +465,10 @@ export const CommandPalette: React.FC = () => {
       if (!q || score(entry, q) > 0) out.push(entry);
     }
 
-    if (q.length >= 2 && tenants.length > 1) {
+    if (
+      q.length >= 2 &&
+      (tenants.length > 1 || searchBuckets.clientTenants.length > 0)
+    ) {
       const strippedSwitchQuery = q
         .replace(/^(switch(?:\s+client|\s+to)?|client:?|workspace:?)\s*/i, "")
         .trim();
@@ -447,7 +482,9 @@ export const CommandPalette: React.FC = () => {
         })
         .slice(0, 5);
 
+      const seenSwitchUuids = new Set<string>();
       for (const t of matchedTenants) {
+        seenSwitchUuids.add(t.uuid);
         out.push({
           id: `action-switch-client-${t.uuid}`,
           label: `Switch client: ${t.name}`,
@@ -472,6 +509,76 @@ export const CommandPalette: React.FC = () => {
           },
         });
       }
+
+      for (const ct of searchBuckets.clientTenants.slice(0, 3)) {
+        if (ct.uuid !== tenantUuid && !seenSwitchUuids.has(ct.uuid)) {
+          seenSwitchUuids.add(ct.uuid);
+          out.push({
+            id: `action-switch-client-${ct.uuid}`,
+            label: `Switch client: ${ct.name}`,
+            hint: ["Action · Instant workspace switch", ct.slug]
+              .filter(Boolean)
+              .join(" · "),
+            to: "",
+            Icon: ArrowLeftRight,
+            keywords: `switch client workspace ${ct.name} ${ct.slug ?? ""}`,
+            actionBadge: "↵ SWITCH",
+            run: () => {
+              switchWorkspace(
+                {
+                  id: ct.id,
+                  uuid: ct.uuid,
+                  name: ct.name,
+                  tenantSlug: ct.slug,
+                  requestUrlName: ct.slug,
+                  checkinCode: ct.checkinCode,
+                },
+                {
+                  pathname: location.pathname,
+                  search: location.search,
+                  hash: location.hash,
+                  isClient,
+                  navigate,
+                },
+              );
+            },
+          });
+        }
+        if (ct.uuid !== tenantUuid && ct.checkinCode) {
+          const url = checkinUrl(ct.checkinCode);
+          out.push({
+            id: `action-copy-checkin-${ct.uuid}`,
+            label: `Copy standing check-in link · ${ct.name}`,
+            hint: `Action · ${url}`,
+            to: "",
+            Icon: QrCode,
+            keywords: `copy standing check-in checkin link ${ct.name} ${ct.checkinCode}`,
+            actionBadge: "↵ COPY",
+            run: () =>
+              copyLinkToClipboard(
+                url,
+                `Copied ${ct.name} standing check-in link.`,
+              ),
+          });
+        }
+        if (ct.uuid !== tenantUuid && ct.slug) {
+          const url = sparkFormUrl(ct.slug);
+          out.push({
+            id: `action-copy-public-req-${ct.uuid}`,
+            label: `Copy public request link · ${ct.name}`,
+            hint: `Action · ${url}`,
+            to: "",
+            Icon: Link2,
+            keywords: `copy public request link spark-form ${ct.name} ${ct.slug}`,
+            actionBadge: "↵ COPY",
+            run: () =>
+              copyLinkToClipboard(
+                url,
+                `Copied ${ct.name} public request link.`,
+              ),
+          });
+        }
+      }
     }
 
     return [...out, ...searchBuckets.storeRequestActions];
@@ -486,6 +593,7 @@ export const CommandPalette: React.FC = () => {
     location.hash,
     isClient,
     navigate,
+    searchBuckets.clientTenants,
     searchBuckets.storeRequestActions,
   ]);
 
