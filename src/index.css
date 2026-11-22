@@ -421,6 +421,9 @@ code, kbd, samp, pre, .mono-code {
   --spark-lime: #f2f3ee;
   --spark-lime-dim: #c8c9c4;
   --spark-orange: #ef5a2a;
+  /* White digits on alert/unread badges — keep brand --spark-orange untouched. */
+  --spark-badge-alert-bg: #c2410c;
+  --spark-badge-alert-ink: #ffffff;
   --spark-sky: #5fb8ef;
   --spark-purple: #a08bd9;
   --spark-gold: #ffc400;
@@ -493,8 +496,9 @@ code, kbd, samp, pre, .mono-code {
   --spark-on-accent: #ffffff;
   --spark-lime: #14160f;
   --spark-lime-dim: #3a3d33;
-  /* White badge digits on orange must clear WCAG AA 4.5:1 (#d2481b was 4.48). */
-  --spark-orange: #c2410c;
+  --spark-orange: #d2481b;
+  --spark-badge-alert-bg: #c2410c;
+  --spark-badge-alert-ink: #ffffff;
   --spark-sky: #1f7fc0;
   --spark-purple: #6b55b5;
   --spark-bg: #f6f6f2;
@@ -696,7 +700,14 @@ body:has(.spark-login-page) {
   color: var(--spark-text, #f2f3ee);
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
 }
-.spark-input::placeholder { color: rgba(var(--spark-ink-rgb), 0.4); }
+.spark-input::placeholder { color: rgba(var(--spark-ink-rgb), 0.64); }
+/* Theme-wide empty-field placeholders (pilot forms, filters, drawers). Keep
+   at meta-ink strength so ::placeholder clears WCAG AA without touching the
+   brand --spark-orange token. Login uses a more specific override. */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(var(--spark-ink-rgb), 0.64);
+}
 .spark-input:hover { border-color: rgba(var(--spark-accent-rgb), 0.35); }
 .spark-input:focus {
   border-color: rgba(var(--spark-accent-rgb), 0.7);
@@ -1891,10 +1902,12 @@ a.spark-upcoming-row:focus-visible {
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
-/* Needs someone. The sidebar is dark in both appearances, so these are fixed.
-   White on #ef5a2a is only ~3.4:1 — use a deeper orange so badge digits clear
-   WCAG AA 4.5:1 (white on #c2410c ≈ 5.2:1). */
-.nav-badge--alert { background: #c2410c; color: #ffffff; }
+/* Needs someone. Uses the dedicated badge token so brand --spark-orange stays
+   #ef5a2a / #d2481b while white digits still clear WCAG AA 4.5:1. */
+.nav-badge--alert {
+  background: var(--spark-badge-alert-bg, #c2410c);
+  color: var(--spark-badge-alert-ink, #ffffff);
+}
 /* Something new to read. */
 .nav-badge--new { background: #f2f3ee; color: #14160f; }
 /* A plain count. */

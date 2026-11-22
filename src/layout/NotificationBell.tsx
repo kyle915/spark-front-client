@@ -208,9 +208,8 @@ export default function NotificationBell() {
           <span
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
             style={{
-              // Fixed deep orange so white digits clear WCAG AA in light and dark.
-              background: "#c2410c",
-              color: "#ffffff",
+              background: "var(--spark-badge-alert-bg, #c2410c)",
+              color: "var(--spark-badge-alert-ink, #ffffff)",
             }}
           >
             {unread > 9 ? "9+" : unread}

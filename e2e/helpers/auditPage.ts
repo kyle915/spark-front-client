@@ -130,7 +130,9 @@ export async function auditPage(
         return false;
       };
 
-      const hasDirectReadableText = (el: HTMLElement): string => {
+      const readableContent = (
+        el: HTMLElement,
+      ): { text: string; usePlaceholder: boolean } => {
         const tag = el.tagName.toLowerCase();
         if (tag === "input") {
           const input = el as HTMLInputElement;
@@ -140,17 +142,33 @@ export async function auditPage(
             input.type === "hidden" ||
             input.type === "file"
           ) {
-            return "";
+            return { text: "", usePlaceholder: false };
           }
-          return (input.value || "").trim();
+          const value = (input.value || "").trim();
+          if (value) return { text: value, usePlaceholder: false };
+          const placeholder = (input.placeholder || "").trim();
+          return {
+            text: placeholder,
+            usePlaceholder: Boolean(placeholder),
+          };
         }
         if (tag === "textarea") {
-          return ((el as HTMLTextAreaElement).value || "").trim();
+          const area = el as HTMLTextAreaElement;
+          const value = (area.value || "").trim();
+          if (value) return { text: value, usePlaceholder: false };
+          const placeholder = (area.placeholder || "").trim();
+          return {
+            text: placeholder,
+            usePlaceholder: Boolean(placeholder),
+          };
         }
         if (tag === "select") {
           const sel = el as HTMLSelectElement;
           const opt = sel.options[sel.selectedIndex];
-          return (opt?.textContent || sel.value || "").trim();
+          return {
+            text: (opt?.textContent || sel.value || "").trim(),
+            usePlaceholder: false,
+          };
         }
 
         // For label containers that only wrap an input + inner <span>, audit
@@ -162,12 +180,12 @@ export async function auditPage(
             .map((n) => n.textContent ?? "")
             .join(" ")
             .trim();
-          return directText;
+          return { text: directText, usePlaceholder: false };
         }
 
         // For buttons/links/chips/badges, collect visible text (excluding sr-only)
         const text = (el.innerText || "").replace(/\s+/g, " ").trim();
-        return text;
+        return { text, usePlaceholder: false };
       };
 
       const buildHint = (el: HTMLElement): string => {
@@ -195,15 +213,27 @@ export async function auditPage(
       for (const el of nodes) {
         if (isHiddenOrClipped(el)) continue;
 
-        const text = hasDirectReadableText(el);
+        const { text, usePlaceholder } = readableContent(el);
         if (!text) continue;
 
         // If a button/link/label contains a nested styled span/p that sets a
         // DIFFERENT foreground color for ALL of its text, let the inner node
         // or the element itself represent the actual painted text accurately.
         const style = window.getComputedStyle(el);
-        const fontSizePx = Number.parseFloat(style.fontSize) || 14;
-        const fontWeight = Number.parseInt(style.fontWeight, 10) || 400;
+        const placeholderStyle = usePlaceholder
+          ? window.getComputedStyle(el, "::placeholder")
+          : null;
+        const fontSizePx =
+          Number.parseFloat(
+            (placeholderStyle ?? style).fontSize,
+          ) || 14;
+        const fontWeight =
+          Number.parseInt((placeholderStyle ?? style).fontWeight, 10) || 400;
+        const foreground = normalizeColorString(
+          usePlaceholder && placeholderStyle
+            ? placeholderStyle.color
+            : style.color,
+        );
 
         // Walk ancestors to gather background layers + cumulative opacity
         const backgroundLayers: Array<{ color: string; opacity: number }> = [];
@@ -231,7 +261,7 @@ export async function auditPage(
           role: el.getAttribute("role"),
           text: text.slice(0, 80),
           selectorHint: buildHint(el),
-          foreground: normalizeColorString(style.color),
+          foreground,
           backgroundLayers,
           fontSizePx,
           fontWeight,
