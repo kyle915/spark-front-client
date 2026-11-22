@@ -388,7 +388,10 @@ const PlansAndBillingBody: React.FC<{
             </span>
             <span
               className="px-2.5 py-0.5 rounded-full text-xs mono"
-              style={{ background: "rgba(255,255,255,0.06)", color: "#cbd5e1" }}
+              style={{
+                background: "var(--pilot-neutral-bg)",
+                color: "var(--pilot-neutral-fg)",
+              }}
             >
               Stripe {ov.stripeMode.toUpperCase()} Mode
             </span>
@@ -431,12 +434,12 @@ const PlansAndBillingBody: React.FC<{
         <section
           className="rounded-xl p-4 flex flex-wrap items-center justify-between gap-3"
           style={{
-            background: "rgba(197,245,70,0.09)",
-            border: "1px solid rgba(197,245,70,0.35)",
+            background: "var(--pilot-ok-bg)",
+            border: "1px solid var(--pilot-ok-border)",
           }}
         >
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "#c5f546" }}>
+            <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "var(--pilot-ok-fg)" }}>
               Active $1,500 · 60-Day Pro Pilot Entitlement
             </p>
             <p className="text-sm font-medium mt-0.5">
@@ -453,11 +456,11 @@ const PlansAndBillingBody: React.FC<{
         <section
           className="rounded-xl p-4 space-y-1"
           style={{
-            background: "rgba(239,90,42,0.16)",
-            border: "1px solid rgba(239,90,42,0.45)",
+            background: "var(--pilot-danger-bg)",
+            border: "1px solid var(--pilot-danger-border)",
           }}
         >
-          <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "#ef5a2a" }}>
+          <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "var(--pilot-danger-fg)" }}>
             Renewal Payment Action Required
           </p>
           <p className="text-sm font-medium">
@@ -473,11 +476,11 @@ const PlansAndBillingBody: React.FC<{
         <section
           className="rounded-xl p-4"
           style={{
-            background: "rgba(250,204,21,0.12)",
-            border: "1px solid rgba(250,204,21,0.35)",
+            background: "var(--pilot-warn-bg)",
+            border: "1px solid var(--pilot-warn-border)",
           }}
         >
-          <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "#fde047" }}>
+          <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "var(--pilot-warn-fg)" }}>
             Scheduled Cancellation · Paid-Through Access Preserved
           </p>
           <p className="text-sm mt-0.5">
@@ -492,12 +495,12 @@ const PlansAndBillingBody: React.FC<{
         <section
           className="rounded-xl p-5 flex flex-wrap items-center justify-between gap-4"
           style={{
-            background: "rgba(56,189,248,0.12)",
-            border: "1px solid rgba(56,189,248,0.38)",
+            background: "var(--pilot-info-bg)",
+            border: "1px solid var(--pilot-info-border)",
           }}
         >
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "#7dd3fc" }}>
+            <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "var(--pilot-info-fg)" }}>
               Stripe Test Mode Hosted Checkout Ready ({pendingTestSessionId})
             </p>
             <p className="text-sm mt-1">
@@ -510,7 +513,7 @@ const PlansAndBillingBody: React.FC<{
             disabled={completingTest}
             onClick={() => handleCompleteTestWebhook(pendingTestSessionId)}
             className="px-4 py-2.5 rounded-lg text-xs font-bold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={{ background: "var(--pilot-cta-bg)", color: "var(--pilot-cta-fg)" }}
           >
             {completingTest ? "Verifying Webhook…" : "Confirm Test Payment (Signed Webhook) →"}
           </button>
@@ -520,7 +523,11 @@ const PlansAndBillingBody: React.FC<{
       {banner ? (
         <div
           className="rounded-xl px-4 py-3 text-xs font-medium"
-          style={{ background: "rgba(197,245,70,0.14)", color: "#c5f546" }}
+          style={{
+            background: "var(--pilot-ok-bg)",
+            color: "var(--pilot-ok-fg)",
+            border: "1px solid var(--pilot-ok-border)",
+          }}
         >
           {banner}
         </div>
@@ -528,7 +535,11 @@ const PlansAndBillingBody: React.FC<{
       {error ? (
         <div
           className="rounded-xl px-4 py-3 text-xs font-medium"
-          style={{ background: "rgba(239,90,42,0.18)", color: "#ff8a65" }}
+          style={{
+            background: "var(--pilot-danger-bg)",
+            color: "var(--pilot-danger-fg)",
+            border: "1px solid var(--pilot-danger-border)",
+          }}
         >
           {error}
         </div>
@@ -551,7 +562,11 @@ const PlansAndBillingBody: React.FC<{
 
           <span
             className="px-3 py-1 rounded-full text-xs font-semibold mono"
-            style={{ background: "rgba(197,245,70,0.12)", color: "#c5f546" }}
+            style={{
+              background: "var(--pilot-ok-bg)",
+              color: "var(--pilot-ok-fg)",
+              border: "1px solid var(--pilot-ok-border)",
+            }}
           >
             In-progress fieldwork is never blocked at cap
           </span>
@@ -559,7 +574,7 @@ const PlansAndBillingBody: React.FC<{
 
         <div
           className="w-full h-3 rounded-full overflow-hidden"
-          style={{ background: "rgba(255,255,255,0.08)" }}
+          style={{ background: "var(--pilot-meter-track)" }}
         >
           <div
             className="h-full transition-all duration-300"
@@ -600,7 +615,8 @@ const PlansAndBillingBody: React.FC<{
         {/* Schedule New Standalone Visit (demonstrates live cap gate + upgrade CTA) */}
         <form
           onSubmit={handleScheduleVisit}
-          className="pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
+          className="pt-4 grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
         >
           <label className="md:col-span-2 space-y-1">
             <span className="text-xs font-medium">Schedule New Standalone Visit</span>
@@ -648,14 +664,14 @@ const PlansAndBillingBody: React.FC<{
             type="submit"
             disabled={schedulingVisit}
             className="px-4 py-2 rounded-lg text-xs font-bold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={{ background: "var(--pilot-cta-bg)", color: "var(--pilot-cta-fg)" }}
           >
             {schedulingVisit ? "Booking…" : "Schedule Visit →"}
           </button>
         </form>
 
         {mintedVisitLink ? (
-          <div className="text-xs mono" style={{ color: "#c5f546" }}>
+          <div className="text-xs mono" style={{ color: "var(--pilot-ok-fg)" }}>
             Mobile recap link minted: {mintedVisitLink}
           </div>
         ) : null}
@@ -664,7 +680,7 @@ const PlansAndBillingBody: React.FC<{
           <div className="overflow-x-auto pt-2">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10" style={META}>
+                <tr style={{ ...META, borderBottom: "1px solid var(--spark-border)" }}>
                   <th className="py-2 pr-3">Store / Venue</th>
                   <th className="py-2 pr-3">Visit Date</th>
                   <th className="py-2 pr-3">Completed ({usage.businessTimezone})</th>
@@ -676,7 +692,10 @@ const PlansAndBillingBody: React.FC<{
               </thead>
               <tbody>
                 {usage.countedVisits.map((cv) => (
-                  <tr key={cv.visitUuid} className="border-b border-white/5">
+                  <tr
+                    key={cv.visitUuid}
+                    style={{ borderBottom: "1px solid var(--spark-hairline)" }}
+                  >
                     <td className="py-2.5 pr-3 font-medium">{cv.storeLabel}</td>
                     <td className="py-2.5 pr-3 mono">{cv.visitDate}</td>
                     <td className="py-2.5 pr-3 mono">{cv.completionLocalDate}</td>
@@ -727,11 +746,11 @@ const PlansAndBillingBody: React.FC<{
                 className="rounded-xl p-5 flex flex-col justify-between space-y-4"
                 style={{
                   border: isCurrent
-                    ? "1.5px solid #c5f546"
+                    ? "1.5px solid var(--pilot-ok-border)"
                     : "1px solid var(--spark-border)",
                   background: isCurrent
-                    ? "rgba(197,245,70,0.05)"
-                    : "transparent",
+                    ? "var(--pilot-ok-subtle)"
+                    : "var(--spark-surface)",
                 }}
               >
                 <div className="space-y-3">
@@ -742,7 +761,10 @@ const PlansAndBillingBody: React.FC<{
                     {isCurrent ? (
                       <span
                         className="px-2 py-0.5 rounded-full text-[11px] font-bold mono"
-                        style={{ background: "#c5f546", color: "#0A0B0D" }}
+                        style={{
+                          background: "var(--pilot-cta-bg)",
+                          color: "var(--pilot-cta-fg)",
+                        }}
                       >
                         CURRENT
                       </span>
@@ -756,7 +778,7 @@ const PlansAndBillingBody: React.FC<{
                     <span className="text-xs ml-1" style={META}>
                       / month
                     </span>
-                    <p className="text-xs font-semibold mono mt-1" style={{ color: "#c5f546" }}>
+                    <p className="text-xs font-semibold mono mt-1" style={{ color: "var(--pilot-ok-fg)" }}>
                       {plan.includedCompletedVisits != null
                         ? `${plan.includedCompletedVisits} completed visits / mo`
                         : "Contracted SOW visits"}
@@ -767,7 +789,10 @@ const PlansAndBillingBody: React.FC<{
                     {plan.tagline}
                   </p>
 
-                  <ul className="space-y-1.5 text-xs pt-2 border-t border-white/10">
+                  <ul
+                    className="space-y-1.5 text-xs pt-2"
+                    style={{ borderTop: "1px solid var(--spark-border)" }}
+                  >
                     <li>
                       • Operating providers:{" "}
                       <strong>{plan.maxOperatingProviders ?? "Unlimited"}</strong>
@@ -825,7 +850,10 @@ const PlansAndBillingBody: React.FC<{
                       disabled={loadingPreview}
                       onClick={() => void openPlanChangeModal(plan.planCode)}
                       className="w-full py-2 rounded-lg text-xs font-bold transition-opacity hover:opacity-90"
-                      style={{ background: "#c5f546", color: "#0A0B0D" }}
+                      style={{
+                        background: "var(--pilot-cta-bg)",
+                        color: "var(--pilot-cta-fg)",
+                      }}
                     >
                       {Number(plan.monthlyPriceUsd) > Number(ov.monthlyPriceUsd)
                         ? `Upgrade to ${plan.displayName} →`
@@ -874,7 +902,7 @@ const PlansAndBillingBody: React.FC<{
                   type="checkbox"
                   checked={overageApproved}
                   onChange={(e) => setOverageApproved(e.target.checked)}
-                  className="accent-[#c5f546]"
+                  style={{ accentColor: "var(--pilot-control-accent)" }}
                 />
                 <span>Approve $12/visit metered overage above band</span>
               </label>
@@ -915,8 +943,9 @@ const PlansAndBillingBody: React.FC<{
                     onClick={handleCancelAtPeriodEnd}
                     className="px-3.5 py-1.5 rounded-lg text-xs font-semibold"
                     style={{
-                      background: "rgba(239,90,42,0.16)",
-                      color: "#ef5a2a",
+                      background: "var(--pilot-danger-bg)",
+                      color: "var(--pilot-danger-fg)",
+                      border: "1px solid var(--pilot-danger-border)",
                     }}
                   >
                     Cancel at Period End
@@ -934,7 +963,10 @@ const PlansAndBillingBody: React.FC<{
             )}
 
             {ov.isIgniteAdmin ? (
-              <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
+              <div
+                className="pt-3 flex flex-wrap items-center justify-between gap-2"
+                style={{ borderTop: "1px solid var(--spark-border)" }}
+              >
                 <span className="text-xs mono" style={META}>
                   Ignite Staff · Provision $1,500 / 60-Day Pro Pilot
                 </span>
@@ -943,7 +975,10 @@ const PlansAndBillingBody: React.FC<{
                   disabled={provisioningPilot}
                   onClick={handleProvisionPilot}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold"
-                  style={{ background: "#c5f546", color: "#0A0B0D" }}
+                  style={{
+                    background: "var(--pilot-cta-bg)",
+                    color: "var(--pilot-cta-fg)",
+                  }}
                 >
                   Provision 60-Day Pro Pilot
                 </button>
@@ -959,52 +994,63 @@ const PlansAndBillingBody: React.FC<{
           <div
             className="max-w-lg w-full rounded-2xl p-6 space-y-4"
             style={{
-              background: "#111317",
-              border: "1px solid rgba(197,245,70,0.35)",
+              background: "var(--spark-surface)",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
             }}
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wider mono text-[#c5f546]">
+              <p
+                className="text-xs uppercase tracking-wider mono font-semibold"
+                style={{ color: "var(--pilot-ok-fg)" }}
+              >
                 Confirm Plan & Billing Terms
               </p>
               <button
                 type="button"
                 onClick={() => setPreviewModal(null)}
-                className="text-xs text-slate-400 hover:text-white"
+                className="text-xs hover:opacity-100 opacity-80"
+                style={META}
               >
                 Close ✕
               </button>
             </div>
 
-            <h3 className="display text-xl font-bold text-white">
+            <h3 className="display text-xl font-bold">
               {previewModal.targetDisplayName} · ${previewModal.monthlyPriceUsd}/month
             </h3>
 
             <div
               className="rounded-xl p-3.5 space-y-1.5 text-xs"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{
+                background: "var(--spark-surface-2)",
+                border: "1px solid var(--spark-border)",
+              }}
             >
               <p>
-                <span className="text-slate-400">Charge today:</span>{" "}
-                <strong className="mono text-white">${previewModal.chargeTodayUsd} USD</strong>
+                <span style={META}>Charge today:</span>{" "}
+                <strong className="mono">${previewModal.chargeTodayUsd} USD</strong>
               </p>
               <p>
-                <span className="text-slate-400">Monthly allowance:</span>{" "}
-                <strong className="mono text-white">{previewModal.includedVisits} canonical completed visits/month</strong>
+                <span style={META}>Monthly allowance:</span>{" "}
+                <strong className="mono">{previewModal.includedVisits} canonical completed visits/month</strong>
               </p>
               <p>
-                <span className="text-slate-400">Effective timing:</span>{" "}
-                <strong className="text-white">{previewModal.effectiveDateLabel}</strong>
+                <span style={META}>Effective timing:</span>{" "}
+                <strong>{previewModal.effectiveDateLabel}</strong>
               </p>
-              <p className="text-slate-300 pt-1">{previewModal.disclosure}</p>
+              <p className="pt-1" style={{ color: "var(--spark-text-secondary)" }}>
+                {previewModal.disclosure}
+              </p>
             </div>
 
-            <label className="flex items-start gap-2.5 text-xs text-slate-200 cursor-pointer">
+            <label className="flex items-start gap-2.5 text-xs cursor-pointer">
               <input
                 type="checkbox"
                 checked={termsChecked}
                 onChange={(e) => setTermsChecked(e.target.checked)}
-                className="mt-0.5 accent-[#c5f546]"
+                className="mt-0.5"
+                style={{ accentColor: "var(--pilot-control-accent)" }}
               />
               <span>
                 I confirm the recurring software subscription terms, effective date, and monthly visit allowance above.
@@ -1015,7 +1061,8 @@ const PlansAndBillingBody: React.FC<{
               <button
                 type="button"
                 onClick={() => setPreviewModal(null)}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-300 border border-white/15"
+                className="px-4 py-2 rounded-lg text-xs font-semibold"
+                style={BORDER}
               >
                 Cancel
               </button>
@@ -1024,7 +1071,10 @@ const PlansAndBillingBody: React.FC<{
                 disabled={!termsChecked || startingCheckout || changingPlan}
                 onClick={handleConfirmPlanAction}
                 className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
-                style={{ background: "#c5f546", color: "#0A0B0D" }}
+                style={{
+                  background: "var(--pilot-cta-bg)",
+                  color: "var(--pilot-cta-fg)",
+                }}
               >
                 {startingCheckout || changingPlan
                   ? "Processing…"

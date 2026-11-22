@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -6,31 +6,56 @@ import { RecapStoreKeyQuery } from "@/api/queries/RecapStoreKeyQuery";
 import type { RecapStoreKeyQuery as RecapStoreKeyQueryType } from "@api/queries/__generated__/RecapStoreKeyQuery.graphql";
 import { StoreLinksQuery } from "@/api/queries/StoreLinksQuery";
 import type { StoreLinksQuery as StoreLinksQueryType } from "@api/queries/__generated__/StoreLinksQuery.graphql";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { linksForLabels, storeHref } from "@/lib/storeProfile";
+
+function isPlainLeftClick(e: MouseEvent<HTMLAnchorElement>): boolean {
+  return (
+    e.button === 0 &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    !e.shiftKey &&
+    !e.altKey
+  );
+}
 
 const RecapStoreInner: React.FC<{ tenantId: string; recapId: string; children: ReactNode }> = ({
   tenantId,
   recapId,
   children,
 }) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const data = useLazyLoadQuery<RecapStoreKeyQueryType>(
     RecapStoreKeyQuery,
     { tenantId, recapId },
     { fetchPolicy: "store-or-network" },
   );
-  const href = storeHref(data.recapStoreKey);
-  if (!href) return <>{children}</>;
+  const storeKey = data.recapStoreKey;
+  const href = storeHref(storeKey);
+  if (!href || !storeKey) return <>{children}</>;
   return (
-    <Link to={href} className="underline underline-offset-2" style={{ color: "inherit" }}>
+    <Link
+      to={href}
+      onClick={(e) => {
+        if (!isPlainLeftClick(e)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openStoreSheet({
+          storeKey,
+          fallbackTitle: typeof children === "string" ? children : undefined,
+        });
+      }}
+      className="underline underline-offset-2"
+      style={{ color: "inherit" }}
+    >
       {children}
     </Link>
   );
 };
 
 /**
- * A recap's store name, linked to the store's page when Spark can tell
- * which store it is. Its own query: while it loads, when it fails, or when
- * the store cannot be told, the name is plain text.
+ * A recap's store name, linked to the store's slide-over drawer (or full page
+ * on Cmd/Ctrl-click) when Spark can tell which store it is.
  */
 export const RecapStoreLink: React.FC<{
   tenantId: string | null | undefined;
@@ -53,6 +78,7 @@ const ChartLinksInner: React.FC<{ tenantId: string; labels: ReadonlyArray<string
   tenantId,
   labels,
 }) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const data = useLazyLoadQuery<StoreLinksQueryType>(
     StoreLinksQuery,
     { tenantId },
@@ -63,24 +89,32 @@ const ChartLinksInner: React.FC<{ tenantId: string; labels: ReadonlyArray<string
   return (
     <p className="text-xs flex flex-wrap gap-x-3 gap-y-1" style={{ color: "var(--spark-text-meta)" }}>
       <span>Store pages:</span>
-      {links.map((l) => (
-        <Link
-          key={l.href}
-          to={l.href}
-          className="underline"
-          style={{ color: "var(--spark-text-secondary)" }}
-        >
-          {l.name}
-        </Link>
-      ))}
+      {links.map((l) => {
+        const keyFromHref = l.href.startsWith("/store/") ? l.href.slice("/store/".length) : null;
+        return (
+          <Link
+            key={l.href}
+            to={l.href}
+            onClick={(e) => {
+              if (!keyFromHref || !isPlainLeftClick(e)) return;
+              e.preventDefault();
+              e.stopPropagation();
+              openStoreSheet({ storeKey: keyFromHref, storeName: l.name, fallbackTitle: l.name });
+            }}
+            className="underline"
+            style={{ color: "var(--spark-text-secondary)" }}
+          >
+            {l.name}
+          </Link>
+        );
+      })}
     </p>
   );
 };
 
 /**
- * Under the "by store" chart: a link to the store page for each bar that
- * is one physical store. Nothing while it loads, if it fails, or when no
- * bar is a single store.
+ * Under the "by store" chart: a trigger opening the StoreSheet drawer (with
+ * Cmd/Ctrl-click full-page support) for each bar that is one physical store.
  */
 export const StoreChartLinks: React.FC<{ tenantId: string; labels: ReadonlyArray<string> }> = ({
   tenantId,

@@ -73,7 +73,7 @@ export const WorkspaceSharePublicPage: React.FC = () => {
           <div className="space-y-2">
             <p
               className="text-xs font-semibold uppercase tracking-wider"
-              style={{ color: "#ef5a2a" }}
+              style={{ color: "#991b1b" }}
             >
               Link Unavailable
             </p>
@@ -97,7 +97,7 @@ export const WorkspaceSharePublicPage: React.FC = () => {
               </div>
               <span
                 className="px-3 py-1 rounded-full text-xs font-bold"
-                style={{ background: "#ecfccb", color: "#365314" }}
+                style={{ background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0" }}
               >
                 Verified Visit
               </span>

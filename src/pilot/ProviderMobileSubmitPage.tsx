@@ -239,10 +239,10 @@ export const ProviderMobileSubmitPage: React.FC = () => {
           className="max-w-md w-full rounded-2xl p-6"
           style={{
             background: "#121418",
-            border: "1px solid rgba(197,245,70,0.4)",
+            border: "1px solid rgba(52,211,153,0.42)",
           }}
         >
-          <p className="text-xs uppercase tracking-wider mono mb-1" style={{ color: "#c5f546" }}>
+          <p className="text-xs uppercase tracking-wider mono mb-1" style={{ color: "#6ee7b7" }}>
             Submitted for review
           </p>
           <h1 className="text-xl font-bold mb-2">
@@ -259,7 +259,7 @@ export const ProviderMobileSubmitPage: React.FC = () => {
               resetFormForShift(ctx.visit);
             }}
             className="w-full py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={{ background: "#f2f3ee", color: "#0A0B0D" }}
           >
             Submit another shift on this assignment
           </button>
@@ -285,8 +285,8 @@ export const ProviderMobileSubmitPage: React.FC = () => {
             <span
               className="text-xs mono px-2 py-0.5 rounded-full"
               style={{
-                background: "rgba(197,245,70,0.14)",
-                color: "#c5f546",
+                background: "#0d2e24",
+                color: "#6ee7b7",
               }}
             >
               {ctx.submission_code}
@@ -491,7 +491,7 @@ export const ProviderMobileSubmitPage: React.FC = () => {
               />
             </label>
             {photos.length > 0 && (
-              <p className="text-xs mono" style={{ color: "#c5f546" }}>
+              <p className="text-xs mono" style={{ color: "#6ee7b7" }}>
                 {photos.length} photo{photos.length === 1 ? "" : "s"} attached
               </p>
             )}
@@ -539,7 +539,7 @@ export const ProviderMobileSubmitPage: React.FC = () => {
             disabled={submitting}
             className="w-full py-3 rounded-xl text-sm font-bold transition"
             style={{
-              background: "#c5f546",
+              background: "#f2f3ee",
               color: "#0A0B0D",
               opacity: submitting ? 0.65 : 1,
             }}

@@ -2,9 +2,9 @@ import { graphql } from "react-relay";
 
 /**
  * One store of one brand: visits, totals from approved recaps, products,
- * consumer comments, photos and a short summary. `staff` is null for
- * anyone who is not Ignite staff. Null when the key is not a store of the
- * brand the viewer may read.
+ * consumer comments, photos, persistent logistics notes, and a short summary.
+ * `staff` is null for anyone who is not Ignite staff. Null when the key is
+ * not a store of the brand the viewer may read.
  */
 export const StoreProfileQuery = graphql`
   query StoreProfileQuery($tenantId: ID!, $storeKey: String!) {
@@ -17,6 +17,8 @@ export const StoreProfileQuery = graphql`
       summary
       summarySource
       visitTotal
+      logisticsNotes
+      logisticsNotesUpdatedAt
       totals {
         visits
         upcoming
@@ -30,6 +32,7 @@ export const StoreProfileQuery = graphql`
         lastVisit
       }
       visits {
+        eventId
         eventUuid
         requestUuid
         title

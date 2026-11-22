@@ -66,20 +66,20 @@ export function settlementBadgeMeta(status: CostSettlementKind): {
     case "paid":
       return {
         label: "Paid",
-        bg: "rgba(197,245,70,0.16)",
-        fg: "#c5f546",
+        bg: "var(--spark-ok-bg)",
+        fg: "var(--spark-ok-ink)",
       };
     case "invoiced":
       return {
         label: "Invoiced",
-        bg: "rgba(56,189,248,0.16)",
-        fg: "#7dd3fc",
+        bg: "var(--spark-info-bg)",
+        fg: "var(--spark-info-ink)",
       };
     case "estimated":
       return {
         label: "Estimated",
-        bg: "rgba(250,204,21,0.15)",
-        fg: "#fde047",
+        bg: "var(--spark-warn-badge-bg)",
+        fg: "var(--spark-warn-badge-ink)",
       };
     default:
       return assertNever(status);
@@ -95,20 +95,20 @@ export function evidenceBadgeMeta(status: CostEvidenceKind): {
     case "supported":
       return {
         label: "Supported",
-        bg: "rgba(197,245,70,0.15)",
-        fg: "#c5f546",
+        bg: "var(--spark-ok-bg)",
+        fg: "var(--spark-ok-ink)",
       };
     case "estimated":
       return {
         label: "Estimated",
-        bg: "rgba(250,204,21,0.14)",
-        fg: "#fde047",
+        bg: "var(--spark-warn-badge-bg)",
+        fg: "var(--spark-warn-badge-ink)",
       };
     case "missing":
       return {
         label: "Missing proof / rate",
-        bg: "rgba(239,90,42,0.18)",
-        fg: "#ef5a2a",
+        bg: "rgba(239,90,42,0.14)",
+        fg: "var(--spark-flag-ink, #ef5a2a)",
       };
     default:
       return assertNever(status);
@@ -322,6 +322,149 @@ export async function applyWorkspaceContextSelection(
   }
 }
 
+export function isArchivedWorkspaceLabel(
+  value: string | null | undefined,
+): boolean {
+  return Boolean(value && value.trim().toUpperCase().startsWith("[ARCHIVED]"));
+}
+
+export function workspaceContextOptionKey(ctx: {
+  membershipUuid?: string | null;
+  tenantUuid: string;
+}): string {
+  return ctx.membershipUuid
+    ? `membership:${ctx.membershipUuid}`
+    : `tenant:${ctx.tenantUuid}`;
+}
+
+export function filterVisibleWorkspaceContexts<
+  T extends {
+    tenantUuid: string;
+    tenantName?: string | null;
+    displayLabel?: string | null;
+    membershipUuid?: string | null;
+  },
+>(
+  contexts: readonly T[],
+  active: {
+    tenantUuid?: string | null;
+    membershipUuid?: string | null;
+  } = {},
+): T[] {
+  return contexts.filter((ctx) => {
+    const isCurrentlySelected =
+      (Boolean(active.tenantUuid) && ctx.tenantUuid === active.tenantUuid) ||
+      (Boolean(active.membershipUuid) &&
+        ctx.membershipUuid === active.membershipUuid);
+    if (isCurrentlySelected) return true;
+    return (
+      !isArchivedWorkspaceLabel(ctx.tenantName) &&
+      !isArchivedWorkspaceLabel(ctx.displayLabel)
+    );
+  });
+}
+
+export function resolveActiveWorkspaceContextKey(
+  contexts: readonly {
+    tenantUuid: string;
+    membershipUuid?: string | null;
+    isCurrent?: boolean;
+  }[],
+  active: {
+    tenantUuid?: string | null;
+    membershipUuid?: string | null;
+  },
+): string {
+  if (contexts.length === 0) return "";
+  const { tenantUuid, membershipUuid } = active;
+
+  if (tenantUuid && membershipUuid) {
+    const exactBoth = contexts.find(
+      (c) => c.tenantUuid === tenantUuid && c.membershipUuid === membershipUuid,
+    );
+    if (exactBoth) return workspaceContextOptionKey(exactBoth);
+  }
+
+  if (tenantUuid) {
+    const currentForTenant = contexts.find(
+      (c) => c.tenantUuid === tenantUuid && c.isCurrent,
+    );
+    if (currentForTenant) return workspaceContextOptionKey(currentForTenant);
+    const firstForTenant = contexts.find((c) => c.tenantUuid === tenantUuid);
+    if (firstForTenant) return workspaceContextOptionKey(firstForTenant);
+  }
+
+  if (membershipUuid) {
+    const byMembership = contexts.find(
+      (c) => c.membershipUuid === membershipUuid,
+    );
+    if (byMembership) return workspaceContextOptionKey(byMembership);
+  }
+
+  const serverCurrent = contexts.find((c) => c.isCurrent);
+  if (serverCurrent) return workspaceContextOptionKey(serverCurrent);
+
+  return workspaceContextOptionKey(contexts[0]);
+}
+
+export function formatSingleWorkspaceBadgeLabel(ctx: {
+  tenantName?: string | null;
+  providerName?: string | null;
+  displayLabel?: string | null;
+}): string {
+  const brand = (ctx.tenantName ?? "").trim();
+  const provider = (ctx.providerName ?? "").trim();
+  if (brand && provider) return `${brand} · ${provider}`;
+  if (brand) return brand;
+  if (provider) return provider;
+  return (ctx.displayLabel ?? "").trim();
+}
+
+export const PILOT_CONTRAST_PALETTE = {
+  dark: {
+    pageBg: "#0A0B0D",
+    cardBg: "#141416",
+    text: "#f2f3ee",
+    ctaBg: "#f2f3ee",
+    ctaFg: "#0A0B0D",
+    okBg: "#0d2e24",
+    okFg: "#6ee7b7",
+    infoBg: "#0f2942",
+    infoFg: "#93c5fd",
+    warnBg: "#332407",
+    warnFg: "#fcd34d",
+    dangerBg: "#361512",
+    dangerFg: "#fca5a5",
+    neutralBg: "#1e2430",
+    neutralFg: "#e2e8f0",
+    meterTrack: "#181b20",
+    meterOk: "#34d399",
+    meterWarn: "#fbbf24",
+    meterDanger: "#ff7849",
+  },
+  light: {
+    pageBg: "#f6f6f2",
+    cardBg: "#ffffff",
+    text: "#14160f",
+    ctaBg: "#14160f",
+    ctaFg: "#ffffff",
+    okBg: "#ecfdf5",
+    okFg: "#065f46",
+    infoBg: "#eff6ff",
+    infoFg: "#1e40af",
+    warnBg: "#fffbeb",
+    warnFg: "#92400e",
+    dangerBg: "#fef2f2",
+    dangerFg: "#991b1b",
+    neutralBg: "#f1f5f9",
+    neutralFg: "#334155",
+    meterTrack: "#e2e8f0",
+    meterOk: "#065f46",
+    meterWarn: "#92400e",
+    meterDanger: "#9a3412",
+  },
+} as const;
+
 export type PlanCodeKind =
   | "free"
   | "core"
@@ -353,51 +496,51 @@ export function planBadgeMeta(planCode: string): {
       return {
         label: "Free",
         priceSummary: "$0/mo · 5 visits",
-        bg: "rgba(148,163,184,0.16)",
-        fg: "#cbd5e1",
+        bg: "var(--pilot-neutral-bg)",
+        fg: "var(--pilot-neutral-fg)",
       };
     case "core":
       return {
         label: "Core",
         priceSummary: "$299/mo · 50 visits",
-        bg: "rgba(56,189,248,0.16)",
-        fg: "#7dd3fc",
+        bg: "var(--pilot-info-bg)",
+        fg: "var(--pilot-info-fg)",
       };
     case "pro":
       return {
         label: "Pro",
         priceSummary: "$750/mo · 100 visits",
-        bg: "rgba(197,245,70,0.18)",
-        fg: "#c5f546",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
       };
     case "pilot_pro":
       return {
         label: "60-Day Pro Pilot",
         priceSummary: "$1,500 pilot · 100 visits/mo",
-        bg: "rgba(197,245,70,0.22)",
-        fg: "#c5f546",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
       };
     case "scale":
       return {
         label: "Scale",
         priceSummary: "From $1,500/mo · 250 visits",
-        bg: "rgba(250,204,21,0.16)",
-        fg: "#fde047",
+        bg: "var(--pilot-warn-bg)",
+        fg: "var(--pilot-warn-fg)",
       };
     case "managed_sow":
       return {
         label: "Managed SOW",
         priceSummary: "Contracted Ignite SOW",
-        bg: "rgba(197,245,70,0.14)",
-        fg: "#c5f546",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
       };
     default: {
       if (typeof planCode === "string" && planCode) {
         return {
           label: planCode.toUpperCase(),
           priceSummary: "Custom plan",
-          bg: "rgba(148,163,184,0.16)",
-          fg: "#cbd5e1",
+          bg: "var(--pilot-neutral-bg)",
+          fg: "var(--pilot-neutral-fg)",
         };
       }
       return assertNever(known);
@@ -415,63 +558,63 @@ export function subscriptionStatusBadge(status: string): {
     case "free_active":
       return {
         label: "Free Active",
-        bg: "rgba(148,163,184,0.15)",
-        fg: "#cbd5e1",
+        bg: "var(--pilot-neutral-bg)",
+        fg: "var(--pilot-neutral-fg)",
       };
     case "pilot_active":
       return {
         label: "60-Day Pilot Active",
-        bg: "rgba(197,245,70,0.18)",
-        fg: "#c5f546",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
       };
     case "pilot_expired":
       return {
         label: "Pilot Ended · Free Fallback",
-        bg: "rgba(250,204,21,0.18)",
-        fg: "#fde047",
+        bg: "var(--pilot-warn-bg)",
+        fg: "var(--pilot-warn-fg)",
       };
     case "checkout_pending":
       return {
         label: "Checkout Open",
-        bg: "rgba(56,189,248,0.16)",
-        fg: "#7dd3fc",
+        bg: "var(--pilot-info-bg)",
+        fg: "var(--pilot-info-fg)",
       };
     case "active":
       return {
         label: "Active Recurring",
-        bg: "rgba(197,245,70,0.18)",
-        fg: "#c5f546",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
       };
     case "past_due":
       return {
         label: "Payment Past Due",
-        bg: "rgba(239,90,42,0.22)",
-        fg: "#ef5a2a",
+        bg: "var(--pilot-danger-bg)",
+        fg: "var(--pilot-danger-fg)",
       };
     case "cancel_at_period_end":
       return {
         label: "Cancels at Period End (Paid-Through)",
-        bg: "rgba(250,204,21,0.16)",
-        fg: "#fde047",
+        bg: "var(--pilot-warn-bg)",
+        fg: "var(--pilot-warn-fg)",
       };
     case "canceled":
       return {
         label: "Cancelled · Free Tier",
-        bg: "rgba(148,163,184,0.16)",
-        fg: "#cbd5e1",
+        bg: "var(--pilot-neutral-bg)",
+        fg: "var(--pilot-neutral-fg)",
       };
     case "managed_sow":
       return {
         label: "Ignite Managed SOW",
-        bg: "rgba(197,245,70,0.14)",
-        fg: "#c5f546",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
       };
     default: {
       if (typeof status === "string" && status) {
         return {
           label: status.replace(/_/g, " "),
-          bg: "rgba(148,163,184,0.16)",
-          fg: "#cbd5e1",
+          bg: "var(--pilot-neutral-bg)",
+          fg: "var(--pilot-neutral-fg)",
         };
       }
       return assertNever(known);
@@ -497,7 +640,7 @@ export function computeVisitMeterProgress(params: {
       percent: 18,
       summaryLabel: `${used} completed visits (Managed SOW — uncapped)`,
       remainingLabel: "Included in contracted SOW",
-      barColor: "#c5f546",
+      barColor: "var(--pilot-meter-ok)",
       isAtCap: false,
     };
   }
@@ -513,7 +656,9 @@ export function computeVisitMeterProgress(params: {
         : over > 0
           ? `${over} completed from already-underway shifts (no automatic charge) · Upgrade to book new visits`
           : "Monthly allowance reached · In-progress fieldwork still submits cleanly",
-      barColor: params.overageAgreementApproved ? "#fde047" : "#ef5a2a",
+      barColor: params.overageAgreementApproved
+        ? "var(--pilot-meter-warn)"
+        : "var(--pilot-meter-danger)",
       isAtCap: true,
     };
   }
@@ -522,7 +667,7 @@ export function computeVisitMeterProgress(params: {
     percent: pct,
     summaryLabel: `${used} / ${cap} completed visits`,
     remainingLabel: `${rem} included visit${rem === 1 ? "" : "s"} remaining this month`,
-    barColor: pct >= 80 ? "#fde047" : "#c5f546",
+    barColor: pct >= 80 ? "var(--pilot-meter-warn)" : "var(--pilot-meter-ok)",
     isAtCap: false,
   };
 }
@@ -549,27 +694,138 @@ export function currentDateInTimezone(
   tzName: string | null | undefined,
   now: Date = new Date(),
 ): string {
-  const cleanTz = (tzName || "").trim() || "America/Chicago";
-  try {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: cleanTz,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(now);
-    const year = parts.find((p) => p.type === "year")?.value;
-    const month = parts.find((p) => p.type === "month")?.value;
-    const day = parts.find((p) => p.type === "day")?.value;
-    if (year && month && day) {
-      return `${year}-${month}-${day}`;
+  const candidates = [(tzName || "").trim(), "America/Chicago"].filter(Boolean);
+  for (const candidateTz of candidates) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: candidateTz,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(now);
+      const year = parts.find((p) => p.type === "year")?.value;
+      const month = parts.find((p) => p.type === "month")?.value;
+      const day = parts.find((p) => p.type === "day")?.value;
+      if (year && month && day) {
+        return `${year}-${month}-${day}`;
+      }
+    } catch {
+      /* invalid IANA timezone — fall back to America/Chicago */
     }
-  } catch {
-    // Fall back to local calendar date if an unrecognized IANA zone was supplied.
   }
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+export interface OnboardingSignupFormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  brandName: string;
+  businessTimezone: string;
+  acceptTerms: boolean;
+}
+
+export function createInitialOnboardingSignupState(): OnboardingSignupFormState {
+  return {
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    brandName: "",
+    businessTimezone: "America/Chicago",
+    acceptTerms: false,
+  };
+}
+
+export interface OnboardingQuickRecapState {
+  storeName: string;
+  city: string;
+  stateCode: string;
+  visitDate: string;
+  samplesDistributed: string;
+  consumersSampled: string;
+  repObservedUnits: string;
+}
+
+export function createInitialQuickRecapState(
+  businessTimezone?: string | null,
+  now: Date = new Date(),
+): OnboardingQuickRecapState {
+  return {
+    storeName: "",
+    city: "",
+    stateCode: "",
+    visitDate: currentDateInTimezone(businessTimezone, now),
+    samplesDistributed: "",
+    consumersSampled: "",
+    repObservedUnits: "",
+  };
+}
+
+function parseRequiredNonNegativeInt(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+export function validateOnboardingQuickRecap(
+  form: OnboardingQuickRecapState,
+  businessTimezone?: string | null,
+  now: Date = new Date(),
+):
+  | {
+      ok: true;
+      payload: {
+        storeName: string;
+        city: string;
+        stateCode: string;
+        visitDate: string;
+        samplesDistributed: number;
+        consumersSampled: number;
+        repObservedUnits: number;
+      };
+    }
+  | { ok: false; error: string } {
+  const storeName = form.storeName.trim();
+  if (!storeName) {
+    return {
+      ok: false,
+      error: "Enter the real store or venue name before logging a field recap.",
+    };
+  }
+  const samples = parseRequiredNonNegativeInt(form.samplesDistributed);
+  const consumers = parseRequiredNonNegativeInt(form.consumersSampled);
+  const units = parseRequiredNonNegativeInt(form.repObservedUnits);
+  if (samples === null || consumers === null || units === null) {
+    return {
+      ok: false,
+      error:
+        "Enter actual Samples, Consumers Sampled, and Observed Units (0 or more) before submitting.",
+    };
+  }
+  const rawDate = form.visitDate.trim();
+  const visitDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+    ? rawDate
+    : currentDateInTimezone(businessTimezone, now);
+
+  return {
+    ok: true,
+    payload: {
+      storeName,
+      city: form.city.trim(),
+      stateCode: form.stateCode.trim().toUpperCase(),
+      visitDate,
+      samplesDistributed: samples,
+      consumersSampled: consumers,
+      repObservedUnits: units,
+    },
+  };
 }
 
 

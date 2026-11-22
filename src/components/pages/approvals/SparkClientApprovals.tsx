@@ -13,6 +13,7 @@ import Layout from "@/layout/Layout";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__generated__/RecapsListQuery.graphql";
 import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
@@ -107,6 +108,7 @@ type PendingRecap = {
   name: string;
   /** YYYY-MM-DD or ISO; "" when neither event date nor createdAt exist. */
   date: string;
+  venue: string | null;
   /** "Venue · City, ST" — best-effort, "—" when unknown. */
   where: string;
   /** "Event Activation" / template name / null. */
@@ -251,7 +253,36 @@ const ApprovalRow: React.FC<{
           )}
         </div>
         <p className="text-[13px] mt-1" style={{ color: "var(--spark-text-meta)" }}>
-          {row.where}
+          {row.venue ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useStoreSheetStore.getState().openStoreSheet({
+                    recapId: row.uuid,
+                    storeName: row.venue,
+                    fallbackTitle: row.venue,
+                  });
+                }}
+                title={`Open store profile for ${row.venue}`}
+                className="underline underline-offset-2 cursor-pointer"
+                style={{
+                  color: "var(--spark-text-secondary)",
+                  background: "none",
+                  border: 0,
+                  padding: 0,
+                }}
+              >
+                {row.venue}
+              </button>
+              {row.where.startsWith(`${row.venue} · `)
+                ? row.where.slice(row.venue.length)
+                : ""}
+            </>
+          ) : (
+            row.where
+          )}
           <span style={{ opacity: 0.5 }}> · </span>
           {fmtDate(row.date)}
         </p>
@@ -485,6 +516,7 @@ const ClientApprovalsMerged: React.FC<{
             uuid: String(n.uuid),
             name: n.name ?? "Untitled recap",
             date,
+            venue,
             where: joinWhere(venue, null, st),
             typeLabel: n.requestTypeName ?? null,
             sortMs: toMs(n.eventDate) || toMs(n.createdAt),
@@ -511,6 +543,7 @@ const ClientApprovalsMerged: React.FC<{
               n.customRecapTemplate?.name ??
               "Custom recap",
             date,
+            venue: n.eventRetailer || null,
             where: joinWhere(
               n.eventRetailer || null,
               n.eventRetailer ? null : (n.eventAddress ?? null),
@@ -829,7 +862,28 @@ const RequestApprovalRow: React.FC<{
               </span>
             )}
           </div>
-          <p className="text-sm font-semibold mt-1 truncate">{row.venue}</p>
+          <p className="text-sm font-semibold mt-1 truncate">
+            {row.venue && row.venue !== "—" ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useStoreSheetStore.getState().openStoreSheet({
+                    requestId: row.id,
+                    storeName: row.venue,
+                    fallbackTitle: row.venue,
+                  });
+                }}
+                title={`Open store profile for ${row.venue}`}
+                className="font-semibold text-sm text-left truncate max-w-full hover:underline underline-offset-2 cursor-pointer"
+                style={{ color: "inherit", background: "none", border: 0, padding: 0 }}
+              >
+                {row.venue}
+              </button>
+            ) : (
+              row.venue
+            )}
+          </p>
           <p className="text-[13px]" style={{ color: "var(--spark-text-meta)" }}>
             {[row.where, row.date].filter(Boolean).join(" · ") || "—"}
           </p>

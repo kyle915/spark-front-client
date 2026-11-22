@@ -45,6 +45,9 @@ import AccountMapView, { CoverageLegend, CoverageMark } from "./AccountMapView";
 import AccountUploader from "./AccountUploader";
 import SampleNextList from "@/components/explain/SampleNextList";
 import { useAccountList } from "./useAccountList";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
+import WaveScheduleSheet from "./WaveScheduleSheet";
+import type { WaveTargetStore } from "./waveSchedule";
 
 /**
  * Account Map: every store a brand works with, one pin per physical store.
@@ -85,14 +88,20 @@ const coverageFilterFromParam = (raw: string | null): CoverageFilter => {
 function StoreRow({
   store,
   selected,
+  checkedForWave,
+  onToggleWave,
   onShowOnMap,
   onSchedule,
+  onOpenProfile,
   rowRef,
 }: {
   store: Store;
   selected: boolean;
+  checkedForWave: boolean;
+  onToggleWave: (store: Store) => void;
   onShowOnMap: (key: string) => void;
   onSchedule: (store: Store) => void;
+  onOpenProfile: (store: Store) => void;
   rowRef: (el: HTMLLIElement | null) => void;
 }) {
   const onMap = store.position !== null;
@@ -127,43 +136,80 @@ function StoreRow({
       aria-current={selected ? "true" : undefined}
       style={{
         borderBottom: "1px solid var(--spark-border)",
-        background: selected ? "rgba(var(--spark-ink-rgb), 0.04)" : undefined,
-        boxShadow: selected ? "inset 3px 0 0 var(--spark-text)" : undefined,
+        background:
+          selected || checkedForWave
+            ? "rgba(var(--spark-ink-rgb), 0.04)"
+            : undefined,
+        boxShadow: selected
+          ? "inset 3px 0 0 var(--spark-text)"
+          : checkedForWave
+            ? "inset 3px 0 0 var(--spark-ok-ink)"
+            : undefined,
       }}
     >
-      {onMap ? (
-        <button
-          type="button"
-          onClick={() => onShowOnMap(store.key)}
-          title="Show on the map"
-          className="spark-row-hover block w-full text-left px-4 pt-3 pb-1.5 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2"
-          style={{ color: "var(--spark-text)", outlineColor: "var(--spark-text)" }}
+      <div className="flex items-start">
+        <label
+          className="pl-3.5 pt-3.5 pr-1 flex items-center cursor-pointer shrink-0"
+          title={`Select ${store.name} for multi-store wave`}
         >
-          {body}
-        </button>
-      ) : (
-        <div className="px-4 pt-3 pb-1.5">{body}</div>
-      )}
-      <p
-        className="flex flex-wrap gap-x-3 px-4 pb-3 pl-[46px] text-xs"
-        style={{ color: "var(--spark-text-meta)" }}
-      >
-        {onMap ? null : <span>{noPositionWords(store.positionStatus)}</span>}
-        <button
-          type="button"
-          onClick={() => onSchedule(store)}
-          className="underline"
-          style={{
-            color: "var(--spark-text-secondary)",
-            background: "none",
-            border: 0,
-            padding: 0,
-            cursor: "pointer",
-          }}
-        >
-          Schedule a visit
-        </button>
-      </p>
+          <input
+            type="checkbox"
+            checked={checkedForWave}
+            onChange={() => onToggleWave(store)}
+            aria-label={`Select ${store.name}`}
+            className="cursor-pointer"
+          />
+        </label>
+        <div className="flex-1 min-w-0">
+          {onMap ? (
+            <button
+              type="button"
+              onClick={() => onShowOnMap(store.key)}
+              title="Show on the map"
+              className="spark-row-hover block w-full text-left pl-2 pr-4 pt-3 pb-1.5 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2"
+              style={{ color: "var(--spark-text)", outlineColor: "var(--spark-text)" }}
+            >
+              {body}
+            </button>
+          ) : (
+            <div className="pl-2 pr-4 pt-3 pb-1.5">{body}</div>
+          )}
+          <p
+            className="flex flex-wrap gap-x-3 pr-4 pb-3 pl-[38px] text-xs"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
+            {onMap ? null : <span>{noPositionWords(store.positionStatus)}</span>}
+            <button
+              type="button"
+              onClick={() => onOpenProfile(store)}
+              className="underline"
+              style={{
+                color: "var(--spark-text-secondary)",
+                background: "none",
+                border: 0,
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              Store profile
+            </button>
+            <button
+              type="button"
+              onClick={() => onSchedule(store)}
+              className="underline"
+              style={{
+                color: "var(--spark-text-secondary)",
+                background: "none",
+                border: 0,
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              Schedule a visit
+            </button>
+          </p>
+        </div>
+      </div>
     </li>
   );
 }
@@ -174,6 +220,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { tenantId } = useAuthStore();
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
 
   const [coverage, setCoverage] = useState<CoverageFilter>(() =>
     coverageFilterFromParam(searchParams.get("coverage")),
@@ -182,6 +229,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [stateFilter, setStateFilter] = useState("all");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
+  const [waveRefreshKey, setWaveRefreshKey] = useState(0);
+  const [selectedWaveMap, setSelectedWaveMap] = useState<Map<string, WaveTargetStore>>(
+    () => new Map(),
+  );
+  const [waveSheetOpen, setWaveSheetOpen] = useState(false);
   // Brand users (who cannot switch to Admin) get 200 rows a request; ask
   // for exactly that so each offset step lands where the last page ended.
   const { canToggleRole } = useSparkRole();
@@ -216,12 +268,17 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     setExtraPins([]);
     setScanned(pageSize);
     setLoadingRest(false);
+    setSelectedWaveMap(new Map());
+    setWaveSheetOpen(false);
   }, [tenantId, pageSize]);
 
   const data = useLazyLoadQuery<AccountMapQueryType>(
     AccountMapQuery,
     { first: pageSize, offset: 0, tenantId: tenantId || null },
-    { fetchPolicy: "store-or-network" },
+    {
+      fetchPolicy: waveRefreshKey > 0 ? "network-only" : "store-or-network",
+      fetchKey: waveRefreshKey,
+    },
   );
   const list = useAccountList(tenantId || null);
 
@@ -325,6 +382,89 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     },
     [navigate],
   );
+  const openProfile = useCallback(
+    (store: Store) => {
+      openStoreSheet({
+        storeKey: store.key,
+        storeName: store.name,
+        address: store.address,
+        fallbackTitle: store.name,
+      });
+    },
+    [openStoreSheet],
+  );
+  const toWaveStore = useCallback(
+    (s: Store): WaveTargetStore => ({
+      key: s.key,
+      name: s.name,
+      address: s.address,
+      market: s.market,
+      state: s.state,
+      position: s.position,
+    }),
+    [],
+  );
+  const toggleWaveStore = useCallback((target: WaveTargetStore) => {
+    setSelectedWaveMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(target.key)) next.delete(target.key);
+      else next.set(target.key, target);
+      return next;
+    });
+  }, []);
+  const toggleWaveFromStoreRow = useCallback(
+    (store: Store) => {
+      toggleWaveStore(toWaveStore(store));
+    },
+    [toWaveStore, toggleWaveStore],
+  );
+  const selectManyWaveStores = useCallback(
+    (targets: ReadonlyArray<WaveTargetStore>) => {
+      setSelectedWaveMap((prev) => {
+        const next = new Map(prev);
+        const allPresent =
+          targets.length > 0 && targets.every((t) => next.has(t.key));
+        if (allPresent) {
+          for (const t of targets) next.delete(t.key);
+        } else {
+          for (const t of targets) next.set(t.key, t);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+  const selectedWaveKeys = useMemo(
+    () => new Set(selectedWaveMap.keys()),
+    [selectedWaveMap],
+  );
+  const selectedWaveList = useMemo(
+    () => Array.from(selectedWaveMap.values()),
+    [selectedWaveMap],
+  );
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((s) => selectedWaveMap.has(s.key));
+  const toggleSelectAllFiltered = useCallback(() => {
+    selectManyWaveStores(filtered.map(toWaveStore));
+  }, [filtered, selectManyWaveStores, toWaveStore]);
+  const handleWaveCreated = useCallback(
+    ({ retainStoreKeys }: { createdCount: number; retainStoreKeys: string[] }) => {
+      setSelectedWaveMap((prev) => {
+        if (retainStoreKeys.length === 0) return new Map();
+        const keep = new Set(retainStoreKeys);
+        const next = new Map<string, WaveTargetStore>();
+        for (const [k, v] of prev.entries()) {
+          if (keep.has(k)) next.set(k, v);
+        }
+        return next;
+      });
+      setExtraPins([]);
+      setScanned(pageSize);
+      autoFilled.current = null;
+      setWaveRefreshKey((k) => k + 1);
+    },
+    [pageSize],
+  );
   const onlyRetailer = useCallback((name: string) => {
     setRetailerFilter(name);
     setSelectedKey(null);
@@ -382,7 +522,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
       <AccountUploader list={list} />
 
-      <SampleNextList tenantId={tenantId} />
+      <SampleNextList
+        tenantId={tenantId}
+        selectedKeys={selectedWaveKeys}
+        onToggleStore={toggleWaveStore}
+        onSelectStores={selectManyWaveStores}
+        refreshKey={waveRefreshKey}
+      />
 
       <SparkFilterBar
         label="Stores"
@@ -462,6 +608,46 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             Clear filters
           </button>
         ) : null}
+        {filtered.length > 0 ? (
+          <button
+            type="button"
+            onClick={toggleSelectAllFiltered}
+            className="spark-btn-ghost text-xs"
+          >
+            {allFilteredSelected
+              ? `Deselect ${filtered.length.toLocaleString("en-US")} filtered`
+              : `Select all ${filtered.length.toLocaleString("en-US")} filtered stores`}
+          </button>
+        ) : null}
+        {selectedWaveList.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedWaveMap(new Map())}
+              className="text-xs underline px-1"
+              style={{
+                color: "var(--spark-text-meta)",
+                background: "none",
+                border: 0,
+                cursor: "pointer",
+              }}
+            >
+              Clear ({selectedWaveList.length.toLocaleString("en-US")})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWaveSheetOpen(true)}
+              className="btn btn-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "var(--spark-on-accent)",
+                border: "1px solid var(--spark-lime)",
+              }}
+            >
+              Schedule wave ({selectedWaveList.length.toLocaleString("en-US")})
+            </button>
+          </div>
+        ) : null}
       </SparkFilterBar>
 
       {roster && roster.rosterTotal > 0 ? (
@@ -539,8 +725,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   key={s.key}
                   store={s}
                   selected={s.key === selectedKey}
+                  checkedForWave={selectedWaveKeys.has(s.key)}
+                  onToggleWave={toggleWaveFromStoreRow}
                   onShowOnMap={showOnMap}
                   onSchedule={schedule}
+                  onOpenProfile={openProfile}
                   rowRef={(el) => {
                     if (el) rowEls.current.set(s.key, el);
                     else rowEls.current.delete(s.key);
@@ -557,6 +746,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           )}
         </div>
       </div>
+      <WaveScheduleSheet
+        open={waveSheetOpen}
+        onClose={() => setWaveSheetOpen(false)}
+        tenantId={tenantId}
+        stores={selectedWaveList}
+        onWaveCreated={handleWaveCreated}
+      />
     </div>
   );
 };

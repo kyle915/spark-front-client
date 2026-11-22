@@ -20,6 +20,21 @@ import type { PilotMutationsUpsertCostLineMutation as CostLineMutationType } fro
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const OK_BANNER_STYLE = {
+  background: "var(--spark-ok-bg)",
+  color: "var(--spark-ok-ink)",
+  border: "1px solid var(--spark-ok-border)",
+} as const;
 
 const FEE_BASE_OPTIONS = [
   { key: "product", label: "Product purchases" },
@@ -99,8 +114,8 @@ const DemoCostsBody: React.FC<{
           to="/finance-queue"
           className="px-4 py-2 rounded-xl text-xs font-bold"
           style={{
-            background: "rgba(239,90,42,0.16)",
-            color: "#ef5a2a",
+            background: "rgba(239,90,42,0.14)",
+            color: "var(--spark-flag-ink, #ef5a2a)",
             border: "1px solid rgba(239,90,42,0.4)",
           }}
         >
@@ -119,11 +134,7 @@ const DemoCostsBody: React.FC<{
       {banner && (
         <div
           className="p-3 rounded-xl text-xs"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "#c5f546",
-            border: "1px solid rgba(197,245,70,0.3)",
-          }}
+          style={OK_BANNER_STYLE}
         >
           {banner}
         </div>
@@ -140,11 +151,7 @@ const DemoCostsBody: React.FC<{
                 type="button"
                 onClick={() => setGroupBy(g)}
                 className="px-3 py-1 rounded-full text-xs font-semibold capitalize"
-                style={
-                  groupBy === g
-                    ? { background: "#c5f546", color: "#0A0B0D" }
-                    : META
-                }
+                style={groupBy === g ? PRIMARY_BTN_STYLE : META}
               >
                 By {g}
               </button>
@@ -188,7 +195,10 @@ const DemoCostsBody: React.FC<{
                           })
                         : `${formatHonestMoney(r.knownTotalCost, { isConfirmedZero: true })} + Unknown`}
                     </td>
-                    <td className="py-2.5 pr-3 mono" style={{ color: "#c5f546" }}>
+                    <td
+                      className="py-2.5 pr-3 mono font-semibold"
+                      style={{ color: "var(--spark-ok-ink)" }}
+                    >
                       {formatHonestMoney(r.supportedCost, {
                         isConfirmedZero: true,
                       })}
@@ -251,8 +261,8 @@ const DemoCostsBody: React.FC<{
                 required
                 value={agProviderUuid}
                 onChange={(e) => setAgProviderUuid(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               >
                 <option value="">Select agency…</option>
                 {ws.providers.map((p) => (
@@ -265,16 +275,16 @@ const DemoCostsBody: React.FC<{
                 value={agName}
                 onChange={(e) => setAgName(e.target.value)}
                 placeholder="Agreement name"
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               />
               <label className="space-y-1">
                 <span style={META}>Contracted Demo Fee ($)</span>
                 <input
                   value={agDemoFee}
                   onChange={(e) => setAgDemoFee(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl mono bg-black/30"
-                  style={BORDER}
+                  className="w-full px-3 py-2 rounded-xl mono"
+                  style={FIELD_STYLE}
                 />
               </label>
               <label className="space-y-1">
@@ -282,8 +292,8 @@ const DemoCostsBody: React.FC<{
                 <input
                   value={agAdminPct}
                   onChange={(e) => setAgAdminPct(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl mono bg-black/30"
-                  style={BORDER}
+                  className="w-full px-3 py-2 rounded-xl mono"
+                  style={FIELD_STYLE}
                 />
               </label>
             </div>
@@ -306,7 +316,7 @@ const DemoCostsBody: React.FC<{
               type="submit"
               disabled={savingAgreement}
               className="px-4 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={PRIMARY_BTN_STYLE}
             >
               Save Agreement Rules
             </button>
@@ -351,8 +361,8 @@ const DemoCostsBody: React.FC<{
                 required
                 value={lineVisitUuid}
                 onChange={(e) => setLineVisitUuid(e.target.value)}
-                className="col-span-2 px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="col-span-2 px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               >
                 <option value="">Select visit…</option>
                 {visits.map((v) => (
@@ -364,8 +374,8 @@ const DemoCostsBody: React.FC<{
               <select
                 value={lineCat}
                 onChange={(e) => setLineCat(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               >
                 <option value="demo_fee">Demo fee</option>
                 <option value="extra_hours">Extra hours</option>
@@ -381,14 +391,14 @@ const DemoCostsBody: React.FC<{
                 value={lineAmount}
                 onChange={(e) => setLineAmount(e.target.value)}
                 placeholder="Amount $ (leave blank if unknown)"
-                className="px-3 py-2 rounded-xl mono bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl mono"
+                style={FIELD_STYLE}
               />
               <select
                 value={lineSettlement}
                 onChange={(e) => setLineSettlement(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               >
                 <option value="estimated">Estimated</option>
                 <option value="invoiced">Invoiced</option>
@@ -398,15 +408,15 @@ const DemoCostsBody: React.FC<{
                 value={lineDesc}
                 onChange={(e) => setLineDesc(e.target.value)}
                 placeholder="Invoice # or note"
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               />
             </div>
             <button
               type="submit"
               disabled={savingLine}
               className="px-4 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={PRIMARY_BTN_STYLE}
             >
               + Add Cost Line
             </button>
@@ -463,8 +473,11 @@ const DemoCostsBody: React.FC<{
                     {v.costLines.map((cl) => (
                       <div
                         key={cl.uuid}
-                        className="px-3 py-2 rounded-xl bg-black/25 flex items-center justify-between gap-2"
-                        style={BORDER}
+                        className="px-3 py-2 rounded-xl flex items-center justify-between gap-2"
+                        style={{
+                          ...BORDER,
+                          background: "var(--spark-surface-2)",
+                        }}
                       >
                         <div>
                           <div className="font-medium capitalize">
@@ -504,7 +517,7 @@ const DemoCostsBody: React.FC<{
                     </strong>
                   </span>
                   {v.efficiencyWithheldReason && (
-                    <span style={{ color: "#fde047" }}>
+                    <span style={{ color: "var(--spark-warn-badge-ink)" }}>
                       {v.efficiencyWithheldReason}
                     </span>
                   )}

@@ -19,8 +19,8 @@ export const PlanGateCallout: React.FC<PlanGateCalloutProps> = ({
     <section
       className="rounded-xl p-6 space-y-4"
       style={{
-        background: "rgba(197,245,70,0.05)",
-        border: "1px solid rgba(197,245,70,0.28)",
+        background: "var(--pilot-ok-subtle)",
+        border: "1px solid var(--pilot-ok-border)",
       }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -47,8 +47,8 @@ export const PlanGateCallout: React.FC<PlanGateCalloutProps> = ({
           to="/plans-billing"
           className="px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-opacity hover:opacity-90"
           style={{
-            background: "#c5f546",
-            color: "#0A0B0D",
+            background: "var(--pilot-cta-bg)",
+            color: "var(--pilot-cta-fg)",
           }}
         >
           View Plans & Upgrade →

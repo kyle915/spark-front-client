@@ -111,6 +111,8 @@ export interface WorkspaceSwitchNavigationOptions {
   search?: string;
   hash?: string;
   isClient?: boolean;
+  membershipUuid?: string | null;
+  workspaceRole?: string | null;
   navigate: (to: string, opts?: { replace?: boolean }) => void;
 }
 
@@ -125,7 +127,18 @@ export function switchWorkspace(
   target: SwitchableTenant,
   options: WorkspaceSwitchNavigationOptions,
 ): string {
+  const prevState = useAuthStore.getState();
   rememberTenantRecent(target.uuid);
+  if (options.membershipUuid !== undefined) {
+    prevState.setWorkspaceMembership(
+      options.membershipUuid,
+      options.workspaceRole ?? null,
+    );
+  } else if (prevState.tenantUuid !== target.uuid && prevState.membershipUuid) {
+    // Clear stale membership scoping from the previous brand when switching via
+    // sidebar TenantPicker or Jump so X-Spark-Membership never mismatches X-Spark-Tenant.
+    prevState.setWorkspaceMembership(null, null);
+  }
   useAuthStore
     .getState()
     .setTenant(

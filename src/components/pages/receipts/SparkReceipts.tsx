@@ -536,7 +536,11 @@ const CampaignCard: React.FC<{
 
       <div className="grid grid-cols-4 gap-2 mt-4">
         <CountTile label="Total" value={campaign.receiptsCount} />
-        <CountTile label="Pending" value={campaign.pendingCount} tone="#ffc960" />
+        <CountTile
+          label="Pending"
+          value={campaign.pendingCount}
+          tone="var(--spark-warn-badge-ink)"
+        />
         <CountTile
           label="Validated"
           value={campaign.validatedCount}
@@ -1073,9 +1077,9 @@ const ReceiptCard: React.FC<{
                   className="mono inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
                   style={{
                     letterSpacing: "0.06em",
-                    background: "rgba(255,201,96,0.12)",
-                    border: "1px solid rgba(255,201,96,0.5)",
-                    color: "#ffc960",
+                    background: "var(--spark-warn-badge-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-warn-badge-ink)",
                   }}
                   title={receipt.flagReason || "Possible duplicate submission"}
                 >
@@ -1088,7 +1092,7 @@ const ReceiptCard: React.FC<{
           {receipt.isFlagged && receipt.flagReason && (
             <p
               className="text-[11px] mt-1.5"
-              style={{ color: "#ffc960" }}
+              style={{ color: "var(--spark-warn-badge-ink)" }}
             >
               {receipt.flagReason}
             </p>

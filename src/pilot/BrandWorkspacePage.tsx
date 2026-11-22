@@ -23,6 +23,21 @@ import type { PilotMutationsSetSourceInclusionMutation as InclusionMutationType 
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const OK_BANNER_STYLE = {
+  background: "var(--spark-ok-bg)",
+  color: "var(--spark-ok-ink)",
+  border: "1px solid var(--spark-ok-border)",
+} as const;
 
 const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   fetchKey,
@@ -99,7 +114,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
           </h1>
           <p className="text-xs mt-1" style={META}>
             Signed in as{" "}
-            <strong className="text-white">
+            <strong style={{ color: "var(--spark-text)" }}>
               {workspaceRoleLabel(ws.viewerRole)}
             </strong>
             {ws.viewerProviderName ? ` · ${ws.viewerProviderName}` : ""}
@@ -110,11 +125,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {feedback && (
         <div
           className="p-3 rounded-xl text-xs font-medium"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "#c5f546",
-            border: "1px solid rgba(197,245,70,0.3)",
-          }}
+          style={OK_BANNER_STYLE}
         >
           {feedback}
         </div>
@@ -161,23 +172,23 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={provName}
                 onChange={(e) => setProvName(e.target.value)}
                 placeholder="Agency name (e.g. FieldPulse)"
-                className="px-3 py-2 rounded-xl text-sm bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl text-sm"
+                style={FIELD_STYLE}
               />
               <input
                 type="email"
                 value={provEmail}
                 onChange={(e) => setProvEmail(e.target.value)}
                 placeholder="ops@agency.com"
-                className="px-3 py-2 rounded-xl text-sm bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl text-sm"
+                style={FIELD_STYLE}
               />
             </div>
             <button
               type="submit"
               disabled={registering}
               className="px-4 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={PRIMARY_BTN_STYLE}
             >
               + Add Provider
             </button>
@@ -221,14 +232,14 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={invEmail}
                 onChange={(e) => setInvEmail(e.target.value)}
                 placeholder="teammate@brand.com"
-                className="px-3 py-2 rounded-xl text-sm bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl text-sm"
+                style={FIELD_STYLE}
               />
               <select
                 value={invRole}
                 onChange={(e) => setInvRole(e.target.value)}
-                className="px-3 py-2 rounded-xl text-sm bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl text-sm"
+                style={FIELD_STYLE}
               >
                 <option value="brand_admin">Brand Admin</option>
                 <option value="brand_reviewer">Brand Ops / Reviewer</option>
@@ -243,8 +254,8 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 required
                 value={invProviderUuid}
                 onChange={(e) => setInvProviderUuid(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-sm bg-black/30"
-                style={BORDER}
+                className="w-full px-3 py-2 rounded-xl text-sm"
+                style={FIELD_STYLE}
               >
                 <option value="">Select agency organization…</option>
                 {ws.providers.map((p) => (
@@ -285,7 +296,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               type="submit"
               disabled={inviting}
               className="px-4 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={PRIMARY_BTN_STYLE}
             >
               Send Workspace Invite
             </button>
@@ -438,8 +449,8 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               required
               value={assignProvUuid}
               onChange={(e) => setAssignProvUuid(e.target.value)}
-              className="px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             >
               <option value="">Select agency…</option>
               {ws.providers.map((p) => (
@@ -451,8 +462,8 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <select
               value={assignProgramId}
               onChange={(e) => setAssignProgramId(e.target.value)}
-              className="px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             >
               <option value="">All retail programs</option>
               {ws.programs.map((pr) => (
@@ -465,21 +476,21 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               type="date"
               value={assignDueDate}
               onChange={(e) => setAssignDueDate(e.target.value)}
-              className="px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             />
             <input
               value={assignNotes}
               onChange={(e) => setAssignNotes(e.target.value)}
               placeholder="Briefing / store instructions"
-              className="px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             />
             <button
               type="submit"
               disabled={assigning}
               className="px-3 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={PRIMARY_BTN_STYLE}
             >
               + Assign Program
             </button>
@@ -517,11 +528,8 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                         <button
                           type="button"
                           onClick={() => copyLink(mobileUrl, a.uuid)}
-                          className="px-2.5 py-1 rounded-lg mono text-xs"
-                          style={{
-                            background: "rgba(197,245,70,0.12)",
-                            color: "#c5f546",
-                          }}
+                          className="px-2.5 py-1 rounded-lg mono text-xs font-semibold"
+                          style={OK_BANNER_STYLE}
                         >
                           {copiedCode === a.uuid
                             ? "Copied!"
@@ -531,7 +539,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                           type="button"
                           onClick={() => copyLink(walkupUrl, `${a.uuid}-w`)}
                           className="px-2 py-1 rounded-lg text-[11px]"
-                          style={BORDER}
+                          style={FIELD_STYLE}
                         >
                           {copiedCode === `${a.uuid}-w`
                             ? "Copied check-in"
@@ -556,7 +564,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                               })
                             }
                             className="px-2.5 py-1 rounded-lg font-semibold"
-                            style={{ background: "#c5f546", color: "#0A0B0D" }}
+                            style={PRIMARY_BTN_STYLE}
                           >
                             Accept
                           </button>
@@ -681,7 +689,10 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 style={{ borderTop: "1px solid var(--spark-border)" }}
               >
                 <span>
-                  <strong className="mono text-[11px] uppercase mr-2" style={{ color: "#c5f546" }}>
+                  <strong
+                    className="mono text-[11px] uppercase mr-2"
+                    style={{ color: "var(--spark-ok-ink)" }}
+                  >
                     {log.category}
                   </strong>
                   {log.summary}

@@ -13,8 +13,10 @@ import {
 } from "@/utils/publicHosts";
 import {
   applyWorkspaceContextSelection,
+  createInitialOnboardingSignupState,
   currentDateInTimezone,
   planBadgeMeta,
+  validateOnboardingQuickRecap,
 } from "./pilotHelpers";
 import {
   PilotQueriesOnboardingStateQuery,
@@ -77,12 +79,12 @@ const UnauthenticatedSignupStep: React.FC<{
   onAuthenticated: () => void;
 }> = ({ onAuthenticated }) => {
   const [searchParams] = useSearchParams();
-  const invitationToken =
-    (
-      searchParams.get("invitation_token") ||
-      searchParams.get("invite") ||
-      ""
-    ).trim() || undefined;
+  const invitationToken = (
+    searchParams.get("invitation_token") ||
+    searchParams.get("invite") ||
+    searchParams.get("invitation") ||
+    ""
+  ).trim();
 
   const catalogData = useLazyLoadQuery<CatalogQueryType>(
     PilotQueriesStarterCatalogQuery,
@@ -91,13 +93,16 @@ const UnauthenticatedSignupStep: React.FC<{
   );
   const catalog = catalogData.selfServeStarterCatalog;
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [brandName, setBrandName] = useState("");
-  const [businessTimezone, setBusinessTimezone] = useState("America/Chicago");
-  const [acceptTerms, setAcceptTerms] = useState(false);
+  const initialSignup = createInitialOnboardingSignupState();
+  const [firstName, setFirstName] = useState(initialSignup.firstName);
+  const [lastName, setLastName] = useState(initialSignup.lastName);
+  const [email, setEmail] = useState(initialSignup.email);
+  const [password, setPassword] = useState(initialSignup.password);
+  const [brandName, setBrandName] = useState(initialSignup.brandName);
+  const [businessTimezone, setBusinessTimezone] = useState(
+    initialSignup.businessTimezone,
+  );
+  const [acceptTerms, setAcceptTerms] = useState(initialSignup.acceptTerms);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,62 +174,82 @@ const UnauthenticatedSignupStep: React.FC<{
         onSubmit={handleSubmit}
         className="lg:col-span-7 rounded-2xl p-6 md:p-8 space-y-5"
         style={{
-          background: "#111317",
-          border: "1px solid rgba(255,255,255,0.09)",
+          background: "var(--spark-surface)",
+          border: "1px solid var(--spark-border)",
+          color: "var(--spark-text)",
         }}
       >
         <div>
           <span
             className="px-2.5 py-1 rounded-full text-xs font-bold mono"
-            style={{ background: "rgba(197,245,70,0.16)", color: "#c5f546" }}
+            style={{
+              background: "var(--pilot-ok-bg)",
+              color: "var(--pilot-ok-fg)",
+              border: "1px solid var(--pilot-ok-border)",
+            }}
           >
             Free Tier · 5 Visits / Month · No Credit Card Required
           </span>
-          <h2 className="display text-2xl font-bold mt-3 text-white">
+          <h2 className="display text-2xl font-bold mt-3">
             Use Spark with your team
           </h2>
-          <p className="text-sm mt-1" style={{ color: "#94a3b8" }}>
+          <p className="text-sm mt-1" style={{ color: "var(--spark-text-meta)" }}>
             Launch a standalone brand workspace in 60 seconds, or enter an existing account to resume setup without creating duplicate workspaces.
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-300">First name</span>
+            <span className="text-xs font-medium" style={{ color: "var(--spark-text-secondary)" }}>First name</span>
             <input
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="Maya"
-              className="w-full rounded-lg px-3 py-2 text-sm bg-black/50 text-white border border-white/15"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-field-bg, var(--spark-bg))",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-300">Last name</span>
+            <span className="text-xs font-medium" style={{ color: "var(--spark-text-secondary)" }}>Last name</span>
             <input
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder="Lin"
-              className="w-full rounded-lg px-3 py-2 text-sm bg-black/50 text-white border border-white/15"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-field-bg, var(--spark-bg))",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
             />
           </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-300">Work email *</span>
+            <span className="text-xs font-medium" style={{ color: "var(--spark-text-secondary)" }}>Work email *</span>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="maya@canyonspritz.com"
-              className="w-full rounded-lg px-3 py-2 text-sm bg-black/50 text-white border border-white/15"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-field-bg, var(--spark-bg))",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-300">Password (8+ chars) *</span>
+            <span className="text-xs font-medium" style={{ color: "var(--spark-text-secondary)" }}>Password (8+ chars) *</span>
             <input
               type="password"
               required
@@ -232,29 +257,44 @@ const UnauthenticatedSignupStep: React.FC<{
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-lg px-3 py-2 text-sm bg-black/50 text-white border border-white/15"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-field-bg, var(--spark-bg))",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
             />
           </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-300">Brand / Company name *</span>
+            <span className="text-xs font-medium" style={{ color: "var(--spark-text-secondary)" }}>Brand / Company name *</span>
             <input
               type="text"
               required
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
               placeholder="Canyon Spritz Co."
-              className="w-full rounded-lg px-3 py-2 text-sm bg-black/50 text-white border border-white/15"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-field-bg, var(--spark-bg))",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-300">Metering timezone</span>
+            <span className="text-xs font-medium" style={{ color: "var(--spark-text-secondary)" }}>Metering timezone</span>
             <select
               value={businessTimezone}
               onChange={(e) => setBusinessTimezone(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm bg-black/50 text-white border border-white/15"
+              className="w-full rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-field-bg, var(--spark-bg))",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
             >
               {TIMEZONE_OPTIONS.map((tz) => (
                 <option key={tz.value} value={tz.value}>
@@ -265,16 +305,20 @@ const UnauthenticatedSignupStep: React.FC<{
           </label>
         </div>
 
-        <label className="flex items-start gap-2.5 text-xs text-slate-300 cursor-pointer">
+        <label
+          className="flex items-start gap-2.5 text-xs cursor-pointer"
+          style={{ color: "var(--spark-text-secondary)" }}
+        >
           <input
             type="checkbox"
             checked={acceptTerms}
             onChange={(e) => setAcceptTerms(e.target.checked)}
-            className="mt-0.5 accent-[#c5f546]"
+            className="mt-0.5"
+            style={{ accentColor: "var(--pilot-control-accent)" }}
           />
           <span>
             I agree to the Spark Terms of Service. My workspace starts on the{" "}
-            <strong className="text-white">Free plan ($0/month · 5 completed visits/month)</strong>{" "}
+            <strong style={{ color: "var(--spark-text)" }}>Free plan ($0/month · 5 completed visits/month)</strong>{" "}
             with zero automatic charges.
           </span>
         </label>
@@ -282,7 +326,11 @@ const UnauthenticatedSignupStep: React.FC<{
         {error ? (
           <div
             className="rounded-lg px-3.5 py-2.5 text-xs font-medium"
-            style={{ background: "rgba(239,90,42,0.16)", color: "#ff8a65" }}
+            style={{
+              background: "var(--pilot-danger-bg)",
+              color: "var(--pilot-danger-fg)",
+              border: "1px solid var(--pilot-danger-border)",
+            }}
           >
             {error}
           </div>
@@ -293,12 +341,19 @@ const UnauthenticatedSignupStep: React.FC<{
             type="submit"
             disabled={submitting || !acceptTerms}
             className="px-5 py-2.5 rounded-lg text-sm font-bold transition-opacity disabled:opacity-50"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={{
+              background: "var(--pilot-cta-bg)",
+              color: "var(--pilot-cta-fg)",
+            }}
           >
             {submitting ? "Creating Workspace…" : "Create Free Workspace →"}
           </button>
 
-          <Link to="/login" className="text-xs underline text-slate-400 hover:text-white">
+          <Link
+            to="/login"
+            className="text-xs underline hover:opacity-100 opacity-85"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
             Already have an account? Sign in
           </Link>
         </div>
@@ -307,11 +362,12 @@ const UnauthenticatedSignupStep: React.FC<{
       <aside
         className="lg:col-span-5 rounded-2xl p-6 space-y-4"
         style={{
-          background: "#111317",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--spark-surface)",
+          border: "1px solid var(--spark-border)",
+          color: "var(--spark-text)",
         }}
       >
-        <p className="text-xs uppercase tracking-wider mono text-slate-400">
+        <p className="text-xs uppercase tracking-wider mono" style={{ color: "var(--spark-text-meta)" }}>
           Included CPG Starter Templates
         </p>
         <div className="space-y-3">
@@ -319,11 +375,14 @@ const UnauthenticatedSignupStep: React.FC<{
             <div
               key={s.key}
               className="rounded-xl p-3.5 space-y-1"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{
+                background: "var(--spark-surface-2)",
+                border: "1px solid var(--spark-border)",
+              }}
             >
-              <p className="text-sm font-semibold text-white">{s.name}</p>
-              <p className="text-xs text-slate-400">{s.description}</p>
-              <p className="text-[11px] mono text-[#c5f546]">
+              <p className="text-sm font-semibold">{s.name}</p>
+              <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>{s.description}</p>
+              <p className="text-[11px] mono font-medium" style={{ color: "var(--pilot-ok-fg)" }}>
                 Template: {s.templateName} · Default SKU: {s.defaultSkuHint}
               </p>
             </div>
@@ -442,32 +501,20 @@ const AuthenticatedOnboardingWizard: React.FC<{
       setError("Select a starter program in Step 2 first to mint your mobile recap link.");
       return;
     }
-    const cleanStore = quickStore.trim();
-    if (!cleanStore) {
-      setError("Enter the real store or venue name before logging a field recap.");
-      return;
-    }
-    const samplesTrim = quickSamples.trim();
-    const consumersTrim = quickConsumers.trim();
-    const unitsTrim = quickUnits.trim();
-    if (!samplesTrim || !consumersTrim || !unitsTrim) {
-      setError(
-        "Enter actual Samples, Consumers Sampled, and Observed Units from the shift before submitting.",
-      );
-      return;
-    }
-    const samplesNum = Number(samplesTrim);
-    const consumersNum = Number(consumersTrim);
-    const unitsNum = Number(unitsTrim);
-    if (
-      !Number.isInteger(samplesNum) ||
-      samplesNum < 0 ||
-      !Number.isInteger(consumersNum) ||
-      consumersNum < 0 ||
-      !Number.isInteger(unitsNum) ||
-      unitsNum < 0
-    ) {
-      setError("Samples, Consumers Sampled, and Observed Units must be non-negative whole numbers.");
+    const check = validateOnboardingQuickRecap(
+      {
+        storeName: quickStore,
+        city: quickCity,
+        stateCode: quickState,
+        visitDate: quickVisitDate,
+        samplesDistributed: quickSamples,
+        consumersSampled: quickConsumers,
+        repObservedUnits: quickUnits,
+      },
+      st.businessTimezone,
+    );
+    if (!check.ok) {
+      setError(check.error);
       return;
     }
     setError(null);
@@ -479,15 +526,7 @@ const AuthenticatedOnboardingWizard: React.FC<{
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            storeName: cleanStore,
-            city: quickCity.trim(),
-            stateCode: quickState.trim().toUpperCase(),
-            visitDate:
-              quickVisitDate.trim() ||
-              currentDateInTimezone(st.businessTimezone),
-            samplesDistributed: samplesNum,
-            consumersSampled: consumersNum,
-            repObservedUnits: unitsNum,
+            ...check.payload,
             notes: quickNotes.trim(),
           }),
         },
@@ -496,6 +535,13 @@ const AuthenticatedOnboardingWizard: React.FC<{
       if (!resp.ok || !body.ok) {
         setError(body.message || "Could not submit field recap.");
       } else {
+        setQuickStore("");
+        setQuickCity("");
+        setQuickState("");
+        setQuickSamples("");
+        setQuickConsumers("");
+        setQuickUnits("");
+        setQuickNotes("");
         setBanner("Field recap submitted! Review & approve it below to complete your first visit.");
         bump();
       }
@@ -531,11 +577,21 @@ const AuthenticatedOnboardingWizard: React.FC<{
     { label: "First visit approved & shared", done: st.stepFirstVisitCompleted },
   ];
 
+  const inputStyle = {
+    background: "var(--spark-field-bg, var(--spark-bg))",
+    color: "var(--spark-text)",
+    border: "1px solid var(--spark-border)",
+  } as const;
+
   return (
     <div className="space-y-6">
       <div
         className="rounded-2xl p-6 flex flex-wrap items-center justify-between gap-4"
-        style={{ background: "#111317", border: "1px solid rgba(255,255,255,0.09)" }}
+        style={{
+          background: "var(--spark-surface)",
+          border: "1px solid var(--spark-border)",
+          color: "var(--spark-text)",
+        }}
       >
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -545,11 +601,11 @@ const AuthenticatedOnboardingWizard: React.FC<{
             >
               {planBadge.label} · {st.completedVisitsUsed}/{st.includedVisits ?? "∞"} visits used
             </span>
-            <span className="text-xs mono text-slate-400">
+            <span className="text-xs mono" style={{ color: "var(--spark-text-meta)" }}>
               Timezone: {st.businessTimezone}
             </span>
           </div>
-          <h2 className="display text-2xl font-bold text-white mt-2">
+          <h2 className="display text-2xl font-bold mt-2">
             {st.tenantName} · Self-Service Launch Checklist ({st.stepsCompleted}/{st.totalSteps})
           </h2>
         </div>
@@ -558,7 +614,11 @@ const AuthenticatedOnboardingWizard: React.FC<{
           <button
             type="button"
             onClick={() => navigate("/workspace")}
-            className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white border border-white/15 hover:bg-white/5"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold hover:opacity-90"
+            style={{
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
           >
             Open Workspace →
           </button>
@@ -566,7 +626,10 @@ const AuthenticatedOnboardingWizard: React.FC<{
             type="button"
             onClick={() => navigate("/plans-billing")}
             className="px-3.5 py-2 rounded-lg text-xs font-bold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={{
+              background: "var(--pilot-cta-bg)",
+              color: "var(--pilot-cta-fg)",
+            }}
           >
             Plans & Visit Meter →
           </button>
@@ -579,16 +642,23 @@ const AuthenticatedOnboardingWizard: React.FC<{
             key={step.label}
             className="rounded-xl px-3.5 py-3 text-xs"
             style={{
-              background: step.done ? "rgba(197,245,70,0.10)" : "#111317",
+              background: step.done ? "var(--pilot-ok-bg)" : "var(--spark-surface)",
               border: step.done
-                ? "1px solid rgba(197,245,70,0.35)"
-                : "1px solid rgba(255,255,255,0.08)",
+                ? "1px solid var(--pilot-ok-border)"
+                : "1px solid var(--spark-border)",
             }}
           >
-            <p className="mono font-bold" style={{ color: step.done ? "#c5f546" : "#94a3b8" }}>
+            <p
+              className="mono font-bold"
+              style={{
+                color: step.done ? "var(--pilot-ok-fg)" : "var(--spark-text-meta)",
+              }}
+            >
               STEP {i + 1} · {step.done ? "DONE" : "NEXT"}
             </p>
-            <p className="font-medium text-white mt-1">{step.label}</p>
+            <p className="font-medium mt-1" style={{ color: "var(--spark-text)" }}>
+              {step.label}
+            </p>
           </div>
         ))}
       </div>
@@ -596,7 +666,11 @@ const AuthenticatedOnboardingWizard: React.FC<{
       {banner ? (
         <div
           className="rounded-xl px-4 py-3 text-xs font-medium"
-          style={{ background: "rgba(197,245,70,0.14)", color: "#c5f546" }}
+          style={{
+            background: "var(--pilot-ok-bg)",
+            color: "var(--pilot-ok-fg)",
+            border: "1px solid var(--pilot-ok-border)",
+          }}
         >
           {banner}
         </div>
@@ -604,7 +678,11 @@ const AuthenticatedOnboardingWizard: React.FC<{
       {error ? (
         <div
           className="rounded-xl px-4 py-3 text-xs font-medium"
-          style={{ background: "rgba(239,90,42,0.16)", color: "#ff8a65" }}
+          style={{
+            background: "var(--pilot-danger-bg)",
+            color: "var(--pilot-danger-fg)",
+            border: "1px solid var(--pilot-danger-border)",
+          }}
         >
           {error}
         </div>
@@ -615,13 +693,17 @@ const AuthenticatedOnboardingWizard: React.FC<{
         <form
           onSubmit={handleSaveStarter}
           className="rounded-2xl p-6 space-y-4"
-          style={{ background: "#111317", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{
+            background: "var(--spark-surface)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+          }}
         >
           <div>
-            <p className="text-xs uppercase tracking-wider mono text-[#c5f546]">
+            <p className="text-xs uppercase tracking-wider mono font-semibold" style={{ color: "var(--pilot-ok-fg)" }}>
               Step 2 · Starter Program & Recap Template
             </p>
-            <h3 className="display text-lg font-bold text-white mt-1">
+            <h3 className="display text-lg font-bold mt-1">
               Choose your field activation format
             </h3>
           </div>
@@ -634,12 +716,12 @@ const AuthenticatedOnboardingWizard: React.FC<{
                 style={{
                   background:
                     selectedKey === opt.key
-                      ? "rgba(197,245,70,0.09)"
-                      : "rgba(255,255,255,0.02)",
+                      ? "var(--pilot-ok-subtle)"
+                      : "var(--spark-surface-2)",
                   border:
                     selectedKey === opt.key
-                      ? "1px solid rgba(197,245,70,0.4)"
-                      : "1px solid rgba(255,255,255,0.07)",
+                      ? "1.5px solid var(--pilot-ok-border)"
+                      : "1px solid var(--spark-border)",
                 }}
               >
                 <input
@@ -647,11 +729,12 @@ const AuthenticatedOnboardingWizard: React.FC<{
                   name="starterKey"
                   checked={selectedKey === opt.key}
                   onChange={() => setSelectedKey(opt.key)}
-                  className="mt-1 accent-[#c5f546]"
+                  className="mt-1"
+                  style={{ accentColor: "var(--pilot-control-accent)" }}
                 />
                 <div>
-                  <p className="text-sm font-semibold text-white">{opt.name}</p>
-                  <p className="text-xs text-slate-400">{opt.description}</p>
+                  <p className="text-sm font-semibold">{opt.name}</p>
+                  <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>{opt.description}</p>
                 </div>
               </label>
             ))}
@@ -663,14 +746,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
               value={customProgramName}
               onChange={(e) => setCustomProgramName(e.target.value)}
               placeholder="Custom program title (optional)"
-              className="rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+              className="rounded-lg px-3 py-2 text-xs"
+              style={inputStyle}
             />
             <input
               type="text"
               value={starterSkuName}
               onChange={(e) => setStarterSkuName(e.target.value)}
               placeholder="Flagship SKU name (optional)"
-              className="rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+              className="rounded-lg px-3 py-2 text-xs"
+              style={inputStyle}
             />
           </div>
 
@@ -678,7 +763,10 @@ const AuthenticatedOnboardingWizard: React.FC<{
             type="submit"
             disabled={savingStarter}
             className="px-4 py-2 rounded-lg text-xs font-bold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={{
+              background: "var(--pilot-cta-bg)",
+              color: "var(--pilot-cta-fg)",
+            }}
           >
             {savingStarter
               ? "Provisioning…"
@@ -692,16 +780,20 @@ const AuthenticatedOnboardingWizard: React.FC<{
         <form
           onSubmit={handleInvite}
           className="rounded-2xl p-6 space-y-4"
-          style={{ background: "#111317", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{
+            background: "var(--spark-surface)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+          }}
         >
           <div>
-            <p className="text-xs uppercase tracking-wider mono text-[#c5f546]">
+            <p className="text-xs uppercase tracking-wider mono font-semibold" style={{ color: "var(--pilot-ok-fg)" }}>
               Step 3 · Optional Team or Agency Invite
             </p>
-            <h3 className="display text-lg font-bold text-white mt-1">
+            <h3 className="display text-lg font-bold mt-1">
               Invite a field contributor or viewer (Free seat)
             </h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
               Field contributors and read-only viewers are always free. Repeating an invite safely reuses the existing token.
             </p>
           </div>
@@ -712,14 +804,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="rep@agency-or-team.com"
-            className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+            className="w-full rounded-lg px-3 py-2 text-xs"
+            style={inputStyle}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value)}
-              className="rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+              className="rounded-lg px-3 py-2 text-xs"
+              style={inputStyle}
             >
               <option value="field_contributor">Field Contributor (Free)</option>
               <option value="provider_manager">Agency / Provider Manager</option>
@@ -731,14 +825,19 @@ const AuthenticatedOnboardingWizard: React.FC<{
               value={inviteProviderName}
               onChange={(e) => setInviteProviderName(e.target.value)}
               placeholder="Team / Agency name (optional)"
-              className="rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+              className="rounded-lg px-3 py-2 text-xs"
+              style={inputStyle}
             />
           </div>
 
           <button
             type="submit"
             disabled={savingInvite}
-            className="px-4 py-2 rounded-lg text-xs font-semibold text-white border border-white/20 hover:bg-white/5"
+            className="px-4 py-2 rounded-lg text-xs font-semibold hover:opacity-90"
+            style={{
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
           >
             {savingInvite ? "Sending Invite…" : "Send Contributor Invite"}
           </button>
@@ -748,27 +847,42 @@ const AuthenticatedOnboardingWizard: React.FC<{
       {/* Step 4 & 5: Mobile Recap Link + First Visit Approval & Share Link */}
       <section
         className="rounded-2xl p-6 space-y-5"
-        style={{ background: "#111317", border: "1px solid rgba(255,255,255,0.08)" }}
+        style={{
+          background: "var(--spark-surface)",
+          border: "1px solid var(--spark-border)",
+          color: "var(--spark-text)",
+        }}
       >
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider mono text-[#c5f546]">
+            <p className="text-xs uppercase tracking-wider mono font-semibold" style={{ color: "var(--pilot-ok-fg)" }}>
               Steps 4 & 5 · Mobile Field Recap & Self-Service Approval
             </p>
-            <h3 className="display text-lg font-bold text-white mt-1">
+            <h3 className="display text-lg font-bold mt-1">
               Complete your first visit & shareable recap without Ignite staffing
             </h3>
           </div>
 
           {mobileUrl ? (
             <div className="flex flex-wrap items-center gap-2">
-              <code className="px-3 py-1.5 rounded-lg text-xs mono bg-black/60 text-[#c5f546] border border-white/10">
+              <code
+                className="px-3 py-1.5 rounded-lg text-xs mono"
+                style={{
+                  background: "var(--pilot-ok-bg)",
+                  color: "var(--pilot-ok-fg)",
+                  border: "1px solid var(--pilot-ok-border)",
+                }}
+              >
                 {mobileUrl}
               </code>
               <button
                 type="button"
                 onClick={() => navigator.clipboard?.writeText(mobileUrl)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white border border-white/15 hover:bg-white/5"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90"
+                style={{
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
               >
                 Copy Mobile Link
               </button>
@@ -777,13 +891,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
                 target="_blank"
                 rel="noreferrer"
                 className="px-3 py-1.5 rounded-lg text-xs font-bold"
-                style={{ background: "#c5f546", color: "#0A0B0D" }}
+                style={{
+                  background: "var(--pilot-cta-bg)",
+                  color: "var(--pilot-cta-fg)",
+                }}
               >
                 Open Mobile Form ↗
               </a>
             </div>
           ) : (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
               Complete Step 2 above to mint your mobile field submission link.
             </p>
           )}
@@ -792,28 +909,31 @@ const AuthenticatedOnboardingWizard: React.FC<{
         {st.submissionCode ? (
           <form
             onSubmit={handleQuickFieldSubmit}
-            className="grid grid-cols-1 md:grid-cols-8 gap-3 items-end pt-2 border-t border-white/10"
+            className="grid grid-cols-1 md:grid-cols-8 gap-3 items-end pt-3"
+            style={{ borderTop: "1px solid var(--spark-border)" }}
           >
             <label className="md:col-span-2 space-y-1">
-              <span className="text-[11px] text-slate-400">Store / Venue *</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>Store / Venue *</span>
               <input
                 type="text"
                 required
                 value={quickStore}
                 onChange={(e) => setQuickStore(e.target.value)}
                 placeholder="e.g. Store name & #"
-                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+                className="w-full rounded-lg px-3 py-2 text-xs"
+                style={inputStyle}
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">City / State</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>City / State</span>
               <div className="flex gap-1.5">
                 <input
                   type="text"
                   value={quickCity}
                   onChange={(e) => setQuickCity(e.target.value)}
                   placeholder="City"
-                  className="w-2/3 rounded-lg px-2.5 py-2 text-xs bg-black/50 text-white border border-white/15"
+                  className="w-2/3 rounded-lg px-2.5 py-2 text-xs"
+                  style={inputStyle}
                 />
                 <input
                   type="text"
@@ -821,22 +941,24 @@ const AuthenticatedOnboardingWizard: React.FC<{
                   onChange={(e) => setQuickState(e.target.value)}
                   placeholder="ST"
                   maxLength={2}
-                  className="w-1/3 rounded-lg px-2 py-2 text-xs bg-black/50 text-white border border-white/15 uppercase"
+                  className="w-1/3 rounded-lg px-2 py-2 text-xs uppercase"
+                  style={inputStyle}
                 />
               </div>
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">Visit Date ({st.businessTimezone}) *</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>Visit Date ({st.businessTimezone}) *</span>
               <input
                 type="date"
                 required
                 value={quickVisitDate}
                 onChange={(e) => setQuickVisitDate(e.target.value)}
-                className="w-full rounded-lg px-2.5 py-2 text-xs bg-black/50 text-white border border-white/15"
+                className="w-full rounded-lg px-2.5 py-2 text-xs"
+                style={inputStyle}
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">Samples *</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>Samples *</span>
               <input
                 type="number"
                 required
@@ -845,11 +967,12 @@ const AuthenticatedOnboardingWizard: React.FC<{
                 value={quickSamples}
                 onChange={(e) => setQuickSamples(e.target.value)}
                 placeholder="0"
-                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+                className="w-full rounded-lg px-3 py-2 text-xs"
+                style={inputStyle}
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">Consumers *</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>Consumers *</span>
               <input
                 type="number"
                 required
@@ -858,11 +981,12 @@ const AuthenticatedOnboardingWizard: React.FC<{
                 value={quickConsumers}
                 onChange={(e) => setQuickConsumers(e.target.value)}
                 placeholder="0"
-                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+                className="w-full rounded-lg px-3 py-2 text-xs"
+                style={inputStyle}
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-400">Observed Units *</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>Observed Units *</span>
               <input
                 type="number"
                 required
@@ -871,25 +995,30 @@ const AuthenticatedOnboardingWizard: React.FC<{
                 value={quickUnits}
                 onChange={(e) => setQuickUnits(e.target.value)}
                 placeholder="0"
-                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+                className="w-full rounded-lg px-3 py-2 text-xs"
+                style={inputStyle}
               />
             </label>
             <button
               type="submit"
               disabled={submittingField}
               className="px-3.5 py-2 rounded-lg text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={{
+                background: "var(--pilot-cta-bg)",
+                color: "var(--pilot-cta-fg)",
+              }}
             >
               {submittingField ? "Submitting…" : "Log Field Recap"}
             </button>
             <label className="md:col-span-8 space-y-1">
-              <span className="text-[11px] text-slate-400">Shift notes (optional)</span>
+              <span className="text-[11px]" style={{ color: "var(--spark-text-meta)" }}>Shift notes (optional)</span>
               <input
                 type="text"
                 value={quickNotes}
                 onChange={(e) => setQuickNotes(e.target.value)}
                 placeholder="Optional field notes from the visit"
-                className="w-full rounded-lg px-3 py-2 text-xs bg-black/50 text-white border border-white/15"
+                className="w-full rounded-lg px-3 py-2 text-xs"
+                style={inputStyle}
               />
             </label>
           </form>
@@ -897,23 +1026,26 @@ const AuthenticatedOnboardingWizard: React.FC<{
 
         {st.recentVisits.length > 0 ? (
           <div className="space-y-2 pt-2">
-            <p className="text-xs uppercase tracking-wider mono text-slate-400">
+            <p className="text-xs uppercase tracking-wider mono" style={{ color: "var(--spark-text-meta)" }}>
               Submitted & Completed Workspace Visits
             </p>
             {st.recentVisits.map((v) => (
               <div
                 key={v.uuid}
                 className="rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+                style={{
+                  background: "var(--spark-surface-2)",
+                  border: "1px solid var(--spark-border)",
+                }}
               >
                 <div>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold">
                     {v.storeLabel}{" "}
-                    <span className="text-xs font-normal text-slate-400">
+                    <span className="text-xs font-normal" style={{ color: "var(--spark-text-meta)" }}>
                       · {v.visitDate} · {v.samplesDistributed ?? 0} samples · {v.repObservedUnits ?? 0} units
                     </span>
                   </p>
-                  <p className="text-xs mono text-slate-400">
+                  <p className="text-xs mono" style={{ color: "var(--spark-text-meta)" }}>
                     Status: {v.status} · Submissions linked: {v.submissionCount}
                   </p>
                 </div>
@@ -924,14 +1056,21 @@ const AuthenticatedOnboardingWizard: React.FC<{
                     disabled={savingApprove}
                     onClick={() => handleApproveVisit(v.uuid)}
                     className="px-3.5 py-1.5 rounded-lg text-xs font-bold"
-                    style={{ background: "#c5f546", color: "#0A0B0D" }}
+                    style={{
+                      background: "var(--pilot-cta-bg)",
+                      color: "var(--pilot-cta-fg)",
+                    }}
                   >
                     Approve Recap & Mint Share Link →
                   </button>
                 ) : (
                   <span
                     className="px-2.5 py-1 rounded-full text-xs font-semibold mono"
-                    style={{ background: "rgba(197,245,70,0.16)", color: "#c5f546" }}
+                    style={{
+                      background: "var(--pilot-ok-bg)",
+                      color: "var(--pilot-ok-fg)",
+                      border: "1px solid var(--pilot-ok-border)",
+                    }}
                   >
                     Approved & Counted
                   </span>
@@ -944,19 +1083,26 @@ const AuthenticatedOnboardingWizard: React.FC<{
         {sharedUrl ? (
           <div
             className="rounded-xl p-4 flex flex-wrap items-center justify-between gap-3"
-            style={{ background: "rgba(197,245,70,0.08)", border: "1px solid rgba(197,245,70,0.3)" }}
+            style={{
+              background: "var(--pilot-ok-bg)",
+              border: "1px solid var(--pilot-ok-border)",
+            }}
           >
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mono text-[#c5f546]">
+              <p className="text-xs font-bold uppercase tracking-wider mono" style={{ color: "var(--pilot-ok-fg)" }}>
                 Shareable Recap Ready
               </p>
-              <p className="text-xs text-slate-300 mt-0.5">{sharedUrl}</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--spark-text)" }}>{sharedUrl}</p>
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => navigator.clipboard?.writeText(sharedUrl)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white border border-white/20"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
               >
                 Copy Share Link
               </button>
@@ -965,7 +1111,10 @@ const AuthenticatedOnboardingWizard: React.FC<{
                 target="_blank"
                 rel="noreferrer"
                 className="px-3 py-1.5 rounded-lg text-xs font-bold"
-                style={{ background: "#c5f546", color: "#0A0B0D" }}
+                style={{
+                  background: "var(--pilot-cta-bg)",
+                  color: "var(--pilot-cta-fg)",
+                }}
               >
                 Preview Shared Recap ↗
               </a>
@@ -985,33 +1134,38 @@ export const SelfServeOnboardingPage: React.FC = () => {
   return (
     <div
       className="min-h-[100dvh] py-8 px-4 md:px-8"
-      style={{ background: "#0A0B0D", color: "#f8fafc" }}
+      style={{ background: "var(--spark-bg)", color: "var(--spark-text)" }}
     >
       <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
+        <header
+          className="flex flex-wrap items-center justify-between gap-4 pb-4"
+          style={{ borderBottom: "1px solid var(--spark-border)" }}
+        >
           <div className="flex items-center gap-3">
             <span
               className="w-3 h-3 rounded-full"
-              style={{ background: "#c5f546" }}
+              style={{ background: "var(--pilot-brand-dot)" }}
             />
-            <span className="display font-bold tracking-tight text-lg text-white">
+            <span className="display font-bold tracking-tight text-lg">
               SPARK BY IGNITE
             </span>
-            <span className="text-xs mono text-slate-400">
+            <span className="text-xs mono" style={{ color: "var(--spark-text-meta)" }}>
               Standalone Brand Workspace Onboarding
             </span>
           </div>
           {isAuthenticated ? (
             <Link
               to="/plans-billing"
-              className="text-xs font-semibold mono text-[#c5f546] hover:underline"
+              className="text-xs font-semibold mono hover:underline"
+              style={{ color: "var(--pilot-ok-fg)" }}
             >
               Plans, Usage Meter & Billing →
             </Link>
           ) : (
             <Link
               to="/login"
-              className="text-xs font-semibold text-slate-300 hover:text-white"
+              className="text-xs font-semibold hover:underline"
+              style={{ color: "var(--spark-text-secondary)" }}
             >
               Sign in to existing account →
             </Link>
@@ -1020,7 +1174,7 @@ export const SelfServeOnboardingPage: React.FC = () => {
 
         <Suspense
           fallback={
-            <div className="py-12 text-sm text-slate-400">
+            <div className="py-12 text-sm" style={{ color: "var(--spark-text-meta)" }}>
               Loading workspace setup…
             </div>
           }
