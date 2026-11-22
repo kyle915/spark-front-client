@@ -180,7 +180,9 @@ export function formatReceiptProposalDetail(args: {
 /**
  * Combine proposals across uploaded receipt photos on the current recap.
  * Two photos of the same receipt (matching `dedupeKey`) count once; distinct
- * receipts sum their proposed brand spend.
+ * receipts sum their proposed brand spend. Receipts flagged as already
+ * submitted (`duplicate_receipt`) are excluded from the spend proposal while
+ * their advisory banner still shows under the photo bucket.
  */
 export function combineReceiptProposals(
   entries: readonly { photoId: string; result: ReceiptReadResult }[],
@@ -194,6 +196,9 @@ export function combineReceiptProposals(
 
   for (const { photoId, result } of entries) {
     if (!result.available || !result.proposedSpend) continue;
+    if (result.advisories.some((adv) => adv.kind === "duplicate_receipt")) {
+      continue;
+    }
     const key = result.dedupeKey || `photo:${photoId}`;
     if (seenKeys.has(key)) continue;
     seenKeys.add(key);

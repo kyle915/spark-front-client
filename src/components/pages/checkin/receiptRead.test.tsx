@@ -191,6 +191,36 @@ describe("combineReceiptProposals & shownReceiptProposal", () => {
     });
   });
 
+  it("excludes duplicate_receipt results from the spend proposal while keeping their advisory", () => {
+    const duplicateReceipt = parseReceiptRead({
+      available: true,
+      proposedSpend: "42.80",
+      receiptTotal: "46.29",
+      dedupeKey: "dup-key-1",
+      advisories: [
+        {
+          kind: "duplicate_receipt",
+          message: "This receipt was already submitted on an earlier recap.",
+        },
+      ],
+    });
+    expect(combineReceiptProposals([{ photoId: "p1", result: duplicateReceipt }])).toBeNull();
+    expect(
+      combineReceiptProposals([
+        { photoId: "p1", result: duplicateReceipt },
+        { photoId: "p2", result: receiptB },
+      ]),
+    ).toEqual({
+      proposedSpend: "10.20",
+      excludedNonBrandTotal: null,
+      excludedNonBrandCount: 0,
+      receiptCount: 1,
+      detail: null,
+      signature: "sprouts|412|2026-10-16|10.20:10.20",
+    });
+    expect(collectReceiptAdvisories([duplicateReceipt, receiptB], new Set())).toHaveLength(1);
+  });
+
   it("hides the proposal once SpendAmountInput matches or the signature is dismissed", () => {
     const proposal = combineReceiptProposals([{ photoId: "p1", result: receiptA }]);
     expect(
