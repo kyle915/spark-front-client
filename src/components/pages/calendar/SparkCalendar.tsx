@@ -5,14 +5,16 @@ import { useAllEventPages } from "@/hooks/useAllEventPages";
 import { addDaysIso, venueDayOf } from "@/utils/venueDay";
 import { useAuthStore } from "@/store/authStore";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { layoutOverlappingShifts } from "./layoutOverlappingShifts";
 
 /**
  * Spark v2 — Shifts Board, Google-Calendar style.
  *
  * Hourly time column on the left, day columns across. Events are
  * absolutely positioned in their day column based on start/end times
- * (height = duration). Each event chip shows its own time range inline,
- * the way Google Calendar does.
+ * (height = duration). Concurrent shifts pack into side-by-side columns
+ * so text never paints through another chip. Each chip stacks time →
+ * title → market in a flex column with truncation.
  */
 
 type ShiftKind = "retail" | "onprem" | "event";
@@ -299,84 +301,119 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                 </>
               )}
 
-              {/* Events */}
-              {dayShifts.map((s) => {
+              {/* Events — packed so concurrent chips sit side-by-side */}
+              {layoutOverlappingShifts(dayShifts).map((s) => {
                 const top = Math.max(0, (s.startHour - HOUR_START) * HOUR_PX);
                 const heightRaw = Math.max(
                   24,
                   (s.endHour - s.startHour) * HOUR_PX - 4,
                 );
                 const color = KIND_COLOR[s.kind];
+                const gutter = 4;
+                const colGap = 2;
+                // Percentage widths keep chips readable when a day is busy.
+                const widthPct = 100 / s.cols;
+                const leftPct = (s.col / s.cols) * 100;
+                const showMarket = heightRaw > 56 && Boolean(s.market);
+                const titleLines = heightRaw > 72 ? 2 : 1;
+                const chipTitle = [s.startLabel + "–" + s.endLabel, s.title, s.market]
+                  .filter(Boolean)
+                  .join(" · ");
                 return (
                   <button
                     key={s.uuid}
+                    type="button"
                     onClick={() => navigate(`/event/view/${s.uuid}`)}
                     style={{
                       position: "absolute",
-                      left: 4,
-                      right: 4,
                       top: top + 2,
+                      left: `calc(${leftPct}% + ${gutter}px)`,
+                      width: `calc(${widthPct}% - ${gutter * 2}px - ${colGap}px)`,
                       height: heightRaw,
-                      background: `${color}1a`,
+                      // Opaque surface so text from a neighbor never bleeds through.
+                      background: "var(--spark-surface)",
+                      boxShadow: `inset 0 0 0 1px var(--spark-border)`,
                       borderLeft: `3px solid ${color}`,
                       borderRadius: 6,
-                      padding: "4px 8px",
+                      padding: "3px 6px 3px 7px",
                       textAlign: "left",
                       color: "var(--spark-text)",
                       cursor: "pointer",
                       overflow: "hidden",
+                      zIndex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "stretch",
+                      justifyContent: "flex-start",
+                      gap: 1,
+                      minWidth: 0,
                       transition: "transform 150ms ease, box-shadow 150ms ease",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = "scale(1.02)";
-                      e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.4)`;
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 16px rgba(0,0,0,0.18), inset 0 0 0 1px var(--spark-border)";
                       e.currentTarget.style.zIndex = "5";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = "scale(1)";
-                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.boxShadow =
+                        "inset 0 0 0 1px var(--spark-border)";
                       e.currentTarget.style.zIndex = "1";
                     }}
-                    title={s.title}
+                    title={chipTitle}
                   >
-                    <p
+                    <span
                       className="mono"
                       style={{
                         fontSize: 9,
-                        letterSpacing: "0.1em",
+                        letterSpacing: "0.06em",
+                        lineHeight: 1.25,
                         color,
+                        flexShrink: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {s.startLabel}–{s.endLabel}
-                    </p>
-                    <p
+                    </span>
+                    <span
                       style={{
                         fontSize: 12,
                         fontWeight: 600,
-                        lineHeight: 1.2,
-                        marginTop: 2,
+                        lineHeight: 1.25,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: heightRaw > 50 ? 2 : 1,
-                        WebkitBoxOrient: "vertical",
+                        // Single-line truncate by default; taller chips may wrap once.
+                        ...(titleLines > 1
+                          ? {
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical" as const,
+                              whiteSpace: "normal" as const,
+                            }
+                          : { whiteSpace: "nowrap" as const }),
+                        minWidth: 0,
                       }}
                     >
                       {s.title}
-                    </p>
-                    {heightRaw > 70 && s.market && (
-                      <p
+                    </span>
+                    {showMarket && (
+                      <span
                         style={{
                           fontSize: 10,
+                          lineHeight: 1.25,
                           color: "var(--spark-text-meta)",
-                          marginTop: 2,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
+                          minWidth: 0,
+                          flexShrink: 0,
                         }}
                       >
                         {s.market}
-                      </p>
+                      </span>
                     )}
                   </button>
                 );
