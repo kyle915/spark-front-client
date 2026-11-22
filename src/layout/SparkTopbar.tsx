@@ -26,7 +26,6 @@ import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 import { useMobileNav } from "./MobileNavContext";
 import { TenantLogo } from "./TenantLogo.tsx";
 import { setAppearance, useAppearance } from "@/theme/appearance";
-import WorkspaceContextSwitcher from "@/pilot/WorkspaceContextSwitcher";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -262,7 +261,7 @@ export const SparkTopbar: React.FC = () => {
               color: "var(--spark-text)",
               border: "1px solid var(--spark-border)",
             }}
-            title={`Working in ${clientName}. Switch clients from the sidebar.`}
+            title={`Working in ${clientName}. Switch workspaces from the sidebar.`}
           >
             {clientName}
           </span>
@@ -278,7 +277,6 @@ export const SparkTopbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 md:flex-wrap">
-        <WorkspaceContextSwitcher />
         <button
           type="button"
           onClick={() => navigate("/requests/create")}

@@ -29,16 +29,17 @@ vi.mock("@/api/queries/TenantStoreInsightsQuery", () => ({
 
 import environment from "@/api/relay/environment";
 import { WhereToGoNextCard } from "@/components/ai/StoreInsightsCards";
+import { WorkspaceSwitcherView } from "@/layout/TenantPicker";
 import {
   captureWorkspaceSnapshot,
   restoreWorkspaceSnapshot,
   switchWorkspace,
 } from "@/layout/workspaceSwitch";
-import { useAuthStore } from "@/store/authStore";
 import {
-  WorkspaceContextSwitcherView,
+  buildUnifiedWorkspaceOptions,
   type WorkspaceContextItem,
-} from "./WorkspaceContextSwitcher";
+} from "@/pilot/pilotHelpers";
+import { useAuthStore } from "@/store/authStore";
 
 function createMemoryStorage(): Storage {
   const map = new Map<string, string>();
@@ -64,7 +65,7 @@ function createMemoryStorage(): Storage {
   };
 }
 
-describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
+describe("Unified sidebar workspace switcher & single-brand client isolation", () => {
   beforeEach(() => {
     vi.stubGlobal("localStorage", createMemoryStorage());
     useAuthStore.setState({
@@ -75,7 +76,23 @@ describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
     });
   });
 
-  it("renders a clean non-interactive workspace pill (no <select> dropdown) when a client user only has 1 workspace", () => {
+  it("consolidates workspace switching into one sidebar control with no duplicate topbar dropdown", () => {
+    const topbarSrc = readFileSync(
+      resolve(__dirname, "../layout/SparkTopbar.tsx"),
+      "utf8",
+    );
+    const sidebarSrc = readFileSync(
+      resolve(__dirname, "../layout/SparkSidebar.tsx"),
+      "utf8",
+    );
+
+    expect(topbarSrc).not.toContain("WorkspaceContextSwitcher");
+    expect(topbarSrc).not.toContain("<select");
+    expect(sidebarSrc).toContain("<TenantPicker />");
+    expect(sidebarSrc).toContain("Workspace");
+  });
+
+  it("renders a static non-interactive workspace pill (no dropdown trigger or list) for a single-brand client", () => {
     const singleClientContexts: WorkspaceContextItem[] = [
       {
         membershipUuid: "mem-ld-1",
@@ -90,19 +107,91 @@ describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
       },
     ];
 
+    const options = buildUnifiedWorkspaceOptions({
+      contexts: singleClientContexts,
+      tenants: [
+        {
+          id: "Tenant:ld",
+          uuid: "uuid-liquid-death",
+          name: "Liquid Death",
+          logo: null,
+          requestUrlName: "liquid-death",
+          tenantSlug: "liquid-death",
+          checkinCode: "LD-TNBJ8K",
+        },
+      ],
+      active: { tenantUuid: "uuid-liquid-death", membershipUuid: "mem-ld-1" },
+    });
+
     const html = renderToStaticMarkup(
-      <WorkspaceContextSwitcherView
-        contexts={singleClientContexts}
+      <WorkspaceSwitcherView
+        options={options}
         tenantUuid="uuid-liquid-death"
         membershipUuid="mem-ld-1"
-        onSelectKey={vi.fn()}
+        onSelectOption={vi.fn()}
       />,
     );
 
     expect(html).toContain('data-testid="workspace-single-pill"');
     expect(html).toContain(">Liquid Death<");
+    expect(html).not.toContain('data-testid="workspace-switcher-trigger"');
+    expect(html).not.toContain("<button");
     expect(html).not.toContain("<select");
     expect(html).not.toContain("<option");
+  });
+
+  it("supports multi-brand agency users even when TenantQuery returns 0 rows", () => {
+    const agencyContexts: WorkspaceContextItem[] = [
+      {
+        membershipUuid: "mem-fp-ld",
+        tenantUuid: "uuid-liquid-death",
+        tenantName: "Liquid Death",
+        tenantSlug: "liquid-death",
+        workspaceRole: "provider_manager",
+        providerUuid: "prov-fp",
+        providerName: "FieldPulse",
+        displayLabel: "Liquid Death · FieldPulse (Agency Manager)",
+        isCurrent: false,
+      },
+      {
+        membershipUuid: "mem-fp-bd",
+        tenantUuid: "uuid-brew-dr",
+        tenantName: "Brew Dr",
+        tenantSlug: "brew-dr-kombucha",
+        workspaceRole: "provider_manager",
+        providerUuid: "prov-fp",
+        providerName: "FieldPulse",
+        displayLabel: "Brew Dr · FieldPulse (Agency Manager)",
+        isCurrent: true,
+      },
+    ];
+
+    const options = buildUnifiedWorkspaceOptions({
+      contexts: agencyContexts,
+      tenants: [],
+      active: { tenantUuid: "uuid-brew-dr", membershipUuid: "mem-fp-bd" },
+    });
+
+    const html = renderToStaticMarkup(
+      <WorkspaceSwitcherView
+        options={options}
+        tenantUuid="uuid-brew-dr"
+        membershipUuid="mem-fp-bd"
+        defaultOpen
+        onSelectOption={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('data-testid="workspace-switcher-trigger"');
+    expect(html).toContain("FieldPulse · Agency Manager");
+    expect(html).toContain("Brew Dr");
+    expect(html).toContain("Liquid Death");
+    expect(html).toContain(
+      'aria-selected="true" data-workspace-key="membership:mem-fp-bd"',
+    );
+    expect(html).toContain(
+      'aria-selected="false" data-workspace-key="membership:mem-fp-ld"',
+    );
   });
 
   it("excludes [ARCHIVED] workspaces and selects Liquid Death (never alphabetical #1 Alcohol Armor) when Liquid Death is active", () => {
@@ -153,41 +242,93 @@ describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
       },
     ];
 
+    const options = buildUnifiedWorkspaceOptions({
+      contexts: staffContexts,
+      tenants: [],
+      active: { tenantUuid: "uuid-liquid-death", membershipUuid: null },
+    });
+
     const html = renderToStaticMarkup(
-      <WorkspaceContextSwitcherView
-        contexts={staffContexts}
+      <WorkspaceSwitcherView
+        options={options}
         tenantUuid="uuid-liquid-death"
         membershipUuid={null}
-        onSelectKey={vi.fn()}
+        defaultOpen
+        onSelectOption={vi.fn()}
       />,
     );
 
-    expect(html).toContain("<select");
+    expect(html).toContain('data-testid="workspace-switcher-trigger"');
     expect(html).not.toContain("Carbliss");
     expect(html).not.toContain("WERNSA");
-    // React SSR marks the matching <option selected="" value="tenant:uuid-liquid-death">
-    expect(html).toMatch(
-      /<option[^>]*value="tenant:uuid-liquid-death"[^>]*selected=""|<option[^>]*selected=""[^>]*value="tenant:uuid-liquid-death"/,
+    expect(html).toContain(
+      'aria-selected="true" data-workspace-key="tenant:uuid-liquid-death"',
     );
-    expect(html).not.toMatch(
-      /<option[^>]*value="tenant:uuid-alcohol-armor"[^>]*selected=""|<option[^>]*selected=""[^>]*value="tenant:uuid-alcohol-armor"/,
+    expect(html).toContain(
+      'aria-selected="false" data-workspace-key="tenant:uuid-alcohol-armor"',
     );
   });
 
+  it("filters workspaces by search query across brand name, slug, and agency provider", () => {
+    const options = buildUnifiedWorkspaceOptions({
+      contexts: [
+        {
+          membershipUuid: null,
+          tenantUuid: "uuid-liquid-death",
+          tenantName: "Liquid Death",
+          tenantSlug: "liquid-death",
+          workspaceRole: "brand_admin",
+          providerUuid: null,
+          providerName: null,
+          displayLabel: "Liquid Death · Managed Workspace",
+          isCurrent: true,
+        },
+        {
+          membershipUuid: "mem-fp-bd",
+          tenantUuid: "uuid-brew-dr",
+          tenantName: "Brew Dr",
+          tenantSlug: "brew-dr-kombucha",
+          workspaceRole: "provider_manager",
+          providerUuid: "prov-fp",
+          providerName: "FieldPulse",
+          displayLabel: "Brew Dr · FieldPulse (Agency Manager)",
+          isCurrent: false,
+        },
+      ],
+      tenants: [],
+      active: { tenantUuid: "uuid-liquid-death", membershipUuid: null },
+    });
+
+    const html = renderToStaticMarkup(
+      <WorkspaceSwitcherView
+        options={options}
+        tenantUuid="uuid-liquid-death"
+        membershipUuid={null}
+        defaultOpen
+        defaultQuery="fieldpulse"
+        onSelectOption={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain("Brew Dr");
+    expect(html).not.toContain('data-workspace-key="tenant:uuid-liquid-death"');
+  });
+
   it("synchronizes zero-reload switchWorkspace across tenantUuid, membershipUuid, and Relay store without window.location.reload", () => {
-    const switcherSrc = readFileSync(
-      resolve(__dirname, "./WorkspaceContextSwitcher.tsx"),
+    const pickerSrc = readFileSync(
+      resolve(__dirname, "../layout/TenantPicker.tsx"),
       "utf8",
     );
-    expect(switcherSrc).not.toContain("window.location.reload");
-    expect(switcherSrc).toContain("switchWorkspace(");
+    expect(pickerSrc).not.toContain("window.location.reload");
+    expect(pickerSrc).toContain("switchWorkspace(");
+    expect(pickerSrc).toContain("PilotMutationsSwitchContextMutation");
 
     const navigate = vi.fn();
     commitLocalUpdate(environment, (store) => {
       store.create("client:liquid-death-cache", "Dummy");
     });
 
-    // 1. Topbar switch to agency membership sets both tenantUuid & membershipUuid and clears Relay store.
+    // 1. Agency membership switch sets both tenantUuid & membershipUuid and clears Relay store.
     switchWorkspace(
       {
         id: "Tenant:brew",
@@ -209,7 +350,7 @@ describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
       environment.getStore().getSource().get("client:liquid-death-cache"),
     ).toBeUndefined();
 
-    // 2. Subsequent sidebar TenantPicker switch to another brand clears stale membershipUuid automatically.
+    // 2. Subsequent managed brand switch clears stale membershipUuid automatically.
     switchWorkspace(
       {
         id: "Tenant:ld",
@@ -228,12 +369,13 @@ describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
   });
 
   it("rolls back tenant, membership, Relay store, and route when switchWorkspaceContext fails", () => {
-    const switcherSrc = readFileSync(
-      resolve(__dirname, "./WorkspaceContextSwitcher.tsx"),
+    const pickerSrc = readFileSync(
+      resolve(__dirname, "../layout/TenantPicker.tsx"),
       "utf8",
     );
-    expect(switcherSrc).toContain("!resp?.switchWorkspaceContext?.ok");
-    expect(switcherSrc).toContain("restoreWorkspaceSnapshot(");
+    expect(pickerSrc).toContain("captureWorkspaceSnapshot(");
+    expect(pickerSrc).toContain("!resp?.switchWorkspaceContext?.ok");
+    expect(pickerSrc).toContain("restoreWorkspaceSnapshot(");
 
     const navigate = vi.fn();
     useAuthStore.getState().setWorkspaceMembership("mem-ld", "brand_admin");
@@ -338,8 +480,9 @@ describe("StoreInsightsCards Rebook button light/dark contrast", () => {
     expect(html).not.toContain("#c5f546");
   });
 
-  it("eliminates hardcoded neon-lime #c5f546 / #fde047 / #7dd3fc text across light-mode portal pages and sheets", () => {
+  it("eliminates hardcoded neon-lime #c5f546 / #fde047 / #7dd3fc text across light-mode portal pages, sheets, and unified switcher", () => {
     const portalFiles = [
+      "../layout/TenantPicker.tsx",
       "../components/ai/StoreInsightsCards.tsx",
       "../components/pages/map/WaveScheduleSheet.tsx",
       "../components/pages/map/SparkAccountMap.tsx",
