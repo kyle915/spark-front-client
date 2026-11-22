@@ -11,6 +11,7 @@ import {
   readPendingPublicClockIn,
   readPendingPublicClockOut,
   readPublicClockLostPunch,
+  restoreSessionAfterRejectedClockOut,
   type StorageLike,
 } from "@/shared/offlinePunchQueue";
 
@@ -260,5 +261,80 @@ describe("public /clock/:token offline punch queue", () => {
     expect(html).toContain("Saved offline — syncs automatically when signal returns");
     expect(html).toContain("No service — we&#x27;ll clock you in when you&#x27;re back online");
     expect(html).toContain("Send now");
+  });
+
+  it("falls back to in-memory storage and warns user when localStorage.setItem throws", async () => {
+    const quotaBrokenStorage: StorageLike = {
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException("QuotaExceededError", "QuotaExceededError");
+      },
+      removeItem: () => {},
+    };
+    const nowMs = Date.UTC(2026, 10, 22, 18, 20, 0);
+    const queued = enqueuePublicClockIn(
+      {
+        token: TOKEN,
+        profile: PROFILE,
+        gps: null,
+        gpsStatus: "ok",
+        timezone: "America/Phoenix",
+        clientClockedInAt: new Date(nowMs).toISOString(),
+        nowMs,
+      },
+      quotaBrokenStorage,
+    );
+    expect(queued.memoryOnly).toBe(true);
+    expect(readPendingPublicClockIn(TOKEN, quotaBrokenStorage)?.id).toBe(queued.id);
+
+    const bannerHtml = renderToStaticMarkup(
+      <QueuedPunchBanner
+        queuedIn={queued}
+        queuedOut={null}
+        flushing={false}
+        onSendNow={() => {}}
+      />,
+    );
+    expect(bannerHtml).toContain(
+      "Saved in this tab — keep this page open until signal returns",
+    );
+
+    const flushed = await flushPendingPublicClockIn(
+      {
+        token: TOKEN,
+        postIn: async () => ({
+          ok: true,
+          status: 201,
+          sessionToken: "sess-mem",
+        }),
+      },
+      quotaBrokenStorage,
+    );
+    expect(flushed).toBe("flushed");
+    expect(readPendingPublicClockIn(TOKEN, quotaBrokenStorage)).toBeNull();
+  });
+
+  it("restores the open-shift view when a queued clock-out is rejected", () => {
+    const openSession = {
+      id: "sess-1",
+      firstName: "Jordan",
+      lastName: "Rivera",
+      email: "jordan@gmail.com",
+      market: "Phoenix",
+      address: "123 Warehouse Way",
+      timezone: "America/Phoenix",
+      clockInAt: "2026-11-22T16:00:00Z",
+      clockInGps: "ok" as const,
+      clockOutAt: "2026-11-22T20:00:00Z",
+      clockOutGps: "ok" as const,
+      durationMinutes: 240,
+    };
+
+    const withDeviceToken = restoreSessionAfterRejectedClockOut(openSession, true);
+    expect(withDeviceToken.kind).toBe("in");
+    expect(withDeviceToken.session.clockOutAt).toBeNull();
+
+    const withoutDeviceToken = restoreSessionAfterRejectedClockOut(openSession, false);
+    expect(withoutDeviceToken.kind).toBe("conflict");
   });
 });

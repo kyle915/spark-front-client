@@ -446,8 +446,8 @@ export function syncLiveCounterToRecapDraft({
       } else {
         delete samples[sku.id];
       }
-    } else if (samples[sku.id]) {
-      nextSynced.samples[sku.id] = samples[sku.id];
+    } else if (prevVal !== undefined) {
+      nextSynced.samples[sku.id] = prevVal;
     }
   }
 
@@ -521,6 +521,8 @@ export function syncLiveCounterToRecapDraft({
       } else {
         delete values[perSkuField.id];
       }
+    } else if (prevVal !== undefined) {
+      nextSynced.values[perSkuField.id] = prevVal;
     }
   }
 
@@ -537,6 +539,8 @@ export function syncLiveCounterToRecapDraft({
         } else {
           delete values[aggField.id];
         }
+      } else if (prevVal !== undefined) {
+        nextSynced.values[aggField.id] = prevVal;
       }
     }
   }
@@ -556,12 +560,16 @@ export function syncLiveCounterToRecapDraft({
         } else {
           delete values[field.id];
         }
+      } else if (prevVal !== undefined) {
+        nextSynced.values[field.id] = prevVal;
       }
     }
   } else if (consumersVal || prevSynced.engagements) {
     if (canOverwriteScalar(engagements, prevSynced.engagements)) {
       engagements = consumersVal;
       nextSynced.engagements = consumersVal;
+    } else if (prevSynced.engagements) {
+      nextSynced.engagements = prevSynced.engagements;
     }
   }
 
@@ -588,8 +596,12 @@ export function syncLiveCounterToRecapDraft({
         if (missingLines.length > 0) {
           const combined = `${currentRaw.trimEnd()}\n${missingLines.join("\n")}`;
           values[quoteField.id] = combined;
-          nextSynced.values[quoteField.id] = combined;
         }
+        if (prevVal !== undefined) {
+          nextSynced.values[quoteField.id] = prevVal;
+        }
+      } else if (prevVal !== undefined) {
+        nextSynced.values[quoteField.id] = prevVal;
       }
     }
   }

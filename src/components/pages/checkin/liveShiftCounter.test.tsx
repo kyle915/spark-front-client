@@ -276,6 +276,33 @@ describe("liveShiftCounter offline persistence & recap pre-population", () => {
       'Steady crowd at 4pm.\n"First quote"\n"Second quote at checkout"',
     );
 
+    // Manually override SKU sample in draft ("15" -> "99") and verify MULTIPLE subsequent
+    // counter syncs never mistake the manual override for an auto-synced baseline.
+    writeDraft(
+      CODE,
+      TOKEN,
+      {
+        ...updated,
+        samples: { ...updated.samples, "prod-cherry": "99" },
+      },
+      "shift",
+      storage,
+    );
+    syncLiveCounterToRecapDraft({ code: CODE, token: TOKEN, template: TORCH_TEMPLATE, storage });
+    writeLiveShiftCounter(
+      CODE,
+      TOKEN,
+      {
+        ...readLiveShiftCounter(CODE, TOKEN, storage),
+        skus: { "prod-cherry": { samples: 20, sold: 2 } },
+      },
+      storage,
+    );
+    syncLiveCounterToRecapDraft({ code: CODE, token: TOKEN, template: TORCH_TEMPLATE, storage });
+    const afterRepeatedSyncs = readDraft(CODE, TOKEN, "shift", storage)!;
+    expect(afterRepeatedSyncs.samples["prod-cherry"]).toBe("99");
+    expect(afterRepeatedSyncs.values["f-consumers"]).toBe("14");
+
     clearLiveShiftCounter(CODE, TOKEN, storage);
     expect(hasSavedLiveCounterActivity(CODE, TOKEN, storage)).toBe(false);
   });

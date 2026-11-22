@@ -41,6 +41,53 @@ const memoryStorage: StorageLike = {
   },
 };
 
+const fallbackByStorage = new WeakMap<object, Map<string, string>>();
+
+function memoryFallbackFor(storage: StorageLike): Map<string, string> {
+  let map = fallbackByStorage.get(storage);
+  if (!map) {
+    map = new Map<string, string>();
+    fallbackByStorage.set(storage, map);
+  }
+  return map;
+}
+
+function safeStorageGet(storage: StorageLike, key: string): string | null {
+  try {
+    const raw = storage.getItem(key);
+    if (raw !== null) return raw;
+  } catch {
+    /* private mode / restricted storage */
+  }
+  return memoryFallbackFor(storage).get(key) ?? null;
+}
+
+/**
+ * Write to `storage` with an automatic per-storage in-memory fallback when
+ * `setItem` throws (`QuotaExceededError` or private browsing). Returns `true`
+ * when durably persisted to `storage`, or `false` when held in memory only.
+ */
+function safeStorageSet(storage: StorageLike, key: string, value: string): boolean {
+  const mem = memoryFallbackFor(storage);
+  try {
+    storage.setItem(key, value);
+    mem.delete(key);
+    return storage !== memoryStorage;
+  } catch {
+    mem.set(key, value);
+    return false;
+  }
+}
+
+function safeStorageRemove(storage: StorageLike, key: string): void {
+  memoryFallbackFor(storage).delete(key);
+  try {
+    storage.removeItem(key);
+  } catch {
+    /* disposable */
+  }
+}
+
 export function livePunchStorage(): StorageLike {
   try {
     if (typeof window !== "undefined" && window.localStorage) return window.localStorage;
@@ -186,6 +233,7 @@ export type PendingPublicClockIn = {
   timezone: string | null;
   clientClockedInAt: string;
   queuedAt: number;
+  memoryOnly?: boolean;
 };
 
 export type PendingPublicClockOut = {
@@ -198,6 +246,7 @@ export type PendingPublicClockOut = {
   gpsStatus: GpsStatus;
   clientClockedOutAt: string;
   queuedAt: number;
+  memoryOnly?: boolean;
 };
 
 export const publicClockInQueueKey = (token: string) =>
@@ -215,7 +264,7 @@ export function readPendingPublicClockIn(
 ): PendingPublicClockIn | null {
   if (!token) return null;
   try {
-    const raw = storage.getItem(publicClockInQueueKey(token));
+    const raw = safeStorageGet(storage, publicClockInQueueKey(token));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PendingPublicClockIn;
     if (!parsed || parsed.v !== 1 || parsed.token !== token) return null;
@@ -231,11 +280,7 @@ export function clearPendingPublicClockIn(
   storage: StorageLike = livePunchStorage(),
 ): void {
   if (!token) return;
-  try {
-    storage.removeItem(publicClockInQueueKey(token));
-  } catch {
-    /* disposable */
-  }
+  safeStorageRemove(storage, publicClockInQueueKey(token));
 }
 
 export function enqueuePublicClockIn(
@@ -276,10 +321,12 @@ export function enqueuePublicClockIn(
     clientClockedInAt,
     queuedAt: nowMs,
   };
-  try {
-    storage.setItem(publicClockInQueueKey(args.token), JSON.stringify(pending));
-  } catch {
-    /* private mode / quota */
+  const key = publicClockInQueueKey(args.token);
+  const durable = safeStorageSet(storage, key, JSON.stringify(pending));
+  if (!durable) {
+    const memEntry: PendingPublicClockIn = { ...pending, memoryOnly: true };
+    memoryFallbackFor(storage).set(key, JSON.stringify(memEntry));
+    return memEntry;
   }
   return pending;
 }
@@ -290,7 +337,7 @@ export function readPendingPublicClockOut(
 ): PendingPublicClockOut | null {
   if (!token) return null;
   try {
-    const raw = storage.getItem(publicClockOutQueueKey(token));
+    const raw = safeStorageGet(storage, publicClockOutQueueKey(token));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PendingPublicClockOut;
     if (!parsed || parsed.v !== 1 || parsed.token !== token) return null;
@@ -306,11 +353,7 @@ export function clearPendingPublicClockOut(
   storage: StorageLike = livePunchStorage(),
 ): void {
   if (!token) return;
-  try {
-    storage.removeItem(publicClockOutQueueKey(token));
-  } catch {
-    /* disposable */
-  }
+  safeStorageRemove(storage, publicClockOutQueueKey(token));
 }
 
 export function enqueuePublicClockOut(
@@ -345,10 +388,12 @@ export function enqueuePublicClockOut(
     clientClockedOutAt,
     queuedAt: nowMs,
   };
-  try {
-    storage.setItem(publicClockOutQueueKey(args.token), JSON.stringify(pending));
-  } catch {
-    /* private mode / quota */
+  const key = publicClockOutQueueKey(args.token);
+  const durable = safeStorageSet(storage, key, JSON.stringify(pending));
+  if (!durable) {
+    const memEntry: PendingPublicClockOut = { ...pending, memoryOnly: true };
+    memoryFallbackFor(storage).set(key, JSON.stringify(memEntry));
+    return memEntry;
   }
   return pending;
 }
@@ -359,7 +404,7 @@ export function readPublicClockLostPunch(
 ): LostPunch | null {
   if (!token) return null;
   try {
-    const raw = storage.getItem(publicClockLostKey(token));
+    const raw = safeStorageGet(storage, publicClockLostKey(token));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as LostPunch;
     return parsed?.v === 1 && (parsed.kind === "in" || parsed.kind === "out")
@@ -376,14 +421,11 @@ export function writePublicClockLostPunch(
   storage: StorageLike = livePunchStorage(),
 ): void {
   if (!token) return;
-  try {
-    storage.setItem(
-      publicClockLostKey(token),
-      JSON.stringify({ v: 1, ...punch, lostAt: Date.now() } satisfies LostPunch),
-    );
-  } catch {
-    /* private mode */
-  }
+  safeStorageSet(
+    storage,
+    publicClockLostKey(token),
+    JSON.stringify({ v: 1, ...punch, lostAt: Date.now() } satisfies LostPunch),
+  );
 }
 
 export function clearPublicClockLostPunch(
@@ -391,11 +433,7 @@ export function clearPublicClockLostPunch(
   storage: StorageLike = livePunchStorage(),
 ): void {
   if (!token) return;
-  try {
-    storage.removeItem(publicClockLostKey(token));
-  } catch {
-    /* disposable */
-  }
+  safeStorageRemove(storage, publicClockLostKey(token));
 }
 
 export function readCachedPublicClockLink<T>(
@@ -404,7 +442,7 @@ export function readCachedPublicClockLink<T>(
 ): T | null {
   if (!token) return null;
   try {
-    const raw = storage.getItem(publicClockCachedLinkKey(token));
+    const raw = safeStorageGet(storage, publicClockCachedLinkKey(token));
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
@@ -418,11 +456,7 @@ export function writeCachedPublicClockLink(
   storage: StorageLike = livePunchStorage(),
 ): void {
   if (!token) return;
-  try {
-    storage.setItem(publicClockCachedLinkKey(token), JSON.stringify(payload));
-  } catch {
-    /* private mode */
-  }
+  safeStorageSet(storage, publicClockCachedLinkKey(token), JSON.stringify(payload));
 }
 
 export function provisionalSessionFromQueuedIn(
@@ -455,6 +489,32 @@ export function provisionalClosedSession(
     clockOutGps: pendingOut.gpsStatus,
     durationMinutes: minutesBetween(openSession.clockInAt, pendingOut.clientClockedOutAt),
   };
+}
+
+export type RejectedClockOutView<TSession extends PublicClockSessionSnapshot = PublicClockSessionSnapshot> =
+  | { kind: "in"; session: TSession }
+  | { kind: "conflict"; session: TSession };
+
+/**
+ * Restore the open-shift view after a queued clock-out is permanently rejected
+ * so the worker never sees a false "CLOCKED OUT" confirmation screen.
+ */
+export function restoreSessionAfterRejectedClockOut<
+  TSession extends PublicClockSessionSnapshot,
+>(
+  provisionalClosed: TSession,
+  hasDeviceSessionToken: boolean,
+): RejectedClockOutView<TSession> {
+  const reopened: TSession = {
+    ...provisionalClosed,
+    clockOutAt: null,
+    clockOutGps: null,
+    durationMinutes: null,
+  };
+  if (hasDeviceSessionToken || reopened.id.startsWith("queued-")) {
+    return { kind: "in", session: reopened };
+  }
+  return { kind: "conflict", session: reopened };
 }
 
 export async function flushPendingPublicClockIn(

@@ -12,7 +12,7 @@
  * flushes automatically on reconnect.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { useParams } from "react-router";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
@@ -37,6 +37,7 @@ import {
   readPendingPublicClockIn,
   readPendingPublicClockOut,
   readPublicClockLostPunch,
+  restoreSessionAfterRejectedClockOut,
   timedFetchJson,
   writeCachedPublicClockLink,
   type LostPunch,
@@ -201,6 +202,9 @@ export default function PublicClock() {
     readPublicClockLostPunch(token),
   );
   const [flushingNow, setFlushingNow] = useState(false);
+  // Bumped whenever a punch or queue flush updates session state so a slower
+  // initial GET never clobbers a newly minted sessionToken or active view.
+  const sessionEpochRef = useRef(0);
 
   useEffect(() => {
     setQueuedIn(readPendingPublicClockIn(token));
@@ -210,6 +214,7 @@ export default function PublicClock() {
 
   useEffect(() => {
     let cancelled = false;
+    const epochAtStart = sessionEpochRef.current;
     const { sessionToken } = loadDevice(token);
     timedFetchJson<Partial<LinkPayload> & { message?: string }>(
       base,
@@ -218,7 +223,9 @@ export default function PublicClock() {
     )
       .then(({ ok, status, data }) => {
         if (cancelled) return;
+        const staleForSession = sessionEpochRef.current !== epochAtStart;
         if (!ok) {
+          if (staleForSession) return;
           if (isOfflineClockFailure({ status })) {
             const restored = restoreOfflineView(
               token,
@@ -237,6 +244,23 @@ export default function PublicClock() {
           return;
         }
         const payload = data as LinkPayload;
+        if (staleForSession) {
+          // A concurrent queue flush or manual punch already established the
+          // fresher session state — update brand/link chrome only.
+          setLink((prev) => {
+            const merged = { ...payload, session: prev?.session ?? payload.session };
+            writeCachedPublicClockLink(token, merged);
+            return merged;
+          });
+          if (!payload.active) {
+            setView({
+              kind: "missing",
+              message:
+                "This clock link is turned off. Check with your manager for the current one.",
+            });
+          }
+          return;
+        }
         setLink(payload);
         writeCachedPublicClockLink(token, payload);
         if (!payload.active) {
@@ -271,7 +295,7 @@ export default function PublicClock() {
         }
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || sessionEpochRef.current !== epochAtStart) return;
         const restored = restoreOfflineView(
           token,
           readCachedPublicClockLink<LinkPayload>(token),
@@ -311,6 +335,7 @@ export default function PublicClock() {
           };
         },
         onSession: ({ sessionToken, session, conflictSession }) => {
+          sessionEpochRef.current += 1;
           if (sessionToken) {
             mintedToken = sessionToken;
             saveSessionToken(token, sessionToken);
@@ -333,6 +358,7 @@ export default function PublicClock() {
       setQueuedIn(readPendingPublicClockIn(token));
       setLostPunch(readPublicClockLostPunch(token));
       if (inResult === "rejected") {
+        sessionEpochRef.current += 1;
         setView((prev) =>
           prev.kind === "in" && prev.session.id.startsWith("queued-")
             ? { kind: "form" }
@@ -357,6 +383,7 @@ export default function PublicClock() {
           };
         },
         onClosed: (closedSession) => {
+          sessionEpochRef.current += 1;
           saveSessionToken(token, null);
           setLink((prev) => {
             if (!prev) return prev;
@@ -371,7 +398,16 @@ export default function PublicClock() {
       });
       setQueuedOut(readPendingPublicClockOut(token));
       setLostPunch(readPublicClockLostPunch(token));
-      if (outResult === "rejected") return;
+      if (outResult === "rejected") {
+        sessionEpochRef.current += 1;
+        const hasDeviceToken = Boolean(loadDevice(token).sessionToken);
+        setView((prev) =>
+          prev.kind === "out"
+            ? restoreSessionAfterRejectedClockOut(prev.session, hasDeviceToken)
+            : prev,
+        );
+        return;
+      }
     }
   }, [base, token]);
 
@@ -421,6 +457,7 @@ export default function PublicClock() {
       setBusy("Clocking you in…");
 
       const queueOffline = () => {
+        sessionEpochRef.current += 1;
         // Clear any leftover closed-shift out queue before starting a new offline shift
         clearPendingPublicClockOut(token);
         setQueuedOut(null);
@@ -451,6 +488,7 @@ export default function PublicClock() {
           idempotencyKey: idemKey,
         });
         if (status === 201 || (status === 200 && data.alreadyIn)) {
+          sessionEpochRef.current += 1;
           clearPendingPublicClockIn(token);
           setQueuedIn(null);
           saveSessionToken(token, String(data.sessionToken));
@@ -464,6 +502,7 @@ export default function PublicClock() {
           setLastGps(reading.gpsStatus);
           setView({ kind: "in", session: created });
         } else if (status === 409 && data.openSession) {
+          sessionEpochRef.current += 1;
           setView({ kind: "conflict", session: data.openSession as Session });
         } else if (isOfflineClockFailure({ status })) {
           queueOffline();
@@ -504,6 +543,7 @@ export default function PublicClock() {
         opts.email || activeSession?.email || profile.email || undefined;
 
       const queueOfflineOut = () => {
+        sessionEpochRef.current += 1;
         const queued = enqueuePublicClockOut({
           token,
           id: idemKey,
@@ -564,6 +604,7 @@ export default function PublicClock() {
       try {
         const { status, data } = await postJson(`${base}/out`, body);
         if (status === 200 || (status === 409 && data.session)) {
+          sessionEpochRef.current += 1;
           clearPendingPublicClockOut(token);
           setQueuedOut(null);
           saveSessionToken(token, null);
@@ -759,7 +800,9 @@ export function QueuedPunchBanner({
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: 4 }}>
-        Saved offline — syncs automatically when signal returns
+        {queuedIn?.memoryOnly || queuedOut?.memoryOnly
+          ? "Saved in this tab — keep this page open until signal returns"
+          : "Saved offline — syncs automatically when signal returns"}
       </div>
       {queuedIn ? (
         <div>{offlineClockBanner(queuedIn.clientClockedInAt)}</div>
