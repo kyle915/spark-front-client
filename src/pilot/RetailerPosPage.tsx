@@ -70,7 +70,9 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   );
 
   // POS upload state
-  const [bannerName, setBannerName] = useState("FreshMart");
+  // Empty until the user types a banner or picks a portal preset
+  // (preset defaultBanner only applies when the field is still blank).
+  const [bannerName, setBannerName] = useState("");
   const [presetKey, setPresetKey] = useState("");
   const [feedCompleteness, setFeedCompleteness] = useState("complete");
   const [filename, setFilename] = useState("pos_weekly.csv");
