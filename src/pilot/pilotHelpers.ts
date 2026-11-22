@@ -65,20 +65,20 @@ export function settlementBadgeMeta(status: CostSettlementKind): {
     case "paid":
       return {
         label: "Paid",
-        bg: "rgba(197,245,70,0.16)",
-        fg: "#c5f546",
+        bg: "var(--spark-ok-bg)",
+        fg: "var(--spark-ok-ink)",
       };
     case "invoiced":
       return {
         label: "Invoiced",
-        bg: "rgba(56,189,248,0.16)",
-        fg: "#7dd3fc",
+        bg: "var(--spark-info-bg)",
+        fg: "var(--spark-info-ink)",
       };
     case "estimated":
       return {
         label: "Estimated",
-        bg: "rgba(250,204,21,0.15)",
-        fg: "#fde047",
+        bg: "var(--spark-warn-badge-bg)",
+        fg: "var(--spark-warn-badge-ink)",
       };
     default:
       return assertNever(status);
@@ -94,20 +94,20 @@ export function evidenceBadgeMeta(status: CostEvidenceKind): {
     case "supported":
       return {
         label: "Supported",
-        bg: "rgba(197,245,70,0.15)",
-        fg: "#c5f546",
+        bg: "var(--spark-ok-bg)",
+        fg: "var(--spark-ok-ink)",
       };
     case "estimated":
       return {
         label: "Estimated",
-        bg: "rgba(250,204,21,0.14)",
-        fg: "#fde047",
+        bg: "var(--spark-warn-badge-bg)",
+        fg: "var(--spark-warn-badge-ink)",
       };
     case "missing":
       return {
         label: "Missing proof / rate",
-        bg: "rgba(239,90,42,0.18)",
-        fg: "#ef5a2a",
+        bg: "rgba(239,90,42,0.14)",
+        fg: "var(--spark-flag-ink, #ef5a2a)",
       };
     default:
       return assertNever(status);
@@ -320,4 +320,103 @@ export async function applyWorkspaceContextSelection(
     // row; the cleared baseline set above keeps tenant state consistent.
   }
 }
+
+export function isArchivedWorkspaceLabel(
+  value: string | null | undefined,
+): boolean {
+  return Boolean(value && value.trim().toUpperCase().startsWith("[ARCHIVED]"));
+}
+
+export function workspaceContextOptionKey(ctx: {
+  membershipUuid?: string | null;
+  tenantUuid: string;
+}): string {
+  return ctx.membershipUuid
+    ? `membership:${ctx.membershipUuid}`
+    : `tenant:${ctx.tenantUuid}`;
+}
+
+export function filterVisibleWorkspaceContexts<
+  T extends {
+    tenantUuid: string;
+    tenantName?: string | null;
+    displayLabel?: string | null;
+    membershipUuid?: string | null;
+  },
+>(
+  contexts: readonly T[],
+  active: {
+    tenantUuid?: string | null;
+    membershipUuid?: string | null;
+  } = {},
+): T[] {
+  return contexts.filter((ctx) => {
+    const isCurrentlySelected =
+      (Boolean(active.tenantUuid) && ctx.tenantUuid === active.tenantUuid) ||
+      (Boolean(active.membershipUuid) &&
+        ctx.membershipUuid === active.membershipUuid);
+    if (isCurrentlySelected) return true;
+    return (
+      !isArchivedWorkspaceLabel(ctx.tenantName) &&
+      !isArchivedWorkspaceLabel(ctx.displayLabel)
+    );
+  });
+}
+
+export function resolveActiveWorkspaceContextKey(
+  contexts: readonly {
+    tenantUuid: string;
+    membershipUuid?: string | null;
+    isCurrent?: boolean;
+  }[],
+  active: {
+    tenantUuid?: string | null;
+    membershipUuid?: string | null;
+  },
+): string {
+  if (contexts.length === 0) return "";
+  const { tenantUuid, membershipUuid } = active;
+
+  if (tenantUuid && membershipUuid) {
+    const exactBoth = contexts.find(
+      (c) => c.tenantUuid === tenantUuid && c.membershipUuid === membershipUuid,
+    );
+    if (exactBoth) return workspaceContextOptionKey(exactBoth);
+  }
+
+  if (tenantUuid) {
+    const currentForTenant = contexts.find(
+      (c) => c.tenantUuid === tenantUuid && c.isCurrent,
+    );
+    if (currentForTenant) return workspaceContextOptionKey(currentForTenant);
+    const firstForTenant = contexts.find((c) => c.tenantUuid === tenantUuid);
+    if (firstForTenant) return workspaceContextOptionKey(firstForTenant);
+  }
+
+  if (membershipUuid) {
+    const byMembership = contexts.find(
+      (c) => c.membershipUuid === membershipUuid,
+    );
+    if (byMembership) return workspaceContextOptionKey(byMembership);
+  }
+
+  const serverCurrent = contexts.find((c) => c.isCurrent);
+  if (serverCurrent) return workspaceContextOptionKey(serverCurrent);
+
+  return workspaceContextOptionKey(contexts[0]);
+}
+
+export function formatSingleWorkspaceBadgeLabel(ctx: {
+  tenantName?: string | null;
+  providerName?: string | null;
+  displayLabel?: string | null;
+}): string {
+  const brand = (ctx.tenantName ?? "").trim();
+  const provider = (ctx.providerName ?? "").trim();
+  if (brand && provider) return `${brand} · ${provider}`;
+  if (brand) return brand;
+  if (provider) return provider;
+  return (ctx.displayLabel ?? "").trim();
+}
+
 

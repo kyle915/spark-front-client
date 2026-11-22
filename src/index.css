@@ -414,6 +414,7 @@ code, kbd, samp, pre, .mono-code {
  * ============================================================ */
 
 /* Local vars so the rules below read like the demo source */
+:root,
 [data-theme="spark-v2"] {
   /* --spark-lime kept as the quiet accent token name for existing callers;
      value is off-white. Chromatic brand mark is orange. */
@@ -431,6 +432,13 @@ code, kbd, samp, pre, .mono-code {
   --spark-selected-ink: var(--spark-text);
   --spark-bg-rgb: 10, 11, 13;
   --spark-ok-rgb: 197, 245, 70;
+  --spark-ok-ink: #c5f546;
+  --spark-ok-bg: rgba(197, 245, 70, 0.15);
+  --spark-ok-border: rgba(197, 245, 70, 0.32);
+  --spark-info-ink: #7dd3fc;
+  --spark-info-bg: rgba(56, 189, 248, 0.16);
+  --spark-warn-badge-ink: #fde047;
+  --spark-warn-badge-bg: rgba(250, 204, 21, 0.15);
   --spark-flag-ink: #ffb59d;
   --spark-warn-ink: #f5c042;
   --spark-on-accent: #0a0d09;
@@ -464,12 +472,20 @@ code, kbd, samp, pre, .mono-code {
    A modifier on spark-v2 (see src/theme/appearance.ts). Same tokens, light
    values: ink flips to near-black, the quiet accent becomes ink, and the
    daisyUI base colours follow so utility classes switch with it. */
+[data-spark-mode="light"],
 [data-theme="spark-v2"][data-spark-mode="light"] {
   color-scheme: light;
   --spark-ink-rgb: 20, 22, 15;
   --spark-accent-rgb: 20, 22, 15;
   --spark-bg-rgb: 246, 246, 242;
   --spark-ok-rgb: 63, 92, 18;
+  --spark-ok-ink: #2b4c08;
+  --spark-ok-bg: rgba(63, 92, 18, 0.11);
+  --spark-ok-border: rgba(63, 92, 18, 0.28);
+  --spark-info-ink: #0c5888;
+  --spark-info-bg: rgba(12, 88, 136, 0.1);
+  --spark-warn-badge-ink: #7a5200;
+  --spark-warn-badge-bg: rgba(154, 114, 0, 0.12);
   --spark-flag-ink: #a8340f;
   /* Amber is unreadable on white: ageing/attention text goes red. */
   --spark-warn-ink: #b3261e;
@@ -528,20 +544,39 @@ code, kbd, samp, pre, .mono-code {
 }
 
 /* Tinted chips: the pastel dark-mode inks are unreadable on white. */
+[data-spark-mode="light"] .chip-lime,
+[data-theme="spark-v2"][data-spark-mode="light"] .chip-lime {
+  color: #1f4708;
+  background: rgba(63, 92, 18, 0.11);
+  border-color: rgba(63, 92, 18, 0.34);
+}
+[data-spark-mode="light"] .chip-gold,
 [data-theme="spark-v2"][data-spark-mode="light"] .chip-gold { color: #8a6400; background: rgba(154, 114, 0, 0.1); }
+[data-spark-mode="light"] .chip-purple,
 [data-theme="spark-v2"][data-spark-mode="light"] .chip-purple { color: #5b46a3; background: rgba(107, 85, 181, 0.1); }
+[data-spark-mode="light"] .chip-orange,
 [data-theme="spark-v2"][data-spark-mode="light"] .chip-orange { background: rgba(210, 72, 27, 0.1); }
+[data-spark-mode="light"] .chip-sky,
 [data-theme="spark-v2"][data-spark-mode="light"] .chip-sky { background: rgba(31, 127, 192, 0.1); }
 
 /* The navigation rail stays dark in light mode — it frames the page and
    keeps the Spark mark on its own ground. Re-declare the dark values on the
    rail so everything inside it resolves as before. */
+[data-spark-mode="light"] .spark-sidebar,
 [data-theme="spark-v2"][data-spark-mode="light"] .spark-sidebar {
   color-scheme: dark;
   color: rgba(255, 255, 255, 0.92);
   --spark-ink-rgb: 255, 255, 255;
   --spark-accent-rgb: 242, 243, 238;
   --spark-bg-rgb: 10, 11, 13;
+  --spark-ok-rgb: 197, 245, 70;
+  --spark-ok-ink: #c5f546;
+  --spark-ok-bg: rgba(197, 245, 70, 0.15);
+  --spark-ok-border: rgba(197, 245, 70, 0.32);
+  --spark-info-ink: #7dd3fc;
+  --spark-info-bg: rgba(56, 189, 248, 0.16);
+  --spark-warn-badge-ink: #fde047;
+  --spark-warn-badge-bg: rgba(250, 204, 21, 0.15);
   --spark-on-accent: #0a0d09;
   --spark-lime: #f2f3ee;
   --spark-lime-dim: #c8c9c4;
@@ -569,6 +604,12 @@ code, kbd, samp, pre, .mono-code {
   --color-secondary-content: rgba(255, 255, 255, 0.92);
   --color-neutral: #1c1c1f;
   --color-neutral-content: rgba(255, 255, 255, 0.92);
+}
+[data-spark-mode="light"] .spark-sidebar .chip-lime,
+[data-theme="spark-v2"][data-spark-mode="light"] .spark-sidebar .chip-lime {
+  color: var(--color-primary);
+  background: rgba(var(--spark-accent-rgb), 0.1);
+  border-color: currentColor;
 }
 
 /* === Spark mesh — flat dark page shell (no radials, no dot grid) === */

@@ -31,6 +31,9 @@ export const readAppearance = (): Appearance => {
 export const applyAppearance = (mode: Appearance): void => {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+  if (root.getAttribute("data-theme") !== "spark-v2") {
+    root.setAttribute("data-theme", "spark-v2");
+  }
   if (mode === "light") root.setAttribute(APPEARANCE_ATTR, "light");
   else root.removeAttribute(APPEARANCE_ATTR);
 };

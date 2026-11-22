@@ -16,6 +16,21 @@ import type { PilotMutationsResolveImportRowMutation as ResolveRowType } from "@
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const OK_BANNER_STYLE = {
+  background: "var(--spark-ok-bg)",
+  color: "var(--spark-ok-ink)",
+  border: "1px solid var(--spark-ok-border)",
+} as const;
 
 type PreviewPayload = PreviewDataType["previewProviderCsvImport"];
 
@@ -89,11 +104,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {statusBanner && (
         <div
           className="p-3 rounded-xl text-xs font-medium"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "#c5f546",
-            border: "1px solid rgba(197,245,70,0.3)",
-          }}
+          style={OK_BANNER_STYLE}
         >
           {statusBanner}
         </div>
@@ -108,8 +119,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               value={providerUuid}
               disabled={Boolean(ws.viewerProviderUuid)}
               onChange={(e) => setProviderUuid(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             >
               <option value="">Select agency…</option>
               {ws.providers.map((p) => (
@@ -128,8 +139,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 setPresetKey(e.target.value);
                 setSavedMappingUuid("");
               }}
-              className="w-full px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             >
               {imp.presets.map((pr) => (
                 <option key={pr.key} value={pr.key}>
@@ -144,8 +155,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <select
               value={savedMappingUuid}
               onChange={(e) => setSavedMappingUuid(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs bg-black/30"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl text-xs"
+              style={FIELD_STYLE}
             >
               <option value="">Use preset / auto-detect</option>
               {imp.savedMappings.map((m) => (
@@ -164,7 +175,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               type="file"
               accept=".csv,text/csv"
               onChange={(e) => void handleFilePick(e.target.files?.[0] ?? null)}
-              className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white"
+              className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-base-300 file:text-xs file:font-semibold file:bg-base-200"
+              style={{ color: "var(--spark-text)" }}
             />
           </label>
 
@@ -190,8 +202,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               setPreview(null);
             }}
             placeholder="Event_Ref,Demo_Date,Retail_Chain,Store_Num,Street,City,State,SKU_Code,Cans_Sampled,Units_Sold"
-            className="w-full p-3 rounded-xl text-xs mono bg-black/40"
-            style={BORDER}
+            className="w-full p-3 rounded-xl text-xs mono"
+            style={FIELD_STYLE}
           />
         </label>
 
@@ -212,7 +224,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               });
             }}
             className="px-4 py-2 rounded-xl text-xs font-bold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={PRIMARY_BTN_STYLE}
           >
             {previewing ? "Analyzing rows…" : "Preview Import (Zero Writes)"}
           </button>
@@ -223,8 +235,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={saveMappingName}
                 onChange={(e) => setSaveMappingName(e.target.value)}
                 placeholder="Optional: save mapping as…"
-                className="px-3 py-2 rounded-xl text-xs bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl text-xs"
+                style={FIELD_STYLE}
               />
               <button
                 type="button"
@@ -257,11 +269,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                   });
                 }}
                 className="px-4 py-2 rounded-xl text-xs font-bold"
-                style={{
-                  background: "rgba(197,245,70,0.2)",
-                  color: "#c5f546",
-                  border: "1px solid #c5f546",
-                }}
+                style={OK_BANNER_STYLE}
               >
                 {committing ? "Committing…" : "Commit Valid Rows"}
               </button>
@@ -273,13 +281,19 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
           <div className="space-y-3 pt-3" style={{ borderTop: "1px solid var(--spark-border)" }}>
             <div className="flex flex-wrap gap-3 text-xs mono">
               <span>Total: {preview.totalRows}</span>
-              <span style={{ color: "#c5f546" }}>New: {preview.createdCount}</span>
-              <span style={{ color: "#7dd3fc" }}>Updated: {preview.updatedCount}</span>
+              <span style={{ color: "var(--spark-ok-ink)" }}>
+                New: {preview.createdCount}
+              </span>
+              <span style={{ color: "var(--spark-info-ink)" }}>
+                Updated: {preview.updatedCount}
+              </span>
               <span>Unchanged: {preview.unchangedCount}</span>
-              <span style={{ color: "#fde047" }}>
+              <span style={{ color: "var(--spark-warn-badge-ink)" }}>
                 Needs review: {preview.reviewCount}
               </span>
-              <span style={{ color: "#ef5a2a" }}>Errors: {preview.errorCount}</span>
+              <span style={{ color: "var(--spark-flag-ink, #ef5a2a)" }}>
+                Errors: {preview.errorCount}
+              </span>
             </div>
             <div className="overflow-x-auto max-h-72">
               <table className="w-full text-left text-xs">
@@ -315,7 +329,10 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {/* Uncertain Store / SKU Review Queue */}
       {imp.reviewQueue.length > 0 && (
         <section className="spark-card p-5 space-y-3">
-          <h2 className="display text-lg font-bold" style={{ color: "#fde047" }}>
+          <h2
+            className="display text-lg font-bold"
+            style={{ color: "var(--spark-warn-badge-ink)" }}
+          >
             Uncertain Store & SKU Match Queue ({imp.reviewQueue.length})
           </h2>
           <p className="text-xs" style={META}>
@@ -346,8 +363,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                             [rowKey]: e.target.value,
                           }))
                         }
-                        className="px-2.5 py-1.5 rounded-lg bg-black/40"
-                        style={BORDER}
+                        className="px-2.5 py-1.5 rounded-lg"
+                        style={FIELD_STYLE}
                       >
                         <option value="">Map store (optional)…</option>
                         {ws.stores.map((s) => (
@@ -364,8 +381,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                             [rowKey]: e.target.value,
                           }))
                         }
-                        className="px-2.5 py-1.5 rounded-lg bg-black/40"
-                        style={BORDER}
+                        className="px-2.5 py-1.5 rounded-lg"
+                        style={FIELD_STYLE}
                       >
                         <option value="">Map SKU (optional)…</option>
                         {ws.products.map((p) => (
@@ -402,7 +419,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                           });
                         }}
                         className="px-3 py-1.5 rounded-lg font-bold"
-                        style={{ background: "#c5f546", color: "#0A0B0D" }}
+                        style={PRIMARY_BTN_STYLE}
                       >
                         Save Alias & Retry Row
                       </button>

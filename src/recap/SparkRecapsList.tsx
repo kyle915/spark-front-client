@@ -727,7 +727,7 @@ const RecapCard: React.FC<{
           className="mono text-[10px] mt-1"
           style={{
             letterSpacing: "0.1em",
-            color: "rgba(var(--spark-ok-rgb),0.75)",
+            color: "var(--spark-ok-ink)",
           }}
         >
           {recap.approvalMeta}

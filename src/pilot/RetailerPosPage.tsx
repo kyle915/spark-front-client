@@ -16,6 +16,21 @@ import type { PilotMutationsSetContributionMutation as SetContribType } from "@/
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const OK_BANNER_STYLE = {
+  background: "var(--spark-ok-bg)",
+  color: "var(--spark-ok-ink)",
+  border: "1px solid var(--spark-ok-border)",
+} as const;
 
 const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   fetchKey,
@@ -97,11 +112,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {feedback && (
         <div
           className="p-3 rounded-xl text-xs font-medium"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "#c5f546",
-            border: "1px solid rgba(197,245,70,0.3)",
-          }}
+          style={OK_BANNER_STYLE}
         >
           {feedback}
         </div>
@@ -111,9 +122,12 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {!pos.available ? (
         <section
           className="spark-card p-6 space-y-2"
-          style={{ border: "1px solid rgba(250,204,21,0.35)" }}
+          style={{ border: "1px solid var(--spark-border)" }}
         >
-          <p className="text-xs uppercase mono" style={{ color: "#fde047" }}>
+          <p
+            className="text-xs uppercase mono font-semibold"
+            style={{ color: "var(--spark-warn-badge-ink)" }}
+          >
             Retailer sales unavailable
           </p>
           <h2 className="display text-lg font-bold">
@@ -129,7 +143,10 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <p className="text-xs" style={META}>
               Feed Coverage
             </p>
-            <p className="text-xl font-bold mono mt-1" style={{ color: "#c5f546" }}>
+            <p
+              className="text-xl font-bold mono mt-1"
+              style={{ color: "var(--spark-ok-ink)" }}
+            >
               {pos.matchedStoreSkuWeeks}/{pos.eligibleStoreSkuWeeks} (
               {formatCoveragePercent(pos.coverageRatio)})
             </p>
@@ -181,7 +198,10 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <p className="text-xs" style={META}>
               Contribution & ROI
             </p>
-            <p className="text-xl font-bold mono mt-1" style={{ color: "#c5f546" }}>
+            <p
+              className="text-xl font-bold mono mt-1"
+              style={{ color: "var(--spark-ok-ink)" }}
+            >
               {pos.roi != null ? `${pos.roi}x` : "Withheld"}
             </p>
             <p className="text-[11px] mt-1" style={META}>
@@ -233,14 +253,14 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={bannerName}
                 onChange={(e) => setBannerName(e.target.value)}
                 placeholder="Retailer banner (e.g. FreshMart)"
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               />
               <select
                 value={feedCompleteness}
                 onChange={(e) => setFeedCompleteness(e.target.value)}
-                className="px-3 py-2 rounded-xl bg-black/30"
-                style={BORDER}
+                className="px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
               >
                 <option value="complete">Complete weekly feed</option>
                 <option value="partial">Partial feed</option>
@@ -251,21 +271,22 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               type="file"
               accept=".csv,text/csv"
               onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white"
+              className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-base-300 file:text-xs file:font-semibold file:bg-base-200"
+              style={{ color: "var(--spark-text)" }}
             />
             <textarea
               rows={4}
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
               placeholder="retailer,store_id,store_name,city,state,sku,week_start,units_sold,baseline_units"
-              className="w-full p-2.5 rounded-xl text-xs mono bg-black/40"
-              style={BORDER}
+              className="w-full p-2.5 rounded-xl text-xs mono"
+              style={FIELD_STYLE}
             />
             <button
               type="submit"
               disabled={importing || !csvText.trim()}
               className="px-4 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "#c5f546", color: "#0A0B0D" }}
+              style={PRIMARY_BTN_STYLE}
             >
               {importing ? "Importing POS…" : "Import Retailer POS"}
             </button>
@@ -310,8 +331,8 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 <select
                   value={crewVisitUuid}
                   onChange={(e) => setCrewVisitUuid(e.target.value)}
-                  className="col-span-2 px-3 py-2 rounded-xl bg-black/30"
-                  style={BORDER}
+                  className="col-span-2 px-3 py-2 rounded-xl"
+                  style={FIELD_STYLE}
                 >
                   <option value="">Select visit…</option>
                   {visits.map((v) => (
@@ -323,8 +344,8 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 <select
                   value={crewProductId}
                   onChange={(e) => setCrewProductId(e.target.value)}
-                  className="px-3 py-2 rounded-xl bg-black/30"
-                  style={BORDER}
+                  className="px-3 py-2 rounded-xl"
+                  style={FIELD_STYLE}
                 >
                   <option value="">Select SKU…</option>
                   {ws.products.map((p) => (
@@ -339,15 +360,15 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                   value={crewUnits}
                   onChange={(e) => setCrewUnits(e.target.value)}
                   placeholder="Units bought at register"
-                  className="px-3 py-2 rounded-xl mono bg-black/30"
-                  style={BORDER}
+                  className="px-3 py-2 rounded-xl mono"
+                  style={FIELD_STYLE}
                 />
               </div>
               <button
                 type="submit"
                 disabled={linkingCrew}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold"
-                style={{ background: "#c5f546", color: "#0A0B0D" }}
+                style={PRIMARY_BTN_STYLE}
               >
                 Link Crew Purchase
               </button>
@@ -376,13 +397,13 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={contribInput}
                 onChange={(e) => setContribInput(e.target.value)}
                 placeholder="2.40"
-                className="w-28 px-3 py-1.5 rounded-xl mono bg-black/30"
-                style={BORDER}
+                className="w-28 px-3 py-1.5 rounded-xl mono"
+                style={FIELD_STYLE}
               />
               <button
                 type="submit"
                 className="px-3 py-1.5 rounded-xl font-semibold"
-                style={BORDER}
+                style={FIELD_STYLE}
               >
                 Save Margin
               </button>
@@ -394,7 +415,10 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {/* Unmatched POS Rows */}
       {pos.unmatchedRows.length > 0 && (
         <section className="spark-card p-5 space-y-3">
-          <h2 className="display text-base font-bold" style={{ color: "#fde047" }}>
+          <h2
+            className="display text-base font-bold"
+            style={{ color: "var(--spark-warn-badge-ink)" }}
+          >
             Unmatched POS Store / SKU Rows ({pos.unmatchedRows.length})
           </h2>
           <div className="space-y-2 text-xs">
@@ -421,8 +445,8 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                           [ur.uuid]: e.target.value,
                         }))
                       }
-                      className="px-2.5 py-1.5 rounded-lg bg-black/30"
-                      style={BORDER}
+                      className="px-2.5 py-1.5 rounded-lg"
+                      style={FIELD_STYLE}
                     >
                       <option value="">Store…</option>
                       {ws.stores.map((s) => (
@@ -439,8 +463,8 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                           [ur.uuid]: e.target.value,
                         }))
                       }
-                      className="px-2.5 py-1.5 rounded-lg bg-black/30"
-                      style={BORDER}
+                      className="px-2.5 py-1.5 rounded-lg"
+                      style={FIELD_STYLE}
                     >
                       <option value="">Product…</option>
                       {ws.products.map((p) => (
@@ -467,7 +491,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                         });
                       }}
                       className="px-3 py-1.5 rounded-lg font-bold"
-                      style={{ background: "#c5f546", color: "#0A0B0D" }}
+                      style={PRIMARY_BTN_STYLE}
                     >
                       Resolve
                     </button>

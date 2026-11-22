@@ -11,10 +11,15 @@ import {
   buildInitialShiftFormState,
   evidenceBadgeMeta,
   exceptionStatusLabel,
+  filterVisibleWorkspaceContexts,
   formatCoveragePercent,
   formatHonestMoney,
+  formatSingleWorkspaceBadgeLabel,
+  isArchivedWorkspaceLabel,
+  resolveActiveWorkspaceContextKey,
   settlementBadgeMeta,
   storeActionLabel,
+  workspaceContextOptionKey,
   workspaceRoleLabel,
 } from "./pilotHelpers";
 import { useAuthStore } from "@/store/authStore";
@@ -201,5 +206,112 @@ describe("pilotHelpers", () => {
     expect(useAuthStore.getState().tenantId).toBeNull();
     expect(useAuthStore.getState().tenantSlug).toBeNull();
     expect(useAuthStore.getState().tenantMeta).toBeNull();
+  });
+
+  it("filters [ARCHIVED] workspaces unless active and keeps active option synced to sidebar tenantUuid", () => {
+    expect(isArchivedWorkspaceLabel("[ARCHIVED] Carbliss")).toBe(true);
+    expect(isArchivedWorkspaceLabel("  [archived] WERNSA · Managed Workspace")).toBe(true);
+    expect(isArchivedWorkspaceLabel("Liquid Death")).toBe(false);
+
+    const rawContexts = [
+      {
+        membershipUuid: null,
+        tenantUuid: "uuid-alcohol-armor",
+        tenantName: "Alcohol Armor",
+        displayLabel: "Alcohol Armor · Managed Workspace",
+        isCurrent: false,
+      },
+      {
+        membershipUuid: null,
+        tenantUuid: "uuid-carbliss",
+        tenantName: "[ARCHIVED] Carbliss",
+        displayLabel: "[ARCHIVED] Carbliss · Managed Workspace",
+        isCurrent: false,
+      },
+      {
+        membershipUuid: null,
+        tenantUuid: "uuid-wernsa",
+        tenantName: "[ARCHIVED] WERNSA",
+        displayLabel: "[ARCHIVED] WERNSA · Managed Workspace",
+        isCurrent: false,
+      },
+      {
+        membershipUuid: null,
+        tenantUuid: "uuid-liquid-death",
+        tenantName: "Liquid Death",
+        displayLabel: "Liquid Death · Managed Workspace",
+        isCurrent: false,
+      },
+      {
+        membershipUuid: "mem-agency-brew",
+        tenantUuid: "uuid-brew-dr",
+        tenantName: "Brew Dr",
+        providerName: "FieldPulse",
+        displayLabel: "Brew Dr · FieldPulse (Agency Manager)",
+        isCurrent: false,
+      },
+    ];
+
+    const visible = filterVisibleWorkspaceContexts(rawContexts, {
+      tenantUuid: "uuid-liquid-death",
+      membershipUuid: null,
+    });
+    expect(visible.map((c) => c.tenantName)).toEqual([
+      "Alcohol Armor",
+      "Liquid Death",
+      "Brew Dr",
+    ]);
+
+    // Managed workspaces have membershipUuid: null — active key MUST resolve to
+    // "tenant:uuid-liquid-death" rather than "" (which caused <select> to fall back to index 0 Alcohol Armor!).
+    expect(
+      resolveActiveWorkspaceContextKey(visible, {
+        tenantUuid: "uuid-liquid-death",
+        membershipUuid: null,
+      }),
+    ).toBe("tenant:uuid-liquid-death");
+
+    // Switching sidebar to Alcohol Armor immediately selects "tenant:uuid-alcohol-armor".
+    expect(
+      resolveActiveWorkspaceContextKey(visible, {
+        tenantUuid: "uuid-alcohol-armor",
+        membershipUuid: null,
+      }),
+    ).toBe("tenant:uuid-alcohol-armor");
+
+    // Agency membership context resolves to "membership:mem-agency-brew".
+    expect(
+      resolveActiveWorkspaceContextKey(visible, {
+        tenantUuid: "uuid-brew-dr",
+        membershipUuid: "mem-agency-brew",
+      }),
+    ).toBe("membership:mem-agency-brew");
+    expect(workspaceContextOptionKey(visible[2])).toBe(
+      "membership:mem-agency-brew",
+    );
+
+    // If an archived tenant happens to be currently selected, keep it visible until switched away.
+    const visibleWhenArchivedSelected = filterVisibleWorkspaceContexts(
+      rawContexts,
+      { tenantUuid: "uuid-carbliss", membershipUuid: null },
+    );
+    expect(
+      visibleWhenArchivedSelected.some((c) => c.tenantUuid === "uuid-carbliss"),
+    ).toBe(true);
+
+    expect(
+      formatSingleWorkspaceBadgeLabel({
+        tenantName: "Liquid Death",
+        providerName: null,
+        displayLabel: "Liquid Death · Managed Workspace",
+      }),
+    ).toBe("Liquid Death");
+    expect(
+      formatSingleWorkspaceBadgeLabel({
+        tenantName: "Liquid Death",
+        providerName: "FieldPulse",
+        displayLabel: "Liquid Death · FieldPulse (Agency Manager)",
+      }),
+    ).toBe("Liquid Death · FieldPulse");
   });
 });

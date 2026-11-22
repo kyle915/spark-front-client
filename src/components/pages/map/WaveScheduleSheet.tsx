@@ -578,7 +578,10 @@ const WaveScheduleSheetBody: React.FC<{
             className="w-full"
           />
           {overnight ? (
-            <p className="text-[11px] mt-1" style={{ color: "#c5f546" }}>
+            <p
+              className="text-[11px] mt-1 font-semibold"
+              style={{ color: "var(--spark-ok-ink)" }}
+            >
               Overnight shift (ends next calendar day)
             </p>
           ) : null}
@@ -862,9 +865,9 @@ const WaveScheduleSheetBody: React.FC<{
             onClick={() => runWaveMutation(false)}
             className="btn btn-sm font-semibold"
             style={{
-              background: "#c5f546",
-              color: "#0A0B0D",
-              border: "none",
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+              border: "1px solid var(--spark-lime)",
             }}
           >
             {isSubmitting
