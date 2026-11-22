@@ -6781,6 +6781,9 @@ type Mutation {
   rebookLastCrew(input: RebookLastCrewInput!): BulkAssignAmbassadorResponse!
   cancelShiftInvite(input: CancelShiftInviteInput!): CancelShiftInviteResponse!
   bulkInviteAmbassadorsToShift(input: BulkInviteToShiftInput!): BulkInviteResponse!
+  requestIgniteStaffing(input: RequestIgniteStaffingInput!): RequestIgniteStaffingResult!
+  updateIgniteStaffingRequestStatus(input: UpdateIgniteStaffingRequestInput!): UpdateIgniteStaffingRequestResult!
+  triggerNoShowCascade(input: TriggerNoShowCascadeInput!): TriggerNoShowCascadeResult!
   rateAmbassador(input: RateAmbassadorInput!): RateAmbassadorResponse!
   applyAmbassadorJob(jobId: ID!, acceptedTerms: Boolean! = false): ApplyAmbassadorJobResponse!
   createPublicAmbassador(input: CreatePublicAmbassadorInput!): PublicAmbassadorCreationResponse!
@@ -8083,6 +8086,9 @@ type Query {
   ambassadorGroup(groupId: ID!): AmbassadorGroup
   eventStaffing(eventId: ID!, limit: Int = 20): EventStaffing
   staffingSuggestions(eventId: ID!, limit: Int = 20): [StaffingSuggestion!]!
+  smartBaMatches(eventId: ID = null, storeKey: String = null, tenantId: ID = null, limit: Int = 20): [SmartBaMatch!]!
+  igniteStaffingRequests(status: String = null, tenantId: ID = null, first: Int = 50): [IgniteStaffingRequestType!]!
+  noShowCascadeAlerts(status: String = null, tenantId: ID = null, first: Int = 50): [NoShowCascadeAlertType!]!
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   pendingWalkupCount(tenantId: ID = null): Int!
   myNotifications(limit: Int! = 50): [NotificationItem!]!
@@ -10476,6 +10482,119 @@ type StaffingSuggestion {
   reliabilityScore: Int
   reliabilityLabel: String
   reasons: [String!]!
+}
+
+type SmartBaMatch {
+  baId: ID!
+  baUuid: String!
+  name: String!
+  score: Int!
+  unitsPerHour: Float
+  reliabilityRate: Float
+  brandCertified: Boolean!
+  brandGigs: Int!
+  distanceMiles: Float
+  isAvailable: Boolean
+  isFavorited: Boolean!
+  email: String
+  phone: String
+  reasons: [String!]!
+  summaryReason: String!
+}
+
+type IgniteStaffingRequestType {
+  id: ID!
+  uuid: String!
+  tenantId: ID!
+  tenantName: String!
+  status: String!
+  source: String!
+  title: String!
+  activationType: String!
+  requestedShiftCount: Int!
+  requestedBaCount: Int!
+  requestedDates: [String!]!
+  requestedStores: [String!]!
+  eventIds: [String!]!
+  notes: String!
+  opsNotes: String!
+  requestedByName: String
+  assignedOpsOwnerName: String
+  acceptedAt: String
+  assignedAt: String
+  completedAt: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type NoShowCascadeAlertType {
+  id: ID!
+  uuid: String!
+  tenantId: ID!
+  tenantName: String!
+  eventId: ID!
+  eventUuid: String!
+  eventName: String!
+  triggerReason: String!
+  status: String!
+  minutesPastStart: Int
+  notifiedBackupBas: JSON
+  deliveryAudit: JSON
+  opsNotifiedEmails: [String!]!
+  notes: String!
+  dispatchedAt: String
+  resolvedAt: String
+  createdAt: String!
+}
+
+input RequestIgniteStaffingInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  source: String = null
+  title: String = null
+  activationType: String = null
+  requestedShiftCount: Int = null
+  requestedBaCount: Int = null
+  requestedDates: [String!] = null
+  requestedStores: [String!] = null
+  eventIds: [String!] = null
+  notes: String = null
+}
+
+input UpdateIgniteStaffingRequestInput {
+  clientMutationId: ID = null
+  uuid: String!
+  status: String!
+  opsNotes: String = null
+}
+
+input TriggerNoShowCascadeInput {
+  clientMutationId: ID = null
+  eventId: ID!
+  notes: String = null
+  force: Boolean = false
+}
+
+type RequestIgniteStaffingResult {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  request: IgniteStaffingRequestType
+}
+
+type UpdateIgniteStaffingRequestResult {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  request: IgniteStaffingRequestType
+}
+
+type TriggerNoShowCascadeResult {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  created: Boolean!
+  alert: NoShowCascadeAlertType
 }
 
 type StarterProgramOption {

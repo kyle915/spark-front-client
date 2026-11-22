@@ -20,6 +20,11 @@ import { AmbassadorsBookedOnDateQuery } from "@/api/queries/AmbassadorsBookedOnD
 import type { AmbassadorsBookedOnDateQuery as AmbassadorsBookedOnDateQueryType } from "@api/queries/__generated__/AmbassadorsBookedOnDateQuery.graphql";
 import { StaffingSuggestionsQuery } from "@/api/queries/StaffingSuggestionsQuery";
 import type { StaffingSuggestionsQuery as StaffingSuggestionsQueryType } from "@api/queries/__generated__/StaffingSuggestionsQuery.graphql";
+import { SmartBaMatchesQuery } from "@/api/queries/SmartBaMatchesQuery";
+import type { SmartBaMatchesQuery as SmartBaMatchesQueryType } from "@api/queries/__generated__/SmartBaMatchesQuery.graphql";
+import SmartBaMatchList, {
+  type SmartBaMatchRow,
+} from "@/components/staffing/SmartBaMatchList";
 import { InviteAmbassadorToShiftMutation } from "@/api/mutations/InviteAmbassadorToShiftMutation";
 import type { InviteAmbassadorToShiftMutation as InviteAmbassadorToShiftMutationType } from "@api/mutations/__generated__/InviteAmbassadorToShiftMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -75,15 +80,6 @@ type Row = {
   localityScore: number;
 };
 
-const initials = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "BA";
-
 type Suggestion =
   StaffingSuggestionsQueryType["response"]["staffingSuggestions"][number];
 
@@ -111,20 +107,59 @@ const SuggestionsInner: React.FC<{
   onInvite: (baId: string, name: string) => void;
   verb: string;
 }> = ({ eventId, done, pendingIds, onInvite, verb }) => {
-  const data = useLazyLoadQuery<StaffingSuggestionsQueryType>(
+  const smartData = useLazyLoadQuery<SmartBaMatchesQueryType>(
+    SmartBaMatchesQuery,
+    { eventId, limit: 20 },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const smartMatches = useMemo(
+    () => (smartData?.smartBaMatches ?? []).filter(Boolean),
+    [smartData],
+  );
+
+  const useLegacy = smartMatches.length === 0;
+  const legacyData = useLazyLoadQuery<StaffingSuggestionsQueryType>(
     StaffingSuggestionsQuery,
     { eventId, limit: 20 },
     { fetchPolicy: "store-or-network" },
   );
 
-  // Pre-ranked by the server — render in the order we receive.
-  const suggestions: Suggestion[] = useMemo(
-    () => (data?.staffingSuggestions ?? []).filter(Boolean),
-    [data],
+  const legacySuggestions: Suggestion[] = useMemo(
+    () => (legacyData?.staffingSuggestions ?? []).filter(Boolean),
+    [legacyData],
   );
 
-  // Empty → render nothing so the existing list is the whole modal.
-  if (suggestions.length === 0) return null;
+  const displayRows: SmartBaMatchRow[] = useMemo(() => {
+    if (!useLegacy) {
+      return smartMatches.map((m) => ({
+        baId: m.baId,
+        name: m.name,
+        score: m.score,
+        summaryReason: m.summaryReason ?? "",
+        reasons: m.reasons ?? [],
+        isFavorited: m.isFavorited,
+        isAvailable: m.isAvailable,
+        brandCertified: m.brandCertified,
+        brandGigs: m.brandGigs,
+        reliabilityRate: m.reliabilityRate,
+        distanceMiles: m.distanceMiles,
+      }));
+    }
+    return legacySuggestions.map((s) => ({
+      baId: s.baId,
+      name: s.name,
+      score: s.score,
+      summaryReason:
+        s.reasons.length > 0 ? s.reasons.slice(0, 2).join(" · ") : "",
+      reasons: s.reasons,
+      isFavorited: s.isFavorited,
+      isAvailable: s.isAvailable,
+      brandGigs: s.gigsForBrand,
+    }));
+  }, [useLegacy, smartMatches, legacySuggestions]);
+
+  if (displayRows.length === 0) return null;
 
   return (
     <div style={{ borderBottom: "1px solid var(--spark-border)" }}>
@@ -136,7 +171,7 @@ const SuggestionsInner: React.FC<{
             color: "var(--spark-lime)",
           }}
         >
-          ✦ SUGGESTED FOR THIS GIG
+          ✦ {useLegacy ? "SUGGESTED FOR THIS GIG" : "SMART MATCHES"}
         </p>
         <span
           className="mono text-[9px]"
@@ -148,167 +183,14 @@ const SuggestionsInner: React.FC<{
           TAP TO {verb.toUpperCase()}
         </span>
       </div>
-      {suggestions.map((s, i) => {
-        const invited = done.has(s.baId);
-        const busy = pendingIds.has(s.baId);
-        const onClick = () => {
-          if (invited || busy) return;
-          onInvite(s.baId, s.name);
-        };
-        return (
-          <div
-            key={s.baId}
-            onClick={onClick}
-            className="flex items-center gap-3 px-5 py-3"
-            style={{
-              borderTop: "1px solid rgba(var(--spark-ink-rgb),0.04)",
-              cursor: invited || busy ? "default" : "pointer",
-              background: invited
-                ? "rgba(var(--spark-accent-rgb),0.04)"
-                : "transparent",
-              opacity: invited ? 0.7 : 1,
-            }}
-            title={invited ? undefined : `Invite ${s.name} to this shift`}
-          >
-            {/* Rank # */}
-            <span
-              className="mono text-[11px] shrink-0 text-right"
-              style={{
-                width: 18,
-                color:
-                  i === 0 ? "var(--spark-lime)" : "rgba(var(--spark-ink-rgb),0.4)",
-                fontWeight: i === 0 ? 700 : 400,
-              }}
-            >
-              {i + 1}
-            </span>
-            <div
-              className="rounded-full grid place-items-center font-bold shrink-0"
-              style={{
-                width: 32,
-                height: 32,
-                background: "rgba(var(--spark-accent-rgb),0.10)",
-                color: "var(--spark-lime)",
-                fontSize: 12,
-              }}
-            >
-              {initials(s.name)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                {s.isFavorited && (
-                  <span
-                    style={{ color: "var(--spark-lime)", fontSize: 12 }}
-                    title="Favorited BA"
-                    aria-label="Favorited"
-                  >
-                    ★
-                  </span>
-                )}
-                <span className="truncate">{s.name}</span>
-                {s.avgRating != null && (
-                  <span
-                    className="mono text-[10px] shrink-0"
-                    style={{
-                      letterSpacing: "0.1em",
-                      color: "var(--spark-gold)",
-                    }}
-                    title={`${s.avgRating.toFixed(1)} / 5 average rating`}
-                  >
-                    ★ {s.avgRating.toFixed(1)}
-                  </span>
-                )}
-              </p>
-              {/* Reasons rendered as small chips. High reliability arrives as
-                  a server reason ("96% reliable"); the NEW chip below covers
-                  the other end — no shift history yet — so an admin can tell
-                  unproven from proven at a glance. Mid scores stay silent by
-                  design (they weigh into the ranking without a shaming tag). */}
-              <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                {s.reasons.map((reason, ri) => (
-                  <span
-                    key={ri}
-                    className="mono text-[9px] shrink-0"
-                    style={{
-                      letterSpacing: "0.12em",
-                      color: "var(--spark-text-secondary)",
-                      background: "rgba(var(--spark-ink-rgb),0.05)",
-                      border: "1px solid var(--spark-border)",
-                      padding: "1px 6px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    {reason}
-                  </span>
-                ))}
-                {s.reliabilityScore == null && s.reliabilityLabel === "New" && (
-                  <span
-                    className="mono text-[9px] shrink-0"
-                    style={{
-                      letterSpacing: "0.12em",
-                      color: "var(--spark-gold)",
-                      background: "rgba(var(--spark-ink-rgb),0.05)",
-                      border: "1px solid var(--spark-border)",
-                      padding: "1px 6px",
-                      borderRadius: 999,
-                    }}
-                    title="No completed or dropped shifts yet — reliability unknown"
-                  >
-                    NEW
-                  </span>
-                )}
-              </div>
-            </div>
-            {/* Score indicator — number over a small bar. */}
-            <div className="shrink-0 flex flex-col items-end gap-1" style={{ width: 44 }}>
-              {invited ? (
-                <span
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.18em",
-                    color: "var(--spark-lime)",
-                  }}
-                >
-                  ✓ ON SHIFT
-                </span>
-              ) : busy ? (
-                <span
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.16em",
-                    color: "var(--spark-text-meta)",
-                  }}
-                >
-                  …
-                </span>
-              ) : (
-                <>
-                  <span
-                    className="mono text-[12px] font-bold leading-none"
-                    style={{ color: "var(--spark-lime)" }}
-                    title={`Match score ${s.score} / 100`}
-                  >
-                    {s.score}
-                  </span>
-                  <div
-                    className="h-1 w-full overflow-hidden rounded-full"
-                    style={{ background: "rgba(var(--spark-ink-rgb),0.08)" }}
-                    aria-hidden
-                  >
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(0, Math.min(100, s.score))}%`,
-                        background: "var(--spark-lime)",
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        );
-      })}
+      <SmartBaMatchList
+        matches={displayRows}
+        surface="ops"
+        done={done}
+        pendingIds={pendingIds}
+        onSelect={onInvite}
+        actionVerb={verb}
+      />
     </div>
   );
 };

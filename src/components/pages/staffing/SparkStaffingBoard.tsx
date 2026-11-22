@@ -13,6 +13,8 @@ import { RebookLastCrewMutation } from "@/api/mutations/RebookLastCrewMutation";
 import type { RebookLastCrewMutation as RebookLastCrewMutationType } from "@api/mutations/__generated__/RebookLastCrewMutation.graphql";
 import InviteBAModal from "@/requests/InviteBAModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAuthStore } from "@/store/authStore";
+import IgniteStaffingQueuePanel from "@/components/staffing/IgniteStaffingQueuePanel";
 
 /**
  * Staffing Board — a week grid of shifts × dates so an admin can see who's
@@ -835,6 +837,7 @@ const Inner: React.FC<{
 };
 
 export default function SparkStaffingBoard() {
+  const { tenantId } = useAuthStore();
   // Start the window on the Monday of the current week.
   const [weekStart, setWeekStart] = useState<Date>(() => {
     const d = new Date();
@@ -906,6 +909,8 @@ export default function SparkStaffingBoard() {
       </div>
 
       <FindAmbassadors />
+
+      <IgniteStaffingQueuePanel tenantId={tenantId} />
 
       <Suspense
         fallback={
