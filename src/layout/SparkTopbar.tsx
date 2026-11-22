@@ -26,6 +26,7 @@ import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 import { useMobileNav } from "./MobileNavContext";
 import { TenantLogo } from "./TenantLogo.tsx";
 import { setAppearance, useAppearance } from "@/theme/appearance";
+import WorkspaceContextSwitcher from "@/pilot/WorkspaceContextSwitcher";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -277,6 +278,7 @@ export const SparkTopbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 md:flex-wrap">
+        <WorkspaceContextSwitcher />
         <button
           type="button"
           onClick={() => navigate("/requests/create")}

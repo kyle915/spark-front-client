@@ -60,6 +60,10 @@ export function checkinUrl(code: string): string {
   return withPath(clientOrigin(), `/checkin/${code}`);
 }
 
+export function providerSubmitUrl(code: string): string {
+  return withPath(clientOrigin(), `/provider-submit/${encodeURIComponent(code)}`);
+}
+
 export function jobBoardUrl(token: string): string {
   return withPath(clientOrigin(), `/jobs/${token}`);
 }
@@ -129,7 +133,7 @@ export function adminRequestUrl(requestUuid: string): string {
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
   return (
-    /^\/(checkin|spark-form|r|report|training|c|invoice|live|clock)(\/|$)/.test(pathname) ||
+    /^\/(checkin|provider-submit|spark-form|r|report|training|c|invoice|live|clock)(\/|$)/.test(pathname) ||
     /^\/jobs\/[^/]+/.test(pathname)
   );
 }

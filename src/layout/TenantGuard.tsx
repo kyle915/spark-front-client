@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import { TenantQuery } from "@/api/queries/TenantQuery";
+import { PilotQueriesWorkspaceContextsQuery } from "@/api/queries/PilotQueries";
 import type { TenantQuery as TenantQueryType } from "@api/queries/__generated__/TenantQuery.graphql";
+import type { PilotQueriesWorkspaceContextsQuery as ContextsQueryType } from "@api/queries/__generated__/PilotQueriesWorkspaceContextsQuery.graphql";
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@store/authStore";
 import { useTenantSelection } from "@/hooks/useTenantSelection";
@@ -114,8 +116,41 @@ export default function TenantRoute({ component }: TenantRouteProps) {
         });
 
         if (tenants.length === 0) {
-          setNoTenants(true);
-          setResolving(false);
+          // External agency / provider users intentionally have no consolidated
+          // TenantedUser row; resolve their assigned workspace context instead.
+          fetchQuery<ContextsQueryType>(
+            environment,
+            PilotQueriesWorkspaceContextsQuery,
+            {},
+          )
+            .toPromise()
+            .then((ctxData) => {
+              if (cancelled) return;
+              const ctxs = ctxData?.myWorkspaceContexts ?? [];
+              if (ctxs.length === 0) {
+                setNoTenants(true);
+                setResolving(false);
+                return;
+              }
+              const active = ctxs.find((c) => c.isCurrent) ?? ctxs[0];
+              selectTenant({
+                tenantUuid: active.tenantUuid,
+                tenantId: "",
+                tenantSlug: active.tenantSlug || null,
+              });
+              useAuthStore
+                .getState()
+                .setWorkspaceMembership(
+                  active.membershipUuid ?? null,
+                  active.workspaceRole,
+                );
+              setResolving(false);
+            })
+            .catch(() => {
+              if (cancelled) return;
+              setNoTenants(true);
+              setResolving(false);
+            });
           return;
         }
 

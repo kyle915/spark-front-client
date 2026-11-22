@@ -21,9 +21,10 @@ import type {
 } from "relay-runtime";
 
 /**
- * The brand selected in the app. For people on more than one brand the
- * server can't tell which one a page means; it uses this when they are a
- * member of it (spark-api utils/graphql/mixins.py, X-Spark-Tenant).
+ * The brand and workspace membership selected in the app. For people on more
+ * than one brand or holding distinct workspace/provider memberships, the
+ * server resolves exact tenant + role scope from X-Spark-Tenant and
+ * X-Spark-Membership.
  */
 function readLocalStorage(key: string): string | null {
   if (typeof localStorage === "undefined") return null;
@@ -44,9 +45,14 @@ function writeLocalStorage(key: string, value: string): void {
 }
 
 function selectedTenantHeader(): Record<string, string> {
-  const uuid =
-    useAuthStore.getState().tenantUuid ?? readLocalStorage("@tenantUuid");
-  return uuid ? { "X-Spark-Tenant": uuid } : {};
+  const { tenantUuid, membershipUuid } = useAuthStore.getState();
+  const resolvedTenant = tenantUuid ?? readLocalStorage("@tenantUuid");
+  const resolvedMembership =
+    membershipUuid ?? readLocalStorage("@membershipUuid");
+  const headers: Record<string, string> = {};
+  if (resolvedTenant) headers["X-Spark-Tenant"] = resolvedTenant;
+  if (resolvedMembership) headers["X-Spark-Membership"] = resolvedMembership;
+  return headers;
 }
 
 const REFRESH_TOKEN_MUTATION = `

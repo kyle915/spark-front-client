@@ -221,6 +221,36 @@ const SECTIONS: NavSection[] = [
         to: "/account-map",
         clientLabel: "Account Map",
       },
+      {
+        label: "Workspace & Agencies",
+        Icon: Building2,
+        to: "/workspace",
+        clientLabel: "Workspace & Agencies",
+      },
+      {
+        label: "Provider CSV Imports",
+        Icon: Upload,
+        to: "/imports",
+        clientLabel: "Provider Imports",
+      },
+      {
+        label: "Demo Costs",
+        Icon: DollarSign,
+        to: "/demo-costs",
+        clientLabel: "Demo Costs",
+      },
+      {
+        label: "Finance Queue",
+        Icon: ShieldCheck,
+        to: "/finance-queue",
+        clientLabel: "Finance Queue",
+      },
+      {
+        label: "Retailer POS & ROI",
+        Icon: Store,
+        to: "/retailer-pos",
+        clientLabel: "Retailer POS & ROI",
+      },
       { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],
   },
@@ -238,6 +268,12 @@ const SECTIONS: NavSection[] = [
     title: "Outputs",
     items: [
       { label: "Reports", Icon: BarChart3, to: "/reports" },
+      {
+        label: "Buyer Store Report",
+        Icon: Store,
+        to: "/buyer-report",
+        clientLabel: "Buyer Store Report",
+      },
       // Ignite-internal: each brand's written weekly summary and monthly
       // email draft, for staff to review and copy. Nothing is sent from it.
       { label: "Client summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },
