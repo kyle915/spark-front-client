@@ -255,7 +255,8 @@ const SECTIONS: NavSection[] = [
         label: "Plans & Billing",
         Icon: CreditCard,
         to: "/plans-billing",
-        clientLabel: "Plans & Billing",
+        // Ignite-admin internal test mode until CLIENT_BILLING_LAUNCHED.
+        adminOnly: true,
       },
       { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router";
+import useSparkRole from "@/hooks/useSparkRole";
 import { planBadgeMeta } from "./pilotHelpers";
 
 interface PlanGateCalloutProps {
@@ -13,6 +14,10 @@ export const PlanGateCallout: React.FC<PlanGateCalloutProps> = ({
   message,
   requiredPlan,
 }) => {
+  const { isAdmin, canToggleRole } = useSparkRole();
+  // Client-facing plan upsells stay hidden until CLIENT_BILLING_LAUNCHED.
+  if (!canToggleRole || !isAdmin) return null;
+
   const badge = planBadgeMeta(requiredPlan || "pro");
 
   return (
@@ -25,7 +30,7 @@ export const PlanGateCallout: React.FC<PlanGateCalloutProps> = ({
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className="px-2.5 py-0.5 rounded-full text-xs font-semibold mono"
               style={{ background: badge.bg, color: badge.fg }}

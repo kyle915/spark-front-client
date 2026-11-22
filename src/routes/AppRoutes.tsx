@@ -1786,7 +1786,11 @@ const PilotLinks = {
     },
     {
       path: "/plans-billing",
-      component: <PlansAndBillingPage />,
+      component: (
+        <AdminOnly>
+          <PlansAndBillingPage />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {

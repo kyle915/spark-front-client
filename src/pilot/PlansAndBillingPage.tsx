@@ -24,6 +24,7 @@ import {
   PilotMutationsCreateSubscriptionCheckoutMutation,
   PilotMutationsProvisionProPilotMutation,
   PilotMutationsReverseCanonicalVisitMutation,
+  PilotMutationsRunBillingTestCheckMutation,
   PilotMutationsScheduleStandaloneVisitMutation,
 } from "@/api/mutations/PilotMutations";
 import type { PilotQueriesPlansAndBillingQuery as BillingQueryType } from "@/api/queries/__generated__/PilotQueriesPlansAndBillingQuery.graphql";
@@ -37,6 +38,7 @@ import type { PilotMutationsScheduleStandaloneVisitMutation as ScheduleVisitMuta
 import type { PilotMutationsReverseCanonicalVisitMutation as ReverseVisitMutationType } from "@/api/mutations/__generated__/PilotMutationsReverseCanonicalVisitMutation.graphql";
 import type { PilotMutationsApproveVolumeBandMutation as ApproveVolumeMutationType } from "@/api/mutations/__generated__/PilotMutationsApproveVolumeBandMutation.graphql";
 import type { PilotMutationsProvisionProPilotMutation as ProvisionPilotMutationType } from "@/api/mutations/__generated__/PilotMutationsProvisionProPilotMutation.graphql";
+import type { PilotMutationsRunBillingTestCheckMutation as RunBillingTestCheckMutationType } from "@/api/mutations/__generated__/PilotMutationsRunBillingTestCheckMutation.graphql";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -54,6 +56,7 @@ const PlansAndBillingBody: React.FC<{
     { fetchPolicy: "network-only", fetchKey },
   );
   const ov = data.plansAndBillingOverview;
+  const readiness = data.billingReadiness;
   const usage = ov.usage;
   const badge = planBadgeMeta(ov.effectivePlanCode);
   const statusBadge = subscriptionStatusBadge(ov.subscriptionStatus);
@@ -92,6 +95,10 @@ const PlansAndBillingBody: React.FC<{
   const [commitProvisionPilot, provisioningPilot] =
     useMutation<ProvisionPilotMutationType>(
       PilotMutationsProvisionProPilotMutation,
+    );
+  const [commitBillingTestCheck, runningBillingCheck] =
+    useMutation<RunBillingTestCheckMutationType>(
+      PilotMutationsRunBillingTestCheckMutation,
     );
 
   const [previewModal, setPreviewModal] = useState<PreviewPayload | null>(null);
@@ -368,6 +375,34 @@ const PlansAndBillingBody: React.FC<{
     });
   };
 
+  const handleRunBillingTestCheck = () => {
+    setError(null);
+    commitBillingTestCheck({
+      variables: { tenantUuid: ov.tenantUuid },
+      onCompleted: (res) => {
+        const out = res.runBillingTestCheck;
+        if (!out.ok) {
+          setError(out.error || "Billing readiness test check failed.");
+          return;
+        }
+        setBanner(out.summary || "Billing readiness test check passed.");
+        bump();
+      },
+      onError: (err) => setError(err.message),
+    });
+  };
+
+  const readinessFlags: Array<{ label: string; ok: boolean }> = readiness
+    ? [
+        { label: "Secret key", ok: readiness.secretKeyConfigured },
+        { label: "Publishable key", ok: readiness.publishableKeyConfigured },
+        { label: "Webhook secret", ok: readiness.webhookSecretConfigured },
+        { label: "Core price", ok: readiness.corePriceConfigured },
+        { label: "Pro price", ok: readiness.proPriceConfigured },
+        { label: "Scale price", ok: readiness.scalePriceConfigured },
+      ]
+    : [];
+
   return (
     <div className="space-y-6 max-w-6xl">
       {/* Header */}
@@ -428,6 +463,141 @@ const PlansAndBillingBody: React.FC<{
           ) : null}
         </div>
       </header>
+
+      {/* Ignite-admin Stripe readiness diagnostics (boolean flags only) */}
+      {ov.isIgniteAdmin && readiness ? (
+        <section
+          className="rounded-xl p-5 space-y-4"
+          style={{
+            background: "var(--spark-surface)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p
+                className="text-xs font-bold uppercase tracking-wider mono"
+                style={{ color: "var(--spark-text-secondary)" }}
+              >
+                Admin Billing Readiness & Test Mode
+              </p>
+              <p className="text-sm mt-1 max-w-3xl" style={META}>
+                Client-facing Plans & Billing stays hidden
+                {readiness.clientBillingHidden
+                  ? " (CLIENT_BILLING_LAUNCHED=false)."
+                  : "."}{" "}
+                Stripe {readiness.billingMode.toUpperCase()} · webhook{" "}
+                <span className="mono text-[11px]">
+                  {readiness.webhookEndpointUrl}
+                </span>
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={runningBillingCheck || readiness.billingMode !== "test"}
+              onClick={handleRunBillingTestCheck}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold"
+              style={{
+                background: "var(--pilot-cta-bg)",
+                color: "var(--pilot-cta-fg)",
+              }}
+            >
+              {runningBillingCheck
+                ? "Running check…"
+                : "Run Test-Mode Billing Check"}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {readinessFlags.map((flag) => (
+              <span
+                key={flag.label}
+                className="px-2.5 py-1 rounded-full text-[11px] font-semibold mono"
+                style={{
+                  background: flag.ok
+                    ? "var(--pilot-ok-bg)"
+                    : "var(--pilot-danger-bg)",
+                  color: flag.ok
+                    ? "var(--pilot-ok-fg)"
+                    : "var(--pilot-danger-fg)",
+                  border: flag.ok
+                    ? "1px solid var(--pilot-ok-border)"
+                    : "1px solid var(--pilot-danger-border)",
+                }}
+              >
+                {flag.label}: {flag.ok ? "configured" : "missing"}
+              </span>
+            ))}
+            <span
+              className="px-2.5 py-1 rounded-full text-[11px] font-semibold mono"
+              style={{
+                background: readiness.testSimulationActive
+                  ? "var(--pilot-neutral-bg)"
+                  : "var(--pilot-ok-bg)",
+                color: readiness.testSimulationActive
+                  ? "var(--pilot-neutral-fg)"
+                  : "var(--pilot-ok-fg)",
+              }}
+            >
+              {readiness.testSimulationActive
+                ? "Local test simulator"
+                : "Remote Stripe test API"}
+            </span>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-3 text-xs" style={META}>
+            <div>
+              Recent webhooks (30d):{" "}
+              <strong style={{ color: "var(--spark-text)" }}>
+                {readiness.recentWebhookCount}
+              </strong>
+            </div>
+            <div>
+              Failed:{" "}
+              <strong style={{ color: "var(--spark-text)" }}>
+                {readiness.failedWebhookCount}
+              </strong>
+            </div>
+            <div>
+              Last:{" "}
+              <strong style={{ color: "var(--spark-text)" }}>
+                {readiness.lastWebhookEventType || "—"}
+                {readiness.lastWebhookStatus
+                  ? ` (${readiness.lastWebhookStatus})`
+                  : ""}
+              </strong>
+            </div>
+          </div>
+
+          {readiness.recentWebhooks.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr style={META}>
+                    <th className="py-1.5 pr-3 font-semibold">Event</th>
+                    <th className="py-1.5 pr-3 font-semibold">Status</th>
+                    <th className="py-1.5 pr-3 font-semibold">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {readiness.recentWebhooks.slice(0, 5).map((ev) => (
+                    <tr
+                      key={ev.stripeEventId}
+                      style={{ borderTop: "1px solid var(--spark-border)" }}
+                    >
+                      <td className="py-1.5 pr-3 mono">{ev.eventType}</td>
+                      <td className="py-1.5 pr-3">{ev.processingStatus}</td>
+                      <td className="py-1.5 pr-3" style={META}>
+                        {ev.processedAt.slice(0, 19).replace("T", " ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* Pilot / Payment Failure / Paid-Through Alerts */}
       {ov.isPilot ? (

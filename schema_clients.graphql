@@ -6923,6 +6923,7 @@ type Mutation {
   cancelSubscription(immediate: Boolean! = false, reason: String! = ""): PilotMutationOutcome!
   approveVolumeBandOrOverage(agreedVolumeBandVisits: Int = null, overageAgreementApproved: Boolean! = false, overageUnitPriceUsd: String = null): PilotMutationOutcome!
   provisionProPilotWorkspace(tenantUuid: String!, pilotFeeUsd: String! = "1500.00", durationDays: Int! = 60, includedVisitsMonthly: Int! = 100): PilotMutationOutcome!
+  runBillingTestCheck(tenantUuid: String = null): BillingTestCheckOutcome!
 }
 
 type MutationNormalOutput {
@@ -7529,6 +7530,46 @@ type PlansAndBillingView {
   usage: MonthlyVisitUsageView!
   availablePlans: [PlanTierCardItem!]!
   openCheckouts: [OpenCheckoutItem!]!
+}
+
+type BillingWebhookHealthItem {
+  stripeEventId: String!
+  eventType: String!
+  processingStatus: String!
+  livemode: Boolean!
+  processedAt: String!
+  note: String!
+}
+
+type BillingReadinessView {
+  billingMode: String!
+  billingEnabled: Boolean!
+  clientBillingHidden: Boolean!
+  secretKeyConfigured: Boolean!
+  publishableKeyConfigured: Boolean!
+  webhookSecretConfigured: Boolean!
+  corePriceConfigured: Boolean!
+  proPriceConfigured: Boolean!
+  scalePriceConfigured: Boolean!
+  testSimulationActive: Boolean!
+  webhookEndpointUrl: String!
+  recentWebhookCount: Int!
+  failedWebhookCount: Int!
+  lastWebhookAt: String
+  lastWebhookEventType: String
+  lastWebhookStatus: String
+  recentWebhooks: [BillingWebhookHealthItem!]!
+}
+
+type BillingTestCheckOutcome {
+  ok: Boolean!
+  error: String
+  billingMode: String!
+  transport: String!
+  signatureVerified: Boolean!
+  idempotencyVerified: Boolean!
+  probeEventId: String
+  summary: String!
 }
 
 type PortalSessionOutcome {
@@ -8172,6 +8213,7 @@ type Query {
   onboardingState: OnboardingStateView!
   plansAndBillingOverview: PlansAndBillingView!
   previewSubscriptionPlanChange(targetPlanCode: String!): SubscriptionChangePreview!
+  billingReadiness: BillingReadinessView!
 }
 
 """

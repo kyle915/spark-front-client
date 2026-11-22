@@ -833,3 +833,18 @@ export const PilotMutationsProvisionProPilotMutation = graphql`
   }
 `;
 
+export const PilotMutationsRunBillingTestCheckMutation = graphql`
+  mutation PilotMutationsRunBillingTestCheckMutation($tenantUuid: String) {
+    runBillingTestCheck(tenantUuid: $tenantUuid) {
+      ok
+      error
+      billingMode
+      transport
+      signatureVerified
+      idempotencyVerified
+      probeEventId
+      summary
+    }
+  }
+`;
+

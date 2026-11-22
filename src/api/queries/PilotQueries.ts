@@ -762,6 +762,32 @@ export const PilotQueriesPlansAndBillingQuery = graphql`
         effectiveSummary
       }
     }
+    billingReadiness {
+      billingMode
+      billingEnabled
+      clientBillingHidden
+      secretKeyConfigured
+      publishableKeyConfigured
+      webhookSecretConfigured
+      corePriceConfigured
+      proPriceConfigured
+      scalePriceConfigured
+      testSimulationActive
+      webhookEndpointUrl
+      recentWebhookCount
+      failedWebhookCount
+      lastWebhookAt
+      lastWebhookEventType
+      lastWebhookStatus
+      recentWebhooks {
+        stripeEventId
+        eventType
+        processingStatus
+        livemode
+        processedAt
+        note
+      }
+    }
   }
 `;
 

@@ -4,6 +4,7 @@ import { fetchQuery, commitMutation } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import { TenantQuery } from "@/api/queries/TenantQuery";
 import { rememberTenantRecent } from "@/layout/tenantPickerPrefs";
 import type { SwitchableTenant } from "@/lib/tenantDeepLink";
@@ -398,6 +399,8 @@ const AuthenticatedOnboardingWizard: React.FC<{
   bump: () => void;
 }> = ({ fetchKey, bump }) => {
   const navigate = useNavigate();
+  const { isAdmin, canToggleRole } = useSparkRole();
+  const showBillingLinks = canToggleRole && isAdmin;
   const data = useLazyLoadQuery<OnboardingStateQueryType>(
     PilotQueriesOnboardingStateQuery,
     {},
@@ -622,17 +625,19 @@ const AuthenticatedOnboardingWizard: React.FC<{
           >
             Open Workspace →
           </button>
-          <button
-            type="button"
-            onClick={() => navigate("/plans-billing")}
-            className="px-3.5 py-2 rounded-lg text-xs font-bold"
-            style={{
-              background: "var(--pilot-cta-bg)",
-              color: "var(--pilot-cta-fg)",
-            }}
-          >
-            Plans & Visit Meter →
-          </button>
+          {showBillingLinks ? (
+            <button
+              type="button"
+              onClick={() => navigate("/plans-billing")}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold"
+              style={{
+                background: "var(--pilot-cta-bg)",
+                color: "var(--pilot-cta-fg)",
+              }}
+            >
+              Plans & Visit Meter →
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -1128,6 +1133,8 @@ const AuthenticatedOnboardingWizard: React.FC<{
 
 export const SelfServeOnboardingPage: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { isAdmin, canToggleRole } = useSparkRole();
+  const showBillingLinks = canToggleRole && isAdmin;
   const [fetchKey, setFetchKey] = useState(0);
   const bump = () => setFetchKey((k) => k + 1);
 
@@ -1153,7 +1160,7 @@ export const SelfServeOnboardingPage: React.FC = () => {
               Standalone Brand Workspace Onboarding
             </span>
           </div>
-          {isAuthenticated ? (
+          {isAuthenticated && showBillingLinks ? (
             <Link
               to="/plans-billing"
               className="text-xs font-semibold mono hover:underline"
@@ -1161,13 +1168,21 @@ export const SelfServeOnboardingPage: React.FC = () => {
             >
               Plans, Usage Meter & Billing →
             </Link>
-          ) : (
+          ) : !isAuthenticated ? (
             <Link
               to="/login"
               className="text-xs font-semibold hover:underline"
               style={{ color: "var(--spark-text-secondary)" }}
             >
               Sign in to existing account →
+            </Link>
+          ) : (
+            <Link
+              to="/workspace"
+              className="text-xs font-semibold hover:underline"
+              style={{ color: "var(--spark-text-secondary)" }}
+            >
+              Open Workspace →
             </Link>
           )}
         </header>
