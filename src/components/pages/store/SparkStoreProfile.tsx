@@ -11,6 +11,7 @@ import { useAuthStore } from "@/store/authStore";
 import { StoreProfileQuery } from "@/api/queries/StoreProfileQuery";
 import type { StoreProfileQuery as StoreProfileQueryType } from "@api/queries/__generated__/StoreProfileQuery.graphql";
 import { barSeries, chartOptions } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 import {
   activationLabel,
   count,
@@ -84,6 +85,7 @@ const Message: React.FC<{ children: ReactNode }> = ({ children }) => (
 );
 
 const Inner: React.FC<{ tenantId: string; storeKey: string }> = ({ tenantId, storeKey }) => {
+  useAppearance();
   const data = useLazyLoadQuery<StoreProfileQueryType>(
     StoreProfileQuery,
     { tenantId, storeKey },

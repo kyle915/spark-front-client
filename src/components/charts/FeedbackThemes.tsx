@@ -13,6 +13,7 @@ import { labelsEveryRow } from "@/lib/chartRows";
 import { shortLabel } from "@/lib/consumerBreakdown";
 import { recapsLabel, themeBars, themeSections, themesBasis } from "@/lib/feedbackThemes";
 import { barSeries, chartOptions, valueLabels } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 const everyValue = valueLabels("all");
 
@@ -44,6 +45,7 @@ const Quiet: React.FC<{ children: ReactNode; action?: ReactNode }> = ({ children
 );
 
 const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+  useAppearance();
   const { isAdmin } = useSparkRole();
   const data = useLazyLoadQuery<TenantFeedbackThemesQueryType>(
     TenantFeedbackThemesQuery,

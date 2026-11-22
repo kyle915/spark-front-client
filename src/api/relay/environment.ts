@@ -1,7 +1,9 @@
 import { Environment, Network, RecordSource, Store } from "relay-runtime";
+import { useSyncExternalStore } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { noteLegalGate } from "@/legal/acceptance/legalGateStore";
+import { resetHotRelayDataPrefetch } from "@/lib/prefetchHotRelayData";
 import {
   findGuardrailError,
   guardrailFromStatus,
@@ -23,17 +25,119 @@ import type {
  * server can't tell which one a page means; it uses this when they are a
  * member of it (spark-api utils/graphql/mixins.py, X-Spark-Tenant).
  */
+function readLocalStorage(key: string): string | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* ignore quota / non-browser env */
+  }
+}
+
 function selectedTenantHeader(): Record<string, string> {
-  const uuid = useAuthStore.getState().tenantUuid;
+  const uuid =
+    useAuthStore.getState().tenantUuid ?? readLocalStorage("@tenantUuid");
   return uuid ? { "X-Spark-Tenant": uuid } : {};
 }
 
-async function fetchGraphQL(
-  params: RequestParameters,
-  variables: Variables
-): Promise<GraphQLResponse> {
-  const token = localStorage.getItem("@token");
+const REFRESH_TOKEN_MUTATION = `
+  mutation RefreshToken($input: RefreshTokenInput!) {
+    refreshToken(input: $input) {
+      success
+      errors
+      token {
+        token
+      }
+    }
+  }
+`;
 
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * Single-flight JWT refresh so concurrent requests hitting an expired token
+ * share one refreshToken network round-trip.
+ */
+async function refreshAccessTokenSingleFlight(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  const { refreshToken, logout } = useAuthStore.getState();
+  const storedRefresh = refreshToken ?? readLocalStorage("@refreshToken");
+  if (!storedRefresh) {
+    logout();
+    useAlertStore
+      .getState()
+      .showAlert("Session expired. Please login again.", "error");
+    return null;
+  }
+
+  refreshInFlight = (async () => {
+    try {
+      const refreshResponse = await fetch(
+        import.meta.env.VITE_GRAPHQL_ENDPOINT,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: REFRESH_TOKEN_MUTATION,
+            variables: { input: { refreshToken: storedRefresh } },
+          }),
+        },
+      );
+      const refreshResult = await refreshResponse.json();
+      const refreshData = refreshResult?.data?.refreshToken;
+      if (refreshData?.success && refreshData?.token?.token) {
+        const newToken: string = refreshData.token.token;
+        writeLocalStorage("@token", newToken);
+        useAuthStore.setState({
+          token: newToken,
+          refreshToken: storedRefresh,
+        });
+        return newToken;
+      }
+      throw new Error("Refresh failed");
+    } catch {
+      logout();
+      useAlertStore
+        .getState()
+        .showAlert("Session expired. Please login again.", "error");
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
+function isTokenExpiredErrors(errors: unknown): boolean {
+  if (!Array.isArray(errors)) return false;
+  return errors.some((error) => {
+    const msg = String(
+      (error as { message?: unknown } | null)?.message ?? "",
+    ).toLowerCase();
+    return (
+      msg.includes("signature has expired") ||
+      msg.includes("introspection is disabled") ||
+      msg.includes("error decoding signature")
+    );
+  });
+}
+
+async function postGraphQLOnce(
+  query: string,
+  variables: Variables,
+  token: string | null,
+): Promise<GraphQLResponse> {
   const response = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
@@ -42,7 +146,7 @@ async function fetchGraphQL(
       ...selectedTenantHeader(),
     },
     body: JSON.stringify({
-      query: params.text,
+      query,
       variables,
     }),
   });
@@ -64,100 +168,28 @@ async function fetchGraphQL(
     } as unknown as GraphQLResponse;
   }
 
-  const result = await response.json();
+  return (await response.json()) as GraphQLResponse;
+}
+
+async function fetchGraphQLRaw(
+  query: string,
+  variables: Variables,
+): Promise<GraphQLResponse> {
+  const token =
+    readLocalStorage("@token") ?? useAuthStore.getState().token ?? null;
+  const result = await postGraphQLOnce(query, variables, token);
 
   // Terms not accepted yet (LEGAL_ACCEPTANCE_REQUIRED): show the clickwrap.
   noteLegalGate(result);
 
-  // Check for token expiration error
-  if (result.errors) {
-    const isTokenExpired = result.errors.some((error: { message: string }) => {
-      const msg = error.message.toLowerCase();
-      return (
-        msg.includes("signature has expired") ||
-        msg.includes("introspection is disabled") ||
-        msg.includes("error decoding signature")
-      );
-    });
+  const body = result as { errors?: unknown };
+  if (isTokenExpiredErrors(body.errors)) {
+    const newToken = await refreshAccessTokenSingleFlight();
+    if (!newToken) return result;
 
-    if (isTokenExpired) {
-      const { refreshToken, logout } = useAuthStore.getState();
-
-      if (!refreshToken) {
-        logout();
-        useAlertStore
-          .getState()
-          .showAlert("Session expired. Please login again.", "error");
-        return result;
-      }
-
-      try {
-        // Attempt to refresh the token
-        const refreshResponse = await fetch(
-          import.meta.env.VITE_GRAPHQL_ENDPOINT,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              query: `
-                           mutation RefreshToken($input: RefreshTokenInput!) {
-                            refreshToken(input: $input) {
-                                success
-                                errors
-                                token {
-                                token
-                                }
-                            }
-}
-                        `,
-              variables: { input: { refreshToken } },
-            }),
-          }
-        );
-
-        const refreshResult = await refreshResponse.json();
-        const refreshData = refreshResult.data?.refreshToken;
-
-        if (refreshData?.success && refreshData?.token?.token) {
-          const newToken = refreshData.token.token;
-          // Update store and local storage
-          localStorage.setItem("@token", newToken);
-          useAuthStore.setState({
-            token: newToken,
-            refreshToken: refreshToken, // Keep old as it's not returned in new mutation
-          });
-
-          // Retry original request with new token
-          const retryResponse = await fetch(
-            import.meta.env.VITE_GRAPHQL_ENDPOINT,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `JWT ${newToken}`,
-                ...selectedTenantHeader(),
-              },
-              body: JSON.stringify({
-                query: params.text,
-                variables,
-              }),
-            }
-          );
-
-          const retried = await retryResponse.json();
-          noteLegalGate(retried);
-          return retried;
-        } else {
-          throw new Error("Refresh failed");
-        }
-      } catch {
-        logout();
-        useAlertStore
-          .getState()
-          .showAlert("Session expired. Please login again.", "error");
-        return result; // Return original error
-      }
-    }
+    const retried = await postGraphQLOnce(query, variables, newToken);
+    noteLegalGate(retried);
+    return retried;
   }
 
   return result;
@@ -172,22 +204,64 @@ async function fetchGraphQL(
  * server sent no data.
  */
 function surfaceGuardrail(
-  params: RequestParameters,
+  operationKind: "query" | "mutation" | "subscription",
   response: GraphQLResponse,
 ): GraphQLResponse {
   const body = response as { data?: unknown; errors?: unknown };
   const hit = findGuardrailError(body.errors);
   if (!hit) return response;
   useAlertStore.getState().showGuardrail(hit);
-  if (body.data == null || params.operationKind === "mutation") {
+  if (body.data == null || operationKind === "mutation") {
     throw new GuardrailError(hit);
   }
   return response;
 }
 
+export interface AuthenticatedGraphQLResult<
+  TData = Record<string, unknown>,
+> {
+  data?: TData | null;
+  errors?: Array<{
+    message: string;
+    extensions?: Record<string, unknown>;
+  }>;
+}
+
+export interface ExecuteAuthenticatedGraphQLOptions {
+  operationName?: string;
+  operationKind?: "query" | "mutation";
+}
+
+function inferOperationKind(query: string): "query" | "mutation" {
+  return /^\s*mutation\b/i.test(query) ? "mutation" : "query";
+}
+
+/**
+ * Shared authenticated GraphQL helper for imperative callers outside Relay's
+ * codegen hooks (approvals batch actions, XLSX bulk upload, brand launch
+ * wizard). Carries `X-Spark-Tenant`, legal-gate handling, single-flight JWT
+ * refresh + retry, guardrail toasts, and post-mutation sidebar count refresh.
+ */
+export async function executeAuthenticatedGraphQL<
+  TData = Record<string, unknown>,
+>(
+  query: string,
+  variables: Variables = {},
+  options: ExecuteAuthenticatedGraphQLOptions = {},
+): Promise<AuthenticatedGraphQLResult<TData>> {
+  const operationKind = options.operationKind ?? inferOperationKind(query);
+  const raw = await fetchGraphQLRaw(query, variables);
+  const checked = surfaceGuardrail(operationKind, raw);
+  const typed = checked as unknown as AuthenticatedGraphQLResult<TData>;
+  if (operationKind === "mutation" && !typed.errors?.length && typed.data != null) {
+    scheduleCountsRefresh(environment);
+  }
+  return typed;
+}
+
 function fetchRelay(params: RequestParameters, variables: Variables) {
-  const pending = fetchGraphQL(params, variables).then((response) =>
-    surfaceGuardrail(params, response),
+  const pending = fetchGraphQLRaw(params.text ?? "", variables).then(
+    (response) => surfaceGuardrail(params.operationKind, response),
   );
   // Anything that changed data may have changed a count somewhere: re-read
   // the shared counts so badges, tabs and tiles match without a reload.
@@ -201,9 +275,11 @@ function fetchRelay(params: RequestParameters, variables: Variables) {
   return pending;
 }
 
+const recordSource = new RecordSource();
+
 const environment = new Environment({
   network: Network.create(fetchRelay),
-  store: new Store(new RecordSource()),
+  store: new Store(recordSource),
   getDataID: (payload) => {
     if (payload.__typename && payload.id != null) {
       return `${payload.__typename}:${payload.id}`;
@@ -213,5 +289,46 @@ const environment = new Environment({
 });
 
 startCountsHeartbeat(environment);
+
+let workspaceEpoch = 0;
+const workspaceListeners = new Set<() => void>();
+
+function subscribeWorkspaceEpoch(listener: () => void): () => void {
+  workspaceListeners.add(listener);
+  return () => {
+    workspaceListeners.delete(listener);
+  };
+}
+
+function getWorkspaceEpoch(): number {
+  return workspaceEpoch;
+}
+
+/**
+ * Monotonically increasing epoch bumped on explicit workspace switches so
+ * AuthenticatedShell remounts active route queries cleanly without reloading
+ * the browser tab or unmounting sidebar/topbar chrome.
+ */
+export function useWorkspaceEpoch(): number {
+  return useSyncExternalStore(
+    subscribeWorkspaceEpoch,
+    getWorkspaceEpoch,
+    getWorkspaceEpoch,
+  );
+}
+
+/**
+ * Clear cached tenant records in Relay's RecordSource, re-key active route
+ * queries, and refresh sidebar counts — zero full-tab reload required.
+ */
+export function resetRelayStore(): void {
+  recordSource.clear();
+  resetHotRelayDataPrefetch();
+  workspaceEpoch += 1;
+  for (const listener of workspaceListeners) {
+    listener();
+  }
+  scheduleCountsRefresh(environment, 0);
+}
 
 export default environment;

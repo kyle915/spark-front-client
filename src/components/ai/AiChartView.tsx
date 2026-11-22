@@ -11,6 +11,7 @@ import {
   seriesColor,
   valueLabels,
 } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 /**
  * The optional chart an Ask-AI answer can carry: `{ type, title, labels,
@@ -43,6 +44,7 @@ const dataset = (s: AiChartSeries, isLine: boolean, color?: string, area = false
     : { type: "bar" as const, ...barSeries({ label: s.label, data: [...s.data], color }) };
 
 const AiChartView: React.FC<{ chart: AiChart }> = ({ chart }) => {
+  useAppearance();
   const isLine = chart.type === "line";
   const type = isLine ? "line" : "bar";
   const labels = [...chart.labels];

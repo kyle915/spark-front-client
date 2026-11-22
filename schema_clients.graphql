@@ -6541,6 +6541,8 @@ type QuarterOption {
 
 type Query {
   myLegalStatus: LegalStatus!
+  jumpSearch(q: String!, tenantId: ID = null, first: Int = null): JumpSearchResult!
+  tenantRequestsRollup(tenantId: ID = null, startDate: Date = null, endDate: Date = null, dateField: String! = "date"): TenantRequestsRollup!
   legalAcceptanceReport(pendingOnly: Boolean! = false, search: String = null): LegalAcceptanceReport!
   """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
   myAiConnections: AiConnectorInfo!
@@ -11349,4 +11351,76 @@ input UpdateClockLinkInput {
   tenantId: ID = null
   clearTenant: Boolean! = false
   sheetUrl: String = null
+}
+
+type JumpAmbassadorHit {
+  uuid: String!
+  name: String!
+  email: String
+}
+
+type JumpClientHit {
+  uuid: String!
+  name: String!
+  email: String
+  tenantUuid: String
+  tenantName: String
+}
+
+type JumpEventHit {
+  uuid: String!
+  name: String!
+  date: String
+  address: String
+  retailerName: String
+}
+
+type JumpRecapHit {
+  uuid: String!
+  kind: String!
+  name: String!
+  approved: Boolean!
+  eventDate: String
+}
+
+type JumpRequestHit {
+  uuid: String!
+  name: String!
+  date: String
+  retailerName: String
+}
+
+type JumpStoreHit {
+  key: String!
+  storeKey: String
+  name: String!
+  address: String
+  city: String
+  state: String
+}
+
+type JumpSearchResult {
+  requests: [JumpRequestHit!]!
+  events: [JumpEventHit!]!
+  stores: [JumpStoreHit!]!
+  recaps: [JumpRecapHit!]!
+  ambassadors: [JumpAmbassadorHit!]!
+  clients: [JumpClientHit!]!
+}
+
+type RequestDayBucket {
+  date: String!
+  count: Int!
+}
+
+type RequestNamedBucket {
+  name: String!
+  count: Int!
+}
+
+type TenantRequestsRollup {
+  totalCount: Int!
+  byDay: [RequestDayBucket!]!
+  byRequestType: [RequestNamedBucket!]!
+  topRetailers: [RequestNamedBucket!]!
 }

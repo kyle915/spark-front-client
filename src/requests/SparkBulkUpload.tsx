@@ -2,7 +2,9 @@ import { Suspense, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import * as XLSX from "xlsx";
-import environment from "@api/relay/environment";
+import environment, {
+  executeAuthenticatedGraphQL,
+} from "@api/relay/environment";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -55,19 +57,9 @@ async function postGql<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
-  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
+  const json = await executeAuthenticatedGraphQL<T>(query, variables);
   if (json.errors?.length) {
-    throw new Error(
-      json.errors.map((e: { message: string }) => e.message).join("; "),
-    );
+    throw new Error(json.errors.map((e) => e.message).join("; "));
   }
   return json.data as T;
 }
