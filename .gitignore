@@ -151,3 +151,7 @@ TASKS.md
 
 # Markdown copies written by scripts/legal/export-legal.mjs
 /legal-export/
+
+# Playwright
+playwright-report/
+test-results/

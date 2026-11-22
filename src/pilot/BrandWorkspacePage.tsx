@@ -385,7 +385,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                           }}
                           className="px-2.5 py-1 rounded-lg text-xs font-semibold"
                           style={{
-                            color: "#ef5a2a",
+                            color: "var(--spark-flag-ink, #a8340f)",
                             border: "1px solid rgba(239,90,42,0.4)",
                           }}
                         >
@@ -581,7 +581,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                               })
                             }
                             className="px-2.5 py-1 rounded-lg font-semibold"
-                            style={{ color: "#ef5a2a", ...BORDER }}
+                            style={{ color: "var(--spark-flag-ink, #a8340f)", ...BORDER }}
                           >
                             Decline
                           </button>
@@ -657,7 +657,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                               }
                               className="px-2.5 py-1 rounded-lg text-xs"
                               style={{
-                                color: "#ef5a2a",
+                                color: "var(--spark-flag-ink, #a8340f)",
                                 border: "1px solid rgba(239,90,42,0.35)",
                               }}
                             >

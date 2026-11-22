@@ -393,7 +393,10 @@ const BuyerReportBody: React.FC<{
                           })
                         }
                         className="px-3 py-1 rounded-lg font-semibold"
-                        style={{ color: "#ef5a2a", ...BORDER }}
+                        style={{
+                          color: "var(--spark-flag-ink, #a8340f)",
+                          ...BORDER,
+                        }}
                       >
                         Decline
                       </button>

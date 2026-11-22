@@ -121,10 +121,16 @@ const PillGroup: React.FC<{
           onClick={() => onChange(o.value)}
           className={[
             "px-3 py-1 rounded-full text-xs transition flex items-center gap-1.5 active:scale-[0.98]",
-            on
-              ? "bg-primary text-primary-content font-semibold"
-              : "text-base-content/65 hover:text-base-content",
+            on ? "font-semibold" : "hover:opacity-100",
           ].join(" ")}
+          style={
+            on
+              ? {
+                  background: "var(--color-primary)",
+                  color: "var(--color-primary-content)",
+                }
+              : { color: "var(--spark-text-secondary)" }
+          }
         >
           {o.icon && (
             <span className="mono text-[11px]" aria-hidden>
@@ -301,12 +307,19 @@ export const SparkTopbar: React.FC = () => {
           type="button"
           data-spark-jump
           onClick={(e) => openJump(e.currentTarget)}
-          className="spark-focus-ring flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition active:scale-[0.98]"
+          className="spark-focus-ring flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs transition active:scale-[0.98] hover:text-primary hover:border-primary"
+          style={{ color: "var(--spark-text-secondary)" }}
           aria-label="Jump to a page or recap"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Jump</span>
-          <span className="hidden sm:inline ml-3 mono text-[10px] px-1.5 py-0.5 rounded bg-base-300 text-base-content/55 border border-base-300">
+          <span
+            className="hidden sm:inline ml-3 mono text-[10px] px-1.5 py-0.5 rounded border border-base-300"
+            style={{
+              background: "var(--color-base-300)",
+              color: "var(--spark-text-secondary)",
+            }}
+          >
             ⌘K
           </span>
         </button>

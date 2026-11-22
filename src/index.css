@@ -493,7 +493,8 @@ code, kbd, samp, pre, .mono-code {
   --spark-on-accent: #ffffff;
   --spark-lime: #14160f;
   --spark-lime-dim: #3a3d33;
-  --spark-orange: #d2481b;
+  /* White badge digits on orange must clear WCAG AA 4.5:1 (#d2481b was 4.48). */
+  --spark-orange: #c2410c;
   --spark-sky: #1f7fc0;
   --spark-purple: #6b55b5;
   --spark-bg: #f6f6f2;
@@ -558,6 +559,12 @@ code, kbd, samp, pre, .mono-code {
 [data-theme="spark-v2"][data-spark-mode="light"] .chip-orange { background: rgba(210, 72, 27, 0.1); }
 [data-spark-mode="light"] .chip-sky,
 [data-theme="spark-v2"][data-spark-mode="light"] .chip-sky { background: rgba(31, 127, 192, 0.1); }
+/* Muted chips: 0.55 ink on cream is ~3.9:1 — bump for WCAG AA on interactive chips. */
+[data-spark-mode="light"] .chip-muted,
+[data-theme="spark-v2"][data-spark-mode="light"] .chip-muted {
+  color: rgba(20, 22, 15, 0.78);
+  background: rgba(20, 22, 15, 0.06);
+}
 
 /* The navigation rail stays dark in light mode — it frames the page and
    keeps the Spark mark on its own ground. Re-declare the dark values on the
@@ -1800,14 +1807,15 @@ a.spark-upcoming-row:focus-visible {
   border-radius: 9999px;
   font-size: 0.78rem;
   font-weight: 500;
-  color: rgba(var(--spark-ink-rgb), 0.55);
+  /* 0.55 ink washed out under AA on light cream; keep muted but readable. */
+  color: rgba(var(--spark-ink-rgb), 0.72);
   border: none;
   background: transparent;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: "Space Grotesk", sans-serif;
 }
-.pill-btn:hover { color: rgba(var(--spark-ink-rgb), 0.85); }
+.pill-btn:hover { color: rgba(var(--spark-ink-rgb), 0.92); }
 /* Selected segment: a quiet "you are here", not a filled button. The solid
    accent fill is reserved for a screen's one primary action. */
 .pill-btn.on {
@@ -1883,8 +1891,10 @@ a.spark-upcoming-row:focus-visible {
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
-/* Needs someone. The sidebar is dark in both appearances, so these are fixed. */
-.nav-badge--alert { background: #ef5a2a; color: #ffffff; }
+/* Needs someone. The sidebar is dark in both appearances, so these are fixed.
+   White on #ef5a2a is only ~3.4:1 — use a deeper orange so badge digits clear
+   WCAG AA 4.5:1 (white on #c2410c ≈ 5.2:1). */
+.nav-badge--alert { background: #c2410c; color: #ffffff; }
 /* Something new to read. */
 .nav-badge--new { background: #f2f3ee; color: #14160f; }
 /* A plain count. */
