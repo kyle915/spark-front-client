@@ -1,22 +1,22 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ChevronDownIcon, StarIcon } from "@heroicons/react/24/solid";
 import { StarIcon as StarOutlineIcon } from "@heroicons/react/24/outline";
 import { TenantQuery } from "@/api/queries/TenantQuery";
 import type { TenantQuery as TenantQueryType } from "@/api/queries/__generated__/TenantQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
-import { useTenantSelection } from "@/hooks/useTenantSelection";
+import useSparkRole from "@/hooks/useSparkRole";
 import { TenantLogo } from "./TenantLogo.tsx";
 import {
   groupTenantsByLetter,
   loadTenantFavorites,
   loadTenantRecents,
-  rememberTenantRecent,
   tenantMatchesQuery,
   TENANT_PICKER_MAX_FAVORITES,
   toggleTenantFavorite,
 } from "./tenantPickerPrefs";
+import { switchWorkspace } from "./workspaceSwitch";
 
 /**
  * Inline tenant switcher for the Spark v2 sidebar.
@@ -39,7 +39,8 @@ const sectionLabel =
 
 export const TenantPicker: React.FC = () => {
   const { user, tenantUuid } = useAuthStore();
-  const { selectTenant } = useTenantSelection();
+  const { isClient } = useSparkRole();
+  const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -141,19 +142,26 @@ export const TenantPicker: React.FC = () => {
   const current = tenants.find((t) => t.uuid === tenantUuid) ?? tenants[0];
 
   const onPick = (t: TenantNode) => {
-    rememberTenantRecent(t.uuid);
-    setRecents(loadTenantRecents());
-    selectTenant({
-      tenantUuid: t.uuid,
-      tenantId: t.id,
-      logo: t.image,
-      requestUrlName: t.requestUrlName,
-      tenantSlug: t.tenantSlug,
-      checkinCode: t.checkinCode,
-    });
     setOpen(false);
-    navigate("/", { replace: true });
-    setTimeout(() => window.location.reload(), 50);
+    switchWorkspace(
+      {
+        id: t.id,
+        uuid: t.uuid,
+        name: t.name,
+        logo: t.image,
+        requestUrlName: t.requestUrlName,
+        tenantSlug: t.tenantSlug,
+        checkinCode: t.checkinCode,
+      },
+      {
+        pathname: location.pathname,
+        search: location.search,
+        hash: location.hash,
+        isClient,
+        navigate,
+      },
+    );
+    setRecents(loadTenantRecents());
   };
 
   const onToggleFavorite = (

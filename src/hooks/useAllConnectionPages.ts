@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import {
   fetchQuery,
   useLazyLoadQuery,
@@ -23,9 +23,9 @@ import type {
  * Admins are not clamped, so their first page already holds `first` rows
  * and nothing more is fetched: their requests are exactly what they were.
  *
- * The first page suspends like any `useLazyLoadQuery`; later pages arrive
- * after it (`loadingMore` while they do). The query must take `$after` and
- * select `pageInfo { hasNextPage endCursor }` on the connection.
+ * Extra pages commit in low-priority batches (`CONNECTION_COMMIT_BATCH_PAGES`)
+ * wrapped in `startTransition` so walking 1,600–5,000 rows does not force
+ * 8–25 synchronous chart/table re-renders.
  */
 
 /** The most rows the server returns per request to a brand user. */
@@ -33,6 +33,9 @@ export const BRAND_PAGE_CAP = 200;
 
 /** A guard against a runaway walk, not a target. */
 export const MAX_EXTRA_PAGES = 25;
+
+/** Flush intermediate cursor pages to React state every N pages. */
+export const CONNECTION_COMMIT_BATCH_PAGES = 4;
 
 type Edge<N> = { readonly node?: N | null } | null | undefined;
 
@@ -99,6 +102,8 @@ export function useAllConnectionPages<Q extends OperationType, N>(
     /** Stop once this many rows are in hand. Defaults to `variables.first`. */
     maxNodes?: number;
     keyOf?: (n: N) => string;
+    /** Commit intermediate progress every N extra pages (default 4). */
+    commitEveryPages?: number;
   } = {},
 ): {
   data: Q["response"];
@@ -109,6 +114,10 @@ export function useAllConnectionPages<Q extends OperationType, N>(
   const environment = useRelayEnvironment();
   const maxNodes =
     options.maxNodes ?? variables.first ?? Number.POSITIVE_INFINITY;
+  const commitEveryPages = Math.max(
+    1,
+    options.commitEveryPages ?? CONNECTION_COMMIT_BATCH_PAGES,
+  );
   const data = useLazyLoadQuery<Q>(query, variables, {
     fetchPolicy: options.fetchPolicy ?? "store-or-network",
     fetchKey: options.fetchKey,
@@ -127,10 +136,10 @@ export function useAllConnectionPages<Q extends OperationType, N>(
       return;
     }
     setLoadingMore(true);
+    const pages: N[][] = [];
     (async () => {
       let cursor = firstConnection?.pageInfo?.endCursor ?? null;
       let have = firstNodes.length;
-      const pages: N[][] = [];
       for (let page = 0; cursor && page < MAX_EXTRA_PAGES; page += 1) {
         const res = await fetchQuery<Q>(
           environment,
@@ -144,17 +153,36 @@ export function useAllConnectionPages<Q extends OperationType, N>(
         const rows = connectionNodes(connection);
         pages.push(rows);
         have += rows.length;
-        setRest([...pages]);
-        if (rows.length === 0 || !wantsAnotherPage(connection, have, maxNodes)) {
+        const shouldContinue =
+          rows.length > 0 && wantsAnotherPage(connection, have, maxNodes);
+        if (!shouldContinue) {
           break;
+        }
+        if (pages.length % commitEveryPages === 0) {
+          const snapshot = [...pages];
+          startTransition(() => {
+            setRest(snapshot);
+          });
         }
         cursor = connection?.pageInfo?.endCursor ?? null;
       }
-      if (!cancelled) setLoadingMore(false);
+      if (!cancelled) {
+        const finalPages = [...pages];
+        startTransition(() => {
+          setRest(finalPages);
+          setLoadingMore(false);
+        });
+      }
     })().catch(() => {
       // The network layer already told the person (e.g. a rate limit);
-      // keep the rows we have.
-      if (!cancelled) setLoadingMore(false);
+      // keep the rows we already fetched.
+      if (!cancelled) {
+        const partial = [...pages];
+        startTransition(() => {
+          if (partial.length > 0) setRest(partial);
+          setLoadingMore(false);
+        });
+      }
     });
     return () => {
       cancelled = true;
@@ -162,7 +190,7 @@ export function useAllConnectionPages<Q extends OperationType, N>(
     // variablesKey stands in for `variables` (a new object every render);
     // `select` / `query` are stable per call site.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [environment, data, variablesKey, maxNodes]);
+  }, [environment, data, variablesKey, maxNodes, commitEveryPages]);
 
   const nodes = useMemo(
     () =>

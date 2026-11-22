@@ -17,6 +17,7 @@ import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__gene
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import { CountReel } from "@/motion/CountReel";
 import { inkRgba } from "@/theme/chartInk";
+import { useAppearance } from "@/theme/appearance";
 
 /**
  * Phase 1 KPI panel for the dashboards.
@@ -74,6 +75,7 @@ const TrendChart: React.FC<{
   series: readonly TrendSeries[];
   note?: string | null;
 }> = ({ data, series, note }) => {
+  useAppearance();
   const { labels, measures, recaps } = useMemo(
     () => splitMonthlyTrend(data, series.slice(0, MAX_SERIES)),
     [data, series],

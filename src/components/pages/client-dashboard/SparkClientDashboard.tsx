@@ -14,6 +14,7 @@
 import ClientProgramSnapshot from "./ClientProgramSnapshot";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkSheet from "@/shared/SparkSheet";
@@ -21,9 +22,8 @@ import Layout from "@/layout/Layout";
 import { DashboardSkeleton, PanelSkeleton } from "@/layout/PageSkeletons";
 import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
-import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
-import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
-import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
+import { TenantRequestsRollupQuery } from "@/api/queries/TenantRequestsRollupQuery";
+import type { TenantRequestsRollupQuery as TenantRequestsRollupQueryType } from "@api/queries/__generated__/TenantRequestsRollupQuery.graphql";
 
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
@@ -31,7 +31,7 @@ import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import StoreInsightsCards from "@/components/ai/StoreInsightsCards";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
-import { rankUpcomingRetailers } from "@/components/pages/client-dashboard/topRetailers";
+import type { RankedRetailer } from "@/components/pages/client-dashboard/topRetailers";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { buildTrackerUrlParams } from "@/requests/masterTrackerFilters";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -46,12 +46,6 @@ import {
 import { useBrandView } from "@/components/brandGroup/useBrandView";
 import { CountReel } from "@/motion/CountReel";
 import { ConsumersPerWeekTrend } from "@/components/charts/ConsumerCharts";
-
-type WeekAheadRow = NonNullable<
-  NonNullable<
-    ClientWeekAheadQueryType["response"]["requests"]["edges"][number]
-  >["node"]
->;
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -121,34 +115,20 @@ const WeekAheadPanel: React.FC<{
   torch: boolean;
 }> = ({ tenantId, horizonDays, onHorizonDays, dateWindow }) => {
   const navigate = useNavigate();
-  const { nodes: aheadRows } = useAllConnectionPages<
-    ClientWeekAheadQueryType,
-    WeekAheadRow
-  >(
-    ClientWeekAheadQuery,
+  const rollupData = useLazyLoadQuery<TenantRequestsRollupQueryType>(
+    TenantRequestsRollupQuery,
     {
-      // Busy tenants can schedule hundreds of demos in a quarter window.
-      // Keep first: 1000 — the query is already server-bounded to the
-      // visible horizon (startDate/endDate below), and lowering the cap
-      // would silently truncate buckets/top-retailers for busy tenants
-      // at 90d, undercounting the panel. Brand users get 200 rows a
-      // request, so the rest are walked in by cursor.
-      first: 1000,
-      filters: tenantId
-        ? {
-            tenantId,
-            startDate: dateWindow.startDate,
-            endDate: dateWindow.endDate,
-            dateSort: "asc",
-          }
-        : null,
+      tenantId: tenantId || null,
+      startDate: dateWindow.startDate,
+      endDate: dateWindow.endDate,
+      dateField: "date",
     },
-    (response) => response.requests,
     {
       fetchPolicy: "store-or-network",
       fetchKey: `${tenantId ?? ""}|${horizonDays}|${dateWindow.startDate}`,
     },
   );
+  const rollup = rollupData.tenantRequestsRollup;
 
   // Bucket strategy: daily for 7d, weekly for 30d, monthly for 90d.
   const aheadBuckets: DayBucket[] = useMemo(() => {
@@ -205,48 +185,51 @@ const WeekAheadPanel: React.FC<{
         });
       }
     }
-    const rows = aheadRows;
     const endExclusive = new Date(today);
     endExclusive.setDate(today.getDate() + horizonDays);
-    for (const r of rows) {
-      const k = requestDateKey(r.date);
-      if (!k) continue;
+    for (const dayRow of rollup.byDay) {
+      const k = requestDateKey(dayRow.date);
+      if (!k || dayRow.count <= 0) continue;
       const [y, mo, d] = k.split("-").map(Number);
       const ms = new Date(y, mo - 1, d).getTime();
       if (!Number.isFinite(ms)) continue;
       if (ms < today.getTime() || ms >= endExclusive.getTime()) continue;
       if (horizonDays === 7) {
         const slot = buckets.find((b) => b.key === k);
-        if (slot) slot.count += 1;
+        if (slot) slot.count += dayRow.count;
       } else if (horizonDays === 30) {
         const dayOffset = Math.floor(
           (ms - today.getTime()) / (24 * 60 * 60 * 1000),
         );
         const wi = Math.min(4, Math.max(0, Math.floor(dayOffset / 7)));
-        buckets[wi].count += 1;
+        buckets[wi].count += dayRow.count;
       } else {
         const mi = Math.min(
           2,
           Math.max(0, (y - today.getFullYear()) * 12 + (mo - 1 - today.getMonth())),
         );
-        buckets[mi].count += 1;
+        buckets[mi].count += dayRow.count;
       }
     }
     return buckets;
-  }, [aheadRows, horizonDays]);
+  }, [rollup.byDay, horizonDays]);
 
-  // Top retailers in the selected horizon. Blank retailer names are
-  // excluded so a missing account cannot become the top row.
-  const topRetailers = useMemo(() => {
-    const rows = aheadRows;
-    return rankUpcomingRetailers(
-      rows.map((r) => ({
-        date: r.date,
-        retailerName: r.retailer?.name,
-      })),
-      { today: startOfDay(new Date()), horizonDays, limit: 5 },
-    );
-  }, [aheadRows, horizonDays]);
+  // Top retailers in the selected horizon (server-grouped, no row cap).
+  const topRetailers: RankedRetailer[] = useMemo(
+    () =>
+      rollup.topRetailers
+        .filter((r) => {
+          const trimmed = r.name.trim();
+          return Boolean(trimmed) && !["—", "–", "-", "−"].includes(trimmed) && r.count > 0;
+        })
+        .slice(0, 5)
+        .map((r) => ({
+          key: r.name.trim().toLowerCase(),
+          name: r.name.trim(),
+          count: r.count,
+        })),
+    [rollup.topRetailers],
+  );
 
   const maxWeekCount = Math.max(1, ...aheadBuckets.map((b) => b.count));
   const totalThisWeek = aheadBuckets.reduce((s, b) => s + b.count, 0);

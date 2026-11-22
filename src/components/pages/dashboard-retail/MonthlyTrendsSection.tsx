@@ -9,6 +9,7 @@ import {
   seriesColor,
   valueLabels,
 } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 export type MonthlyTrend = {
   month: string;
@@ -24,6 +25,7 @@ const lastPercent = valueLabels("last", percentLabel);
  * axis: consumers sampled and purchases above, conversion rate below.
  */
 function MonthlyTrendsChart({ data }: { data: MonthlyTrend[] }) {
+  useAppearance();
   if (data.length === 0) {
     return <div className="spark-chart-empty">No monthly activity in this range yet.</div>;
   }

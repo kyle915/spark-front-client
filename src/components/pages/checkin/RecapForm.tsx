@@ -110,6 +110,14 @@ import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapComplet
 import { RecapCheckNotes } from "./RecapCheckNotes";
 import { TallyPhotoCard, TallyProposal } from "./TallyPhotoCard";
 import { isTallyNumberType, shownProposals, type TallyProposals } from "./tallyRead";
+import { ReceiptAdvisoryBanners, ReceiptSpendProposal } from "./ReceiptReadFeedback";
+import {
+  collectReceiptAdvisories,
+  combineReceiptProposals,
+  requestReceiptRead,
+  shownReceiptProposal,
+  type ReceiptReadResult,
+} from "./receiptRead";
 import {
   RECAP_CHECK_MAX_RUNS,
   answersSignature,
@@ -466,6 +474,56 @@ export default function RecapForm({
     setTallyProducts({});
   };
 
+  // Background receipt OCR + pre-submit mismatch/duplicate advisories,
+  // triggered automatically when a photo lands in an expense/receipt bucket.
+  const [receiptReads, setReceiptReads] = useState<Record<string, ReceiptReadResult>>({});
+  const [receiptReadingIds, setReceiptReadingIds] = useState<Set<string>>(() => new Set());
+  const [dismissedReceiptSig, setDismissedReceiptSig] = useState<string | null>(null);
+  const [dismissedReceiptAdvisories, setDismissedReceiptAdvisories] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const storeRef = useRef(store);
+  storeRef.current = store;
+  const primarySpendFieldId = useMemo(() => {
+    const found = templateFields.find((f) => {
+      const isLong =
+        f.type.includes("long") ||
+        f.type.includes("area") ||
+        f.type.includes("paragraph");
+      return (
+        !isLong &&
+        !isPhotoType(f.type) &&
+        isSpendAmountField(f) &&
+        !isMileageCustomFieldName(f.name) &&
+        isFieldShown(f, values)
+      );
+    });
+    return found?.id ?? null;
+  }, [templateFields, values]);
+  const receiptCombinedProposal = useMemo(
+    () =>
+      combineReceiptProposals(
+        photos
+          .filter((p) => p.state === "done" && receiptReads[p.id])
+          .map((p) => ({ photoId: p.id, result: receiptReads[p.id] })),
+      ),
+    [photos, receiptReads],
+  );
+  const receiptSpendShown =
+    primarySpendFieldId != null
+      ? shownReceiptProposal({
+          proposal: receiptCombinedProposal,
+          currentValue: values[primarySpendFieldId],
+          dismissedSignature: dismissedReceiptSig,
+        })
+      : null;
+  const dismissReceiptAdvisory = (key: string) =>
+    setDismissedReceiptAdvisories((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+
   // Voice recap: answers filled from what the BA said. Only empty boxes are
   // filled; a box the BA already answered becomes a conflict they can
   // Replace. The marker under a box shows while it still holds the voice
@@ -701,6 +759,58 @@ export default function RecapForm({
     });
   };
 
+  const runReceiptRead = (id: string, file: File, shaTask: Promise<void>) => {
+    if (!token || !file.type.startsWith("image/") || submittedRef.current) return;
+    const photo = photosRef.current.find((ph) => ph.id === id);
+    if (!photo) return;
+    const bucketName =
+      photo.category != null
+        ? (photoBuckets ?? []).find((b) => b.id === photo.category)?.name ?? null
+        : null;
+    const isReceipt =
+      photo.category != null
+        ? isExpenseReceiptBucket(bucketName)
+        : (photoBuckets ?? []).length === 0 &&
+          templateFields.some((f) => isPhotoType(f.type) && isExpenseReceiptBucket(f.name));
+    if (!isReceipt) return;
+
+    setReceiptReadingIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    void (async () => {
+      try {
+        await shaTask;
+        if (!photosRef.current.some((ph) => ph.id === id) || submittedRef.current) return;
+        const curStore = storeRef.current;
+        const storeName = curStore.name.trim();
+        const storeNumber = curStore.noNumber
+          ? ""
+          : curStore.number.trim().replace(/^#\s*/, "");
+        const result = await requestReceiptRead({
+          origin: apiOrigin(),
+          code,
+          session: token,
+          file,
+          contentType: file.type || "image/jpeg",
+          sha256: shaByPhotoId.current.get(id),
+          storeName,
+          storeNumber,
+        });
+        if (!photosRef.current.some((ph) => ph.id === id) || submittedRef.current) return;
+        setReceiptReads((prev) => ({ ...prev, [id]: result }));
+      } finally {
+        setReceiptReadingIds((prev) => {
+          if (!prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    })();
+  };
+
   // Advisory work that must never delay the PUT: SHA-256 (full-file digest),
   // the tile thumbnail, and the server photo check. All of it runs after the
   // upload has landed and patches the photo when it finishes — warnings and
@@ -732,6 +842,7 @@ export default function RecapForm({
       if (!submittedRef.current) void saveDraftPhotoFile(code, token, id, thumb);
     })();
     runPhotoCheck(id, file);
+    runReceiptRead(id, file, shaTask);
   };
 
   // Compress once — a raw iPhone shot is 3-5MB and a BA may file dozens from a
@@ -1006,9 +1117,20 @@ export default function RecapForm({
     const failed = photosRef.current.filter((p) => p.state === "failed");
     if (!failed.length) return;
     for (const ph of failed) cancelAutoRetry(ph.id);
+    const failedIds = new Set(failed.map((p) => p.id));
     const next = photosRef.current.filter((p) => p.state !== "failed");
     photosRef.current = next;
     setPhotos(next);
+    setReceiptReads((prev) => {
+      const copy = { ...prev };
+      for (const id of failedIds) delete copy[id];
+      return copy;
+    });
+    setReceiptReadingIds((prev) => {
+      const copy = new Set(prev);
+      for (const id of failedIds) copy.delete(id);
+      return copy;
+    });
     void deleteDraftPhotoFiles(code, token, failed.map((p) => p.id));
   };
 
@@ -1023,6 +1145,18 @@ export default function RecapForm({
     setPhotoWarnings((prev) => {
       const copy = { ...prev };
       delete copy[id];
+      return copy;
+    });
+    setReceiptReads((prev) => {
+      if (!(id in prev)) return prev;
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    setReceiptReadingIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const copy = new Set(prev);
+      copy.delete(id);
       return copy;
     });
     for (const [hash, owner] of photoHashes.current) {
@@ -1633,7 +1767,16 @@ export default function RecapForm({
               />
               {voiceMark(f.id)}
               {voiceConflictFor("field", f.id)}
-              {tallyFieldShown[f.id] !== undefined ? (
+              {f.id === primarySpendFieldId && receiptSpendShown ? (
+                <ReceiptSpendProposal
+                  proposal={receiptSpendShown}
+                  onUse={() => {
+                    setVal(f.id, receiptSpendShown.proposedSpend);
+                    setDismissedReceiptSig(receiptSpendShown.signature);
+                  }}
+                  onDismiss={() => setDismissedReceiptSig(receiptSpendShown.signature)}
+                />
+              ) : tallyFieldShown[f.id] !== undefined ? (
                 <TallyProposal
                   value={tallyFieldShown[f.id]}
                   onUse={() => {
@@ -1642,6 +1785,24 @@ export default function RecapForm({
                   }}
                   onDismiss={() => dropTally(setTallyFields, f.id)}
                 />
+              ) : null}
+              {buckets.length === 0 &&
+              isPhotoType(f.type) &&
+              isExpenseReceiptBucket(f.name) ? (
+                <div style={{ marginTop: 8 }}>
+                  <ReceiptAdvisoryBanners
+                    readingCount={
+                      loosePhotos.filter((p) => receiptReadingIds.has(p.id)).length
+                    }
+                    advisories={collectReceiptAdvisories(
+                      loosePhotos
+                        .map((p) => receiptReads[p.id])
+                        .filter((r): r is ReceiptReadResult => r != null),
+                      dismissedReceiptAdvisories,
+                    )}
+                    onDismiss={dismissReceiptAdvisory}
+                  />
+                </div>
               ) : null}
               </div>
             ))}
@@ -1779,9 +1940,23 @@ export default function RecapForm({
                 onChange={setUsedCorpoCard}
               />
             ) : null}
-            {buckets.map((b) => (
+            {buckets.map((b) => {
+              const bucketPhotos = photos.filter((p) => p.category === b.id);
+              const isReceiptBucket = isExpenseReceiptBucket(b.name);
+              const bucketReadingCount = isReceiptBucket
+                ? bucketPhotos.filter((p) => receiptReadingIds.has(p.id)).length
+                : 0;
+              const bucketAdvisories = isReceiptBucket
+                ? collectReceiptAdvisories(
+                    bucketPhotos
+                      .map((p) => receiptReads[p.id])
+                      .filter((r): r is ReceiptReadResult => r != null),
+                    dismissedReceiptAdvisories,
+                  )
+                : [];
+              return (
               <Fragment key={b.id}>
-                {isExpenseReceiptBucket(b.name) &&
+                {isReceiptBucket &&
                 buckets.find((row) => isExpenseReceiptBucket(row.name))?.id ===
                   b.id ? (
                   <CorpoCardYesNo
@@ -1792,12 +1967,19 @@ export default function RecapForm({
                 ) : null}
                 <PhotoBucketZone
                   bucket={b}
-                  photos={photos.filter((p) => p.category === b.id)}
+                  photos={bucketPhotos}
                   onAdd={uploadFiles}
                   onRemove={removePhoto}
                   onKeep={keepPhotoCheck}
                   accent={accent}
                 />
+                {isReceiptBucket ? (
+                  <ReceiptAdvisoryBanners
+                    readingCount={bucketReadingCount}
+                    advisories={bucketAdvisories}
+                    onDismiss={dismissReceiptAdvisory}
+                  />
+                ) : null}
                 {receiptMissing && receiptNeed?.bucket.id === b.id ? (
                   <p
                     role="status"
@@ -1812,7 +1994,8 @@ export default function RecapForm({
                   </p>
                 ) : null}
               </Fragment>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : null}
