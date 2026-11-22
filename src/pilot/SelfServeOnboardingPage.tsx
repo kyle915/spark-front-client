@@ -20,6 +20,10 @@ import {
   validateOnboardingQuickRecap,
 } from "./pilotHelpers";
 import {
+  captureOnboardingMarketingUtm,
+  utmMutationVariables,
+} from "./marketingUtm";
+import {
   PilotQueriesOnboardingStateQuery,
   PilotQueriesStarterCatalogQuery,
 } from "@/api/queries/PilotQueries";
@@ -86,6 +90,7 @@ const UnauthenticatedSignupStep: React.FC<{
     searchParams.get("invitation") ||
     ""
   ).trim();
+  const marketingUtm = captureOnboardingMarketingUtm(searchParams);
 
   const catalogData = useLazyLoadQuery<CatalogQueryType>(
     PilotQueriesStarterCatalogQuery,
@@ -119,6 +124,7 @@ const UnauthenticatedSignupStep: React.FC<{
       return;
     }
     setSubmitting(true);
+    const utmVars = utmMutationVariables(marketingUtm);
     commitMutation<StartOnboardingMutationType>(environment, {
       mutation: PilotMutationsStartSelfServeOnboardingMutation,
       variables: {
@@ -131,6 +137,8 @@ const UnauthenticatedSignupStep: React.FC<{
         acceptTerms,
         forceNewWorkspace: false,
         invitationToken,
+        ...utmVars,
+        landingPath: "/onboarding",
       },
       onCompleted: async (resp) => {
         const out = resp.startSelfServeOnboarding;

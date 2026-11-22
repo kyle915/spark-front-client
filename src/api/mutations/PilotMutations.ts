@@ -591,6 +591,13 @@ export const PilotMutationsStartSelfServeOnboardingMutation = graphql`
     $acceptTerms: Boolean!
     $forceNewWorkspace: Boolean!
     $invitationToken: String!
+    $utmSource: String!
+    $utmMedium: String!
+    $utmCampaign: String!
+    $utmId: String!
+    $utmContent: String!
+    $utmTerm: String!
+    $landingPath: String!
   ) {
     startSelfServeOnboarding(
       email: $email
@@ -602,6 +609,13 @@ export const PilotMutationsStartSelfServeOnboardingMutation = graphql`
       acceptTerms: $acceptTerms
       forceNewWorkspace: $forceNewWorkspace
       invitationToken: $invitationToken
+      utmSource: $utmSource
+      utmMedium: $utmMedium
+      utmCampaign: $utmCampaign
+      utmId: $utmId
+      utmContent: $utmContent
+      utmTerm: $utmTerm
+      landingPath: $landingPath
     ) {
       ok
       error
