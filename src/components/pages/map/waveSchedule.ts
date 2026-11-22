@@ -178,21 +178,68 @@ type RegionGroup =
 
 export function inferRegionGroupForStore(store: WaveTargetStore): RegionGroup | null {
   const { stateCode } = extractCityState(store);
+  const lat = store.position?.lat;
+  const lng = store.position?.lng;
+  const hasLat = typeof lat === "number" && Number.isFinite(lat);
+  const hasLng = typeof lng === "number" && Number.isFinite(lng);
+
   if (stateCode === "AZ") return "arizona";
   if (stateCode === "HI") return "hawaii";
   if (stateCode === "AK") return "alaska";
+
+  // Split-timezone US states: use coordinates when available before falling
+  // back to the state's primary timezone.
+  if (stateCode === "FL" && hasLng) {
+    return lng < -85.0 ? "central" : "eastern";
+  }
+  if (stateCode === "TN" && hasLng) {
+    return lng >= -85.6 ? "eastern" : "central";
+  }
+  if (stateCode === "KY" && hasLng) {
+    return lng < -86.0 ? "central" : "eastern";
+  }
+  if (stateCode === "IN" && hasLng) {
+    const inCentral = hasLat
+      ? (lat >= 41.0 && lng < -86.8) || (lat < 38.5 && lng < -87.1)
+      : lng < -87.0;
+    return inCentral ? "central" : "eastern";
+  }
+  if (stateCode === "MI" && hasLng) {
+    return (!hasLat || lat >= 45.1) && lng < -87.5 ? "central" : "eastern";
+  }
+  if (stateCode === "TX" && hasLng) {
+    return lng <= -104.85 ? "mountain" : "central";
+  }
+  if (stateCode === "KS" && hasLng) {
+    return lng <= -101.5 ? "mountain" : "central";
+  }
+  if (stateCode === "NE" && hasLng) {
+    return lng <= -100.8 ? "mountain" : "central";
+  }
+  if (stateCode === "SD" && hasLng) {
+    return lng <= -100.3 ? "mountain" : "central";
+  }
+  if (stateCode === "ND" && hasLng) {
+    return lng <= -101.5 && (!hasLat || lat < 47.5) ? "mountain" : "central";
+  }
+  if (stateCode === "ID" && hasLat) {
+    return lat >= 45.55 ? "pacific" : "mountain";
+  }
+  if (stateCode === "OR" && hasLng) {
+    return lng >= -117.5 && (!hasLat || lat >= 43.2) ? "mountain" : "pacific";
+  }
+
   if (EASTERN_STATES.has(stateCode)) return "eastern";
   if (CENTRAL_STATES.has(stateCode)) return "central";
   if (MOUNTAIN_STATES.has(stateCode)) return "mountain";
   if (PACIFIC_STATES.has(stateCode)) return "pacific";
 
-  const lng = store.position?.lng;
-  if (typeof lng === "number" && Number.isFinite(lng)) {
+  if (hasLng) {
     if (lng <= -150) return "hawaii";
     if (lng <= -130) return "alaska";
     if (lng <= -114.5) return "pacific";
     if (lng <= -102) return "mountain";
-    if (lng <= -86) return "central";
+    if (lng <= -85.5) return "central";
     if (lng <= -65) return "eastern";
   }
 
@@ -411,4 +458,58 @@ export function buildWavePreviewRows(params: BuildWavePreviewParams): WavePrevie
   }
 
   return rows;
+}
+
+export interface WaveRowOutcome {
+  rowNumber: number;
+  success: boolean;
+  skipped: boolean;
+}
+
+/**
+ * Partition submitted wave rows into stores that still have failed visits
+ * (so partial failures retain failed stores for retry) and rowKeys that
+ * already completed or skipped (so retries do not re-submit succeeded dates).
+ */
+export function partitionWaveOutcome(
+  activeRows: ReadonlyArray<Pick<WavePreviewRow, "rowKey" | "storeKey">>,
+  outcomes: ReadonlyArray<WaveRowOutcome> | null | undefined,
+  rolledBack: boolean,
+): {
+  retainStoreKeys: string[];
+  completedRowKeys: string[];
+} {
+  if (rolledBack || !outcomes || outcomes.length === 0) {
+    return {
+      retainStoreKeys: Array.from(new Set(activeRows.map((r) => r.storeKey))),
+      completedRowKeys: [],
+    };
+  }
+
+  const failedStores = new Set<string>();
+  const completedRowKeys: string[] = [];
+  const accountedIndices = new Set<number>();
+
+  for (const outcome of outcomes) {
+    const idx = outcome.rowNumber - 1;
+    if (idx < 0 || idx >= activeRows.length) continue;
+    accountedIndices.add(idx);
+    const row = activeRows[idx];
+    if (outcome.success || outcome.skipped) {
+      completedRowKeys.push(row.rowKey);
+    } else {
+      failedStores.add(row.storeKey);
+    }
+  }
+
+  for (let i = 0; i < activeRows.length; i += 1) {
+    if (!accountedIndices.has(i)) {
+      failedStores.add(activeRows[i].storeKey);
+    }
+  }
+
+  return {
+    retainStoreKeys: Array.from(failedStores),
+    completedRowKeys,
+  };
 }

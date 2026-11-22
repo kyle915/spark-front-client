@@ -447,13 +447,24 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const toggleSelectAllFiltered = useCallback(() => {
     selectManyWaveStores(filtered.map(toWaveStore));
   }, [filtered, selectManyWaveStores, toWaveStore]);
-  const handleWaveCreated = useCallback(() => {
-    setSelectedWaveMap(new Map());
-    setExtraPins([]);
-    setScanned(pageSize);
-    autoFilled.current = null;
-    setWaveRefreshKey((k) => k + 1);
-  }, [pageSize]);
+  const handleWaveCreated = useCallback(
+    ({ retainStoreKeys }: { createdCount: number; retainStoreKeys: string[] }) => {
+      setSelectedWaveMap((prev) => {
+        if (retainStoreKeys.length === 0) return new Map();
+        const keep = new Set(retainStoreKeys);
+        const next = new Map<string, WaveTargetStore>();
+        for (const [k, v] of prev.entries()) {
+          if (keep.has(k)) next.set(k, v);
+        }
+        return next;
+      });
+      setExtraPins([]);
+      setScanned(pageSize);
+      autoFilled.current = null;
+      setWaveRefreshKey((k) => k + 1);
+    },
+    [pageSize],
+  );
   const onlyRetailer = useCallback((name: string) => {
     setRetailerFilter(name);
     setSelectedKey(null);

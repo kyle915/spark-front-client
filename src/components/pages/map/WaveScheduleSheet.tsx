@@ -16,18 +16,24 @@ import {
   buildWavePreviewRows,
   defaultWaveWindow,
   isOvernightShift,
+  partitionWaveOutcome,
   type WaveDateMode,
   type WaveTargetStore,
   type WaveTimezoneOption,
   type WaveWindowAssignMode,
 } from "./waveSchedule";
 
+export interface WaveCreatedSummary {
+  createdCount: number;
+  retainStoreKeys: string[];
+}
+
 interface WaveScheduleSheetProps {
   open: boolean;
   onClose: () => void;
   tenantId: string | null;
   stores: ReadonlyArray<WaveTargetStore>;
-  onWaveCreated: (createdCount: number) => void;
+  onWaveCreated: (summary: WaveCreatedSummary) => void;
 }
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -47,7 +53,7 @@ const WaveScheduleSheetBody: React.FC<{
   tenantId: string;
   stores: ReadonlyArray<WaveTargetStore>;
   onClose: () => void;
-  onWaveCreated: (createdCount: number) => void;
+  onWaveCreated: (summary: WaveCreatedSummary) => void;
 }> = ({ tenantId, stores, onClose, onWaveCreated }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
 
@@ -157,12 +163,19 @@ const WaveScheduleSheetBody: React.FC<{
     setLastDryRunSummary(null);
     setSubmitErrors([]);
   }, [
-    previewRows,
     requestTypeId,
+    dateMode,
+    singleDate,
+    windowStart,
+    windowEnd,
+    weekdays,
+    assignMode,
+    startTime,
+    endTime,
+    fallbackTimezoneId,
     schedulingStatus,
     selectedProductIds,
     notes,
-    excludedRowKeys,
   ]);
 
   const activeRows = useMemo(
@@ -294,6 +307,20 @@ const WaveScheduleSheetBody: React.FC<{
           setSubmitErrors(uniqueErrs);
         }
 
+        const { retainStoreKeys, completedRowKeys } = partitionWaveOutcome(
+          activeRows,
+          result.rows,
+          result.rolledBack,
+        );
+
+        if (uniqueErrs.length > 0 && completedRowKeys.length > 0) {
+          setExcludedRowKeys((prev) => {
+            const next = new Set(prev);
+            for (const rk of completedRowKeys) next.add(rk);
+            return next;
+          });
+        }
+
         if (result.successCount > 0) {
           const dupNote =
             result.skippedCount > 0
@@ -301,14 +328,20 @@ const WaveScheduleSheetBody: React.FC<{
                   result.skippedCount === 1 ? "" : "s"
                 } skipped)`
               : "";
+          const hasFailed = uniqueErrs.length > 0 || retainStoreKeys.length > 0;
           showAlert(
             `Scheduled ${result.successCount} wave request${
               result.successCount === 1 ? "" : "s"
-            }${dupNote}.`,
-            "success",
+            }${dupNote}${
+              hasFailed ? ` · ${retainStoreKeys.length} store(s) retained to retry` : ""
+            }.`,
+            hasFailed ? "warning" : "success",
           );
-          onWaveCreated(result.successCount);
-          if (uniqueErrs.length === 0) {
+          onWaveCreated({
+            createdCount: result.successCount,
+            retainStoreKeys: hasFailed ? retainStoreKeys : [],
+          });
+          if (!hasFailed) {
             onClose();
           }
         } else if (result.skippedCount > 0 && uniqueErrs.length === 0) {

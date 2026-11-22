@@ -4,6 +4,7 @@ import {
   extractCityState,
   isOvernightShift,
   matchingDatesInWindow,
+  partitionWaveOutcome,
   resolveStoreTimezone,
   type WaveTargetStore,
   type WaveTimezoneOption,
@@ -162,6 +163,99 @@ describe("waveSchedule", () => {
     expect(extractCityState({ key: "x", name: "Test", address: "", market: "Denver, CO" })).toEqual({
       city: "Denver",
       stateCode: "CO",
+    });
+  });
+
+  it("uses coordinates for split-timezone states (Pensacola FL, Knoxville TN, El Paso TX, Northern ID)", () => {
+    const pensacola: WaveTargetStore = {
+      key: "s-fl-west",
+      name: "Publix Pensacola",
+      address: "2180 W Nine Mile Rd, Pensacola, FL 32534",
+      state: "FL",
+      position: { lat: 30.5331, lng: -87.3112 },
+    };
+    const miami: WaveTargetStore = {
+      key: "s-fl-east",
+      name: "Publix Brickell",
+      address: "911 SW 1st Ave, Miami, FL 33130",
+      state: "FL",
+      position: { lat: 25.7652, lng: -80.1956 },
+    };
+    const knoxville: WaveTargetStore = {
+      key: "s-tn-east",
+      name: "Food City Knoxville",
+      address: "1950 Western Ave, Knoxville, TN 37921",
+      state: "TN",
+      position: { lat: 35.9658, lng: -83.9496 },
+    };
+    const elPaso: WaveTargetStore = {
+      key: "s-tx-west",
+      name: "Albertsons El Paso",
+      address: "3100 N Mesa St, El Paso, TX 79902",
+      state: "TX",
+      position: { lat: 31.7802, lng: -106.5034 },
+    };
+    const coeurDAlene: WaveTargetStore = {
+      key: "s-id-north",
+      name: "Super 1 Coeur d'Alene",
+      address: "305 W Kathleen Ave, Coeur d'Alene, ID 83815",
+      state: "ID",
+      position: { lat: 47.7073, lng: -116.7879 },
+    };
+
+    expect(resolveStoreTimezone(SAMPLE_TIMEZONES, pensacola, "2026-07-18")).toEqual({
+      timezoneId: "tz-cdt",
+      timezoneCode: "CDT",
+    });
+    expect(resolveStoreTimezone(SAMPLE_TIMEZONES, miami, "2026-07-18")).toEqual({
+      timezoneId: "tz-edt",
+      timezoneCode: "EDT",
+    });
+    expect(resolveStoreTimezone(SAMPLE_TIMEZONES, knoxville, "2026-07-18")).toEqual({
+      timezoneId: "tz-edt",
+      timezoneCode: "EDT",
+    });
+    expect(resolveStoreTimezone(SAMPLE_TIMEZONES, elPaso, "2026-07-18")).toEqual({
+      timezoneId: "tz-mdt",
+      timezoneCode: "MDT",
+    });
+    expect(resolveStoreTimezone(SAMPLE_TIMEZONES, coeurDAlene, "2026-07-18")).toEqual({
+      timezoneId: "tz-pdt",
+      timezoneCode: "PDT",
+    });
+  });
+
+  it("retains failed stores and marks completed rows on partial wave creation", () => {
+    const activeRows = [
+      { rowKey: "s101|2026-07-10", storeKey: "s101" },
+      { rowKey: "s102|2026-07-10", storeKey: "s102" },
+      { rowKey: "s102|2026-07-11", storeKey: "s102" },
+      { rowKey: "s103|2026-07-10", storeKey: "s103" },
+    ];
+
+    const partial = partitionWaveOutcome(
+      activeRows,
+      [
+        { rowNumber: 1, success: true, skipped: false },
+        { rowNumber: 2, success: true, skipped: false },
+        { rowNumber: 3, success: false, skipped: false },
+        { rowNumber: 4, success: false, skipped: true },
+      ],
+      false,
+    );
+    expect(partial).toEqual({
+      retainStoreKeys: ["s102"],
+      completedRowKeys: ["s101|2026-07-10", "s102|2026-07-10", "s103|2026-07-10"],
+    });
+
+    const rolledBack = partitionWaveOutcome(
+      activeRows,
+      [{ rowNumber: 1, success: false, skipped: false }],
+      true,
+    );
+    expect(rolledBack).toEqual({
+      retainStoreKeys: ["s101", "s102", "s103"],
+      completedRowKeys: [],
     });
   });
 });
