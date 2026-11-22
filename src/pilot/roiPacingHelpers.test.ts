@@ -134,8 +134,11 @@ describe("roiPacingHelpers", () => {
 
     const client = attentionBucketsForViewer(buckets, { staff: false });
     expect(client.totalCount).toBe(5);
-    expect(client.buckets.find((b) => b.key === "missing_recaps")?.count).toBe(0);
-    expect(client.buckets.find((b) => b.key === "missing_recaps")?.items).toEqual([]);
+    expect(client.buckets.map((b) => b.key)).toEqual([
+      "receipt_checks",
+      "unstaffed",
+    ]);
+    expect(client.buckets.find((b) => b.key === "missing_recaps")).toBeUndefined();
     expect(client.buckets.find((b) => b.key === "receipt_checks")?.count).toBe(2);
     expect(client.buckets.find((b) => b.key === "unstaffed")?.count).toBe(3);
 
@@ -147,6 +150,7 @@ describe("roiPacingHelpers", () => {
 
     const staff = attentionBucketsForViewer(buckets, { staff: true });
     expect(staff.totalCount).toBe(10);
+    expect(staff.buckets.map((b) => b.key)).toContain("missing_recaps");
     expect(flattenAttentionRows(buckets, { staff: true })).toHaveLength(3);
   });
 });

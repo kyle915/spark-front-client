@@ -63,39 +63,49 @@ export function syncedTargetEditorAmount(args: {
   return args.serverTarget ?? "";
 }
 
+export type AttentionItemRow = {
+  bucket: string;
+  title: string;
+  refId: string;
+  actionUrl: string;
+};
+
+export type AttentionBucketRow = {
+  key: string;
+  label: string;
+  /** Present on the GraphQL strip; optional for lightweight flatten tests. */
+  count?: number;
+  items: ReadonlyArray<AttentionItemRow>;
+};
+
+type AttentionBucketLike = {
+  key: string;
+  count?: number | null;
+  items?: ReadonlyArray<unknown> | null;
+};
+
 /** Missing-recap chase is Ignite ops (/recaps/missing). Brand/client
- * dashboards keep receipt checks, unstaffed, and rebooks only. */
-export function attentionBucketsForViewer<
-  T extends { key: string; count: number; items: ReadonlyArray<unknown> },
->(
+ * dashboards keep receipt checks, unstaffed, and rebooks only — the
+ * missing_recaps bucket is omitted entirely for non-staff. */
+export function attentionBucketsForViewer<T extends AttentionBucketLike>(
   buckets: ReadonlyArray<T> | null | undefined,
   opts: { staff: boolean },
 ): { buckets: T[]; totalCount: number } {
   const source = [...(buckets ?? [])];
   const next = opts.staff
     ? source
-    : source.map((b) =>
-        b.key === "missing_recaps"
-          ? ({ ...b, count: 0, items: [] } as T)
-          : b,
-      );
+    : source.filter((b) => b.key !== "missing_recaps");
   return {
     buckets: next,
-    totalCount: next.reduce((sum, b) => sum + (b.count || 0), 0),
+    totalCount: next.reduce(
+      (sum, b) => sum + (b.count ?? b.items?.length ?? 0),
+      0,
+    ),
   };
 }
 
 export function flattenAttentionRows(
-  buckets: Array<{
-    key: string;
-    label: string;
-    items: Array<{
-      bucket: string;
-      title: string;
-      refId: string;
-      actionUrl: string;
-    }>;
-  }>,
+  buckets: ReadonlyArray<AttentionBucketRow>,
   opts: { staff?: boolean } = {},
 ): Array<{ key: string; title: string; actionUrl: string; bucketLabel: string }> {
   const staff = opts.staff !== false;
