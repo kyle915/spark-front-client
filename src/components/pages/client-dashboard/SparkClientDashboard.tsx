@@ -46,7 +46,6 @@ import {
 import { useBrandView } from "@/components/brandGroup/useBrandView";
 import { CountReel } from "@/motion/CountReel";
 import { ConsumersPerWeekTrend } from "@/components/charts/ConsumerCharts";
-import TodayAttentionStrip from "@/components/dashboard/TodayAttentionStrip";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -551,8 +550,6 @@ const ClientInner: React.FC = () => {
       )}
 
       {activeTab === "overview" && (<>
-        <TodayAttentionStrip />
-
         {tenantId ? (
           <Suspense fallback={<PanelSkeleton label="Loading your program" />}>
             <ClientProgramSnapshot tenantId={tenantId} />
