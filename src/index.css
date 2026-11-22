@@ -2934,6 +2934,24 @@ tr:hover > td .spark-row-actions > a,
   transition: transform var(--spark-spring-duration, 0.35s)
     var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
 }
+.spark-sheet-content--right {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(640px, 95vw);
+  height: 100dvh;
+  max-height: 100dvh;
+  border-top-right-radius: 0;
+  border-top-left-radius: var(--spark-radius-sheet, 18px);
+  border-bottom-left-radius: var(--spark-radius-sheet, 18px);
+  border-bottom: 1px solid var(--spark-border);
+  border-right: none;
+  box-shadow: -20px 0 48px rgba(0, 0, 0, 0.48);
+}
+.spark-sheet-content--right-lg {
+  width: min(740px, 96vw);
+}
 .spark-sheet-handle {
   width: 2.25rem;
   height: 0.25rem;

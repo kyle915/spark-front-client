@@ -1,4 +1,5 @@
 import SparkGhostButton from "@/shared/SparkGhostButton";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
@@ -679,9 +680,36 @@ const RecapCard: React.FC<{
             used to open with a bare em-dash. Retailer is kept but only when
             it's real. */}
         {baLabel(recap.baName) || "Unattributed"}
-        {recap.retailerName && recap.retailerName !== "—"
-          ? ` · ${recap.retailerName}`
-          : ""}
+        {recap.retailerName && recap.retailerName !== "—" ? (
+          <>
+            {" · "}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                useStoreSheetStore.getState().openStoreSheet({
+                  recapId: recap.uuid,
+                  storeName: recap.retailerName,
+                  fallbackTitle: recap.retailerName,
+                });
+              }}
+              title={`Open store profile for ${recap.retailerName}`}
+              className="relative z-20 underline underline-offset-2 cursor-pointer uppercase mono text-[10px]"
+              style={{
+                color: "var(--spark-text-secondary)",
+                background: "none",
+                border: 0,
+                padding: 0,
+                letterSpacing: "0.14em",
+              }}
+            >
+              {recap.retailerName}
+            </button>
+          </>
+        ) : (
+          ""
+        )}
         {recap.stateCode ? ` · ${recap.stateCode}` : ""}
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
@@ -953,9 +981,33 @@ const RecapCompactRow: React.FC<{
           className="mono text-[10px] truncate"
           style={{ letterSpacing: "0.12em", color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
         >
-          {recap.retailerName && recap.retailerName !== "—"
-            ? recap.retailerName
-            : recap.name}
+          {recap.retailerName && recap.retailerName !== "—" ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                useStoreSheetStore.getState().openStoreSheet({
+                  recapId: recap.uuid,
+                  storeName: recap.retailerName,
+                  fallbackTitle: recap.retailerName,
+                });
+              }}
+              title={`Open store profile for ${recap.retailerName}`}
+              className="relative z-20 underline underline-offset-2 cursor-pointer mono text-[10px]"
+              style={{
+                color: "var(--spark-text-secondary)",
+                background: "none",
+                border: 0,
+                padding: 0,
+                letterSpacing: "0.12em",
+              }}
+            >
+              {recap.retailerName}
+            </button>
+          ) : (
+            recap.name
+          )}
           {recap.date ? ` · ${formatDate(recap.date)}` : ""}
         </p>
       </div>

@@ -4,6 +4,7 @@ import { PageTransition } from "./PageTransition";
 import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
 import CommandPalette from "./CommandPalette";
+import StoreSheet from "@/components/store/StoreSheet";
 import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
@@ -45,6 +46,7 @@ function LayoutChromeInner({ children }: LayoutProps) {
     <div className="flex min-h-[100dvh] bg-base-200 text-base-content spark-mesh">
       <UpdateBanner />
       <CommandPalette />
+      <StoreSheet />
       {open ? (
         <button
           type="button"

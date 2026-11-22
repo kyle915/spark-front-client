@@ -5,6 +5,7 @@ import { TenantStoreInsightsQuery } from "@/api/queries/TenantStoreInsightsQuery
 import type { TenantStoreInsightsQuery as QueryType } from "@api/queries/__generated__/TenantStoreInsightsQuery.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { groupRecommendations, visibleInsights } from "@/lib/storeInsights";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const TEXT = { color: "var(--spark-text)" } as const;
@@ -21,21 +22,45 @@ const DraftNote: React.FC = () => (
   </p>
 );
 
-const ItemRow: React.FC<{ item: Item; first: boolean }> = ({ item, first }) => (
-  <li
-    className="py-3 first:pt-0 last:pb-0"
-    style={first ? undefined : { borderTop: "1px solid var(--spark-border)" }}
-  >
-    <p className="text-sm leading-relaxed" style={TEXT}>
-      {item.text}
-    </p>
-    {item.isDraft ? (
-      <p className="text-xs mt-1" style={META}>
-        Draft
+const ItemRow: React.FC<{ item: Item; first: boolean }> = ({ item, first }) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
+  const subject = (item.subject ?? "").trim();
+  const isStoreSubject =
+    Boolean(subject) && (item.kind === "store" || !item.kind || item.kind === "venue");
+
+  return (
+    <li
+      className="py-3 first:pt-0 last:pb-0"
+      style={first ? undefined : { borderTop: "1px solid var(--spark-border)" }}
+    >
+      {isStoreSubject ? (
+        <div className="mb-1">
+          <button
+            type="button"
+            onClick={() =>
+              openStoreSheet({
+                storeName: subject,
+                fallbackTitle: subject,
+              })
+            }
+            className="chip chip-muted chip-sm cursor-pointer hover:underline"
+            title={`Open store profile for ${subject}`}
+          >
+            {subject} ↗
+          </button>
+        </div>
+      ) : null}
+      <p className="text-sm leading-relaxed" style={TEXT}>
+        {item.text}
       </p>
-    ) : null}
-  </li>
-);
+      {item.isDraft ? (
+        <p className="text-xs mt-1" style={META}>
+          Draft
+        </p>
+      ) : null}
+    </li>
+  );
+};
 
 const Group: React.FC<{ title: string; items: readonly Item[] }> = ({ title, items }) =>
   items.length ? (

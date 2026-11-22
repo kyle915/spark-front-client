@@ -5564,6 +5564,8 @@ type Mutation {
   stop working at once.
   """
   revokeAiConnection(id: ID!): RevokeAiConnectionResult!
+  saveStoreLogisticsNotes(input: SaveStoreLogisticsNotesInput!): SaveStoreLogisticsNotesPayload!
+  createRequestsWave(input: CreateRequestsWaveInput!): CreateRequestsWaveResponse!
   saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
   placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
   decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
@@ -6577,6 +6579,7 @@ type Query {
   listSearch(tenantId: ID!, list: String!, question: String = null, filter: ListSearchFilterInput = null): ListSearchResult
   storeProfile(tenantId: ID!, storeKey: String!): StoreProfile
   recapStoreKey(tenantId: ID!, recapId: ID!): String
+  resolveStoreKey(tenantId: ID!, storeKey: String = null, requestId: ID = null, recapId: ID = null, storeName: String = null, address: String = null): String
   tenantStoreLinks(tenantId: ID!): [StoreLink!]!
   monthHighlight(tenantId: ID!, month: String!): MonthHighlight
   tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
@@ -9278,6 +9281,7 @@ input ListSearchFilterInput {
 }
 
 type StoreVisit {
+  eventId: ID!
   eventUuid: String!
   requestUuid: String
   title: String!
@@ -9358,6 +9362,67 @@ type StoreProfile {
   comments: [StoreComment!]!
   photos: [StorePhoto!]!
   staff: StoreStaffView
+  logisticsNotes: String!
+  logisticsNotesUpdatedAt: String
+}
+
+input SaveStoreLogisticsNotesInput {
+  tenantId: ID!
+  storeKey: String!
+  notes: String!
+  clientMutationId: ID = null
+}
+
+type SaveStoreLogisticsNotesPayload {
+  success: Boolean!
+  message: String!
+  storeKey: String
+  logisticsNotes: String!
+  logisticsNotesUpdatedAt: String
+  clientMutationId: ID
+}
+
+input WaveRequestItemInput {
+  storeName: String!
+  date: String!
+  startTime: String!
+  endTime: String!
+  address: String! = ""
+  city: String! = ""
+  state: String! = ""
+  storeNumber: String! = ""
+  latitude: Float = null
+  longitude: Float = null
+  timezoneId: ID = null
+  timezoneCode: String = null
+  name: String = null
+}
+
+input CreateRequestsWaveInput {
+  requestTypeId: ID!
+  items: [WaveRequestItemInput!]!
+  tenantId: ID = null
+  eventTypeId: ID = null
+  defaultTimezoneId: ID = null
+  schedulingStatus: String! = "needs_scheduling"
+  productIds: [ID!] = null
+  notes: String! = ""
+  dryRun: Boolean! = false
+  rollbackOnError: Boolean! = true
+  clientMutationId: ID = null
+}
+
+type CreateRequestsWaveResponse {
+  success: Boolean!
+  message: String!
+  totalRows: Int!
+  successCount: Int!
+  failedCount: Int!
+  skippedCount: Int!
+  rolledBack: Boolean!
+  errors: [String!]
+  rows: [RequestBatchRowResult!]
+  clientMutationId: ID
 }
 
 type StoreLink {
