@@ -115,7 +115,7 @@ const PacingBody: React.FC<{
     { month, groupBy, sortBy },
     { fetchPolicy: "network-only", fetchKey },
   );
-  const pacing = data.demoBudgetPacingAndLeaderboard;
+  const pacing = data?.demoBudgetPacingAndLeaderboard ?? null;
   const [commitUpsert, saving] = useMutation<UpsertMutationType>(
     UpsertDemoBudgetTargetMutation,
   );

@@ -41,10 +41,12 @@ const StripBody: React.FC = () => {
     {},
     { fetchPolicy: "store-and-network" },
   );
-  const queue = data.todayAttentionQueue;
+  // E2e GraphQL mocks (and pre-API-deploy clients) may omit this field;
+  // never throw — strip is optional chrome above Today / Overview.
+  const queue = data?.todayAttentionQueue ?? null;
   if (!queue || queue.totalCount === 0) return null;
 
-  const rows = queue.buckets.flatMap((b) =>
+  const rows = (queue.buckets ?? []).flatMap((b) =>
     (b?.items ?? []).map((item) => ({
       ...item,
       bucketLabel: b?.label ?? item.bucket,

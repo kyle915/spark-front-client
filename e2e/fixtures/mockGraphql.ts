@@ -1105,6 +1105,60 @@ function buildGraphqlData(
   if (queryText.includes("staffingGlance") || queryText.includes("staffingBoard")) {
     return { staffingGlance: null, staffingBoard: [] };
   }
+  // SPA-37 Budget Pacing / Today's Attention — must precede the generic
+  // "Attention" catch-all below (that matcher also hits these op names and
+  // previously returned `{}`-shaped data → strip crash on brand switch).
+  if (
+    queryText.includes("todayAttentionQueue") ||
+    op.includes("TodayAttentionQueue")
+  ) {
+    return {
+      todayAttentionQueue: {
+        totalCount: 0,
+        buckets: [],
+      },
+    };
+  }
+  if (
+    queryText.includes("demoBudgetPacingAndLeaderboard") ||
+    op.includes("RoiPacingQueriesPage")
+  ) {
+    return {
+      demoBudgetPacingAndLeaderboard: {
+        month: "2026-11",
+        monthEnd: "2026-11-30",
+        targetAmount: 0,
+        spentAmount: 0,
+        committedAmount: 0,
+        projectedAmount: 0,
+        elapsedDays: 1,
+        daysInMonth: 30,
+        elapsedPct: 0,
+        expectedSpendToDate: 0,
+        paceStatus: "on_track",
+        paceNote: null,
+        visitCount: 0,
+        incompleteCostVisits: 0,
+        canEditBudget: false,
+        groupBy: "retailer",
+        sortBy: "units_per_dollar",
+        targets: [],
+        leaderboard: [],
+      },
+    };
+  }
+  if (
+    queryText.includes("upsertDemoBudgetTarget") ||
+    op.includes("RoiPacingMutations")
+  ) {
+    return {
+      upsertDemoBudgetTarget: {
+        ok: true,
+        reason: null,
+        target: null,
+      },
+    };
+  }
   if (queryText.includes("attention") || queryText.includes("Attention")) {
     return {
       homeAttention: null,
