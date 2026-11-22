@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties } from "react";
 import { prepareImageForUpload } from "@/utils/compressImageForUpload";
+import { PhotoFileInputs } from "./RecapPhotoStep";
 import { h2, helperText } from "./checkinStyles";
 import {
   TALLY_PHOTO_PREP,
@@ -9,14 +10,28 @@ import {
   type TallyProposals,
 } from "./tallyRead";
 
-const bigButton = (accent: string, busy: boolean): CSSProperties => ({
-  width: "100%",
+const libraryButton = (accent: string, busy: boolean): CSSProperties => ({
+  flex: "1 1 160px",
   minHeight: 52,
   borderRadius: 12,
   border: `2px solid ${accent}`,
   background: "#fff",
   color: "#1c1917",
-  fontSize: 16,
+  fontSize: 15,
+  fontWeight: 700,
+  padding: "0 14px",
+  cursor: busy ? "default" : "pointer",
+  opacity: busy ? 0.7 : 1,
+});
+
+const cameraButton = (busy: boolean): CSSProperties => ({
+  flex: "1 1 140px",
+  minHeight: 52,
+  borderRadius: 12,
+  border: "1px solid rgba(0,0,0,0.28)",
+  background: "#faf7f1",
+  color: "#1c1917",
+  fontSize: 15,
   fontWeight: 700,
   padding: "0 14px",
   cursor: busy ? "default" : "pointer",
@@ -24,7 +39,11 @@ const bigButton = (accent: string, busy: boolean): CSSProperties => ({
 });
 
 /**
- * Take a photo of a tally sheet and have the counts read off it.
+ * Choose or take a photo of a tally sheet and have the counts read off it.
+ *
+ * Uses `PhotoFileInputs` (separate library + camera inputs) so iOS offers
+ * Camera Roll when the BA photographed their sheet inside the store before
+ * walking out to the parking lot, while still offering live camera capture.
  *
  * The numbers come back as proposals shown next to each box (see
  * TallyProposal); this card only starts the read and says what happened.
@@ -51,7 +70,8 @@ export function TallyPhotoCard({
   onProposals: (proposals: TallyProposals) => void;
   onUseAll: () => void;
 }) {
-  const picker = useRef<HTMLInputElement | null>(null);
+  const libraryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const reading = useRef(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -86,28 +106,35 @@ export function TallyPhotoCard({
     <div>
       <h2 style={h2}>Fill from photo</h2>
       <p style={{ ...helperText, margin: "6px 0 10px" }}>
-        Kept a tally sheet? Take a photo of it and the counts are read for you. Each number
-        shows next to its box so you can check it first. The photo is not added to the recap.
+        Kept a tally sheet? Choose a photo from your library or take one now and the counts are
+        read for you. Each number shows next to its box so you can check it first. The photo is not
+        added to the recap.
       </p>
-      <input
-        ref={picker}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{ display: "none" }}
-        onChange={(event) => {
-          void read(event.target.files);
-          event.target.value = "";
+      <PhotoFileInputs
+        libraryRef={libraryRef}
+        cameraRef={cameraRef}
+        onFiles={(files) => {
+          void read(files);
         }}
       />
-      <button
-        type="button"
-        style={bigButton(accent, busy)}
-        disabled={busy}
-        onClick={() => picker.current?.click()}
-      >
-        {busy ? "Reading the photo. Keep going below." : "Fill from photo"}
-      </button>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <button
+          type="button"
+          style={libraryButton(accent, busy)}
+          disabled={busy}
+          onClick={() => libraryRef.current?.click()}
+        >
+          Choose from library
+        </button>
+        <button
+          type="button"
+          style={cameraButton(busy)}
+          disabled={busy}
+          onClick={() => cameraRef.current?.click()}
+        >
+          Take photo
+        </button>
+      </div>
       {/* One line of room is always held, so a result never moves the form. */}
       <div
         role="status"
@@ -121,7 +148,11 @@ export function TallyPhotoCard({
           gap: 10,
         }}
       >
-        {pendingCount > 0 ? (
+        {busy ? (
+          <p style={{ ...helperText, margin: 0, fontSize: 14, color: "#1c1917" }}>
+            Reading the photo. Keep going below.
+          </p>
+        ) : pendingCount > 0 ? (
           <>
             <p style={{ ...helperText, margin: 0, fontSize: 14, color: "#1c1917" }}>
               {tallyFoundLine(pendingCount)}
@@ -154,17 +185,25 @@ export function TallyPhotoCard({
 }
 
 /**
- * One number read from the tally photo, shown under the box it belongs to.
- * It is not in the box until the ambassador taps Use.
+ * One number read from a tally or receipt photo, shown under the box it
+ * belongs to. It is not in the box until the ambassador taps Use.
  */
 export function TallyProposal({
   value,
   onUse,
   onDismiss,
+  heading = "Read from your photo",
+  detail = null,
+  ariaLabel = "Number read from your photo",
+  dismissAriaLabel = "Ignore this number",
 }: {
   value: string;
   onUse: () => void;
   onDismiss: () => void;
+  heading?: string;
+  detail?: string | null;
+  ariaLabel?: string;
+  dismissAriaLabel?: string;
 }) {
   const button: CSSProperties = {
     minHeight: 48,
@@ -179,7 +218,7 @@ export function TallyProposal({
   return (
     <div
       role="group"
-      aria-label="Number read from your photo"
+      aria-label={ariaLabel}
       style={{
         marginTop: 8,
         padding: "8px 8px 8px 12px",
@@ -192,10 +231,15 @@ export function TallyProposal({
       }}
     >
       <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 14, color: "#1c1917" }}>
-        <span style={{ display: "block", fontSize: 13, color: "#44403c" }}>Read from your photo</span>
+        <span style={{ display: "block", fontSize: 13, color: "#44403c" }}>{heading}</span>
         <span style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
           {value}
         </span>
+        {detail ? (
+          <span style={{ display: "block", fontSize: 12, color: "#44403c", marginTop: 2 }}>
+            {detail}
+          </span>
+        ) : null}
       </p>
       <button
         type="button"
@@ -207,7 +251,7 @@ export function TallyProposal({
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Ignore this number"
+        aria-label={dismissAriaLabel}
         style={{ ...button, border: "1px solid transparent", background: "transparent", fontWeight: 600 }}
       >
         Ignore
