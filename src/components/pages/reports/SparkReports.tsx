@@ -29,13 +29,13 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
-import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQuery";
-import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
-import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
+import { TenantRequestsRollupQuery } from "@/api/queries/TenantRequestsRollupQuery";
+import type { TenantRequestsRollupQuery as TenantRequestsRollupQueryType } from "@api/queries/__generated__/TenantRequestsRollupQuery.graphql";
 import "@/lib/sparkChartRegister";
 import { Bar } from "react-chartjs-2";
 import { labelsEveryRow, mergeSameLabel, rankRows, sharePercent } from "@/lib/chartRows";
 import { barSeries, chartOptions, foldToOther, valueLabels } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 import { inputColorScheme } from "@/theme/inputColorScheme";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import RecapDecksCard from "@/components/pages/client-recap/RecapDecksCard";
@@ -46,7 +46,7 @@ import {
   ConsumersPerWeek,
 } from "@/components/charts/ConsumerCharts";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
-import { isCutOff, ofAsked } from "@/lib/consumerBreakdown";
+import { ofAsked } from "@/lib/consumerBreakdown";
 
 const everyValue = valueLabels("all");
 
@@ -59,19 +59,19 @@ const ChartEmpty: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const RankedBars: React.FC<{
   label: string;
   rows: ReadonlyArray<{ label: string; value: number }>;
-}> = ({ label, rows }) => (
-  <Bar
-    data={{
-      labels: rows.map((r) => r.label),
-      datasets: [barSeries({ label, data: rows.map((r) => r.value), horizontal: true })],
-    }}
-    options={chartOptions<"bar">({ horizontal: true })}
-    plugins={labelsEveryRow(rows.length) ? [everyValue] : []}
-  />
-);
-
-/** The most requests one page returns. More than this and the page says so. */
-const CHART_PAGE_SIZE = 2000;
+}> = ({ label, rows }) => {
+  useAppearance();
+  return (
+    <Bar
+      data={{
+        labels: rows.map((r) => r.label),
+        datasets: [barSeries({ label, data: rows.map((r) => r.value), horizontal: true })],
+      }}
+      options={chartOptions<"bar">({ horizontal: true })}
+      plugins={labelsEveryRow(rows.length) ? [everyValue] : []}
+    />
+  );
+};
 
 const isoWeekKey = (d: Date): string => {
   // Monday-start week label "MMM D" (week start). Cheap to compute,
@@ -162,57 +162,45 @@ const ReportsRangeContext = createContext<ReportsRange>(
 );
 const useReportsRange = () => useContext(ReportsRangeContext);
 
-type ReportsRequestRow = NonNullable<
-  NonNullable<
-    ReportsRequestsChartQueryType["response"]["requests"]["edges"][number]
-  >["node"]
->;
-
 /**
- * Request rows behind the request charts, up to CHART_PAGE_SIZE. Brand users
- * get 200 rows a request, so the rest are walked in by cursor; admins still
- * get one request.
+ * Server-aggregated request counts by createdAt day and requestType for the
+ * active report date range — one query, never truncated at 2,000 rows.
  */
-const useReportsRequestPages = () => {
+const useReportsRequestsRollup = () => {
   const { tenantId } = useAuthStore();
-  return useAllConnectionPages<ReportsRequestsChartQueryType, ReportsRequestRow>(
-    ReportsRequestsChartQuery,
-    { first: CHART_PAGE_SIZE, filters: tenantId ? { tenantId } : null },
-    (response) => response.requests,
-  );
+  const range = useReportsRange();
+  return useLazyLoadQuery<TenantRequestsRollupQueryType>(
+    TenantRequestsRollupQuery,
+    {
+      tenantId: tenantId || null,
+      startDate: ymdLocal(range.start),
+      endDate: ymdLocal(range.end),
+      dateField: "created_at",
+    },
+    { fetchPolicy: "store-or-network" },
+  ).tenantRequestsRollup;
 };
 
-const useReportsRequestRows = () => useReportsRequestPages().nodes;
-
-/** How many requests match in all, to say so when a page is not everything. */
-const useReportsRequestTotal = (): number | null =>
-  useReportsRequestPages().totalCount;
-
 const EventsPerWeekChart: React.FC = () => {
-  const rows = useReportsRequestRows();
+  useAppearance();
+  const rollup = useReportsRequestsRollup();
   const range = useReportsRange();
   const { labels, values } = useMemo(() => {
-    const cutoff = range.start;
-    const today = range.end;
-    // Contiguous week buckets (oldest → newest) so the X-axis shows
-    // zero-count weeks instead of gaps.
     const buckets = weekBuckets(range);
     const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
 
-    for (const r of rows) {
-      const raw = r.createdAt;
-      if (!raw) continue;
-      const d = new Date(raw);
-      if (d < cutoff || d > today) continue;
+    for (const dayRow of rollup.byDay) {
+      const d = parseYmd(dayRow.date);
+      if (!d || dayRow.count <= 0) continue;
       const key = isoWeekKey(d);
       const idx = idxByKey.get(key);
-      if (idx !== undefined) buckets[idx].count += 1;
+      if (idx !== undefined) buckets[idx].count += dayRow.count;
     }
     return {
       labels: buckets.map((b) => b.key),
       values: buckets.map((b) => b.count),
     };
-  }, [rows, range]);
+  }, [rollup.byDay, range]);
 
   if (values.every((v) => v === 0)) {
     return <ChartEmpty>No requests created in this window.</ChartEmpty>;
@@ -226,29 +214,16 @@ const EventsPerWeekChart: React.FC = () => {
 };
 
 const ActivationMixChart: React.FC = () => {
-  const rows = useReportsRequestRows();
-  const range = useReportsRange();
+  const rollup = useReportsRequestsRollup();
   const mix = useMemo(() => {
-    const cutoff = range.start.getTime();
-    const until = range.end.getTime();
-    const counts = new Map<string, number>();
-    for (const r of rows) {
-      const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
-      if (!Number.isFinite(t) || t < cutoff || t > until) continue;
-      const key = r.requestType?.name ?? "Other";
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-    // Largest first; past eight types the tail is one "Other" row (joined
-    // with untyped requests, which are already counted as "Other").
-    return rankRows(
-      mergeSameLabel(
-        foldToOther(
-          [...counts.entries()].map(([label, value]) => ({ label, value })),
-          7,
-        ),
-      ),
-    );
-  }, [rows, range]);
+    const rows = rollup.byRequestType
+      .filter((r) => r.count > 0)
+      .map((r) => ({
+        label: r.name === "Unspecified" ? "Other" : r.name,
+        value: r.count,
+      }));
+    return rankRows(mergeSameLabel(foldToOther(rows, 7)));
+  }, [rollup.byRequestType]);
 
   if (mix.length === 0) {
     return <ChartEmpty>No requests in this date range.</ChartEmpty>;
@@ -445,18 +420,8 @@ const ChartCard: React.FC<{
 
 /** The two request charts, shown only when the range has requests. */
 const RequestChartsRow: React.FC = () => {
-  const rows = useReportsRequestRows();
-  const range = useReportsRange();
-  const hasRequests = useMemo(() => {
-    const from = range.start.getTime();
-    const to = range.end.getTime();
-    return rows.some((r) => {
-      const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
-      return Number.isFinite(t) && t >= from && t <= to;
-    });
-  }, [rows, range]);
-  const total = useReportsRequestTotal();
-  if (!hasRequests) return null;
+  const rollup = useReportsRequestsRollup();
+  if (rollup.totalCount <= 0) return null;
   return (
     <div className="space-y-2">
       <div className="grid lg:grid-cols-3 gap-5">
@@ -469,12 +434,6 @@ const RequestChartsRow: React.FC = () => {
           <ActivationMixChart />
         </ChartCard>
       </div>
-      {isCutOff(rows.length, total) ? (
-        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
-          These two charts are cut off: they read {rows.length.toLocaleString()} of this
-          client&rsquo;s {(total ?? 0).toLocaleString()} requests, so some weeks are short.
-        </p>
-      ) : null}
     </div>
   );
 };

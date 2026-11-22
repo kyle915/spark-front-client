@@ -3,7 +3,7 @@ import { geoAlbersUsa, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import statesTopoJson from "us-atlas/states-10m.json";
 import { inkRgba } from "@/theme/chartInk";
-import { readAppearance } from "@/theme/appearance";
+import { useAppearance } from "@/theme/appearance";
 import { chartSurface } from "@/lib/sparkChart";
 import {
   NO_DATA_FILL,
@@ -386,7 +386,7 @@ export const GeoHeatmapView: React.FC<{
   rangeLabel?: string;
   onSelectState?: (code: string) => void;
 }> = ({ rows, rangeLabel, onSelectState }) => {
-  const mode: Mode = readAppearance();
+  const mode: Mode = useAppearance();
   const [metricKey, setMetricKey] = useState<MetricKey>("consumersReached");
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<Tip | null>(null);

@@ -20,6 +20,7 @@ import {
   topBrands,
 } from "@/lib/commentInsights";
 import { barSeries, chartOptions, valueLabels } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 const everyValue = valueLabels("all");
 
@@ -79,6 +80,7 @@ const Guard: React.FC<Window & { title: string; children: ReactNode }> = ({
 /* ───────────────────── other brands people mentioned ───────────────────── */
 
 const MentionsInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+  useAppearance();
   const data = useLazyLoadQuery<MentionsQueryType>(
     TenantCompetitorMentionsQuery,
     { tenantId, startDate, endDate },

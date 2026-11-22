@@ -6,6 +6,7 @@ import ChartCard from "@/components/charts/ChartCard";
 import ChartBlock from "@/components/charts/ChartBlock";
 import { labelsEveryRow } from "@/lib/chartRows";
 import { barSeries, chartOptions, percentLabel, valueLabels } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 export type ReachConversionItem = {
   market: string;
@@ -21,6 +22,7 @@ const everyPercent = valueLabels("all", percentLabel);
  * one market axis, in the order the markets arrive.
  */
 function ReachConversionChart({ data }: { data: ReachConversionItem[] }) {
+  useAppearance();
   const labels = data.map((d) => d.market);
   const labelled = labelsEveryRow(data.length);
 

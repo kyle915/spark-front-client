@@ -27,6 +27,7 @@ import {
 import type { ChartKind } from "@/lib/dashboardExplain";
 import type { ChartOptions, TooltipItem } from "chart.js";
 import { barSeries, chartOptions, lineSeries, valueLabels } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 const lastValue = valueLabels("last");
 const everyValue = valueLabels("all");
@@ -87,6 +88,7 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
   endDate,
   note,
 }) => {
+  useAppearance();
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
   const trend = useMemo(() => weeklyTrend(breakdown?.byWeek ?? []), [breakdown]);
   if (!breakdown) {
@@ -169,6 +171,7 @@ const RankedSplitChart: React.FC<{
   ask: Window & { chart: ChartKind };
 }> = ({ title, measure, split, empty, noun, where, ask }) => {
   const { bars, aside } = split;
+  const appearance = useAppearance();
   // The tooltip names the whole row (the axis may cut it) and says when it
   // is an event venue rather than a store.
   const options = useMemo(() => {
@@ -190,7 +193,7 @@ const RankedSplitChart: React.FC<{
         },
       },
     } as ChartOptions<"bar">;
-  }, [bars]);
+  }, [bars, appearance]);
   if (bars.length === 0) return <Nothing title={title}>{empty}</Nothing>;
   // One row is a sentence, not a one-bar chart.
   if (bars.length === 1 && !aside) {

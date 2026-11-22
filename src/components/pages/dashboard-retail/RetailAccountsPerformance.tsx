@@ -9,6 +9,7 @@ import FormAutocomplete from "@/shared/FormAutocomplete";
 import { useGlobalDistributors } from "../hooks/useGlobalDistributors";
 import { labelsEveryRow } from "@/lib/chartRows";
 import { barSeries, chartOptions, percentLabel, valueLabels } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 const everyCount = valueLabels("all");
 
@@ -28,6 +29,7 @@ export default memo(function RetailAccountsPerformance({
 }: {
   data: RetailAccount[];
 }) {
+  useAppearance();
   const [filter, setFilter] = useState<"top10" | "all">("top10");
   const [search, setSearch] = useState("");
 
