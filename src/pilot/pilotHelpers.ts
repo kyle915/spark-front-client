@@ -828,4 +828,185 @@ export function validateOnboardingQuickRecap(
   };
 }
 
+export interface WorkspaceContextItem {
+  membershipUuid?: string | null;
+  tenantUuid: string;
+  tenantName: string;
+  tenantSlug: string;
+  workspaceRole: string;
+  providerUuid?: string | null;
+  providerName?: string | null;
+  displayLabel: string;
+  isCurrent: boolean;
+}
+
+export interface UnifiedWorkspaceOption {
+  /** Stable key: `membership:<uuid>` when membership-scoped, else `tenant:<uuid>`. */
+  key: string;
+  tenantUuid: string;
+  tenantId: string;
+  name: string;
+  tenantSlug: string | null;
+  requestUrlName: string | null;
+  checkinCode: string | null;
+  logo: string | null;
+  membershipUuid: string | null;
+  workspaceRole: string | null;
+  providerUuid: string | null;
+  providerName: string | null;
+  displayLabel: string;
+  isCurrent: boolean;
+  /** True when backed by `myWorkspaceContexts` so switches sync via `switchWorkspaceContext`. */
+  fromWorkspaceContext: boolean;
+}
+
+/**
+ * Merge `myWorkspaceContexts` (managed brands + agency memberships) with
+ * `TenantQuery` rows (logos, Relay IDs, check-in codes) into one deduplicated,
+ * `[ARCHIVED]`-filtered list for the unified sidebar workspace switcher.
+ */
+export function buildUnifiedWorkspaceOptions(params: {
+  contexts: readonly WorkspaceContextItem[];
+  tenants: readonly SwitchableTenant[];
+  active?: {
+    tenantUuid?: string | null;
+    membershipUuid?: string | null;
+  };
+}): UnifiedWorkspaceOption[] {
+  const { contexts, tenants, active = {} } = params;
+  const tenantByUuid = new Map<string, SwitchableTenant>();
+  for (const t of tenants) {
+    if (t.uuid) tenantByUuid.set(t.uuid, t);
+  }
+
+  const merged: UnifiedWorkspaceOption[] = [];
+  const seenKeys = new Set<string>();
+  const coveredTenantUuids = new Set<string>();
+
+  for (const ctx of contexts) {
+    if (!ctx.tenantUuid) continue;
+    const key = workspaceContextOptionKey(ctx);
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    coveredTenantUuids.add(ctx.tenantUuid);
+
+    const meta = tenantByUuid.get(ctx.tenantUuid);
+    const name =
+      (ctx.tenantName || meta?.name || "").trim() ||
+      ctx.tenantSlug ||
+      meta?.tenantSlug ||
+      meta?.requestUrlName ||
+      "Workspace";
+
+    merged.push({
+      key,
+      tenantUuid: ctx.tenantUuid,
+      tenantId: meta?.id ?? "",
+      name,
+      tenantSlug: ctx.tenantSlug || meta?.tenantSlug || null,
+      requestUrlName: meta?.requestUrlName ?? null,
+      checkinCode: meta?.checkinCode ?? null,
+      logo: meta?.logo ?? null,
+      membershipUuid: ctx.membershipUuid ?? null,
+      workspaceRole: ctx.workspaceRole || null,
+      providerUuid: ctx.providerUuid ?? null,
+      providerName: ctx.providerName ?? null,
+      displayLabel: (ctx.displayLabel || "").trim() || name,
+      isCurrent: Boolean(ctx.isCurrent),
+      fromWorkspaceContext: true,
+    });
+  }
+
+  for (const t of tenants) {
+    if (!t.uuid || coveredTenantUuids.has(t.uuid)) continue;
+    const key = workspaceContextOptionKey({
+      tenantUuid: t.uuid,
+      membershipUuid: null,
+    });
+    if (seenKeys.has(key)) continue;
+    seenKeys.add(key);
+
+    const name =
+      (t.name ?? "").trim() || t.tenantSlug || t.requestUrlName || "Workspace";
+
+    merged.push({
+      key,
+      tenantUuid: t.uuid,
+      tenantId: t.id,
+      name,
+      tenantSlug: t.tenantSlug ?? null,
+      requestUrlName: t.requestUrlName ?? null,
+      checkinCode: t.checkinCode ?? null,
+      logo: t.logo ?? null,
+      membershipUuid: null,
+      workspaceRole: null,
+      providerUuid: null,
+      providerName: null,
+      displayLabel: name,
+      isCurrent: false,
+      fromWorkspaceContext: false,
+    });
+  }
+
+  return filterVisibleWorkspaceContexts(
+    merged.map((opt) => ({
+      opt,
+      tenantUuid: opt.tenantUuid,
+      tenantName: opt.name,
+      displayLabel: opt.displayLabel,
+      membershipUuid: opt.membershipUuid,
+    })),
+    active,
+  ).map((row) => row.opt);
+}
+
+export function workspaceOptionMatchesQuery(
+  opt: Pick<
+    UnifiedWorkspaceOption,
+    | "name"
+    | "tenantSlug"
+    | "requestUrlName"
+    | "providerName"
+    | "displayLabel"
+    | "workspaceRole"
+  >,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const roleText = opt.workspaceRole ? workspaceRoleLabel(opt.workspaceRole) : "";
+  const haystack = [
+    opt.name,
+    opt.tenantSlug,
+    opt.requestUrlName,
+    opt.providerName,
+    opt.displayLabel,
+    roleText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
+export function formatWorkspaceOptionSubtitle(
+  opt: Pick<
+    UnifiedWorkspaceOption,
+    "providerName" | "workspaceRole" | "tenantSlug" | "requestUrlName"
+  >,
+  options?: { hasDuplicateTenant?: boolean },
+): string | null {
+  const provider = (opt.providerName ?? "").trim();
+  const roleLabel = opt.workspaceRole
+    ? workspaceRoleLabel(opt.workspaceRole)
+    : "";
+  if (provider) {
+    return roleLabel ? `${provider} · ${roleLabel}` : provider;
+  }
+  if (options?.hasDuplicateTenant && roleLabel) {
+    return roleLabel;
+  }
+  return opt.tenantSlug || opt.requestUrlName || null;
+}
+
 

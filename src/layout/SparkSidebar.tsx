@@ -667,6 +667,32 @@ export const SparkSidebar: React.FC = () => {
     .toUpperCase();
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
+  const tenantFallback = (
+    <div
+      className="flex items-center gap-2 px-3 py-2 rounded-md"
+      style={{
+        background: "rgba(var(--spark-ink-rgb),0.025)",
+        border: "1px solid var(--spark-border)",
+      }}
+    >
+      <span
+        className="w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0"
+        style={{
+          background: "rgba(var(--spark-accent-rgb),0.15)",
+          color: "var(--spark-lime)",
+        }}
+      >
+        {tenantDisplay.slice(0, 2).toUpperCase()}
+      </span>
+      <span
+        className="text-sm truncate flex-1"
+        style={{ color: "var(--spark-text-meta)" }}
+      >
+        {tenantDisplay}
+      </span>
+    </div>
+  );
+
   // The nav rendered WITHOUT badge counts. Used both as the Suspense
   // fallback (while the counts query loads) AND as the ErrorBoundary
   // fallback below — so if the counts query ever throws, the nav stays
@@ -741,41 +767,17 @@ export const SparkSidebar: React.FC = () => {
         </button>
       </div>
 
-      {/* Tenant picker */}
+      {/* Unified workspace switcher (desktop + mobile drawer) */}
       <div
         className="px-3 py-3 spark-sidebar-expand-only"
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
-        <div className="label-mini mb-1.5 px-1">Tenant</div>
-        <Suspense
-          fallback={
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-md"
-              style={{
-                background: "rgba(var(--spark-ink-rgb),0.025)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              <span
-                className="w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0"
-                style={{
-                  background: "rgba(var(--spark-accent-rgb),0.15)",
-                  color: "var(--spark-lime)",
-                }}
-              >
-                {tenantDisplay.slice(0, 2).toUpperCase()}
-              </span>
-              <span
-                className="text-sm truncate flex-1"
-                style={{ color: "var(--spark-text-meta)" }}
-              >
-                {tenantDisplay}
-              </span>
-            </div>
-          }
-        >
-          <TenantPicker />
-        </Suspense>
+        <div className="label-mini mb-1.5 px-1">Workspace</div>
+        <ErrorBoundary fallback={tenantFallback}>
+          <Suspense fallback={tenantFallback}>
+            <TenantPicker />
+          </Suspense>
+        </ErrorBoundary>
       </div>
 
       {/* Nav — collapsed by default except Workspace and the section

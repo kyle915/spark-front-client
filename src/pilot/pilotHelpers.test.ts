@@ -14,6 +14,7 @@ import {
   createInitialOnboardingSignupState,
   createInitialQuickRecapState,
   currentDateInTimezone,
+  buildUnifiedWorkspaceOptions,
   evidenceBadgeMeta,
   exceptionStatusLabel,
   filterVisibleWorkspaceContexts,
@@ -21,6 +22,7 @@ import {
   formatHonestMoney,
   formatPilotCountdown,
   formatSingleWorkspaceBadgeLabel,
+  formatWorkspaceOptionSubtitle,
   isArchivedWorkspaceLabel,
   planBadgeMeta,
   resolveActiveWorkspaceContextKey,
@@ -29,6 +31,7 @@ import {
   subscriptionStatusBadge,
   validateOnboardingQuickRecap,
   workspaceContextOptionKey,
+  workspaceOptionMatchesQuery,
   workspaceRoleLabel,
 } from "./pilotHelpers";
 import { useAuthStore } from "@/store/authStore";
@@ -478,5 +481,101 @@ describe("pilotHelpers", () => {
         expect(contrastRatio(bar, p.meterTrack)).toBeGreaterThanOrEqual(4.5);
       }
     }
+  });
+
+  it("merges myWorkspaceContexts with TenantQuery metadata, hides [ARCHIVED], and formats subtitles", () => {
+    const merged = buildUnifiedWorkspaceOptions({
+      contexts: [
+        {
+          membershipUuid: null,
+          tenantUuid: "uuid-ld",
+          tenantName: "Liquid Death",
+          tenantSlug: "liquid-death",
+          workspaceRole: "brand_admin",
+          providerUuid: null,
+          providerName: null,
+          displayLabel: "Liquid Death · Managed Workspace",
+          isCurrent: true,
+        },
+        {
+          membershipUuid: "mem-fp-ld",
+          tenantUuid: "uuid-ld",
+          tenantName: "Liquid Death",
+          tenantSlug: "liquid-death",
+          workspaceRole: "provider_manager",
+          providerUuid: "prov-fp",
+          providerName: "FieldPulse",
+          displayLabel: "Liquid Death · FieldPulse (Agency Manager)",
+          isCurrent: false,
+        },
+        {
+          membershipUuid: null,
+          tenantUuid: "uuid-carbliss",
+          tenantName: "[ARCHIVED] Carbliss",
+          tenantSlug: "carbliss",
+          workspaceRole: "brand_admin",
+          providerUuid: null,
+          providerName: null,
+          displayLabel: "[ARCHIVED] Carbliss · Managed Workspace",
+          isCurrent: false,
+        },
+      ],
+      tenants: [
+        {
+          id: "Tenant:ld",
+          uuid: "uuid-ld",
+          name: "Liquid Death",
+          logo: "https://cdn/ld.png",
+          requestUrlName: "liquid-death",
+          tenantSlug: "liquid-death",
+          checkinCode: "LD-TNBJ8K",
+        },
+        {
+          id: "Tenant:bd",
+          uuid: "uuid-bd",
+          name: "Brew Dr",
+          logo: "https://cdn/bd.png",
+          requestUrlName: "brew-dr-kombucha",
+          tenantSlug: "brew-dr-kombucha",
+          checkinCode: "BD-AQRACD",
+        },
+        {
+          id: "Tenant:arch",
+          uuid: "uuid-arch-only",
+          name: "[ARCHIVED] Old Brand",
+          logo: null,
+          requestUrlName: "old-brand",
+          tenantSlug: "old-brand",
+          checkinCode: null,
+        },
+      ],
+      active: { tenantUuid: "uuid-ld", membershipUuid: null },
+    });
+
+    expect(merged.map((o) => o.key)).toEqual([
+      "tenant:uuid-ld",
+      "membership:mem-fp-ld",
+      "tenant:uuid-bd",
+    ]);
+    expect(merged[0].logo).toBe("https://cdn/ld.png");
+    expect(merged[0].tenantId).toBe("Tenant:ld");
+    expect(merged[0].fromWorkspaceContext).toBe(true);
+    expect(merged[1].providerName).toBe("FieldPulse");
+    expect(merged[2].fromWorkspaceContext).toBe(false);
+
+    expect(
+      formatWorkspaceOptionSubtitle(merged[1], { hasDuplicateTenant: true }),
+    ).toBe("FieldPulse · Agency Manager");
+    expect(
+      formatWorkspaceOptionSubtitle(merged[0], { hasDuplicateTenant: true }),
+    ).toBe("Brand Admin");
+    expect(
+      formatWorkspaceOptionSubtitle(merged[0], { hasDuplicateTenant: false }),
+    ).toBe("liquid-death");
+
+    expect(workspaceOptionMatchesQuery(merged[1], "fieldpulse")).toBe(true);
+    expect(workspaceOptionMatchesQuery(merged[1], "agency manager")).toBe(true);
+    expect(workspaceOptionMatchesQuery(merged[2], "kombucha")).toBe(true);
+    expect(workspaceOptionMatchesQuery(merged[0], "fieldpulse")).toBe(false);
   });
 });
