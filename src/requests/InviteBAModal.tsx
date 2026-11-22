@@ -80,15 +80,6 @@ type Row = {
   localityScore: number;
 };
 
-const initials = (name: string): string =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "BA";
-
 type Suggestion =
   StaffingSuggestionsQueryType["response"]["staffingSuggestions"][number];
 
