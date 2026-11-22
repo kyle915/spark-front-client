@@ -272,13 +272,14 @@ const Inner: React.FC<{
     { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
   );
 
-  const cascadeEventNames = useMemo(() => {
-    const names = new Set<string>();
+  const cascadeEventKeys = useMemo(() => {
+    const keys = new Set<string>();
     for (const a of cascadeData?.noShowCascadeAlerts ?? []) {
       if (!a || !ACTIVE_CASCADE.has(a.status)) continue;
-      if (a.eventName) names.add(a.eventName.trim().toLowerCase());
+      if (a.eventUuid) keys.add(String(a.eventUuid));
+      else if (a.eventName) keys.add(a.eventName.trim().toLowerCase());
     }
-    return names;
+    return keys;
   }, [cascadeData]);
 
   const { onClock, noShows, pending } = useMemo(() => {
@@ -391,9 +392,10 @@ const Inner: React.FC<{
                   <TriggerBackupAlertButton
                     eventUuid={s.eventUuid}
                     eventName={s.eventName}
-                    hasCascade={cascadeEventNames.has(
-                      (s.eventName ?? "").trim().toLowerCase(),
-                    )}
+                    hasCascade={
+                      cascadeEventKeys.has(s.eventUuid) ||
+                      cascadeEventKeys.has((s.eventName ?? "").trim().toLowerCase())
+                    }
                     onDone={bump}
                   />
                 ) : null}

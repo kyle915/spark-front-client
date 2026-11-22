@@ -13,6 +13,7 @@ export const NoShowCascadeAlertsQuery = graphql`
       tenantId
       tenantName
       eventId
+      eventUuid
       eventName
       triggerReason
       status

@@ -10533,12 +10533,17 @@ type NoShowCascadeAlertType {
   tenantId: ID!
   tenantName: String!
   eventId: ID!
+  eventUuid: String!
   eventName: String!
   triggerReason: String!
   status: String!
   minutesPastStart: Int
+  notifiedBackupBas: JSON
+  deliveryAudit: JSON
+  opsNotifiedEmails: [String!]!
   notes: String!
   dispatchedAt: String
+  resolvedAt: String
   createdAt: String!
 }
 
