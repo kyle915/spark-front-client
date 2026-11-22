@@ -287,6 +287,12 @@ const SECTIONS: NavSection[] = [
         to: "/buyer-report",
         clientLabel: "Buyer Store Report",
       },
+      {
+        label: "Live Photo Wall",
+        Icon: Images,
+        to: "/photo-wall",
+        clientLabel: "Live Photo Wall",
+      },
       // Ignite-internal: each brand's written weekly summary and monthly
       // email draft, for staff to review and copy. Nothing is sent from it.
       { label: "Client summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },

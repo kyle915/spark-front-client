@@ -505,6 +505,7 @@ const PublicInvoice = lazyDefault(
 const PublicJobBoard = lazyDefault(() => import("@/public/jobs/PublicJobBoard"));
 // Public, no-login clock in/out. The :token is the link (see timeclock/ in spark-api).
 const PublicClock = lazyDefault(() => import("@/public/clock/PublicClock"));
+const PublicPitch = lazyDefault(() => import("@/public/pitch/PublicPitch"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ConnectAi = lazyDefault(() => import("@/auth/ConnectAi"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
@@ -609,6 +610,11 @@ const PublicRoutes = {
     {
       path: "/r/:token",
       component: <PublicRecap />,
+      isPublic: true,
+    },
+    {
+      path: "/pitch/:token",
+      component: <PublicPitch />,
       isPublic: true,
     },
     {
@@ -1772,6 +1778,7 @@ const WorkspaceSharePublicPage = lazyDefault(
   () => import("@/pilot/WorkspaceSharePublicPage"),
 );
 const RoiPacingPage = lazyDefault(() => import("@/pilot/RoiPacingPage"));
+const PhotoWallPage = lazyDefault(() => import("@/pilot/PhotoWallPage"));
 
 const PilotLinks = {
   routes: [
@@ -1827,6 +1834,11 @@ const PilotLinks = {
     {
       path: "/buyer-report",
       component: <BuyerReportPage />,
+      isPublic: false,
+    },
+    {
+      path: "/photo-wall",
+      component: <PhotoWallPage />,
       isPublic: false,
     },
   ],

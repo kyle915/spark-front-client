@@ -129,6 +129,11 @@ export function clientLivePublicUrl(token: string): string {
   return withPath(clientOrigin(), `/live/${encodeURIComponent(token)}`);
 }
 
+/** Public Buyer Pitch Deck leave-behind — /pitch/:token on client. */
+export function pitchPublicUrl(token: string): string {
+  return withPath(recapShareOrigin(), `/pitch/${encodeURIComponent(token)}`);
+}
+
 /** Staff request deep link for mention emails — always admin. in prod. */
 export function adminRequestUrl(requestUuid: string): string {
   return withPath(adminOrigin(), `/request/view/${encodeURIComponent(requestUuid)}`);
@@ -137,7 +142,7 @@ export function adminRequestUrl(requestUuid: string): string {
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
   return (
-    /^\/(checkin|provider-submit|workspace-share|spark-form|r|report|training|c|invoice|live|clock)(\/|$)/.test(pathname) ||
+    /^\/(checkin|provider-submit|workspace-share|spark-form|r|report|training|c|invoice|live|clock|pitch)(\/|$)/.test(pathname) ||
     /^\/jobs\/[^/]+/.test(pathname)
   );
 }

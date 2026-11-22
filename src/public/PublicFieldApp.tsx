@@ -22,6 +22,7 @@ const PublicRecap = lazy(() => import("@/public/recaps/PublicRecap"));
 const TrainingHub = lazy(() => import("@/public/training/TrainingHub"));
 const PublicJobBoard = lazy(() => import("@/public/jobs/PublicJobBoard"));
 const PublicClock = lazy(() => import("@/public/clock/PublicClock"));
+const PublicPitch = lazy(() => import("@/public/pitch/PublicPitch"));
 const ProviderMobileSubmitPage = lazy(
   () => import("@/pilot/ProviderMobileSubmitPage"),
 );
@@ -68,6 +69,7 @@ export default function PublicFieldApp() {
           <Route path="/jobs/release/:releaseToken" element={<PublicJobBoard />} />
           <Route path="/jobs/:token" element={<PublicJobBoard />} />
           <Route path="/clock/:token" element={<PublicClock />} />
+          <Route path="/pitch/:token" element={<PublicPitch />} />
         </Routes>
       </Suspense>
       </CheckinErrorBoundary>
