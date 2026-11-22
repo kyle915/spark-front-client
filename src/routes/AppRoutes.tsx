@@ -602,6 +602,11 @@ const PublicRoutes = {
       isPublic: true,
     },
     {
+      path: "/jobs/release/:releaseToken",
+      component: <PublicJobBoard />,
+      isPublic: true,
+    },
+    {
       path: "/jobs/:token",
       component: <PublicJobBoard />,
       isPublic: true,

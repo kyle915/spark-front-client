@@ -143,6 +143,12 @@ import { previewFromContext } from "./recapPreviewModel";
 import PayableMileageStep from "./PayableMileageStep";
 import IdentifyStep from "./IdentifyStep";
 import RecapForm from "./RecapForm";
+import LiveShiftCounterCard from "./LiveShiftCounterCard";
+import {
+  clearLiveShiftCounter,
+  hasSavedLiveCounterActivity,
+  syncLiveCounterToRecapDraft,
+} from "./liveShiftCounter";
 import ProgramSwitch from "./ProgramSwitch";
 import { showProgramSwitch } from "./programSwitchRules";
 import StoreFix from "./StoreFix";
@@ -612,7 +618,10 @@ export default function SparkCheckin() {
       // draft) on the phone for Try again / Ignite.
       if (!unsent.rejectedRecap) {
         clearPendingRecap(code);
-        if (token) clearDraft(code, token);
+        if (token) {
+          clearDraft(code, token);
+          clearLiveShiftCounter(code, token);
+        }
       }
     } catch {
       /* private mode — clearing state below is enough for this session */
@@ -976,12 +985,26 @@ function CheckedInFlow({
     },
   );
   const [recapAsNew, setRecapAsNew] = useState(false);
+  const computeDraftWaiting = useCallback(
+    () =>
+      hasRecapDraft(code, token) ||
+      draftHasAnswers(ctx.session?.recapDraft) ||
+      hasSavedLiveCounterActivity(code, token),
+    [code, token, ctx.session?.recapDraft],
+  );
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
     if (asNew) {
       setConfirmedPayableMiles(null);
       clearPendingMileage(code);
       setQueuedMileage(null);
+    } else if (!ts) {
+      syncLiveCounterToRecapDraft({
+        code,
+        token,
+        template: ctx.template ?? null,
+        serverDraft: ctx.session?.recapDraft ?? null,
+      });
     }
     const needMiles = shouldCollectPayableMileage({
       brand: ctx.brand,
@@ -1025,16 +1048,12 @@ function CheckedInFlow({
   const [sendingQueuedRecap, setSendingQueuedRecap] = useState(false);
   // Bumped to remount RecapForm after it adopts an earlier session's draft.
   const [recapFormKey, setRecapFormKey] = useState(0);
-  // Local draft (typed answers) — same phone, same session token. Lets the
-  // clocked-in CTA say Continue instead of File when they already started.
-  const [draftWaiting, setDraftWaiting] = useState(
-    () => hasRecapDraft(code, token) || draftHasAnswers(ctx.session?.recapDraft),
-  );
+  // Local draft (typed answers or live shift tallies) — same phone, same session token.
+  // Lets the clocked-in CTA say Continue instead of File when they already started.
+  const [draftWaiting, setDraftWaiting] = useState(() => computeDraftWaiting());
   useEffect(() => {
-    setDraftWaiting(
-      hasRecapDraft(code, token) || draftHasAnswers(ctx.session?.recapDraft),
-    );
-  }, [code, token, showRecap, ctx.session?.recapDraft]);
+    setDraftWaiting(computeDraftWaiting());
+  }, [computeDraftWaiting, showRecap]);
   // The phone reloaded the page while the recap was open (usually the camera
   // — see photoDraft.ts): put the BA back in it, photos and all. A "File
   // another" form isn't reopened as an edit of the filed recap; it waits
@@ -1407,6 +1426,15 @@ function CheckedInFlow({
     setMsg(null);
     setBusy(kind);
     if (kind === "in") setInPhase("pending");
+    if (kind === "out" && !ts) {
+      syncLiveCounterToRecapDraft({
+        code,
+        token,
+        template: ctx.template ?? null,
+        serverDraft: ctx.session?.recapDraft ?? null,
+      });
+      setDraftWaiting(computeDraftWaiting());
+    }
     const tappedAt = new Date().toISOString();
     // Evidence that the button was pressed, sent before anything can fail.
     // If the punch itself never lands, staff can still see the attempt.
@@ -1770,6 +1798,7 @@ function CheckedInFlow({
           } else setShowRecap(false);
         }}
         onSubmitted={async () => {
+          if (!recapAsNew) clearLiveShiftCounter(code, token);
           setShowRecap(false);
           setQueuedRecap(null);
           await onRefresh();
@@ -2419,6 +2448,17 @@ function CheckedInFlow({
           <p style={errText}>{msg}</p>
         ) : null}
       </div>
+
+      {/* Offline live SKU tap counter + verbatim consumer quote scratchpad while on the clock */}
+      {!ts && !leftover && effectiveClock === "clocked_in" && !hasRecap ? (
+        <LiveShiftCounterCard
+          code={code}
+          token={token}
+          template={ctx.template ?? null}
+          accent={accent}
+          onActivityChange={() => setDraftWaiting(computeDraftWaiting())}
+        />
+      ) : null}
 
       {/* Another gig — directly under the Time Clock card (not at the bottom of
           the page, where BAs never found it) but outside it, so it cannot
