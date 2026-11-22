@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  attentionBucketsForViewer,
   flattenAttentionRows,
   formatPaceMoney,
   formatPaceRate,
@@ -86,5 +87,66 @@ describe("roiPacingHelpers", () => {
       bucketLabel: "Rebook stores",
     });
     expect(rows[1].actionUrl).toBe("/finance-queue");
+  });
+
+  it("hides Missing recaps for client viewers, keeps other buckets", () => {
+    const buckets = [
+      {
+        key: "receipt_checks",
+        label: "Receipt checks",
+        count: 2,
+        items: [
+          {
+            bucket: "receipt_checks",
+            title: "Duplicate photo",
+            refId: "r1",
+            actionUrl: "/receipt-checks",
+          },
+        ],
+      },
+      {
+        key: "missing_recaps",
+        label: "Missing recaps",
+        count: 5,
+        items: [
+          {
+            bucket: "missing_recaps",
+            title: "Recap due · K Slope Marketplace",
+            refId: "m1",
+            actionUrl: "/recaps/missing",
+          },
+        ],
+      },
+      {
+        key: "unstaffed",
+        label: "Unstaffed (48h)",
+        count: 3,
+        items: [
+          {
+            bucket: "unstaffed",
+            title: "Unstaffed · larry's little giant",
+            refId: "u1",
+            actionUrl: "/schedule",
+          },
+        ],
+      },
+    ];
+
+    const client = attentionBucketsForViewer(buckets, { staff: false });
+    expect(client.totalCount).toBe(5);
+    expect(client.buckets.find((b) => b.key === "missing_recaps")?.count).toBe(0);
+    expect(client.buckets.find((b) => b.key === "missing_recaps")?.items).toEqual([]);
+    expect(client.buckets.find((b) => b.key === "receipt_checks")?.count).toBe(2);
+    expect(client.buckets.find((b) => b.key === "unstaffed")?.count).toBe(3);
+
+    const clientRows = flattenAttentionRows(buckets, { staff: false });
+    expect(clientRows.map((r) => r.bucketLabel)).toEqual([
+      "Receipt checks",
+      "Unstaffed (48h)",
+    ]);
+
+    const staff = attentionBucketsForViewer(buckets, { staff: true });
+    expect(staff.totalCount).toBe(10);
+    expect(flattenAttentionRows(buckets, { staff: true })).toHaveLength(3);
   });
 });

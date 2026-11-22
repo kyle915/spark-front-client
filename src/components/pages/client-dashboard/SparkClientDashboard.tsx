@@ -551,7 +551,7 @@ const ClientInner: React.FC = () => {
       )}
 
       {activeTab === "overview" && (<>
-        <TodayAttentionStrip />
+        <TodayAttentionStrip staff={false} />
 
         {tenantId ? (
           <Suspense fallback={<PanelSkeleton label="Loading your program" />}>

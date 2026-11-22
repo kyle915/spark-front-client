@@ -63,6 +63,28 @@ export function syncedTargetEditorAmount(args: {
   return args.serverTarget ?? "";
 }
 
+/** Missing-recap chase is Ignite ops (/recaps/missing). Brand/client
+ * dashboards keep receipt checks, unstaffed, and rebooks only. */
+export function attentionBucketsForViewer<
+  T extends { key: string; count: number; items: ReadonlyArray<unknown> },
+>(
+  buckets: ReadonlyArray<T> | null | undefined,
+  opts: { staff: boolean },
+): { buckets: T[]; totalCount: number } {
+  const source = [...(buckets ?? [])];
+  const next = opts.staff
+    ? source
+    : source.map((b) =>
+        b.key === "missing_recaps"
+          ? ({ ...b, count: 0, items: [] } as T)
+          : b,
+      );
+  return {
+    buckets: next,
+    totalCount: next.reduce((sum, b) => sum + (b.count || 0), 0),
+  };
+}
+
 export function flattenAttentionRows(
   buckets: Array<{
     key: string;
@@ -74,8 +96,11 @@ export function flattenAttentionRows(
       actionUrl: string;
     }>;
   }>,
+  opts: { staff?: boolean } = {},
 ): Array<{ key: string; title: string; actionUrl: string; bucketLabel: string }> {
-  return buckets.flatMap((b) =>
+  const staff = opts.staff !== false;
+  const { buckets: visible } = attentionBucketsForViewer(buckets, { staff });
+  return visible.flatMap((b) =>
     (b.items ?? []).map((item) => ({
       key: `${item.bucket}-${item.refId}`,
       title: item.title,

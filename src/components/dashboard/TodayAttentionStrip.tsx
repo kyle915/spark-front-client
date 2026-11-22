@@ -4,10 +4,14 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { TodayAttentionQueueQuery } from "@/api/queries/RoiPacingQueries";
 import type { RoiPacingQueriesTodayAttentionQueueQuery as QueueQueryType } from "@/api/queries/__generated__/RoiPacingQueriesTodayAttentionQueueQuery.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { attentionBucketsForViewer } from "@/pilot/roiPacingHelpers";
 
 /**
  * Compact action queue above the existing Starts-today / Needs-attention
  * panels. One composite GraphQL query; each row deep-links to resolve.
+ *
+ * Staff see all buckets (including Missing recaps). Brand/client viewers
+ * keep Receipt checks / Unstaffed / Rebooks — Missing recaps stay ops-only.
  */
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -35,7 +39,7 @@ const sevTone = (severity: string): CSSProperties => {
   };
 };
 
-const StripBody: React.FC = () => {
+const StripBody: React.FC<{ staff: boolean }> = ({ staff }) => {
   const data = useLazyLoadQuery<QueueQueryType>(
     TodayAttentionQueueQuery,
     {},
@@ -44,13 +48,23 @@ const StripBody: React.FC = () => {
   // E2e GraphQL mocks (and pre-API-deploy clients) may omit this field;
   // never throw — strip is optional chrome above Today / Overview.
   const queue = data?.todayAttentionQueue ?? null;
-  if (!queue || queue.totalCount === 0) return null;
+  if (!queue) return null;
 
-  const rows = (queue.buckets ?? []).flatMap((b) =>
-    (b?.items ?? []).map((item) => ({
-      ...item,
-      bucketLabel: b?.label ?? item.bucket,
-    })),
+  const { buckets, totalCount } = attentionBucketsForViewer(
+    (queue.buckets ?? []).filter(
+      (b): b is NonNullable<typeof b> => Boolean(b),
+    ),
+    { staff },
+  );
+  if (totalCount === 0) return null;
+
+  const rows = buckets.flatMap((b) =>
+    (b.items ?? [])
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .map((item) => ({
+        ...item,
+        bucketLabel: b.label ?? item.bucket,
+      })),
   );
   if (rows.length === 0) return null;
 
@@ -63,7 +77,7 @@ const StripBody: React.FC = () => {
       <div className="spark-panel-head">
         <h2 className="spark-panel-title">
           Today&apos;s attention
-          <span className="spark-panel-count">{queue.totalCount}</span>
+          <span className="spark-panel-count">{totalCount}</span>
         </h2>
       </div>
       <ul className="divide-y" style={{ borderColor: "var(--spark-border)" }}>
@@ -104,10 +118,12 @@ const StripBody: React.FC = () => {
   );
 };
 
-export const TodayAttentionStrip: React.FC = () => (
+export const TodayAttentionStrip: React.FC<{ staff?: boolean }> = ({
+  staff = false,
+}) => (
   <ErrorBoundary fallback={null}>
     <Suspense fallback={null}>
-      <StripBody />
+      <StripBody staff={staff} />
     </Suspense>
   </ErrorBoundary>
 );
