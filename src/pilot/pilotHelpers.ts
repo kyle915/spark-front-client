@@ -49,6 +49,7 @@ export function workspaceRoleLabel(role: string): string {
     default: {
       // Runtime fallback for unknown server strings while keeping exhaustive check
       if (typeof role === "string" && role) {
+        if (role === "field_contributor") return "Field Contributor";
         return role.replace(/_/g, " ");
       }
       return assertNever(known);
@@ -320,4 +321,224 @@ export async function applyWorkspaceContextSelection(
     // row; the cleared baseline set above keeps tenant state consistent.
   }
 }
+
+export type PlanCodeKind =
+  | "free"
+  | "core"
+  | "pro"
+  | "scale"
+  | "pilot_pro"
+  | "managed_sow";
+
+export type SubscriptionStatusKind =
+  | "free_active"
+  | "pilot_active"
+  | "pilot_expired"
+  | "checkout_pending"
+  | "active"
+  | "past_due"
+  | "cancel_at_period_end"
+  | "canceled"
+  | "managed_sow";
+
+export function planBadgeMeta(planCode: string): {
+  label: string;
+  priceSummary: string;
+  bg: string;
+  fg: string;
+} {
+  const known = planCode as PlanCodeKind;
+  switch (known) {
+    case "free":
+      return {
+        label: "Free",
+        priceSummary: "$0/mo · 5 visits",
+        bg: "rgba(148,163,184,0.16)",
+        fg: "#cbd5e1",
+      };
+    case "core":
+      return {
+        label: "Core",
+        priceSummary: "$299/mo · 50 visits",
+        bg: "rgba(56,189,248,0.16)",
+        fg: "#7dd3fc",
+      };
+    case "pro":
+      return {
+        label: "Pro",
+        priceSummary: "$750/mo · 100 visits",
+        bg: "rgba(197,245,70,0.18)",
+        fg: "#c5f546",
+      };
+    case "pilot_pro":
+      return {
+        label: "60-Day Pro Pilot",
+        priceSummary: "$1,500 pilot · 100 visits/mo",
+        bg: "rgba(197,245,70,0.22)",
+        fg: "#c5f546",
+      };
+    case "scale":
+      return {
+        label: "Scale",
+        priceSummary: "From $1,500/mo · 250 visits",
+        bg: "rgba(250,204,21,0.16)",
+        fg: "#fde047",
+      };
+    case "managed_sow":
+      return {
+        label: "Managed SOW",
+        priceSummary: "Contracted Ignite SOW",
+        bg: "rgba(197,245,70,0.14)",
+        fg: "#c5f546",
+      };
+    default: {
+      if (typeof planCode === "string" && planCode) {
+        return {
+          label: planCode.toUpperCase(),
+          priceSummary: "Custom plan",
+          bg: "rgba(148,163,184,0.16)",
+          fg: "#cbd5e1",
+        };
+      }
+      return assertNever(known);
+    }
+  }
+}
+
+export function subscriptionStatusBadge(status: string): {
+  label: string;
+  bg: string;
+  fg: string;
+} {
+  const known = status as SubscriptionStatusKind;
+  switch (known) {
+    case "free_active":
+      return {
+        label: "Free Active",
+        bg: "rgba(148,163,184,0.15)",
+        fg: "#cbd5e1",
+      };
+    case "pilot_active":
+      return {
+        label: "60-Day Pilot Active",
+        bg: "rgba(197,245,70,0.18)",
+        fg: "#c5f546",
+      };
+    case "pilot_expired":
+      return {
+        label: "Pilot Ended · Free Fallback",
+        bg: "rgba(250,204,21,0.18)",
+        fg: "#fde047",
+      };
+    case "checkout_pending":
+      return {
+        label: "Checkout Open",
+        bg: "rgba(56,189,248,0.16)",
+        fg: "#7dd3fc",
+      };
+    case "active":
+      return {
+        label: "Active Recurring",
+        bg: "rgba(197,245,70,0.18)",
+        fg: "#c5f546",
+      };
+    case "past_due":
+      return {
+        label: "Payment Past Due",
+        bg: "rgba(239,90,42,0.22)",
+        fg: "#ef5a2a",
+      };
+    case "cancel_at_period_end":
+      return {
+        label: "Cancels at Period End (Paid-Through)",
+        bg: "rgba(250,204,21,0.16)",
+        fg: "#fde047",
+      };
+    case "canceled":
+      return {
+        label: "Cancelled · Free Tier",
+        bg: "rgba(148,163,184,0.16)",
+        fg: "#cbd5e1",
+      };
+    case "managed_sow":
+      return {
+        label: "Ignite Managed SOW",
+        bg: "rgba(197,245,70,0.14)",
+        fg: "#c5f546",
+      };
+    default: {
+      if (typeof status === "string" && status) {
+        return {
+          label: status.replace(/_/g, " "),
+          bg: "rgba(148,163,184,0.16)",
+          fg: "#cbd5e1",
+        };
+      }
+      return assertNever(known);
+    }
+  }
+}
+
+export function computeVisitMeterProgress(params: {
+  completedVisitsUsed: number;
+  effectiveVisitCap: number | null | undefined;
+  overageAgreementApproved?: boolean;
+}): {
+  percent: number;
+  summaryLabel: string;
+  remainingLabel: string;
+  barColor: string;
+  isAtCap: boolean;
+} {
+  const used = Math.max(0, params.completedVisitsUsed || 0);
+  const cap = params.effectiveVisitCap;
+  if (cap == null || cap <= 0) {
+    return {
+      percent: 18,
+      summaryLabel: `${used} completed visits (Managed SOW — uncapped)`,
+      remainingLabel: "Included in contracted SOW",
+      barColor: "#c5f546",
+      isAtCap: false,
+    };
+  }
+  const pct = Math.min(100, Math.round((used / cap) * 100));
+  const isAtCap = used >= cap;
+  const over = Math.max(0, used - cap);
+  if (isAtCap) {
+    return {
+      percent: 100,
+      summaryLabel: `${used} / ${cap} completed visits`,
+      remainingLabel: params.overageAgreementApproved
+        ? `${over} over allowance (approved volume band active)`
+        : over > 0
+          ? `${over} completed from already-underway shifts (no automatic charge) · Upgrade to book new visits`
+          : "Monthly allowance reached · In-progress fieldwork still submits cleanly",
+      barColor: params.overageAgreementApproved ? "#fde047" : "#ef5a2a",
+      isAtCap: true,
+    };
+  }
+  const rem = cap - used;
+  return {
+    percent: pct,
+    summaryLabel: `${used} / ${cap} completed visits`,
+    remainingLabel: `${rem} included visit${rem === 1 ? "" : "s"} remaining this month`,
+    barColor: pct >= 80 ? "#fde047" : "#c5f546",
+    isAtCap: false,
+  };
+}
+
+export function formatPilotCountdown(
+  pilotEndsAtIso: string | null | undefined,
+  nowMs: number = Date.now(),
+): string {
+  if (!pilotEndsAtIso) return "60-day Pro pilot";
+  const endMs = Date.parse(pilotEndsAtIso);
+  if (Number.isNaN(endMs)) return "60-day Pro pilot";
+  const diffDays = Math.ceil((endMs - nowMs) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) {
+    return `Pilot window ended (${pilotEndsAtIso.slice(0, 10)})`;
+  }
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} left in 60-day Pro pilot (ends ${pilotEndsAtIso.slice(0, 10)})`;
+}
+
 

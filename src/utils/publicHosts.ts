@@ -105,6 +105,10 @@ export function recapPublicUrl(token: string): string {
   return withPath(recapShareOrigin(), `/r/${encodeURIComponent(token)}`);
 }
 
+export function workspaceSharePublicUrl(token: string): string {
+  return withPath(recapShareOrigin(), `/workspace-share/${encodeURIComponent(token)}`);
+}
+
 /** Public campaign report leave-behind — same client. host as /r/:token. */
 export function campaignReportPublicUrl(token: string): string {
   return withPath(recapShareOrigin(), `/report/${encodeURIComponent(token)}`);
@@ -133,7 +137,7 @@ export function adminRequestUrl(requestUuid: string): string {
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
   return (
-    /^\/(checkin|provider-submit|spark-form|r|report|training|c|invoice|live|clock)(\/|$)/.test(pathname) ||
+    /^\/(checkin|provider-submit|workspace-share|spark-form|r|report|training|c|invoice|live|clock)(\/|$)/.test(pathname) ||
     /^\/jobs\/[^/]+/.test(pathname)
   );
 }

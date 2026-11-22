@@ -5,6 +5,7 @@ import {
   formatHonestMoney,
   type FinanceExceptionStatusKind,
 } from "./pilotHelpers";
+import { PlanGateCallout } from "./PlanGateCallout";
 import { PilotQueriesFinanceQueuePageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsAssignExceptionMutation,
@@ -95,6 +96,14 @@ const FinanceBody: React.FC<{
           Approve field recaps without silently clearing missing proof, unitemized slips, duplicate charges, or unmatched expenses.
         </p>
       </header>
+
+      {q.planGated ? (
+        <PlanGateCallout
+          title="Finance Exception & Proof Review Queue"
+          message={q.planUpgradeMessage}
+          requiredPlan={q.requiredPlan}
+        />
+      ) : null}
 
       {banner && (
         <div

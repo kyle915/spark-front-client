@@ -9,16 +9,24 @@ vi.mock("@/lib/prefetchHotRelayData", () => ({
 import {
   applyWorkspaceContextSelection,
   buildInitialShiftFormState,
+  computeVisitMeterProgress,
   evidenceBadgeMeta,
   exceptionStatusLabel,
   formatCoveragePercent,
   formatHonestMoney,
+  formatPilotCountdown,
+  planBadgeMeta,
   settlementBadgeMeta,
   storeActionLabel,
+  subscriptionStatusBadge,
   workspaceRoleLabel,
 } from "./pilotHelpers";
 import { useAuthStore } from "@/store/authStore";
-import { isPublicFieldPath, providerSubmitUrl } from "@/utils/publicHosts";
+import {
+  isPublicFieldPath,
+  providerSubmitUrl,
+  workspaceSharePublicUrl,
+} from "@/utils/publicHosts";
 
 function createMemoryStorage(): Storage {
   const map = new Map<string, string>();
@@ -201,5 +209,53 @@ describe("pilotHelpers", () => {
     expect(useAuthStore.getState().tenantId).toBeNull();
     expect(useAuthStore.getState().tenantSlug).toBeNull();
     expect(useAuthStore.getState().tenantMeta).toBeNull();
+  });
+
+  it("formats Milestone 2 plan badges, subscription states, visit meter caps, and pilot countdowns", () => {
+    expect(planBadgeMeta("free").priceSummary).toBe("$0/mo · 5 visits");
+    expect(planBadgeMeta("core").priceSummary).toBe("$299/mo · 50 visits");
+    expect(planBadgeMeta("pro").priceSummary).toBe("$750/mo · 100 visits");
+    expect(planBadgeMeta("pilot_pro").label).toBe("60-Day Pro Pilot");
+    expect(planBadgeMeta("scale").label).toBe("Scale");
+    expect(planBadgeMeta("managed_sow").label).toBe("Managed SOW");
+
+    expect(subscriptionStatusBadge("past_due").label).toBe("Payment Past Due");
+    expect(subscriptionStatusBadge("cancel_at_period_end").label).toContain(
+      "Paid-Through",
+    );
+
+    const underCap = computeVisitMeterProgress({
+      completedVisitsUsed: 3,
+      effectiveVisitCap: 5,
+    });
+    expect(underCap.percent).toBe(60);
+    expect(underCap.isAtCap).toBe(false);
+    expect(underCap.remainingLabel).toBe("2 included visits remaining this month");
+
+    const atCapWithInProgress = computeVisitMeterProgress({
+      completedVisitsUsed: 6,
+      effectiveVisitCap: 5,
+    });
+    expect(atCapWithInProgress.percent).toBe(100);
+    expect(atCapWithInProgress.isAtCap).toBe(true);
+    expect(atCapWithInProgress.remainingLabel).toContain("no automatic charge");
+
+    const managedMeter = computeVisitMeterProgress({
+      completedVisitsUsed: 42,
+      effectiveVisitCap: null,
+    });
+    expect(managedMeter.isAtCap).toBe(false);
+    expect(managedMeter.summaryLabel).toContain("Managed SOW");
+
+    const countdown = formatPilotCountdown(
+      "2026-12-31T00:00:00Z",
+      Date.parse("2026-11-01T00:00:00Z"),
+    );
+    expect(countdown).toBe("60 days left in 60-day Pro pilot (ends 2026-12-31)");
+
+    expect(workspaceSharePublicUrl("wsl_demo123")).toBe(
+      "https://client.igniteproductions.co/workspace-share/wsl_demo123",
+    );
+    expect(isPublicFieldPath("/workspace-share/wsl_demo123")).toBe(true);
   });
 });

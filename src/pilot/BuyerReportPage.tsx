@@ -9,6 +9,7 @@ import {
   triggerExportDownload,
   type StoreActionTypeKind,
 } from "./pilotHelpers";
+import { PlanGateCallout } from "./PlanGateCallout";
 import {
   PilotQueriesBuyerReportPageQuery,
   PilotQueriesExportBuyerReportQuery,
@@ -127,24 +128,32 @@ const BuyerReportBody: React.FC<{
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={exportingFormat !== null}
+            disabled={exportingFormat !== null || report.planGated}
             onClick={() => void handleExport("csv")}
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
             style={BORDER}
           >
             {exportingFormat === "csv" ? "Exporting…" : "↓ Export CSV"}
           </button>
           <button
             type="button"
-            disabled={exportingFormat !== null}
+            disabled={exportingFormat !== null || report.planGated}
             onClick={() => void handleExport("xlsx")}
-            className="px-4 py-2 rounded-xl text-xs font-bold"
+            className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50"
             style={{ background: "#c5f546", color: "#0A0B0D" }}
           >
             {exportingFormat === "xlsx" ? "Building XLSX…" : "↓ Export Buyer XLSX"}
           </button>
         </div>
       </header>
+
+      {report.planGated ? (
+        <PlanGateCallout
+          title="Weekly Buyer Store Report & Recommendation Actions"
+          message={report.planUpgradeMessage}
+          requiredPlan={report.requiredPlan}
+        />
+      ) : null}
 
       {banner && (
         <div

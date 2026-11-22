@@ -1748,9 +1748,33 @@ const DemoCostsPage = lazyDefault(() => import("@/pilot/DemoCostsPage"));
 const FinanceQueuePage = lazyDefault(() => import("@/pilot/FinanceQueuePage"));
 const RetailerPosPage = lazyDefault(() => import("@/pilot/RetailerPosPage"));
 const BuyerReportPage = lazyDefault(() => import("@/pilot/BuyerReportPage"));
+const SelfServeOnboardingPage = lazyDefault(
+  () => import("@/pilot/SelfServeOnboardingPage"),
+);
+const PlansAndBillingPage = lazyDefault(
+  () => import("@/pilot/PlansAndBillingPage"),
+);
+const WorkspaceSharePublicPage = lazyDefault(
+  () => import("@/pilot/WorkspaceSharePublicPage"),
+);
 
 const PilotLinks = {
   routes: [
+    {
+      path: "/onboarding",
+      component: <SelfServeOnboardingPage />,
+      isPublic: true,
+    },
+    {
+      path: "/workspace-share/:token",
+      component: <WorkspaceSharePublicPage />,
+      isPublic: true,
+    },
+    {
+      path: "/plans-billing",
+      component: <PlansAndBillingPage />,
+      isPublic: false,
+    },
     {
       path: "/workspace",
       component: <BrandWorkspacePage />,

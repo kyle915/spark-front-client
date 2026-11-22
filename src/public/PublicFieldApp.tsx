@@ -25,6 +25,9 @@ const PublicClock = lazy(() => import("@/public/clock/PublicClock"));
 const ProviderMobileSubmitPage = lazy(
   () => import("@/pilot/ProviderMobileSubmitPage"),
 );
+const WorkspaceSharePublicPage = lazy(
+  () => import("@/pilot/WorkspaceSharePublicPage"),
+);
 
 const Fallback = () => (
   <div
@@ -54,6 +57,10 @@ export default function PublicFieldApp() {
           <Route
             path="/provider-submit/:code"
             element={<ProviderMobileSubmitPage />}
+          />
+          <Route
+            path="/workspace-share/:token"
+            element={<WorkspaceSharePublicPage />}
           />
           <Route path="/spark-form/:tenantSlug" element={<SparkPublicExpressForm />} />
           <Route path="/r/:token" element={<PublicRecap />} />

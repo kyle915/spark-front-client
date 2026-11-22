@@ -251,6 +251,12 @@ const SECTIONS: NavSection[] = [
         to: "/retailer-pos",
         clientLabel: "Retailer POS & ROI",
       },
+      {
+        label: "Plans & Billing",
+        Icon: CreditCard,
+        to: "/plans-billing",
+        clientLabel: "Plans & Billing",
+      },
       { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],
   },

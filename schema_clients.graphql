@@ -1407,6 +1407,9 @@ type BrandCostDashboard {
   groupBy: String!
   agreements: [ProviderAgreementItem!]!
   rollups: [BrandCostRollupRow!]!
+  planGated: Boolean!
+  planUpgradeMessage: String
+  requiredPlan: String
 }
 
 type BrandCostRollupRow {
@@ -1920,6 +1923,16 @@ type CheckinIssueSummary {
   events: Int!
   lastAt: String!
   lastDetail: String!
+}
+
+type CheckoutSessionOutcome {
+  ok: Boolean!
+  error: String
+  stripeSessionId: String
+  checkoutUrl: String
+  mode: String
+  alreadyCompleted: Boolean!
+  disclosure: String
 }
 
 """
@@ -2582,6 +2595,16 @@ type CostLineItem {
   providerName: String
   evidenceCount: Int!
   hasUnitemizedProof: Boolean!
+}
+
+type CountedVisitMeterItem {
+  visitUuid: String!
+  storeLabel: String!
+  visitDate: String!
+  completionLocalDate: String!
+  providerName: String
+  submissionCount: Int!
+  coBrandSharePct: String
 }
 
 input CreateAcademyModuleInput {
@@ -4858,6 +4881,9 @@ type FinanceExceptionItem {
 type FinanceQueueView {
   exceptions: [FinanceExceptionItem!]!
   operationalNotices: [OperationalFieldNoticeItem!]!
+  planGated: Boolean!
+  planUpgradeMessage: String
+  requiredPlan: String
 }
 
 input ForecastFieldMarketingInput {
@@ -6361,6 +6387,26 @@ type MonthlyPerformanceTrend {
   dataPoints: [MonthlyDataPoint!]!
 }
 
+type MonthlyVisitUsageView {
+  monthKey: String!
+  businessTimezone: String!
+  completedVisitsUsed: Int!
+  includedVisits: Int
+  effectiveVisitCap: Int
+  remainingVisits: Int
+  atOrOverCap: Boolean!
+  overageUnits: Int!
+  overageAgreementApproved: Boolean!
+  canBookNewVisit: Boolean!
+  inProgressFieldworkAlwaysAllowed: Boolean!
+  historicalExcludedCount: Int!
+  inProgressOrPendingCount: Int!
+  cancelledOrReversedCount: Int!
+  coBrandedVisitCount: Int!
+  nextUpgradePlan: String
+  countedVisits: [CountedVisitMeterItem!]!
+}
+
 input MoveCustomFieldToSectionInput {
   clientMutationId: ID = null
   fieldId: ID!
@@ -6777,6 +6823,19 @@ type Mutation {
   completeRebookStoreAction(actionUuid: String!, samplesDistributed: Int = null, consumersSampled: Int = null, repObservedUnits: Int = null, customRecapId: Int = null, notes: String! = ""): PilotMutationOutcome!
   createWorkspaceSharedLink(resourceType: String! = "visit", visitUuid: String = null): PilotMutationOutcome!
   revokeWorkspaceSharedLink(token: String!): PilotMutationOutcome!
+  startSelfServeOnboarding(email: String! = "", password: String! = "", firstName: String! = "", lastName: String! = "", brandName: String! = "", businessTimezone: String! = "America/Chicago", acceptTerms: Boolean! = true, forceNewWorkspace: Boolean! = false): OnboardingSessionPayload!
+  selectOnboardingStarterProgram(starterKey: String!, customProgramName: String! = "", starterSkuName: String! = ""): PilotMutationOutcome!
+  onboardingInviteContributor(email: String!, workspaceRole: String! = "field_contributor", providerName: String! = ""): PilotMutationOutcome!
+  scheduleStandaloneVisit(storeName: String!, visitDate: String!, address: String! = "", city: String! = "", stateCode: String! = "", providerUuid: String = null, eventTypeId: Int = null, notes: String! = ""): PilotMutationOutcome!
+  approveCanonicalVisitRecap(visitUuid: String!): PilotMutationOutcome!
+  reverseCanonicalVisit(visitUuid: String!, newStatus: String! = "cancelled", reason: String! = ""): PilotMutationOutcome!
+  createSubscriptionCheckout(targetPlanCode: String!, explicitTermsAccepted: Boolean!, idempotencyKey: String = null, successUrl: String = null, cancelUrl: String = null): CheckoutSessionOutcome!
+  completeTestSubscriptionCheckout(stripeSessionId: String!): PilotMutationOutcome!
+  createSubscriptionPortalSession(returnUrl: String = null): PortalSessionOutcome!
+  changeSubscriptionPlan(targetPlanCode: String!, explicitTermsAccepted: Boolean! = false): PilotMutationOutcome!
+  cancelSubscription(immediate: Boolean! = false, reason: String! = ""): PilotMutationOutcome!
+  approveVolumeBandOrOverage(agreedVolumeBandVisits: Int = null, overageAgreementApproved: Boolean! = false, overageUnitPriceUsd: String = null): PilotMutationOutcome!
+  provisionProPilotWorkspace(tenantUuid: String!, pilotFeeUsd: String! = "1500.00", durationDays: Int! = 60, includedVisitsMonthly: Int! = 100): PilotMutationOutcome!
 }
 
 type MutationNormalOutput {
@@ -6893,10 +6952,80 @@ type ObtainJSONWebTokenType implements OutputInterface {
   refreshToken: RefreshTokenType
 }
 
+type OnboardingSessionPayload {
+  ok: Boolean!
+  error: String
+  token: String
+  refreshToken: String
+  tenantUuid: String
+  tenantName: String
+  tenantSlug: String
+  membershipUuid: String
+  workspaceRole: String
+  resumedExisting: Boolean!
+  resolvedManaged: Boolean!
+  joinedInvitation: Boolean!
+}
+
+type OnboardingStarterCatalogView {
+  signupEnabled: Boolean!
+  starters: [StarterProgramOption!]!
+}
+
+type OnboardingStateView {
+  tenantUuid: String!
+  tenantName: String!
+  tenantSlug: String!
+  workspaceMode: String!
+  planCode: String!
+  planDisplayName: String!
+  businessTimezone: String!
+  stepsCompleted: Int!
+  totalSteps: Int!
+  stepWorkspaceCreated: Boolean!
+  stepProgramSelected: Boolean!
+  stepContributorInvited: Boolean!
+  stepMobileLinkOpened: Boolean!
+  stepFirstVisitCompleted: Boolean!
+  starterTemplateKey: String!
+  starterProgramName: String
+  starterRecapTemplateName: String
+  submissionCode: String
+  firstVisitUuid: String
+  firstVisitStoreLabel: String
+  firstVisitStatus: String
+  firstSharedToken: String
+  completedVisitsUsed: Int!
+  includedVisits: Int
+  recentVisits: [OnboardingVisitItem!]!
+  starters: [StarterProgramOption!]!
+}
+
+type OnboardingVisitItem {
+  uuid: String!
+  storeLabel: String!
+  visitDate: String!
+  status: String!
+  samplesDistributed: Int
+  consumersSampled: Int
+  repObservedUnits: Int
+  completedAt: String
+  submissionCount: Int!
+}
+
 input OpenChatThreadInput {
   clientMutationId: ID = null
   ambassadorUuid: String = null
   jobUuid: String = null
+}
+
+type OpenCheckoutItem {
+  stripeSessionId: String!
+  targetPlanCode: String!
+  quotedMonthlyPriceUsd: String!
+  checkoutUrl: String!
+  status: String!
+  effectiveSummary: String!
 }
 
 input OpenJobToAllInput {
@@ -7167,6 +7296,7 @@ type PilotMutationOutcome {
   ok: Boolean!
   error: String
   targetUuid: String
+  status: String
 }
 
 input PlanFieldMarketingInput {
@@ -7253,6 +7383,72 @@ type PlanSummary {
   activity: String!
   activityLabel: String!
   requestCode: String
+}
+
+type PlanTierCardItem {
+  planCode: String!
+  displayName: String!
+  tagline: String!
+  monthlyPriceUsd: String!
+  includedCompletedVisits: Int
+  isQuoteOnly: Boolean!
+  isSelfServeSelectable: Boolean!
+  isCurrent: Boolean!
+  maxActivePrograms: Int
+  maxOperatingProviders: Int
+  maxPosRetailers: Int
+  allowsBrandedForms: Boolean!
+  allowsApprovalsAndReminders: Boolean!
+  allowsExportsAndWeeklyReporting: Boolean!
+  allowsStoreRecommendations: Boolean!
+  allowsProviderCsvImports: Boolean!
+  allowsBrandCostTracking: Boolean!
+  allowsFinanceReviewQueue: Boolean!
+  allowsRetailerPosMeasurement: Boolean!
+  allowsTrackedStoreActions: Boolean!
+}
+
+type PlansAndBillingView {
+  billingEnabled: Boolean!
+  stripeMode: String!
+  stripeConfiguredRemotely: Boolean!
+  tenantUuid: String!
+  tenantName: String!
+  workspaceMode: String!
+  businessTimezone: String!
+  canManageBilling: Boolean!
+  isIgniteAdmin: Boolean!
+  configuredPlanCode: String!
+  effectivePlanCode: String!
+  planDisplayName: String!
+  subscriptionStatus: String!
+  pendingPlanCode: String
+  addonPlanCode: String
+  monthlyPriceUsd: String!
+  isManagedSow: Boolean!
+  isPilot: Boolean!
+  pilotFeeUsd: String
+  pilotStartsAt: String
+  pilotEndsAt: String
+  currentPeriodStart: String
+  currentPeriodEnd: String
+  paidThroughAt: String
+  cancelAtPeriodEnd: Boolean!
+  hasPaymentFailure: Boolean!
+  paymentFailureMessage: String!
+  recurringBillingAccepted: Boolean!
+  viewerAndContributorSeatsFree: Boolean!
+  billingSeparationNotice: String!
+  usage: MonthlyVisitUsageView!
+  availablePlans: [PlanTierCardItem!]!
+  openCheckouts: [OpenCheckoutItem!]!
+}
+
+type PortalSessionOutcome {
+  ok: Boolean!
+  error: String
+  portalUrl: String
+  mode: String
 }
 
 type PosImportHistoryItem {
@@ -7882,6 +8078,10 @@ type Query {
   storeRecommendationActions(storeKey: String = null): [StoreActionItem!]!
   weeklyBuyerStoreReport(periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null): WeeklyBuyerReport!
   exportWeeklyBuyerReport(format: String! = "csv", periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null): WeeklyBuyerReportExport!
+  selfServeStarterCatalog: OnboardingStarterCatalogView!
+  onboardingState: OnboardingStateView!
+  plansAndBillingOverview: PlansAndBillingView!
+  previewSubscriptionPlanChange(targetPlanCode: String!): SubscriptionChangePreview!
 }
 
 """
@@ -9335,6 +9535,9 @@ type RetailerPosDashboard {
   imports: [PosImportHistoryItem!]!
   unmatchedRows: [UnmatchedPosRowItem!]!
   storeWeeks: [PosStoreWeekItem!]!
+  planGated: Boolean!
+  planUpgradeMessage: String
+  requiredPlan: String
 }
 
 type RetailerProposalResponse {
@@ -10117,6 +10320,15 @@ type StaffingSuggestion {
   reasons: [String!]!
 }
 
+type StarterProgramOption {
+  key: String!
+  name: String!
+  slug: String!
+  description: String!
+  templateName: String!
+  defaultSkuHint: String!
+}
+
 """
 State(id, uuid, name, code, created_by, updated_by, created_at, updated_at)
 """
@@ -10369,6 +10581,21 @@ input SubmitFieldMarketingInput {
   clientMutationId: ID = null
   eventId: String!
   tenantId: ID = null
+}
+
+type SubscriptionChangePreview {
+  currentPlanCode: String!
+  targetPlanCode: String!
+  targetDisplayName: String!
+  isQuoteOnly: Boolean!
+  canSelfServeConfirm: Boolean!
+  monthlyPriceUsd: String!
+  chargeTodayUsd: String!
+  includedVisits: Int!
+  changeKind: String!
+  effectiveDateLabel: String!
+  paidThroughDate: String
+  disclosure: String!
 }
 
 type SuggestedAmbassador {
@@ -11853,13 +12080,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  lastName: String
-  email: String!
-  id: ID!
   firstName: String
+  id: ID!
+  email: String!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  lastName: String
   archived: Boolean!
   verified: Boolean!
 }
@@ -11941,6 +12168,9 @@ type WeeklyBuyerReport {
   totalVisits: Int!
   totalSupportedCost: String!
   rows: [WeeklyBuyerStoreRow!]!
+  planGated: Boolean!
+  planUpgradeMessage: String
+  requiredPlan: String
 }
 
 type WeeklyBuyerReportExport {
