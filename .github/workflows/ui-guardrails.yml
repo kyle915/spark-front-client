@@ -1,0 +1,53 @@
+name: UI Guardrails
+
+# Playwright WCAG AA contrast + mobile viewport checks for light/dark
+# Spark surfaces. Runs on PRs targeting main/develop so contrast and
+# horizontal-overflow regressions are caught before merge.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ui-guardrails-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contrast-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build preview bundle for E2E
+        run: npm run build:e2e
+
+      - name: Contrast + mobile viewport guardrails
+        run: npm run test:e2e
+        env:
+          CI: "true"
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

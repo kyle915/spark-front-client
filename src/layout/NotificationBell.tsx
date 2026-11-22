@@ -198,7 +198,8 @@ export default function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={toggle}
-        className="relative w-9 h-9 rounded-full border border-base-300 flex items-center justify-center text-base-content/70 hover:text-primary hover:border-primary transition"
+        className="relative w-9 h-9 rounded-full border border-base-300 flex items-center justify-center hover:text-primary hover:border-primary transition"
+        style={{ color: "var(--spark-text-secondary)" }}
         aria-label="Notifications"
         title="Notifications"
       >
@@ -206,7 +207,10 @@ export default function NotificationBell() {
         {unread > 0 && (
           <span
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
-            style={{ background: "var(--spark-orange, #ef5a2a)", color: "var(--spark-on-accent)" }}
+            style={{
+              background: "var(--spark-badge-alert-bg, #c2410c)",
+              color: "var(--spark-badge-alert-ink, #ffffff)",
+            }}
           >
             {unread > 9 ? "9+" : unread}
           </span>
