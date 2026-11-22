@@ -26,6 +26,7 @@ import { useConsumersSampled } from "@/hooks/useConsumersSampled";
 import { useFirstTimeConsumers } from "@/hooks/useFirstTimeConsumers";
 import { useProductsPurchased } from "@/hooks/useProductsPurchased";
 import { useAuthStore } from "@/store/authStore";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
@@ -485,6 +486,7 @@ const TrackerTable: React.FC<{
     }
   }, [visibleCount, rows]);
   const visibleRows = rows.slice(0, visibleCount);
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const openRow = (r: Row) => {
     navigate(trackerRowDestination(r), { state: { from: "/requests/list" } });
   };
@@ -565,6 +567,32 @@ const TrackerTable: React.FC<{
                       OPEN →
                     </span>
                   </button>
+                  {r.venue && r.venue !== "—" ? (
+                    <div className="px-3 pb-2.5 -mt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openStoreSheet({
+                            requestId: r.id,
+                            storeName: r.venue,
+                            address: r.address,
+                            fallbackTitle: r.venue,
+                          });
+                        }}
+                        className="mono text-[10px] underline underline-offset-2 cursor-pointer"
+                        style={{
+                          letterSpacing: "0.1em",
+                          color: "var(--spark-text-secondary)",
+                          background: "none",
+                          border: 0,
+                          padding: 0,
+                        }}
+                      >
+                        STORE PROFILE ↗
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -709,9 +737,29 @@ const TrackerTable: React.FC<{
                     ) : null}
                   </td>
                   <td>
-                    <span className="font-semibold text-[13px] leading-tight spark-tracker-cell-primary">
-                      {r.venue}
-                    </span>
+                    {r.venue && r.venue !== "—" ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openStoreSheet({
+                            requestId: r.id,
+                            storeName: r.venue,
+                            address: r.address,
+                            fallbackTitle: r.venue,
+                          });
+                        }}
+                        title={`Open store profile for ${r.venue}`}
+                        className="font-semibold text-[13px] leading-tight spark-tracker-cell-primary text-left hover:underline underline-offset-2 cursor-pointer"
+                        style={{ background: "none", border: 0, padding: 0 }}
+                      >
+                        {r.venue}
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-[13px] leading-tight spark-tracker-cell-primary">
+                        {r.venue}
+                      </span>
+                    )}
                     {r.market || r.address ? (
                       <span
                         className="block text-[12px] mt-0.5 spark-tracker-cell-muted truncate max-w-[420px]"

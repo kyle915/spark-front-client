@@ -7,6 +7,7 @@ import type { TenantStoreInsightsQuery as QueryType } from "@api/queries/__gener
 import type { PilotMutationsCreateStoreActionMutation as CreateActionMutationType } from "@/api/mutations/__generated__/PilotMutationsCreateStoreActionMutation.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { groupRecommendations, visibleInsights } from "@/lib/storeInsights";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { storeActionLabel, type StoreActionTypeKind } from "@/pilot/pilotHelpers";
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -25,6 +26,34 @@ const DraftNote: React.FC = () => (
     </Link>
   </p>
 );
+
+const SubjectStoreChip: React.FC<{
+  subject: string | null | undefined;
+  kind: string | null | undefined;
+}> = ({ subject, kind }) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
+  const trimmed = (subject ?? "").trim();
+  const isStoreSubject =
+    Boolean(trimmed) && (kind === "store" || !kind || kind === "venue");
+  if (!isStoreSubject) return null;
+  return (
+    <div className="mb-1">
+      <button
+        type="button"
+        onClick={() =>
+          openStoreSheet({
+            storeName: trimmed,
+            fallbackTitle: trimmed,
+          })
+        }
+        className="chip chip-muted chip-sm cursor-pointer hover:underline"
+        title={`Open store profile for ${trimmed}`}
+      >
+        {trimmed} ↗
+      </button>
+    </div>
+  );
+};
 
 const RecommendationActionDrawer: React.FC<{
   item: Item;
@@ -253,6 +282,7 @@ const RecommendationRow: React.FC<{
       className="py-3.5 first:pt-0 last:pb-0"
       style={first ? undefined : { borderTop: "1px solid var(--spark-border)" }}
     >
+      <SubjectStoreChip subject={item.subject} kind={item.kind} />
       <p className="text-sm leading-relaxed" style={TEXT}>
         {item.text}
       </p>
@@ -344,6 +374,7 @@ const AlertItemRow: React.FC<{ item: AlertItem; first: boolean }> = ({
     className="py-3 first:pt-0 last:pb-0"
     style={first ? undefined : { borderTop: "1px solid var(--spark-border)" }}
   >
+    <SubjectStoreChip subject={item.subject} kind={item.kind} />
     <p className="text-sm leading-relaxed" style={TEXT}>
       {item.text}
     </p>

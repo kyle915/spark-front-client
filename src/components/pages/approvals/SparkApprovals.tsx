@@ -11,6 +11,7 @@ import type {
 } from "@api/queries/__generated__/ApprovalsListQuery.graphql";
 import { executeAuthenticatedGraphQL } from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
@@ -190,7 +191,26 @@ const ApprovalRow: React.FC<{
           className="font-semibold truncate min-w-0 text-sm"
           style={{ flex: "1 1 140px" }}
         >
-          {row.venue}
+          {row.venue && row.venue !== "—" ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                useStoreSheetStore.getState().openStoreSheet({
+                  requestId: row.id,
+                  storeName: row.venue,
+                  fallbackTitle: row.venue,
+                });
+              }}
+              title={`Open store profile for ${row.venue}`}
+              className="font-semibold text-sm text-left truncate max-w-full hover:underline underline-offset-2 cursor-pointer"
+              style={{ color: "inherit", background: "none", border: 0, padding: 0 }}
+            >
+              {row.venue}
+            </button>
+          ) : (
+            row.venue
+          )}
         </p>
         <span
           className="text-xs truncate hidden md:inline"
@@ -1026,7 +1046,26 @@ const ApprovalsInner: React.FC = () => {
                   {d.row.reqId}
                 </span>
                 <span className="text-sm font-semibold flex-1 min-w-0 truncate">
-                  {d.row.venue}
+                  {d.row.venue && d.row.venue !== "—" ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        useStoreSheetStore.getState().openStoreSheet({
+                          requestId: d.row.id,
+                          storeName: d.row.venue,
+                          fallbackTitle: d.row.venue,
+                        });
+                      }}
+                      title={`Open store profile for ${d.row.venue}`}
+                      className="font-semibold text-sm text-left truncate max-w-full hover:underline underline-offset-2 cursor-pointer"
+                      style={{ color: "inherit", background: "none", border: 0, padding: 0 }}
+                    >
+                      {d.row.venue}
+                    </button>
+                  ) : (
+                    d.row.venue
+                  )}
                 </span>
                 <span
                   className="mono text-[10px]"
