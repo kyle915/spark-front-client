@@ -1,4 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@api/auth/login", () => ({ login: vi.fn() }));
+vi.mock("@api/auth/me", () => ({ fetchMe: vi.fn() }));
+vi.mock("@/lib/prefetchHotRelayData", () => ({
+  resetHotRelayDataPrefetch: vi.fn(),
+}));
+
 import {
   applyWorkspaceContextSelection,
   buildInitialShiftFormState,
@@ -135,7 +142,10 @@ describe("pilotHelpers", () => {
         tenantSlug: "new-brand",
         workspaceRole: "provider_manager",
       },
-      async () => [],
+      {
+        store: useAuthStore.getState(),
+        loadTenants: async () => [],
+      },
     );
 
     const afterProviderSwitch = useAuthStore.getState();
@@ -158,17 +168,20 @@ describe("pilotHelpers", () => {
         tenantSlug: "brand-c",
         workspaceRole: "brand_admin",
       },
-      async () => [
-        {
-          id: "Tenant:brand-c-id",
-          uuid: "uuid-brand-c",
-          name: "Brand C",
-          logo: "https://cdn.test/brand-c.png",
-          requestUrlName: "brand-c-requests",
-          tenantSlug: "brand-c",
-          checkinCode: "BC-999",
-        },
-      ],
+      {
+        store: useAuthStore.getState(),
+        loadTenants: async () => [
+          {
+            id: "Tenant:brand-c-id",
+            uuid: "uuid-brand-c",
+            name: "Brand C",
+            logo: "https://cdn.test/brand-c.png",
+            requestUrlName: "brand-c-requests",
+            tenantSlug: "brand-c",
+            checkinCode: "BC-999",
+          },
+        ],
+      },
     );
 
     const afterBrandSwitch = useAuthStore.getState();

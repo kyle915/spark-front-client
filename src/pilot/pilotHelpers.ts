@@ -1,14 +1,11 @@
 /**
  * Pure formatting, badge, state-reset, and download helpers for Standalone Spark
  * Milestone 1 workspaces, costs, finance exceptions, retailer POS, and store actions.
+ *
+ * Kept free of Relay `graphql` module imports so Vitest runs cleanly before
+ * `relay-compiler` generates `__generated__` artifacts in CI.
  */
-import { fetchQuery } from "relay-runtime";
-import environment from "@/api/relay/environment";
-import { TenantQuery } from "@/api/queries/TenantQuery";
-import type { TenantQuery as TenantQueryType } from "@/api/queries/__generated__/TenantQuery.graphql";
-import { applyTenantSwitch } from "@/hooks/useAdoptRecordTenant";
 import type { SwitchableTenant } from "@/lib/tenantDeepLink";
-import { useAuthStore } from "@/store/authStore";
 
 export type WorkspaceRoleKind =
   | "brand_admin"
@@ -254,27 +251,20 @@ export function buildInitialShiftFormState(
   };
 }
 
-async function defaultLoadTenants(
-  userUuid?: string | null,
-): Promise<SwitchableTenant[]> {
-  const data = await fetchQuery<TenantQueryType>(
-    environment,
-    TenantQuery,
-    userUuid ? { userUuid } : {},
-    { fetchPolicy: "network-only" },
-  ).toPromise();
-  return (data?.tenants?.edges ?? [])
-    .map((edge) => edge?.node)
-    .filter((n): n is NonNullable<typeof n> => Boolean(n))
-    .map((n) => ({
-      id: n.id,
-      uuid: String(n.uuid),
-      name: n.name ?? null,
-      logo: n.image ?? null,
-      requestUrlName: n.requestUrlName ?? null,
-      tenantSlug: n.tenantSlug ?? null,
-      checkinCode: n.checkinCode ?? null,
-    }));
+export interface WorkspaceSwitchStoreAdapter {
+  user?: { uuid?: string | null } | null;
+  setWorkspaceMembership: (
+    membershipUuid: string | null,
+    workspaceRole?: string | null,
+  ) => void;
+  setTenant: (
+    tenantUuid: string,
+    tenantId: string,
+    logo?: string | null,
+    requestUrlName?: string | null,
+    tenantSlug?: string | null,
+    checkinCode?: string | null,
+  ) => void;
 }
 
 /**
@@ -289,11 +279,13 @@ export async function applyWorkspaceContextSelection(
     tenantSlug?: string | null;
     workspaceRole: string;
   },
-  loadTenants: (
-    userUuid?: string | null,
-  ) => Promise<SwitchableTenant[]> = defaultLoadTenants,
+  deps: {
+    store: WorkspaceSwitchStoreAdapter;
+    loadTenants: (userUuid?: string | null) => Promise<SwitchableTenant[]>;
+    rememberRecent?: (tenantUuid: string) => void;
+  },
 ): Promise<void> {
-  const store = useAuthStore.getState();
+  const { store, loadTenants, rememberRecent } = deps;
   store.setWorkspaceMembership(
     chosen.membershipUuid ?? null,
     chosen.workspaceRole,
@@ -313,10 +305,15 @@ export async function applyWorkspaceContextSelection(
     const tenants = await loadTenants(store.user?.uuid);
     const match = tenants.find((t) => t.uuid === chosen.tenantUuid);
     if (match) {
-      applyTenantSwitch({
-        ...match,
-        tenantSlug: match.tenantSlug ?? (chosen.tenantSlug || null),
-      });
+      rememberRecent?.(match.uuid);
+      store.setTenant(
+        match.uuid,
+        match.id,
+        match.logo,
+        match.requestUrlName,
+        match.tenantSlug ?? (chosen.tenantSlug || null),
+        match.checkinCode,
+      );
     }
   } catch {
     // External provider memberships intentionally have no consolidated TenantQuery

@@ -2,13 +2,40 @@ import React, { useEffect, useState } from "react";
 import { fetchQuery, commitMutation } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
+import { TenantQuery } from "@/api/queries/TenantQuery";
+import { rememberTenantRecent } from "@/layout/tenantPickerPrefs";
+import type { SwitchableTenant } from "@/lib/tenantDeepLink";
 import { PilotQueriesWorkspaceContextsQuery } from "@/api/queries/PilotQueries";
 import { PilotMutationsSwitchContextMutation } from "@/api/mutations/PilotMutations";
+import type { TenantQuery as TenantQueryType } from "@/api/queries/__generated__/TenantQuery.graphql";
 import type { PilotQueriesWorkspaceContextsQuery as ContextsQueryType } from "@/api/queries/__generated__/PilotQueriesWorkspaceContextsQuery.graphql";
 import type { PilotMutationsSwitchContextMutation as SwitchMutationType } from "@/api/mutations/__generated__/PilotMutationsSwitchContextMutation.graphql";
 import { applyWorkspaceContextSelection } from "./pilotHelpers";
 
 type ContextRow = ContextsQueryType["response"]["myWorkspaceContexts"][number];
+
+async function fetchFreshTenants(
+  userUuid?: string | null,
+): Promise<SwitchableTenant[]> {
+  const data = await fetchQuery<TenantQueryType>(
+    environment,
+    TenantQuery,
+    userUuid ? { userUuid } : {},
+    { fetchPolicy: "network-only" },
+  ).toPromise();
+  return (data?.tenants?.edges ?? [])
+    .map((edge) => edge?.node)
+    .filter((n): n is NonNullable<typeof n> => Boolean(n))
+    .map((n) => ({
+      id: n.id,
+      uuid: String(n.uuid),
+      name: n.name ?? null,
+      logo: n.image ?? null,
+      requestUrlName: n.requestUrlName ?? null,
+      tenantSlug: n.tenantSlug ?? null,
+      checkinCode: n.checkinCode ?? null,
+    }));
+}
 
 /**
  * Explicit workspace & agency context switcher for users holding multiple
@@ -87,7 +114,11 @@ export const WorkspaceContextSwitcher: React.FC = () => {
           setSwitching(false);
           return;
         }
-        void applyWorkspaceContextSelection(chosen).finally(() => {
+        void applyWorkspaceContextSelection(chosen, {
+          store: useAuthStore.getState(),
+          loadTenants: fetchFreshTenants,
+          rememberRecent: rememberTenantRecent,
+        }).finally(() => {
           setSwitching(false);
           window.location.reload();
         });
