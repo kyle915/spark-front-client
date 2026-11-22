@@ -392,6 +392,41 @@ export const PilotQueriesRetailerPosPageQuery = graphql`
         subtitle
       }
     }
+    posAutomationWorkspace {
+      presets {
+        key
+        label
+        columnMapJson
+        defaultBanner
+      }
+      feeds {
+        uuid
+        retailerBanner
+        presetKey
+        sourceKind
+        ingestToken
+        enabled
+        defaultFeedCompleteness
+        notes
+        lastIngestedAt
+        dropUrlPath
+        createdAt
+      }
+      recentDrops {
+        uuid
+        feedUuid
+        retailerBanner
+        status
+        filename
+        sourceFromEmail
+        errorMessage
+        salesImportUuid
+        matchedRows
+        unmatchedRows
+        receivedAt
+        processedAt
+      }
+    }
     retailerPosDashboard(
       periodStart: $periodStart
       periodEnd: $periodEnd
@@ -494,6 +529,9 @@ export const PilotQueriesBuyerReportPageQuery = graphql`
       isBrandAdmin
       canEditBrandOps
       canApproveSpend
+      canManagePos
+      buyerWeeklyDigestEnabled
+      buyerDigestRecipientEmails
       viewerProviderUuid
       providers {
         uuid

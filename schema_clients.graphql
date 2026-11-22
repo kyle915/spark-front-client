@@ -6976,7 +6976,9 @@ type Mutation {
   fixFinanceExceptionMatch(exceptionUuid: String!, visitUuid: String!, costLineUuid: String = null, category: String! = "product"): PilotMutationOutcome!
   requestFinanceExceptionClarification(exceptionUuid: String!, note: String!): PilotMutationOutcome!
   resolveFinanceException(exceptionUuid: String!, resolutionStatus: String!, reason: String!, updatedAmount: String = null): PilotMutationOutcome!
-  importRetailerPosSales(retailerBanner: String!, csvText: String!, filename: String! = "pos.csv", feedCompleteness: String! = "complete", columnMapJson: String = null): PilotMutationOutcome!
+  importRetailerPosSales(retailerBanner: String!, csvText: String!, filename: String! = "pos.csv", feedCompleteness: String! = "complete", columnMapJson: String = null, presetKey: String = null): PilotMutationOutcome!
+  upsertPosFeedConfig(retailerBanner: String!, presetKey: String! = "", sourceKind: String! = "email_drop", enabled: Boolean! = true, defaultFeedCompleteness: String! = "complete", notes: String! = "", remintToken: Boolean! = false, feedUuid: String = null): PilotMutationOutcome!
+  setBuyerWeeklyDigest(enabled: Boolean!, recipientEmails: String = null): PilotMutationOutcome!
   resolveUnmatchedPosRow(rowUuid: String!, retailerId: Int = null, storeKey: String = null, storeLabel: String = null, productId: Int = null, saveProductAlias: Boolean! = true): PilotMutationOutcome!
   linkCrewPurchaseAdjustment(visitUuid: String!, productId: Int!, unitsPurchased: Int!, purchaseDate: String = null, retailerBanner: String! = "", transactionRef: String! = ""): PilotMutationOutcome!
   setWorkspaceDefaultContribution(contributionPerUnit: String!): PilotMutationOutcome!
@@ -8327,6 +8329,7 @@ type Query {
   brandCostDashboard(groupBy: String! = "store", periodStart: String = null, periodEnd: String = null, providerUuid: String = null): BrandCostDashboard!
   financeExceptionQueue(exceptionType: String = null, status: String = null, providerUuid: String = null, storeKey: String = null, periodStart: String = null, periodEnd: String = null): FinanceQueueView!
   retailerPosDashboard(periodStart: String = null, periodEnd: String = null, storeKey: String = null, contributionPerUnit: String = null): RetailerPosDashboard!
+  posAutomationWorkspace: PosAutomationWorkspace!
   storeRecommendationActions(storeKey: String = null): [StoreActionItem!]!
   weeklyBuyerStoreReport(periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null): WeeklyBuyerReport!
   exportWeeklyBuyerReport(format: String! = "csv", periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null): WeeklyBuyerReportExport!
@@ -12786,6 +12789,8 @@ type WorkspaceOverview {
   mode: String!
   planTier: String!
   defaultContributionPerUnit: String
+  buyerWeeklyDigestEnabled: Boolean!
+  buyerDigestRecipientEmails: String!
   viewerRole: String!
   viewerProviderUuid: String
   viewerProviderName: String
@@ -12804,6 +12809,48 @@ type WorkspaceOverview {
   programs: [SimpleCatalogItem!]!
   stores: [SimpleCatalogItem!]!
   products: [SimpleCatalogItem!]!
+}
+
+type PosPresetItem {
+  key: String!
+  label: String!
+  columnMapJson: String!
+  defaultBanner: String!
+}
+
+type PosFeedConfigItem {
+  uuid: String!
+  retailerBanner: String!
+  presetKey: String!
+  sourceKind: String!
+  ingestToken: String!
+  enabled: Boolean!
+  defaultFeedCompleteness: String!
+  notes: String!
+  lastIngestedAt: String
+  dropUrlPath: String!
+  createdAt: String!
+}
+
+type PosFeedDropItem {
+  uuid: String!
+  feedUuid: String!
+  retailerBanner: String!
+  status: String!
+  filename: String!
+  sourceFromEmail: String!
+  errorMessage: String!
+  salesImportUuid: String
+  matchedRows: Int
+  unmatchedRows: Int
+  receivedAt: String!
+  processedAt: String
+}
+
+type PosAutomationWorkspace {
+  presets: [PosPresetItem!]!
+  feeds: [PosFeedConfigItem!]!
+  recentDrops: [PosFeedDropItem!]!
 }
 
 scalar dict
