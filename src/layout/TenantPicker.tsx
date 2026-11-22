@@ -140,6 +140,7 @@ export const TenantPicker: React.FC = () => {
   }, [filtered, favoriteRows, recentRows, query]);
 
   const current = tenants.find((t) => t.uuid === tenantUuid) ?? tenants[0];
+  const canSwitchTenants = tenants.length > 1;
 
   const onPick = (t: TenantNode) => {
     setOpen(false);
@@ -237,6 +238,26 @@ export const TenantPicker: React.FC = () => {
       </div>
     );
   };
+
+  if (!canSwitchTenants) {
+    return (
+      <div
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-base-300/40 border border-base-300"
+        title={current?.name ?? undefined}
+      >
+        <TenantLogo
+          name={current?.name}
+          requestUrlName={current?.requestUrlName}
+          tenantSlug={current?.tenantSlug}
+          image={current?.image}
+          active
+        />
+        <span className="text-sm truncate flex-1 text-left">
+          {current?.name ?? "Workspace"}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={wrapperRef}>

@@ -253,7 +253,7 @@ const BaActivationPanel: React.FC = () => {
                             color: busy === r.email
                               ? "rgba(var(--spark-ink-rgb),0.35)"
                               : "var(--spark-lime)",
-                            border: "1px solid rgba(196,216,46,0.35)",
+                            border: "1px solid var(--spark-border)",
                           }}
                         >
                           {busy === r.email ? "Sending…" : "Resend welcome"}

@@ -22,6 +22,21 @@ import type { PilotMutationsResolveExceptionMutation as ResolveExcType } from "@
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const OK_BANNER_STYLE = {
+  background: "var(--spark-ok-bg)",
+  color: "var(--spark-ok-ink)",
+  border: "1px solid var(--spark-ok-border)",
+} as const;
 
 const FinanceBody: React.FC<{
   statusFilter: string;
@@ -99,11 +114,7 @@ const FinanceBody: React.FC<{
       {banner && (
         <div
           className="p-3 rounded-xl text-xs"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "#c5f546",
-            border: "1px solid rgba(197,245,70,0.3)",
-          }}
+          style={OK_BANNER_STYLE}
         >
           {banner}
         </div>
@@ -114,8 +125,8 @@ const FinanceBody: React.FC<{
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl bg-black/30"
-          style={BORDER}
+          className="px-3 py-2 rounded-xl"
+          style={FIELD_STYLE}
         >
           <option value="">All statuses</option>
           <option value="open">Open</option>
@@ -128,8 +139,8 @@ const FinanceBody: React.FC<{
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl bg-black/30"
-          style={BORDER}
+          className="px-3 py-2 rounded-xl"
+          style={FIELD_STYLE}
         >
           <option value="">All exception types</option>
           <option value="missing_rate_or_amount">Missing rate / amount</option>
@@ -169,13 +180,13 @@ const FinanceBody: React.FC<{
                           background:
                             exc.status === "open" ||
                             exc.status === "needs_clarification"
-                              ? "rgba(239,90,42,0.18)"
-                              : "rgba(197,245,70,0.15)",
+                              ? "rgba(239,90,42,0.14)"
+                              : "var(--spark-ok-bg)",
                           color:
                             exc.status === "open" ||
                             exc.status === "needs_clarification"
-                              ? "#ef5a2a"
-                              : "#c5f546",
+                              ? "var(--spark-flag-ink, #ef5a2a)"
+                              : "var(--spark-ok-ink)",
                         }}
                       >
                         {statusLabel}
@@ -237,8 +248,8 @@ const FinanceBody: React.FC<{
                             onCompleted: () => bump(),
                           });
                         }}
-                        className="px-3 py-2 rounded-xl bg-black/30"
-                        style={BORDER}
+                        className="px-3 py-2 rounded-xl"
+                        style={FIELD_STYLE}
                       >
                         <option value="">Assign owner…</option>
                         {ws.members
@@ -260,8 +271,8 @@ const FinanceBody: React.FC<{
                             }))
                           }
                           placeholder="Attach itemized receipt URL…"
-                          className="flex-1 px-3 py-2 rounded-xl bg-black/30"
-                          style={BORDER}
+                          className="flex-1 px-3 py-2 rounded-xl"
+                          style={FIELD_STYLE}
                         />
                         <button
                           type="button"
@@ -287,7 +298,7 @@ const FinanceBody: React.FC<{
                             });
                           }}
                           className="px-3 py-2 rounded-xl font-semibold"
-                          style={BORDER}
+                          style={FIELD_STYLE}
                         >
                           Attach Proof
                         </button>
@@ -303,8 +314,8 @@ const FinanceBody: React.FC<{
                                 [exc.uuid]: e.target.value,
                               }))
                             }
-                            className="flex-1 px-3 py-2 rounded-xl bg-black/30"
-                            style={BORDER}
+                            className="flex-1 px-3 py-2 rounded-xl"
+                            style={FIELD_STYLE}
                           >
                             <option value="">Match to visit…</option>
                             {visits.map((v) => (
@@ -331,7 +342,7 @@ const FinanceBody: React.FC<{
                               });
                             }}
                             className="px-3 py-2 rounded-xl font-semibold"
-                            style={BORDER}
+                            style={FIELD_STYLE}
                           >
                             Link Visit
                           </button>
@@ -349,8 +360,8 @@ const FinanceBody: React.FC<{
                           }))
                         }
                         placeholder="Required audit reason or clarification question…"
-                        className="flex-1 min-w-[240px] px-3 py-2 rounded-xl bg-black/30"
-                        style={BORDER}
+                        className="flex-1 min-w-[240px] px-3 py-2 rounded-xl"
+                        style={FIELD_STYLE}
                       />
                       <button
                         type="button"
@@ -368,7 +379,7 @@ const FinanceBody: React.FC<{
                           })
                         }
                         className="px-3 py-2 rounded-xl font-semibold"
-                        style={BORDER}
+                        style={FIELD_STYLE}
                       >
                         Request Clarification
                       </button>
@@ -393,8 +404,9 @@ const FinanceBody: React.FC<{
                         }
                         className="px-3 py-2 rounded-xl font-semibold"
                         style={{
-                          background: "rgba(250,204,21,0.16)",
-                          color: "#fde047",
+                          background: "var(--spark-warn-badge-bg)",
+                          color: "var(--spark-warn-badge-ink)",
+                          border: "1px solid var(--spark-border)",
                         }}
                       >
                         Grant Exception
@@ -417,7 +429,7 @@ const FinanceBody: React.FC<{
                           })
                         }
                         className="px-3 py-2 rounded-xl font-bold"
-                        style={{ background: "#c5f546", color: "#0A0B0D" }}
+                        style={PRIMARY_BTN_STYLE}
                       >
                         Resolve
                       </button>

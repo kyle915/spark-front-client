@@ -13,6 +13,21 @@ import { storeActionLabel, type StoreActionTypeKind } from "@/pilot/pilotHelpers
 const META = { color: "var(--spark-text-meta)" } as const;
 const TEXT = { color: "var(--spark-text)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const SECONDARY_BTN_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-surface)",
+  color: "var(--spark-text)",
+} as const;
 
 type Insights = NonNullable<QueryType["response"]["tenantStoreInsights"]>;
 type Item = Insights["recommendations"][number];
@@ -85,8 +100,11 @@ const RecommendationActionDrawer: React.FC<{
 
   return (
     <form
-      className="mt-3 p-4 rounded-2xl space-y-3 text-xs bg-black/30"
-      style={BORDER}
+      className="mt-3 p-4 rounded-2xl space-y-3 text-xs"
+      style={{
+        ...BORDER,
+        background: "var(--spark-surface-2)",
+      }}
       onSubmit={(e) => {
         e.preventDefault();
         setErrorMsg(null);
@@ -121,18 +139,20 @@ const RecommendationActionDrawer: React.FC<{
       }}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex rounded-full p-0.5" style={BORDER}>
+        <div
+          className="inline-flex rounded-full p-0.5"
+          style={{
+            ...BORDER,
+            background: "var(--spark-surface)",
+          }}
+        >
           {(["rebook", "hold", "restock"] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setActionType(t)}
-              className="px-3 py-1 rounded-full font-semibold"
-              style={
-                actionType === t
-                  ? { background: "#c5f546", color: "#0A0B0D" }
-                  : META
-              }
+              className="px-3 py-1 rounded-full font-semibold transition"
+              style={actionType === t ? PRIMARY_BTN_STYLE : META}
             >
               {storeActionLabel(t)}
             </button>
@@ -141,7 +161,7 @@ const RecommendationActionDrawer: React.FC<{
         <button
           type="button"
           onClick={onClose}
-          className="px-2 py-1 rounded-lg"
+          className="px-2 py-1 rounded-lg font-medium"
           style={META}
         >
           Cancel
@@ -150,10 +170,11 @@ const RecommendationActionDrawer: React.FC<{
 
       {errorMsg && (
         <div
-          className="p-2.5 rounded-xl"
+          className="p-2.5 rounded-xl font-medium"
           style={{
-            background: "rgba(239,90,42,0.16)",
-            color: "#ef5a2a",
+            background: "rgba(239,90,42,0.12)",
+            color: "var(--spark-flag-ink, #ef5a2a)",
+            border: "1px solid rgba(239,90,42,0.28)",
           }}
         >
           {errorMsg}
@@ -169,8 +190,8 @@ const RecommendationActionDrawer: React.FC<{
             required
             value={selectedStoreKey}
             onChange={(e) => setSelectedStoreKey(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-black/40"
-            style={BORDER}
+            className="w-full px-3 py-2 rounded-xl"
+            style={FIELD_STYLE}
           >
             <option value="">Select eligible store…</option>
             {(item.eligibleStores ?? []).map((st) => (
@@ -190,8 +211,8 @@ const RecommendationActionDrawer: React.FC<{
               type="date"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-black/40"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl"
+              style={FIELD_STYLE}
             />
           </label>
           <label className="space-y-1">
@@ -202,8 +223,8 @@ const RecommendationActionDrawer: React.FC<{
               value={budgetAmount}
               onChange={(e) => setBudgetAmount(e.target.value)}
               placeholder="250.00"
-              className="w-full px-3 py-2 rounded-xl mono bg-black/40"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl mono"
+              style={FIELD_STYLE}
             />
           </label>
         </div>
@@ -218,8 +239,8 @@ const RecommendationActionDrawer: React.FC<{
               value={holdReason}
               onChange={(e) => setHoldReason(e.target.value)}
               placeholder="Out of stock / low velocity"
-              className="w-full px-3 py-2 rounded-xl bg-black/40"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl"
+              style={FIELD_STYLE}
             />
           </label>
           <label className="space-y-1">
@@ -228,8 +249,8 @@ const RecommendationActionDrawer: React.FC<{
               type="date"
               value={nextReviewDate}
               onChange={(e) => setNextReviewDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-black/40"
-              style={BORDER}
+              className="w-full px-3 py-2 rounded-xl"
+              style={FIELD_STYLE}
             />
           </label>
         </div>
@@ -242,8 +263,8 @@ const RecommendationActionDrawer: React.FC<{
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl bg-black/40"
-            style={BORDER}
+            className="w-full px-3 py-2 rounded-xl"
+            style={FIELD_STYLE}
           />
         </label>
       )}
@@ -252,15 +273,15 @@ const RecommendationActionDrawer: React.FC<{
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Instructions or buyer context…"
-        className="w-full px-3 py-2 rounded-xl bg-black/40"
-        style={BORDER}
+        className="w-full px-3 py-2 rounded-xl"
+        style={FIELD_STYLE}
       />
 
       <button
         type="submit"
         disabled={inFlight}
-        className="px-4 py-2 rounded-xl font-bold"
-        style={{ background: "#c5f546", color: "#0A0B0D" }}
+        className="px-4 py-2 rounded-xl font-bold transition active:scale-[0.99]"
+        style={PRIMARY_BTN_STYLE}
       >
         {inFlight ? "Saving decision…" : `Confirm ${storeActionLabel(actionType)}`}
       </button>
@@ -310,8 +331,9 @@ const RecommendationRow: React.FC<{
               to="/buyer-report"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
               style={{
-                background: "rgba(197,245,70,0.14)",
-                color: "#c5f546",
+                background: "var(--spark-ok-bg)",
+                color: "var(--spark-ok-ink)",
+                border: "1px solid var(--spark-ok-border)",
               }}
             >
               {storeActionLabel(item.currentActionType as StoreActionTypeKind)} ·{" "}
@@ -322,27 +344,24 @@ const RecommendationRow: React.FC<{
               <button
                 type="button"
                 onClick={() => setOpenAction("rebook")}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold"
-                style={{
-                  background: "rgba(197,245,70,0.14)",
-                  color: "#c5f546",
-                }}
+                className="px-3 py-1 rounded-lg text-xs font-semibold transition active:scale-[0.98]"
+                style={PRIMARY_BTN_STYLE}
               >
                 Rebook
               </button>
               <button
                 type="button"
                 onClick={() => setOpenAction("hold")}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold"
-                style={BORDER}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-[0.98]"
+                style={SECONDARY_BTN_STYLE}
               >
                 Hold
               </button>
               <button
                 type="button"
                 onClick={() => setOpenAction("restock")}
-                className="px-2.5 py-1 rounded-lg text-xs font-semibold"
-                style={BORDER}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold transition active:scale-[0.98]"
+                style={SECONDARY_BTN_STYLE}
               >
                 Restock check
               </button>

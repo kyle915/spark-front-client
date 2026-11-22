@@ -95,7 +95,7 @@ export default memo(function MarketPerformanceTable({
     <ChartCard
       title="Market Performance Analysis"
       icon={DollarSign}
-      iconColor="text-green-500"
+      iconColor="text-emerald-700 dark:text-emerald-400"
       className="w-full"
     >
       {/* Filter + Search */}

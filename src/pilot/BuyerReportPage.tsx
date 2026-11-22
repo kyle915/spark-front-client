@@ -26,6 +26,21 @@ import type { PilotMutationsVerifyRestockMutation as VerifyRestockType } from "@
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
+const FIELD_STYLE = {
+  border: "1px solid var(--spark-border)",
+  background: "var(--spark-field-bg, var(--spark-surface))",
+  color: "var(--spark-text)",
+} as const;
+const PRIMARY_BTN_STYLE = {
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
+} as const;
+const OK_BANNER_STYLE = {
+  background: "var(--spark-ok-bg)",
+  color: "var(--spark-ok-ink)",
+  border: "1px solid var(--spark-ok-border)",
+} as const;
 
 const BuyerReportBody: React.FC<{
   retailerFilter: string;
@@ -130,7 +145,7 @@ const BuyerReportBody: React.FC<{
             disabled={exportingFormat !== null}
             onClick={() => void handleExport("csv")}
             className="px-3.5 py-2 rounded-xl text-xs font-semibold"
-            style={BORDER}
+            style={FIELD_STYLE}
           >
             {exportingFormat === "csv" ? "Exporting…" : "↓ Export CSV"}
           </button>
@@ -139,7 +154,7 @@ const BuyerReportBody: React.FC<{
             disabled={exportingFormat !== null}
             onClick={() => void handleExport("xlsx")}
             className="px-4 py-2 rounded-xl text-xs font-bold"
-            style={{ background: "#c5f546", color: "#0A0B0D" }}
+            style={PRIMARY_BTN_STYLE}
           >
             {exportingFormat === "xlsx" ? "Building XLSX…" : "↓ Export Buyer XLSX"}
           </button>
@@ -149,11 +164,7 @@ const BuyerReportBody: React.FC<{
       {banner && (
         <div
           className="p-3 rounded-xl text-xs"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "#c5f546",
-            border: "1px solid rgba(197,245,70,0.3)",
-          }}
+          style={OK_BANNER_STYLE}
         >
           {banner}
         </div>
@@ -165,21 +176,21 @@ const BuyerReportBody: React.FC<{
           value={retailerFilter}
           onChange={(e) => setRetailerFilter(e.target.value)}
           placeholder="Filter by retailer banner…"
-          className="px-3 py-2 rounded-xl bg-black/30"
-          style={BORDER}
+          className="px-3 py-2 rounded-xl"
+          style={FIELD_STYLE}
         />
         <input
           value={marketFilter}
           onChange={(e) => setMarketFilter(e.target.value)}
           placeholder="Filter by market / city / state…"
-          className="px-3 py-2 rounded-xl bg-black/30"
-          style={BORDER}
+          className="px-3 py-2 rounded-xl"
+          style={FIELD_STYLE}
         />
         <select
           value={providerUuid}
           onChange={(e) => setProviderUuid(e.target.value)}
-          className="px-3 py-2 rounded-xl bg-black/30"
-          style={BORDER}
+          className="px-3 py-2 rounded-xl"
+          style={FIELD_STYLE}
         >
           <option value="">All field providers</option>
           {ws.providers.map((p) => (
@@ -257,10 +268,7 @@ const BuyerReportBody: React.FC<{
                         <div>
                           <span
                             className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                            style={{
-                              background: "rgba(197,245,70,0.14)",
-                              color: "#c5f546",
-                            }}
+                            style={OK_BANNER_STYLE}
                           >
                             {storeActionLabel(
                               r.currentActionType as StoreActionTypeKind,
@@ -306,10 +314,7 @@ const BuyerReportBody: React.FC<{
                   <div>
                     <span
                       className="px-2.5 py-0.5 rounded-full font-bold mr-2"
-                      style={{
-                        background: "rgba(197,245,70,0.15)",
-                        color: "#c5f546",
-                      }}
+                      style={OK_BANNER_STYLE}
                     >
                       {storeActionLabel(act.actionType as StoreActionTypeKind)}
                     </span>
@@ -323,8 +328,8 @@ const BuyerReportBody: React.FC<{
                       href={providerSubmitUrl(act.submissionCode)}
                       target="_blank"
                       rel="noreferrer"
-                      className="mono underline"
-                      style={{ color: "#c5f546" }}
+                      className="mono underline font-semibold"
+                      style={{ color: "var(--spark-ok-ink)" }}
                     >
                       Field link {act.submissionCode}
                     </a>
@@ -371,7 +376,7 @@ const BuyerReportBody: React.FC<{
                           })
                         }
                         className="px-3 py-1 rounded-lg font-bold"
-                        style={{ background: "#c5f546", color: "#0A0B0D" }}
+                        style={PRIMARY_BTN_STYLE}
                       >
                         Accept Rebook
                       </button>
@@ -409,8 +414,8 @@ const BuyerReportBody: React.FC<{
                             [act.uuid]: e.target.value,
                           }))
                         }
-                        className="px-2.5 py-1 rounded-lg bg-black/30"
-                        style={BORDER}
+                        className="px-2.5 py-1 rounded-lg"
+                        style={FIELD_STYLE}
                       >
                         <option value="">Reassign agency…</option>
                         {ws.providers.map((p) => (
@@ -439,7 +444,7 @@ const BuyerReportBody: React.FC<{
                           });
                         }}
                         className="px-3 py-1 rounded-lg font-semibold"
-                        style={BORDER}
+                        style={FIELD_STYLE}
                       >
                         Reassign
                       </button>
@@ -460,8 +465,8 @@ const BuyerReportBody: React.FC<{
                           }))
                         }
                         placeholder="Verify restock note (e.g. grocery manager confirmed 6 cases stocked)…"
-                        className="flex-1 min-w-[240px] px-3 py-1.5 rounded-lg bg-black/30"
-                        style={BORDER}
+                        className="flex-1 min-w-[240px] px-3 py-1.5 rounded-lg"
+                        style={FIELD_STYLE}
                       />
                       <button
                         type="button"
@@ -484,7 +489,7 @@ const BuyerReportBody: React.FC<{
                           });
                         }}
                         className="px-3 py-1.5 rounded-lg font-bold"
-                        style={{ background: "#c5f546", color: "#0A0B0D" }}
+                        style={PRIMARY_BTN_STYLE}
                       >
                         Verify Restock
                       </button>

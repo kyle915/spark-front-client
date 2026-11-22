@@ -143,7 +143,7 @@ function StoreRow({
         boxShadow: selected
           ? "inset 3px 0 0 var(--spark-text)"
           : checkedForWave
-            ? "inset 3px 0 0 #c5f546"
+            ? "inset 3px 0 0 var(--spark-ok-ink)"
             : undefined,
       }}
     >
@@ -639,9 +639,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               onClick={() => setWaveSheetOpen(true)}
               className="btn btn-sm font-semibold"
               style={{
-                background: "#c5f546",
-                color: "#0A0B0D",
-                border: "none",
+                background: "var(--spark-lime)",
+                color: "var(--spark-on-accent)",
+                border: "1px solid var(--spark-lime)",
               }}
             >
               Schedule wave ({selectedWaveList.length.toLocaleString("en-US")})

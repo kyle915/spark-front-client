@@ -107,7 +107,10 @@ export default memo(function RecentEventsCarousel({
 
               <div className="flex justify-between">
                 <span className="text-base-content/70">Intent Rate</span>
-                <span className="font-semibold text-green-500">
+                <span
+                  className="font-semibold"
+                  style={{ color: "var(--spark-ok-ink)" }}
+                >
                   {ev.intent}%
                 </span>
               </div>
