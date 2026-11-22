@@ -9,6 +9,7 @@ import type {
   ApprovalsListQuery as ApprovalsListQueryType,
   ApprovalsListQuery$variables,
 } from "@api/queries/__generated__/ApprovalsListQuery.graphql";
+import { executeAuthenticatedGraphQL } from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -56,30 +57,24 @@ async function callApprovalMutation(
 ): Promise<{ success: boolean; message: string }> {
   const inputType =
     mutation === "approveRequest" ? "ApproveRequestInput" : "DeclineRequestInput";
-  const body = JSON.stringify({
-    query: `
-      mutation Run($input: ${inputType}!) {
-        ${mutation}(input: $input) {
-          success
-          message
-        }
+  const query = `
+    mutation Run($input: ${inputType}!) {
+      ${mutation}(input: $input) {
+        success
+        message
       }
-    `,
-    variables,
+    }
+  `;
+  const json = await executeAuthenticatedGraphQL<
+    Record<string, { success?: boolean; message?: string | null } | undefined>
+  >(query, variables, {
+    operationName: mutation,
+    operationKind: "mutation",
   });
-  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-    },
-    body,
-  });
-  const json = await res.json();
   if (json.errors?.length) {
     return {
       success: false,
-      message: json.errors.map((e: { message: string }) => e.message).join("; "),
+      message: json.errors.map((e) => e.message).join("; "),
     };
   }
   const r = json?.data?.[mutation] ?? { success: false, message: "Unknown error." };

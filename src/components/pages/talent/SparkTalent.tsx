@@ -1,5 +1,6 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
@@ -101,6 +102,8 @@ const cityFromAddress = (raw: string): string => {
 
 const TalentInner: React.FC = () => {
   const { tenantId } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const baParam = (searchParams.get("ba") ?? "").trim();
 
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
@@ -165,6 +168,20 @@ const TalentInner: React.FC = () => {
       });
   }, [data]);
 
+  useEffect(() => {
+    if (!baParam) return;
+    const matched = all.find((b) => b.uuid === baParam);
+    setOpenBA((prev) => {
+      if (prev?.uuid === baParam) {
+        if (matched && prev.name === "Ambassador") {
+          return { uuid: baParam, name: matched.name };
+        }
+        return prev;
+      }
+      return { uuid: baParam, name: matched?.name ?? "Ambassador" };
+    });
+  }, [baParam, all]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     return all.filter((b) => {
@@ -227,7 +244,14 @@ const TalentInner: React.FC = () => {
         <BAProfileModal
           ambassadorUuid={openBA.uuid}
           fallbackName={openBA.name}
-          onClose={() => setOpenBA(null)}
+          onClose={() => {
+            setOpenBA(null);
+            if (baParam) {
+              const next = new URLSearchParams(searchParams);
+              next.delete("ba");
+              setSearchParams(next, { replace: true });
+            }
+          }}
         />
       )}
 

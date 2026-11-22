@@ -10,6 +10,7 @@ import {
   seriesColor,
   valueLabels,
 } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 
 export type RmmPerformanceItem = {
   rmm: string;
@@ -25,6 +26,7 @@ const everyPercent = valueLabels("all", percentLabel);
  * consumers sampled and demos above, conversion rate below.
  */
 function RmmPerformanceChart({ data }: { data: RmmPerformanceItem[] }) {
+  useAppearance();
   if (data.length === 0) {
     return <div className="spark-chart-empty">No RMM activity in this range yet.</div>;
   }

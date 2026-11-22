@@ -22,6 +22,9 @@ const PublicRecap = lazy(() => import("@/public/recaps/PublicRecap"));
 const TrainingHub = lazy(() => import("@/public/training/TrainingHub"));
 const PublicJobBoard = lazy(() => import("@/public/jobs/PublicJobBoard"));
 const PublicClock = lazy(() => import("@/public/clock/PublicClock"));
+const ProviderMobileSubmitPage = lazy(
+  () => import("@/pilot/ProviderMobileSubmitPage"),
+);
 
 const Fallback = () => (
   <div
@@ -48,9 +51,14 @@ export default function PublicFieldApp() {
           {/* Read-only recap preview from the shift reminder email. No login,
               no identify, no clock — see SparkRecapPreview. */}
           <Route path="/checkin/:code/preview" element={<SparkRecapPreview />} />
+          <Route
+            path="/provider-submit/:code"
+            element={<ProviderMobileSubmitPage />}
+          />
           <Route path="/spark-form/:tenantSlug" element={<SparkPublicExpressForm />} />
           <Route path="/r/:token" element={<PublicRecap />} />
           <Route path="/training/:code" element={<TrainingHub />} />
+          <Route path="/jobs/release/:releaseToken" element={<PublicJobBoard />} />
           <Route path="/jobs/:token" element={<PublicJobBoard />} />
           <Route path="/clock/:token" element={<PublicClock />} />
         </Routes>

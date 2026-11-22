@@ -24,6 +24,7 @@ import type { RebookLastCrewMutation as RebookLastCrewMutationType } from "@api/
 import { SaveStoreLogisticsNotesMutation } from "@/api/mutations/SaveStoreLogisticsNotesMutation";
 import type { SaveStoreLogisticsNotesMutation as SaveStoreLogisticsNotesMutationType } from "@api/mutations/__generated__/SaveStoreLogisticsNotesMutation.graphql";
 import { barSeries, chartOptions } from "@/lib/sparkChart";
+import { useAppearance } from "@/theme/appearance";
 import {
   activationLabel,
   count,
@@ -133,6 +134,7 @@ export const StoreProfileContent: React.FC<{
   onNavigateAway?: () => void;
   onResolvedTitle?: (title: string) => void;
 }> = ({ tenantId, storeKey, inDrawer = false, onNavigateAway, onResolvedTitle }) => {
+  useAppearance();
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const showAlert = useAlertStore((s) => s.showAlert);

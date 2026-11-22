@@ -64,6 +64,13 @@ type AcceptInvitationResponse {
   activationToken: String
 }
 
+type AcceptLegalTermsResponse {
+  success: Boolean!
+  message: String!
+  code: String
+  status: LegalStatus
+}
+
 """
 AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, was_corpo_card_used, recap, created_by, updated_by, created_at, updated_at)
 """
@@ -87,22 +94,16 @@ input AccountFeedbackInput {
   wasCorpoCardUsed: Boolean = null
 }
 
-type AccountMapPin {
-  id: ID!
+input AccountListEntryInput {
   name: String!
-  address: String!
-  lat: Float!
-  lng: Float!
-  statusSlug: String!
-  date: String
-  retailerName: String!
-  locationName: String!
-  stateCode: String!
-  coverageClass: String!
-  visitCount: Int!
-  planned: Boolean!
-  storeKey: String!
-  locationSource: String!
+  address: String! = ""
+  city: String! = ""
+  state: String! = ""
+  zip: String! = ""
+  chain: String! = ""
+  notes: String! = ""
+  lat: Float = null
+  lng: Float = null
 }
 
 type AccountListEntryType {
@@ -119,16 +120,11 @@ type AccountListEntryType {
   positionStatus: String!
 }
 
-input AccountListEntryInput {
-  name: String!
-  address: String! = ""
-  city: String! = ""
-  state: String! = ""
-  zip: String! = ""
-  chain: String! = ""
-  notes: String! = ""
-  lat: Float = null
-  lng: Float = null
+type AccountListPlaceResult {
+  placed: Int!
+  notFound: Int!
+  remaining: Int!
+  lookupAvailable: Boolean!
 }
 
 type AccountListSaveResult {
@@ -139,101 +135,30 @@ type AccountListSaveResult {
   awaitingPosition: Int!
 }
 
-type AccountListPlaceResult {
-  placed: Int!
-  notFound: Int!
-  remaining: Int!
-  lookupAvailable: Boolean!
-}
-
-type StoreNameAlias {
-  uuid: ID!
-  name: String!
-  records: Int!
-  places: String!
-}
-
-type StoreNameGroup {
-  groupKey: String!
-  canonicalName: String!
-  kind: String!
-  source: String!
-  reason: String!
-  canonicalRecords: Int!
-  affectedRecords: Int!
-  names: [StoreNameAlias!]!
-}
-
-type StoreNameAccepted {
-  uuid: ID!
-  name: String!
-  canonicalName: String!
-  records: Int!
-}
-
-type StoreNameSuggestions {
-  groups: [StoreNameGroup!]!
-  accepted: [StoreNameAccepted!]!
-  maxGroupSize: Int!
-}
-
-type StoreNameDecision {
-  ok: Boolean!
-  message: String!
-  changed: Int!
-  affectedRecords: Int!
-}
-
-type StoreNameCheck {
-  ok: Boolean!
-  message: String!
-  namesChecked: Int!
-  groupsFound: Int!
-  aiUsed: Boolean!
-}
-
-type RequestIntakeProduct {
-  uuid: ID!
-  name: String!
-}
-
-type RequestIntakeDraft {
-  date: String!
-  dateAsTyped: String!
-  yearAssumed: Boolean!
-  dateWarning: String!
-  startTime: String!
-  startAsTyped: String!
-  endTime: String!
-  endAsTyped: String!
-  timeAssumed: Boolean!
-  storeName: String!
-  matchedStoreName: String!
-  storeNumber: String!
-  streetAddress: String!
-  city: String!
-  state: String!
-  zip: String!
-  address: String!
-  notes: String!
-  products: [RequestIntakeProduct!]!
-  unmatchedProducts: [String!]!
-  couldNotRead: [String!]!
-}
-
-type RequestIntakeResult {
-  ok: Boolean!
-  message: String!
-  truncated: Boolean!
-  drafts: [RequestIntakeDraft!]!
-}
-
 type AccountMapCoverage {
   rosterTotal: Int!
   sampled: Int!
   repeat: Int!
   neverVisited: Int!
   planned: Int!
+}
+
+type AccountMapPin {
+  id: ID!
+  name: String!
+  address: String!
+  lat: Float!
+  lng: Float!
+  statusSlug: String!
+  date: String
+  retailerName: String!
+  locationName: String!
+  stateCode: String!
+  coverageClass: String!
+  visitCount: Int!
+  planned: Boolean!
+  storeKey: String!
+  locationSource: String!
 }
 
 type ActivationPlanDetailResponse {
@@ -348,8 +273,26 @@ type AiChartSeries {
   data: [Float!]!
 }
 
+type AiConnection {
+  id: ID!
+  appName: String!
+  brandName: String!
+  userEmail: String
+  createdAt: String!
+  lastUsedAt: String
+  callsLast30Days: Int!
+}
+
+type AiConnectorInfo {
+  connectorUrl: String!
+  helpUrl: String!
+  dailyCallLimit: Int!
+  isAdminView: Boolean!
+  connections: [AiConnection!]!
+}
+
 """
-Ambassador(id, uuid, rating, address, phone, about_me, bio, college, in_college, headshot, resume, coordinates, is_active, location, t_shirt_size, user, created_by, updated_by, created_at, updated_at)
+Ambassador(id, uuid, rating, address, phone, sms_opt_out, about_me, bio, college, in_college, headshot, resume, coordinates, is_active, location, t_shirt_size, user, created_by, updated_by, created_at, updated_at)
 """
 type Ambassador implements Node {
   """The Globally Unique ID of this object"""
@@ -574,7 +517,7 @@ type AmbassadorInvitationTypeCountableEdge {
 }
 
 """
-AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, time_blocks_15m, appear_as_rfp, reminder_sent_at, reminder_3h_sent_at, reminder_15m_sent_at, reminder_end_15m_sent_at, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
+AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, time_blocks_15m, appear_as_rfp, reminder_sent_at, reminder_3h_sent_at, reminder_15m_sent_at, reminder_end_15m_sent_at, reminder_24h_attempts, reminder_3h_attempts, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
 type AmbassadorJob implements Node {
   """The Globally Unique ID of this object"""
@@ -1007,6 +950,12 @@ input ApplyToJobInput {
   agreementAccepted: Boolean! = false
 }
 
+type ApproveAiSignInResult {
+  ok: Boolean!
+  message: String!
+  returnUrl: String
+}
+
 input ApproveAmbassadorInput {
   clientMutationId: ID = null
   ambassadorId: ID!
@@ -1272,6 +1221,45 @@ type BaLeaderboardEntry {
   reliabilityPct: Int
 }
 
+type BaProductQa {
+  notes: String!
+  hasMaterial: Boolean!
+  aiAvailable: Boolean!
+  questions: [BaProductQuestionRow!]!
+  websiteUrl: String!
+  websitePages: Int!
+  websiteProducts: Int!
+  documentCount: Int!
+  websiteRefreshedAt: String!
+  websiteRefreshMessage: String!
+  documentsRefreshedAt: String!
+  sources: [BaProductSource!]!
+}
+
+type BaProductQuestionRow {
+  question: String!
+  answer: String!
+  outcome: String!
+  askedAt: String!
+  eventName: String!
+  source: String!
+}
+
+type BaProductSource {
+  id: ID!
+  kind: String!
+  kindLabel: String!
+  title: String!
+  url: String!
+  label: String!
+  status: String!
+  error: String!
+  excluded: Boolean!
+  chars: Int!
+  extractedAt: String!
+  checkedAt: String!
+}
+
 type BaSelfProfileType {
   id: ID!
   firstName: String
@@ -1290,6 +1278,15 @@ type BaSelfProfileType {
   resumeUrl: String
   photos: [AmbassadorPhotoType!]!
   profileComplete: Boolean!
+}
+
+type BackendErrorRow {
+  signature: String!
+  message: String!
+  location: String!
+  count: Int!
+  firstSeen: String!
+  lastSeen: String!
 }
 
 type BestMonth {
@@ -1345,6 +1342,55 @@ input BillingEntityFiltersInput {
   tenantUuid: ID = null
 }
 
+type BrandChatClearResult {
+  ok: Boolean!
+  reason: String
+  cleared: Int!
+}
+
+type BrandChatLink {
+  label: String!
+  url: String!
+}
+
+type BrandChatReply {
+  ok: Boolean!
+  reason: String
+  conversationId: ID
+  turn: BrandChatTurnType
+  questionsLeftThisHour: Int!
+}
+
+type BrandChatSource {
+  tool: String!
+  label: String!
+  detail: String!
+  link: String!
+  linkLabel: String!
+}
+
+type BrandChatTurnType {
+  id: ID!
+  conversationId: ID!
+  question: String!
+  answer: String!
+  status: String!
+  sources: [BrandChatSource!]!
+  links: [BrandChatLink!]!
+  createdAt: String!
+}
+
+type BrandChatView {
+  ok: Boolean!
+  reason: String
+  brandName: String!
+  conversationId: ID
+  turns: [BrandChatTurnType!]!
+  suggestions: [String!]!
+  questionsPerHour: Int!
+  questionsLeftThisHour: Int!
+}
+
 type BrandCompareRow {
   tenantPk: Int!
   name: String!
@@ -1355,6 +1401,29 @@ type BrandCompareRow {
   consumersSampled: Int!
   unitsSold: Int!
   conversionPct: Float
+}
+
+type BrandCostDashboard {
+  groupBy: String!
+  agreements: [ProviderAgreementItem!]!
+  rollups: [BrandCostRollupRow!]!
+}
+
+type BrandCostRollupRow {
+  key: String!
+  label: String!
+  visitCount: Int!
+  completeVisitCount: Int!
+  incompleteVisitCount: Int!
+  totalCost: String
+  knownTotalCost: String!
+  supportedCost: String!
+  invoicedCost: String!
+  paidCost: String!
+  estimatedCost: String!
+  hasIncompleteCosts: Boolean!
+  costPerSample: String
+  costPerObservedUnit: String
 }
 
 type BrandGroupAccessGrant {
@@ -1391,6 +1460,42 @@ type BrandGroupType {
   name: String!
   slug: String!
   brands: [BrandGroupBrandType!]!
+}
+
+type BrandInsightBatchResult {
+  ok: Boolean!
+  reason: String
+  count: Int!
+}
+
+type BrandInsightResult {
+  ok: Boolean!
+  reason: String
+  item: BrandInsightReviewItem
+}
+
+type BrandInsightReviewBrand {
+  tenantId: ID!
+  tenantName: String!
+  drafts: Int!
+  items: [BrandInsightReviewItem!]!
+}
+
+type BrandInsightReviewItem {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  template: String!
+  factsText: String!
+  source: String!
+  status: String!
+  periodStart: String!
+  periodEnd: String!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
 }
 
 """
@@ -1529,6 +1634,18 @@ input BulkWalkupShiftsInput {
   clientMutationId: ID = null
 }
 
+type CalloutLink {
+  store: String
+  state: String
+  startDate: String
+  endDate: String
+}
+
+type CalloutNumber {
+  label: String!
+  value: String!
+}
+
 type CampaignCostReport {
   startDate: String!
   endDate: String!
@@ -1656,12 +1773,52 @@ type CancelShiftInviteResponse {
   ambassadorEventUuid: ID
 }
 
+type CanonicalVisitItem {
+  uuid: String!
+  storeKey: String!
+  storeLabel: String!
+  chainLabel: String!
+  market: String!
+  visitDate: String!
+  shiftKey: String!
+  status: String!
+  primaryProviderName: String
+  excludeFromAggregates: Boolean!
+  samplesDistributed: Int
+  consumersSampled: Int
+  repObservedUnits: Int
+  totalCost: String
+  supportedCost: String!
+  isCostIncomplete: Boolean!
+  settlementStatus: String!
+  evidenceStatus: String!
+  costPerSample: String
+  costPerObservedUnit: String
+  efficiencyWithheldReason: String
+  submissions: [VisitSubmissionItem!]!
+  costLines: [CostLineItem!]!
+}
+
+input CatalogRowInput {
+  name: String!
+  sku: String = null
+  imageUrl: String = null
+  productType: String = null
+}
+
 input ChangeUserPasswordInput {
   clientMutationId: ID = null
   id: ID = null
   uuid: ID = null
   password1: String!
   password2: String!
+}
+
+type ChartAnswer {
+  ok: Boolean!
+  answered: Boolean!
+  answer: String!
+  reason: String
 }
 
 input ChatAttachmentInput {
@@ -1756,6 +1913,15 @@ type ChatThread {
   messages(first: Int! = 50, beforeUuid: String = null, afterUuid: String = null): [ChatMessage!]!
 }
 
+type CheckinIssueSummary {
+  kind: String!
+  label: String!
+  count: Int!
+  events: Int!
+  lastAt: String!
+  lastDetail: String!
+}
+
 """
 Client(id, uuid, name, email, tenant, created_by, updated_by, created_at, updated_at)
 """
@@ -1809,6 +1975,104 @@ type ClientInviteRowResult {
   message: String!
 }
 
+type ClientRecapBar {
+  label: String!
+  value: Int!
+}
+
+type ClientRecapDeckSummary {
+  uuid: String!
+  tenantName: String!
+  title: String!
+  period: String!
+  readyAt: String!
+}
+
+type ClientRecapDraftPdf {
+  ok: Boolean!
+  reason: String!
+  filename: String!
+  pdfBase64: String!
+}
+
+type ClientRecapDraftPhoto {
+  id: String!
+  url: String!
+  category: String!
+  caption: String!
+  store: String!
+  state: String!
+  eventDate: String!
+  isPick: Boolean!
+}
+
+type ClientRecapDraftResult {
+  ok: Boolean!
+  reason: String!
+  draft: ClientRecapDraftType
+}
+
+type ClientRecapDraftSummary {
+  uuid: String!
+  tenantName: String!
+  title: String!
+  period: String!
+  updatedAt: String!
+}
+
+type ClientRecapDraftType {
+  uuid: String!
+  tenantId: String!
+  tenantName: String!
+  startDate: String!
+  endDate: String!
+  period: String!
+  title: String!
+  summary: String!
+  takeaways: [String!]!
+  textSource: String!
+  numbers: [ClientRecapNumber!]!
+  weeks: [ClientRecapBar!]!
+  stores: [ClientRecapBar!]!
+  states: [ClientRecapBar!]!
+  quotes: [String!]!
+  photos: [ClientRecapDraftPhoto!]!
+  createdAt: String!
+  updatedAt: String!
+  status: String!
+  canEdit: Boolean!
+  buildNote: String!
+  readyAt: String!
+  nextSteps: [String!]!
+  deckNumbers: [ClientRecapNumber!]!
+  noProductNote: String!
+  leftOutVisits: [ClientRecapVisit!]!
+  visitsToCheck: [ClientRecapVisit!]!
+  leftOutCount: Int!
+  quoteChoices: [ClientRecapQuoteChoice!]!
+}
+
+type ClientRecapNumber {
+  label: String!
+  value: Int!
+}
+
+type ClientRecapQuoteChoice {
+  text: String!
+  hidden: Boolean!
+}
+
+type ClientRecapVisit {
+  key: String!
+  day: String!
+  store: String!
+  state: String!
+  reason: String!
+  label: String!
+  evidence: String!
+  kept: Boolean!
+}
+
 input ClientRegisterInput {
   clientMutationId: ID = null
   firstName: String!
@@ -1826,6 +2090,67 @@ type ClientTodayCompletion {
   startDate: String!
   endDate: String!
   lookbackDays: Int!
+}
+
+type ClockActionResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
+type ClockLink {
+  id: ID!
+  label: String!
+  url: String!
+  tenantId: ID
+  tenantName: String
+  sheetUrl: String
+  isActive: Boolean!
+  createdAt: String!
+  sessionCount: Int!
+  openCount: Int!
+  lastClockAt: String
+  syncPending: Int!
+  syncError: String
+}
+
+input ClockLinkIdInput {
+  clientMutationId: ID = null
+  linkId: ID!
+}
+
+type ClockLinkResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  link: ClockLink
+}
+
+type ClockLinks {
+  available: Boolean!
+  serviceAccountEmail: String
+  links: [ClockLink!]!
+}
+
+type ClockSession {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  market: String!
+  address: String!
+  timezone: String!
+  clockInAt: String!
+  clockInGps: String!
+  clockInAccuracyM: Float
+  clockInMapUrl: String
+  clockOutAt: String
+  clockOutGps: String
+  clockOutAccuracyM: Float
+  clockOutMapUrl: String
+  durationMinutes: Int
+  sheetSynced: Boolean!
+  sheetError: String
 }
 
 type CoActivationInfo {
@@ -2009,6 +2334,15 @@ type ComparisonValues {
   purchaseIntent: Float!
 }
 
+type CompetitorBrand {
+  brand: String!
+  recapCount: Int!
+  preferOurs: Int!
+  preferTheirs: Int!
+  neutral: Int!
+  quote: String!
+}
+
 input ConfirmPasswordResetInput {
   clientMutationId: ID = null
   token: String!
@@ -2069,6 +2403,24 @@ type ConnecteamImportJob {
 type ConnecteamRawPair {
   label: String!
   value: String!
+}
+
+type ConsumerBreakdown {
+  total: Int!
+  recaps: Int!
+  events: Int!
+  byWeek: [ConsumerWeek!]!
+  byStore: [ConsumerBreakdownRow!]!
+  byState: [ConsumerBreakdownRow!]!
+  storeCount: Int!
+  stateCount: Int!
+}
+
+type ConsumerBreakdownRow {
+  label: String!
+  kind: String!
+  consumers: Int!
+  recaps: Int!
 }
 
 """
@@ -2183,6 +2535,12 @@ type ConsumerReceiptTypeCountableEdge {
   node: ConsumerReceiptType!
 }
 
+type ConsumerWeek {
+  weekStart: String!
+  consumers: Int!
+  recaps: Int!
+}
+
 type ContractorAgreementType {
   uuid: String!
   version: String!
@@ -2193,6 +2551,37 @@ input CoordinatesFilterInput {
   coordinates: [Float!]!
   range: Float!
   unit: DistanceUnit! = KILOMETERS
+}
+
+input CorrectShelfReadingInput {
+  fileId: ID!
+  productOnShelf: String!
+  priceTagVisible: String!
+  outOfStockGap: String!
+  facings: Int = null
+  price: String = null
+  note: String! = ""
+}
+
+type CorrectShelfReadingPayload {
+  success: Boolean!
+  message: String!
+  photo: ShelfPhotoReading
+}
+
+type CostLineItem {
+  uuid: String!
+  category: String!
+  sourceType: String!
+  description: String!
+  amount: String
+  isConfirmedZero: Boolean!
+  settlementStatus: String!
+  evidenceStatus: String!
+  allocationPercentage: String
+  providerName: String
+  evidenceCount: Int!
+  hasUnitemizedProof: Boolean!
 }
 
 input CreateAcademyModuleInput {
@@ -2386,6 +2775,16 @@ input CreateClientInput {
   tenantId: ID = null
   name: String!
   email: String!
+}
+
+input CreateClockLinkInput {
+  clientMutationId: ID = null
+  label: String!
+  tenantId: ID = null
+  sheetMode: String! = "create"
+  sheetUrl: String = null
+  shareWith: [String!] = null
+  timezone: String = null
 }
 
 input CreateCompanyFileInput {
@@ -2905,6 +3304,33 @@ input CreateRequestWithDependenciesInput {
   coBrands: [CoBrandInput!] = null
 }
 
+input CreateRequestsWaveInput {
+  requestTypeId: ID!
+  items: [WaveRequestItemInput!]!
+  tenantId: ID = null
+  eventTypeId: ID = null
+  defaultTimezoneId: ID = null
+  schedulingStatus: String! = "needs_scheduling"
+  productIds: [ID!] = null
+  notes: String! = ""
+  dryRun: Boolean! = false
+  rollbackOnError: Boolean! = true
+  clientMutationId: ID = null
+}
+
+type CreateRequestsWaveResponse {
+  success: Boolean!
+  message: String!
+  totalRows: Int!
+  successCount: Int!
+  failedCount: Int!
+  skippedCount: Int!
+  rolledBack: Boolean!
+  errors: [String!]
+  rows: [RequestBatchRowResult!]
+  clientMutationId: ID
+}
+
 input CreateRetailerInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -2995,6 +3421,15 @@ input CreateUserInput {
   tenantId: ID = null
 }
 
+type CronRunRow {
+  name: String!
+  lastRunAt: String
+  lastOk: Boolean!
+  lastStatus: Int!
+  runCount: Int!
+  hoursSince: Float
+}
+
 """
 CustomField(id, uuid, name, required, order, options, placeholder, custom_recap_template, custom_field_type, recap_section, created_by, updated_by, created_at, updated_at)
 """
@@ -3016,11 +3451,6 @@ type CustomField implements Node {
   options: [String!]!
   value: String
   customFieldValueId: ID
-  """
-  Browser-loadable URL when this recap's ``value`` is a recap photo key (IMAGE
-  fields), else null. The web app used to build a bucket URL from the raw
-  key, which stops working on a private bucket.
-  """
   mediaUrl: String
 }
 
@@ -3048,7 +3478,7 @@ type CustomFormType {
 }
 
 """
-CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, exclude_from_aggregates, source_label, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, co_activation_key, co_activation_parent, created_by, updated_by, created_at, updated_at)
+CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, finalize_status, finalize_error, finalize_attempted_at, timezone, event, ambassador, external_ba_name, is_third_party, exclude_from_aggregates, source_label, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, store_number, location_fill, tenant, custom_recap_template, co_activation_key, co_activation_parent, created_by, updated_by, created_at, updated_at)
 """
 type CustomRecap implements Node {
   """The Globally Unique ID of this object"""
@@ -3148,24 +3578,6 @@ type CustomRecapDetailResponse {
   customRecap: CustomRecap
 }
 
-"""Spark's suggested retailer for an event that has none. Staff only."""
-type RetailerProposalType {
-  id: ID!
-  name: String!
-  confidence: String!
-  source: String!
-  sourceLabel: String!
-  reason: String!
-  isNewRetailer: Boolean!
-}
-
-type RetailerProposalResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  retailerName: String
-}
-
 """
 CustomRecapFieldType(id, uuid, name, created_by, updated_by, created_at, updated_at)
 """
@@ -3200,7 +3612,7 @@ type CustomRecapFieldTypeDetailResponse {
 }
 
 """
-CustomRecapFile(id, uuid, name, url, approved, custom_recap, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
+CustomRecapFile(id, uuid, name, url, approved, content_sha256, custom_recap, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
 """
 type CustomRecapFile implements Node {
   """The Globally Unique ID of this object"""
@@ -3372,11 +3784,26 @@ type CustomUserTypeCountableEdge {
   node: CustomUserType!
 }
 
+type DashboardCallout {
+  key: String!
+  kind: String!
+  text: String!
+  numbers: [CalloutNumber!]!
+  link: CalloutLink!
+}
+
 """Date (isoformat)"""
 scalar Date
 
 """Date with time (isoformat)"""
 scalar DateTime
+
+input DecideRetailerProposalInput {
+  clientMutationId: ID = null
+  proposalId: ID!
+  accept: Boolean!
+  retailerName: String = null
+}
 
 input DeclineAmbassadorJobInput {
   clientMutationId: ID = null
@@ -3464,6 +3891,11 @@ type DeleteAmbassadorSkillResponse {
 input DeleteAnnouncementInput {
   clientMutationId: ID = null
   uuid: ID!
+}
+
+input DeleteClockSessionInput {
+  clientMutationId: ID = null
+  sessionId: ID!
 }
 
 input DeleteCustomRecapFileInput {
@@ -3621,6 +4053,41 @@ type DisconnectGoogleCalendarResponse {
   clientMutationId: ID
 }
 
+input DismissMissingRecapsInput {
+  clientMutationId: ID = null
+  ambassadorEventUuids: [ID!]! = []
+  eventUuids: [ID!]! = []
+  reason: String!
+  note: String = null
+}
+
+type DismissMissingRecapsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  dismissedCount: Int!
+  dismissalUuids: [ID!]!
+}
+
+type DismissedMissingRecapType {
+  dismissalUuid: ID!
+  eventUuid: ID!
+  eventName: String!
+  address: String
+  stateCode: String
+  date: String
+  endTime: String
+  ambassadorUuid: ID
+  ambassadorName: String
+  ambassadorEmail: String
+  reason: String!
+  reasonLabel: String!
+  note: String!
+  dismissedByName: String!
+  dismissedAt: String!
+  recapFiled: Boolean!
+}
+
 enum DistanceUnit {
   KILOMETERS
   MILES
@@ -3685,6 +4152,16 @@ type DjangoImageType {
   height: Int!
 }
 
+type DonorTemplateOption {
+  templateId: Int!
+  templateName: String!
+  tenantId: ID!
+  tenantName: String!
+  tenantSlug: String
+  eventType: String!
+  fieldCount: Int!
+}
+
 type DuplicateEventCluster {
   key: String!
   events: [DuplicateEventEntry!]!
@@ -3716,6 +4193,16 @@ type EarningsShiftRow {
   estimatedHours: Boolean!
   rate: Float
   estimatedPay: Float
+}
+
+type EfficiencyRow {
+  label: String!
+  recaps: Int!
+  sampled: Int!
+  sold: Int!
+  hours: Float!
+  samplesPerHour: Float
+  unitsPerHour: Float
 }
 
 input EmailCampaignReportInput {
@@ -3798,13 +4285,6 @@ type EventAttendanceRow {
   hoursOnSite: Float
   clockInAttendanceUuid: ID
   clockOutAttendanceUuid: ID
-}
-
-type SheetConfirmationAutomationInfo {
-  key: String!
-  label: String!
-  sheetId: String!
-  sheetUrl: String!
 }
 
 type EventConfirmationFormOptions {
@@ -4153,11 +4633,26 @@ type FavoriteAmbassadorResponse {
   clientMutationId: ID
 }
 
+type FeedbackTheme {
+  section: String!
+  label: String!
+  recapCount: Int!
+  quote: String!
+}
+
 type FieldCallout {
   market: String
   corridor: String
   date: String
   text: String!
+}
+
+type FieldEfficiency {
+  total: EfficiencyRow!
+  byWeekday: [EfficiencyRow!]!
+  byDaypart: [EfficiencyRow!]!
+  topStores: [EfficiencyRow!]!
+  recapsWithoutHours: Int!
 }
 
 type FieldMarketingBoard {
@@ -4225,6 +4720,40 @@ type FieldMarketingEvent {
   deleteCancelledRequest: Boolean!
   resultsCounted: Int!
   resultsPending: Int!
+  setupDay: Boolean!
+}
+
+type FieldMarketingEventRecap {
+  id: String!
+  kind: String!
+  uuid: String!
+  date: String!
+  type: String!
+  typeLabel: String!
+  name: String!
+  place: String!
+  cityState: String!
+  market: String!
+  marketLabel: String!
+  baName: String!
+  consumersSampled: Int
+  samples: Int
+  samplesLabel: String!
+  sampleFormat: String!
+  pours: Int
+  emails: Int
+  planId: String
+  planName: String!
+  planCode: String
+  href: String!
+}
+
+type FieldMarketingEventRecaps {
+  start: String!
+  end: String!
+  canAttach: Boolean!
+  truncated: Boolean!
+  rows: [FieldMarketingEventRecap!]!
 }
 
 type FieldMarketingEventResponse {
@@ -4239,9 +4768,10 @@ type FieldMarketingKpi {
   label: String!
   detail: String!
   target: Int!
-  planned: Int!
+  planned: Int
   logged: Int
   unit: String!
+  note: String!
 }
 
 type FieldMarketingManager {
@@ -4323,9 +4853,65 @@ type FileTypeCountableEdge {
   node: FileType!
 }
 
+type FinanceExceptionAuditItem {
+  uuid: String!
+  actorEmail: String
+  action: String!
+  note: String!
+  createdAt: String!
+}
+
+type FinanceExceptionItem {
+  uuid: String!
+  exceptionType: String!
+  severity: String!
+  status: String!
+  affectedAmount: String
+  sourceLabel: String!
+  explanation: String!
+  visitUuid: String
+  storeLabel: String
+  visitDate: String
+  costLineUuid: String
+  providerName: String
+  ownerUserId: Int
+  ownerEmail: String
+  clarificationNote: String!
+  resolutionReason: String!
+  createdAt: String!
+  audits: [FinanceExceptionAuditItem!]!
+}
+
+type FinanceQueueView {
+  exceptions: [FinanceExceptionItem!]!
+  operationalNotices: [OperationalFieldNoticeItem!]!
+}
+
+input ForecastFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  plannedFullCans: Int = null
+  plannedPourSamples: Int = null
+  plannedEmails: Int = null
+  setupDay: Boolean = null
+  tenantId: ID = null
+}
+
 input ForgotPasswordInput {
   clientMutationId: ID = null
   email: String!
+}
+
+type GalleryPhoto {
+  id: String!
+  url: String!
+  category: String!
+  recapUuid: String!
+  store: String!
+  state: String!
+  eventDate: String!
+  isPick: Boolean!
+  caption: String!
 }
 
 input GenerateCampaignReportPdfInput {
@@ -4489,6 +5075,93 @@ type GroupTypeResponse {
   groupType: GroupType
 }
 
+type HighlightPhoto {
+  url: String!
+  category: String!
+  recapUuid: String!
+}
+
+type HighlightQuote {
+  text: String!
+  recapUuid: String
+  recapKind: String
+}
+
+type HighlightStore {
+  storeKey: String!
+  name: String!
+  market: String!
+  conversion: Float!
+  consumers: Int!
+  unitsSold: Int!
+  recaps: Int!
+  recapUuid: String
+  recapKind: String
+}
+
+type HoursCheckFlag {
+  code: String!
+  title: String!
+  severity: String!
+  summary: String!
+  action: String!
+  facts: [HoursFlagFact!]!
+  usesLocation: Boolean!
+  aiReason: String
+  reviewed: Boolean!
+  staleReview: Boolean!
+  reviewedBy: String
+  reviewedAt: String
+  reviewNote: String
+}
+
+type HoursCheckReport {
+  startDate: String!
+  endDate: String!
+  totalShifts: Int!
+  flaggedShifts: Int!
+  needsLookShifts: Int!
+  byRule: [HoursRuleCount!]!
+  thresholds: [HoursThreshold!]!
+  shifts: [HoursCheckShift!]!
+}
+
+type HoursCheckShift {
+  eventUuid: String!
+  eventName: String!
+  ambassadorUuid: String!
+  ambassadorName: String!
+  date: String
+  needsLook: Boolean!
+  flags: [HoursCheckFlag!]!
+}
+
+type HoursFlagFact {
+  label: String!
+  value: String!
+}
+
+type HoursFlagReviewResponse {
+  success: Boolean!
+  message: String!
+  reviewedBy: String
+  reviewedAt: String
+  clientMutationId: ID
+}
+
+type HoursRuleCount {
+  code: String!
+  title: String!
+  severity: String!
+  count: Int!
+  unreviewed: Int!
+}
+
+type HoursThreshold {
+  key: String!
+  value: Float!
+}
+
 input ImportConnecteamRecapPdfInput {
   clientMutationId: ID = null
   eventId: ID!
@@ -4520,6 +5193,40 @@ type ImportConnecteamRecapPdfStat {
   skippedReason: String
 }
 
+type ImportJobItem {
+  uuid: String!
+  providerUuid: String!
+  providerName: String!
+  filename: String!
+  status: String!
+  isHistorical: Boolean!
+  totalRows: Int!
+  createdCount: Int!
+  updatedCount: Int!
+  unchangedCount: Int!
+  reviewCount: Int!
+  errorCount: Int!
+  createdAt: String!
+}
+
+type ImportPresetItem {
+  key: String!
+  label: String!
+  columnMapJson: String!
+}
+
+type ImportPreviewResult {
+  headers: [String!]!
+  resolvedMapJson: String!
+  totalRows: Int!
+  createdCount: Int!
+  updatedCount: Int!
+  unchangedCount: Int!
+  reviewCount: Int!
+  errorCount: Int!
+  rows: [ImportRowPreviewItem!]!
+}
+
 input ImportRequestsBatchInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -4529,6 +5236,21 @@ input ImportRequestsBatchInput {
   sheetName: String! = "0"
   dryRun: Boolean! = false
   rollbackOnError: Boolean! = true
+}
+
+type ImportRowPreviewItem {
+  rowUuid: String
+  rowNumber: Int!
+  status: String!
+  errorCode: String!
+  message: String!
+  rawRowJson: String!
+  normalizedRowJson: String!
+}
+
+type InsightEligibleStore {
+  storeKey: String!
+  storeLabel: String!
 }
 
 type InsightReport {
@@ -4668,6 +5390,20 @@ type InvoiceResponse {
   invoice: Invoice
 }
 
+input IssueCheckinCodeInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+}
+
+type IssueCheckinCodeResponse {
+  success: Boolean!
+  message: String!
+  code: String
+  url: String
+  created: Boolean!
+  clientMutationId: ID
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
 """
@@ -4781,6 +5517,7 @@ type JobBoardGig {
   openShifts: Int!
   defaultOpenShifts: Int!
   listed: Boolean!
+  publicNotes: String!
   booked: Int!
   spotsLeft: Int!
   bookings: [JobBoardBooking!]!
@@ -5139,6 +5876,248 @@ type JobTitleDetailResponse {
   jobTitle: JobTitle
 }
 
+type JumpAmbassadorHit {
+  uuid: String!
+  name: String!
+  email: String
+}
+
+type JumpClientHit {
+  uuid: String!
+  name: String!
+  email: String
+  tenantId: ID
+  tenantUuid: String
+  tenantName: String
+  slug: String
+  checkinCode: String
+}
+
+type JumpEventHit {
+  uuid: String!
+  name: String!
+  date: String
+  address: String
+  retailerName: String
+}
+
+type JumpRecapHit {
+  uuid: String!
+  kind: String!
+  name: String!
+  approved: Boolean!
+  eventDate: String
+}
+
+type JumpRequestHit {
+  uuid: String!
+  name: String!
+  date: String
+  retailerName: String
+}
+
+type JumpSearchResult {
+  requests: [JumpRequestHit!]!
+  events: [JumpEventHit!]!
+  stores: [JumpStoreHit!]!
+  recaps: [JumpRecapHit!]!
+  ambassadors: [JumpAmbassadorHit!]!
+  clients: [JumpClientHit!]!
+}
+
+type JumpStoreHit {
+  key: String!
+  storeKey: String
+  name: String!
+  address: String
+  city: String
+  state: String
+}
+
+type LaunchBucketPreview {
+  name: String!
+  helper: String
+  min: Int
+}
+
+type LaunchCatalogPreview {
+  name: String!
+  sku: String!
+  imageUrl: String!
+}
+
+type LaunchDonorInfo {
+  tenantName: String!
+  tenantSlug: String
+  templateId: Int!
+  templateName: String!
+  newTemplateName: String!
+  eventType: String!
+}
+
+type LaunchExistingTenant {
+  id: ID!
+  name: String!
+  slug: String
+}
+
+type LaunchFieldPreview {
+  name: String!
+  type: String!
+  required: Boolean!
+  options: [String!]!
+
+  """Options come from the NEW tenant's catalog (a product picker)."""
+  fromCatalog: Boolean!
+}
+
+type LaunchProductFieldPreview {
+  name: String!
+  options: [String!]!
+  donorOptions: [String!]!
+}
+
+type LaunchSectionPreview {
+  name: String!
+  order: Int!
+  fields: [LaunchFieldPreview!]!
+}
+
+type LaunchSwapChange {
+  kind: String!
+  field: String!
+  before: String!
+  after: String!
+}
+
+type LegalAcceptanceReport {
+  currentVersion: String!
+  totalUsers: Int!
+  acceptedCount: Int!
+  pendingCount: Int!
+  rows: [LegalAcceptanceReportRow!]!
+}
+
+type LegalAcceptanceReportRow {
+  userUuid: String!
+  email: String!
+  name: String!
+  role: String!
+  status: String!
+  acceptedVersion: String
+  acceptedAt: DateTime
+  ipAddress: String!
+  userAgent: String!
+}
+
+type LegalDocumentStatus {
+  document: String!
+  title: String!
+  path: String!
+  version: String!
+  acceptedVersion: String
+  acceptedAt: DateTime
+  needsAcceptance: Boolean!
+}
+
+type LegalStatus {
+  required: Boolean!
+  needsAcceptance: Boolean!
+  currentVersion: String!
+  isUpdate: Boolean!
+  changeSummary: String
+  documents: [LegalDocumentStatus!]!
+}
+
+type LibraryPhoto {
+  id: String!
+  url: String!
+  caption: String!
+  category: String!
+  shows: [String!]!
+  showLabels: [String!]!
+  crowdSize: String!
+  crowdLabel: String!
+  setting: String!
+  settingLabel: String!
+  peoplePresent: Boolean
+  qualityScore: Int
+  issues: [String!]!
+  products: [String!]!
+  store: String!
+  city: String!
+  state: String!
+  eventDate: String!
+  recapUuid: String!
+  isPick: Boolean!
+  approved: Boolean!
+  tagged: Boolean!
+}
+
+type ListSearchCondition {
+  metric: String!
+  op: String!
+  value: Float!
+}
+
+input ListSearchConditionInput {
+  metric: String!
+  op: String!
+  value: Float!
+}
+
+type ListSearchFilter {
+  state: String
+  city: String
+  store: String
+  dateFrom: String
+  dateTo: String
+  status: String
+  activationType: String
+  product: String
+  conditions: [ListSearchCondition!]!
+}
+
+input ListSearchFilterInput {
+  state: String = null
+  city: String = null
+  store: String = null
+  dateFrom: String = null
+  dateTo: String = null
+  status: String = null
+  activationType: String = null
+  product: String = null
+  conditions: [ListSearchConditionInput!] = null
+}
+
+type ListSearchResult {
+  list: String!
+  filter: ListSearchFilter!
+  interpreted: Boolean!
+  modelAvailable: Boolean!
+  ignored: [String!]!
+  reason: String
+  rows: [ListSearchRow!]!
+  total: Int!
+}
+
+type ListSearchRow {
+  kind: String!
+  uuid: String!
+  title: String!
+  date: String
+  store: String!
+  city: String!
+  state: String!
+  activationType: String!
+  status: String!
+  requestUuid: String
+  recapCount: Int
+  consumers: Int
+  unitsSold: Int
+  conversion: Float
+}
+
 type LiveBoardBA {
   ambassadorUuid: String!
   name: String!
@@ -5154,25 +6133,6 @@ type LiveBoardBA {
   pendingApproval: Boolean!
   registeredAt: String
   bookingSource: String
-}
-
-"""One staffed row of a staffing sheet, beside what Spark has booked."""
-type SheetShiftRow {
-  uuid: ID!
-  day: String!
-  startText: String!
-  endText: String!
-  storeName: String!
-  address: String!
-  baName: String!
-  brandName: String!
-  sourceLabel: String!
-  sheetUrl: String!
-  match: String!
-  eventUuid: String
-  bookedNames: [String!]!
-  agrees: Boolean
-  syncedAt: String!
 }
 
 type LiveBoardShift {
@@ -5301,13 +6261,6 @@ input ManageAmbassadorJobAssignmentInput {
   statusId: ID = null
 }
 
-input DecideRetailerProposalInput {
-  clientMutationId: ID = null
-  proposalId: ID!
-  accept: Boolean!
-  retailerName: String = null
-}
-
 input MapCustomRecapStoreInput {
   clientMutationId: ID = null
   id: ID!
@@ -5317,6 +6270,16 @@ input MapCustomRecapStoreInput {
 input MarkChatThreadReadInput {
   clientMutationId: ID = null
   threadUuid: String!
+}
+
+input MarkHoursFlagReviewedInput {
+  tenantId: ID!
+  eventUuid: String!
+  ambassadorUuid: String!
+  code: String!
+  note: String = null
+  undo: Boolean! = false
+  clientMutationId: ID = null
 }
 
 input MarkRecapsSharedInput {
@@ -5364,6 +6327,20 @@ type MarketWithBrandAwareness {
 type MarketWithWillingness {
   marketName: String!
   willingCount: Int!
+}
+
+type MentionSeries {
+  key: String!
+  label: String!
+  polarity: String!
+  counts: [Int!]!
+  total: Int!
+  current: Int!
+  previous: Int!
+  currentShare: Int!
+  previousShare: Int!
+  direction: String!
+  quote: String!
 }
 
 input MergeEventsInput {
@@ -5446,51 +6423,15 @@ type MissingRecapEventType {
   assignedAmbassadors: [MissingRecapAmbassadorInfo!]!
 }
 
-type DismissedMissingRecapType {
-  dismissalUuid: ID!
-  eventUuid: ID!
-  eventName: String!
-  address: String
-  stateCode: String
-  date: String
-  endTime: String
-  ambassadorUuid: ID
-  ambassadorName: String
-  ambassadorEmail: String
-  reason: String!
-  reasonLabel: String!
-  note: String!
-  dismissedByName: String!
-  dismissedAt: String!
-  recapFiled: Boolean!
-}
-
-type DismissMissingRecapsResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  dismissedCount: Int!
-  dismissalUuids: [ID!]!
-}
-
-type RestoreMissingRecapsResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  restoredCount: Int!
-}
-
-input DismissMissingRecapsInput {
-  clientMutationId: ID = null
-  ambassadorEventUuids: [ID!]! = []
-  eventUuids: [ID!]! = []
-  reason: String!
-  note: String = null
-}
-
-input RestoreMissingRecapsInput {
-  clientMutationId: ID = null
-  dismissalUuids: [ID!]!
+type MonthHighlight {
+  month: String!
+  label: String!
+  caption: String!
+  captionSource: String!
+  recaps: Int!
+  store: HighlightStore
+  quote: HighlightQuote
+  photo: HighlightPhoto
 }
 
 type MonthlyDataPoint {
@@ -5511,67 +6452,7 @@ input MoveCustomFieldToSectionInput {
   sectionId: ID!
 }
 
-type AcceptLegalTermsResponse {
-  success: Boolean!
-  message: String!
-  code: String
-  status: LegalStatus
-}
-
-type LegalAcceptanceReport {
-  currentVersion: String!
-  totalUsers: Int!
-  acceptedCount: Int!
-  pendingCount: Int!
-  rows: [LegalAcceptanceReportRow!]!
-}
-
-type LegalAcceptanceReportRow {
-  userUuid: String!
-  email: String!
-  name: String!
-  role: String!
-  status: String!
-  acceptedVersion: String
-  acceptedAt: DateTime
-  ipAddress: String!
-  userAgent: String!
-}
-
-type LegalDocumentStatus {
-  document: String!
-  title: String!
-  path: String!
-  version: String!
-  acceptedVersion: String
-  acceptedAt: DateTime
-  needsAcceptance: Boolean!
-}
-
-type LegalStatus {
-  required: Boolean!
-  needsAcceptance: Boolean!
-  currentVersion: String!
-  isUpdate: Boolean!
-  changeSummary: String
-  documents: [LegalDocumentStatus!]!
-}
-
 type Mutation {
-  acceptLegalTerms(version: String!): AcceptLegalTermsResponse!
-  """
-  Disconnect an AI app (your own; Ignite admins: anyone's). Its tokens
-  stop working at once.
-  """
-  revokeAiConnection(id: ID!): RevokeAiConnectionResult!
-  saveStoreLogisticsNotes(input: SaveStoreLogisticsNotesInput!): SaveStoreLogisticsNotesPayload!
-  createRequestsWave(input: CreateRequestsWaveInput!): CreateRequestsWaveResponse!
-  saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
-  placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
-  decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
-  undoStoreNameAlias(tenantId: ID!, aliasUuid: ID!): StoreNameDecision!
-  checkStoreNames(tenantId: ID!): StoreNameCheck!
-  parseRequestDetails(tenantId: ID!, text: String!): RequestIntakeResult!
   mergeEvents(input: MergeEventsInput!): MergeEventsResponse!
   setEventMileageTracking(eventId: ID!, trackMileage: Boolean!, mileageRate: Float = null): EventDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
@@ -5587,6 +6468,14 @@ type Mutation {
   markPayrollPaid(input: ApprovePayrollInput!): PayrollActionResponse!
   unapprovePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
   markHoursFlagReviewed(input: MarkHoursFlagReviewedInput!): HoursFlagReviewResponse!
+  saveStoreLogisticsNotes(input: SaveStoreLogisticsNotesInput!): SaveStoreLogisticsNotesPayload!
+  createRequestsWave(input: CreateRequestsWaveInput!): CreateRequestsWaveResponse!
+  saveAccountList(tenantId: ID!, accounts: [AccountListEntryInput!]!): AccountListSaveResult!
+  placeAccountListEntries(tenantId: ID!, limit: Int = null): AccountListPlaceResult!
+  decideStoreNameGroup(tenantId: ID!, groupKey: String!, action: String!, canonicalName: String = null, aliasUuids: [ID!] = null): StoreNameDecision!
+  undoStoreNameAlias(tenantId: ID!, aliasUuid: ID!): StoreNameDecision!
+  checkStoreNames(tenantId: ID!): StoreNameCheck!
+  parseRequestDetails(tenantId: ID!, text: String!): RequestIntakeResult!
   sendEventConfirmation(input: SendEventConfirmationInput!): SendEventConfirmationResponse!
   cancelEventConfirmationReminders(uuid: ID!, clientMutationId: ID = null): SendEventConfirmationResponse!
   createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
@@ -5637,6 +6526,7 @@ type Mutation {
   planFieldMarketing(input: PlanFieldMarketingInput!): FieldMarketingEventResponse!
   submitFieldMarketing(input: SubmitFieldMarketingInput!): FieldMarketingEventResponse!
   logFieldMarketing(input: LogFieldMarketingInput!): FieldMarketingEventResponse!
+  forecastFieldMarketing(input: ForecastFieldMarketingInput!): FieldMarketingEventResponse!
   updateFieldMarketing(input: UpdateFieldMarketingInput!): FieldMarketingEventResponse!
   deleteFieldMarketing(input: DeleteFieldMarketingInput!): FieldMarketingDeleteResponse!
   restoreFieldMarketing(input: RestoreFieldMarketingInput!): FieldMarketingEventResponse!
@@ -5670,20 +6560,6 @@ type Mutation {
   setCustomRecapFileCategory(input: SetCustomRecapFileCategoryInput!): CustomRecapDetailResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
-  summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
-  refreshTenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes
-  readRecapShelfPhotos(recapId: ID!): RecapShelfReadings!
-  correctShelfReading(input: CorrectShelfReadingInput!): CorrectShelfReadingPayload!
-  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
-  saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
-  setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
-  setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
-  publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
-  generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
-  askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
-  clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
-  suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
-  saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
   archiveRecap(input: ArchiveRecapInput!): RecapDetailResponse!
   unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
@@ -5710,22 +6586,36 @@ type Mutation {
   exportCustomRecapsXlsx(input: ExportCustomRecapsXlsxInput!): RecapExportResponse!
   exportCustomRecapXlsx(input: ExportCustomRecapXlsxInput!): RecapExportResponse!
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
+  summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
+  refreshTenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes
+  readRecapShelfPhotos(recapId: ID!): RecapShelfReadings!
+  correctShelfReading(input: CorrectShelfReadingInput!): CorrectShelfReadingPayload!
+  generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
+  saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
+  setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
+  publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
+  generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
+  askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
+  clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
+  suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
+  saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
+  resolveRecapFlag(input: ResolveRecapFlagInput!): ResolveRecapFlagPayload!
+  setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
+  setProgramShareEnabled(input: SetProgramShareEnabledInput!): SetProgramShareEnabledResponse!
+  issueCheckinCode(input: IssueCheckinCodeInput!): IssueCheckinCodeResponse!
+  setBoothDayCounting(input: SetBoothDayCountingInput!): SetBoothDayCountingResponse!
+  setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
+  setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
+  setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
+  exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
+  sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
+  setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
+  generateFieldSamplingCalloutSummary(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingCalloutSummary!
   setRecapPhotoPick(fileId: ID!, choice: String!): RecapPhotoPicksResult!
   createClientRecapDraft(tenantId: ID!, startDate: String!, endDate: String!): ClientRecapDraftResult!
   updateClientRecapDraft(uuid: String!, title: String = null, summary: String = null, takeaways: [String!] = null, photoIds: [ID!] = null, nextSteps: [String!] = null, hiddenQuotes: [String!] = null, keptVisits: [String!] = null): ClientRecapDraftResult!
   setClientRecapDeckStatus(uuid: String!, status: String!): ClientRecapDraftResult!
-  setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
-  setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
-  setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
-  issueCheckinCode(input: IssueCheckinCodeInput!): IssueCheckinCodeResponse!
-  setProgramShareEnabled(input: SetProgramShareEnabledInput!): SetProgramShareEnabledResponse!
-  setBoothDayCounting(input: SetBoothDayCountingInput!): SetBoothDayCountingResponse!
-  setMyNotificationPreference(input: SetMyNotificationPreferenceInput!): SetMyNotificationPreferenceResponse!
-  setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
-  exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
-  resolveRecapFlag(input: ResolveRecapFlagInput!): ResolveRecapFlagPayload!
-  sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
-  generateFieldSamplingCalloutSummary(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingCalloutSummary!
   register(input: ClientRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
@@ -5748,6 +6638,7 @@ type Mutation {
   setLinkedSheet(input: SetLinkedSheetInput!): UpdateTenantResponse!
   setDefaultExternalRmm(input: SetDefaultExternalRmmInput!): UpdateTenantResponse!
   setTenantRecapRecipientEmails(tenantId: ID!, emails: String!): TenantType
+  setTenantRecapSkipEmails(tenantId: ID!, emails: String!): TenantType
   createTenant(input: CreateTenantInput!): CreateTenantResponse!
   updateTenant(input: UpdateTenantInput!): UpdateTenantResponse!
   setMyPreferences(input: SetMyPreferencesInput!): SetMyPreferencesResponse!
@@ -5755,6 +6646,8 @@ type Mutation {
   updateForm(input: UpdateFormInput!): SaveFormResponse!
   deleteForm(input: DeleteFormInput!): DeleteFormResponse!
   createSupportTicket(input: CreateSupportTicketInput!): CreateSupportTicketResponse!
+  previewTenantLaunch(input: TenantLaunchInput!): TenantLaunchResponse!
+  launchTenant(input: TenantLaunchInput!): TenantLaunchResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -5924,15 +6817,53 @@ type Mutation {
   deleteInvoice(input: DeleteInvoiceInput!): InvoiceResponse!
   postJobBoardPlan(input: PostJobBoardPlanInput!): JobBoardPostPlanResponse!
   setJobBoardGig(input: SetJobBoardGigInput!): JobBoardGigResponse!
+  cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
   createClockLink(input: CreateClockLinkInput!): ClockLinkResponse!
   updateClockLink(input: UpdateClockLinkInput!): ClockLinkResponse!
   syncClockSheet(input: ClockLinkIdInput!): ClockLinkResponse!
+  deleteClockSession(input: DeleteClockSessionInput!): ClockActionResponse!
   setBaProductNotes(tenantId: ID!, notes: String!): BaProductQa!
   setBaBrandWebsite(tenantId: ID!, url: String!): BaProductQa!
   refreshBaProductSources(tenantId: ID!, scope: String! = "all"): BaProductQa!
   setBaProductSourceExcluded(tenantId: ID!, sourceId: ID!, excluded: Boolean!): BaProductQa!
-  deleteClockSession(input: DeleteClockSessionInput!): ClockActionResponse!
-  cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
+  approveAiSignIn(handoff: String!): ApproveAiSignInResult!
+  revokeAiConnection(id: ID!): RevokeAiConnectionResult!
+  linkTenantToClose(tenantId: ID!, closeLeadId: String!, closeOpportunityId: String = null, renewalDate: String = null, contactEmail: String = null): SalesAssistResult!
+  unlinkTenantFromClose(tenantId: ID!): SalesAssistResult!
+  acceptLegalTerms(version: String!): AcceptLegalTermsResponse!
+  switchWorkspaceContext(membershipUuid: String = null, tenantUuid: String = null): PilotMutationOutcome!
+  registerProviderOrganization(name: String!, contactEmail: String! = "", slug: String! = ""): PilotMutationOutcome!
+  inviteWorkspaceMember(email: String!, workspaceRole: String!, providerUuid: String = null, canApproveRecaps: Boolean! = false, canApproveFinance: Boolean! = false, canApproveSpend: Boolean! = false): PilotMutationOutcome!
+  acceptWorkspaceInvitation(token: String!): PilotMutationOutcome!
+  revokeWorkspaceMembership(membershipUuid: String!): PilotMutationOutcome!
+  revokeProviderWorkspaceAccess(providerUuid: String!): PilotMutationOutcome!
+  assignProviderWork(providerUuid: String!, scopeType: String!, eventTypeId: Int = null, eventId: Int = null, visitUuid: String = null, dueDate: String = null, notes: String! = ""): PilotMutationOutcome!
+  respondProviderAssignment(assignmentUuid: String!, decision: String!, responseNote: String! = ""): PilotMutationOutcome!
+  revokeProviderAssignment(assignmentUuid: String!): PilotMutationOutcome!
+  setProviderSourceInclusion(providerUuid: String!, includeInCombinedReporting: Boolean!, notes: String! = ""): PilotMutationOutcome!
+  previewProviderCsvImport(providerUuid: String!, csvText: String!, mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null): ImportPreviewResult!
+  commitProviderCsvImport(providerUuid: String!, csvText: String!, filename: String! = "upload.csv", mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, saveMappingName: String = null, idempotencyKey: String = null, isHistorical: Boolean! = false): PilotMutationOutcome!
+  resolveProviderImportRow(rowUuid: String!, retailerId: Int = null, confirmedStoreNumber: String = null, confirmedAddress: String = null, confirmedCity: String = null, confirmedState: String = null, saveStoreAlias: Boolean! = false, productId: Int = null, saveProductAlias: Boolean! = true): PilotMutationOutcome!
+  upsertProviderAgreement(providerUuid: String!, name: String!, contractedDemoFee: String = null, includedHours: String! = "4.00", extraHourRate: String = null, mileageRate: String = null, adminFeePercent: String! = "0.00", adminFeeBases: [String!] = null, taxPercent: String! = "0.00"): PilotMutationOutcome!
+  upsertBrandCostLine(visitUuid: String!, category: String!, sourceType: String! = "invoice_line", amount: String = null, isConfirmedZero: Boolean! = false, quantity: String = null, unitRate: String = null, description: String! = "", settlementStatus: String! = "invoiced", evidenceStatus: String = null, providerUuid: String = null, agreementUuid: String = null, lineUuid: String = null): PilotMutationOutcome!
+  linkCostEvidence(costLineUuid: String!, proofUrl: String! = "", label: String! = "Receipt proof", recapFileId: Int = null, receiptReadingId: Int = null, verifiedAmount: String = null, isItemized: Boolean! = true): PilotMutationOutcome!
+  allocateSharedVisitCost(totalAmount: String!, category: String!, allocationsJson: String!, allocationMode: String! = "percentage", description: String! = "", providerUuid: String = null): PilotMutationOutcome!
+  assignFinanceException(exceptionUuid: String!, ownerUserId: Int = null): PilotMutationOutcome!
+  attachFinanceExceptionProof(exceptionUuid: String!, proofUrl: String! = "", label: String! = "Uploaded proof", isItemized: Boolean! = true, verifiedAmount: String = null): PilotMutationOutcome!
+  fixFinanceExceptionMatch(exceptionUuid: String!, visitUuid: String!, costLineUuid: String = null, category: String! = "product"): PilotMutationOutcome!
+  requestFinanceExceptionClarification(exceptionUuid: String!, note: String!): PilotMutationOutcome!
+  resolveFinanceException(exceptionUuid: String!, resolutionStatus: String!, reason: String!, updatedAmount: String = null): PilotMutationOutcome!
+  importRetailerPosSales(retailerBanner: String!, csvText: String!, filename: String! = "pos.csv", feedCompleteness: String! = "complete", columnMapJson: String = null): PilotMutationOutcome!
+  resolveUnmatchedPosRow(rowUuid: String!, retailerId: Int = null, storeKey: String = null, storeLabel: String = null, productId: Int = null, saveProductAlias: Boolean! = true): PilotMutationOutcome!
+  linkCrewPurchaseAdjustment(visitUuid: String!, productId: Int!, unitsPurchased: Int!, purchaseDate: String = null, retailerBanner: String! = "", transactionRef: String! = ""): PilotMutationOutcome!
+  setWorkspaceDefaultContribution(contributionPerUnit: String!): PilotMutationOutcome!
+  createStoreInsightAction(findingId: String!, actionType: String!, selectedStoreKey: String = null, idempotencyKey: String = null, providerUuid: String = null, ownerUserId: Int = null, targetDate: String = null, dueDate: String = null, budgetAmount: String = null, holdReason: String! = "", nextReviewDate: String = null, notes: String! = ""): PilotMutationOutcome!
+  respondStoreInsightAction(actionUuid: String!, decision: String!, note: String! = ""): PilotMutationOutcome!
+  reassignStoreInsightActionProvider(actionUuid: String!, newProviderUuid: String!, note: String! = ""): PilotMutationOutcome!
+  verifyRestockStoreAction(actionUuid: String!, verificationMethod: String!, verificationNote: String! = "", recapFileId: Int = null, followupVisitUuid: String = null): PilotMutationOutcome!
+  completeRebookStoreAction(actionUuid: String!, samplesDistributed: Int = null, consumersSampled: Int = null, repObservedUnits: Int = null, customRecapId: Int = null, notes: String! = ""): PilotMutationOutcome!
+  createWorkspaceSharedLink(resourceType: String! = "visit", visitUuid: String = null): PilotMutationOutcome!
+  revokeWorkspaceSharedLink(token: String!): PilotMutationOutcome!
 }
 
 type MutationNormalOutput {
@@ -5975,6 +6906,13 @@ type MyRatingSummary {
   lastShiftOnTime: Boolean
 }
 
+type MyReportSubscriptionResponse {
+  success: Boolean!
+  message: String!
+  subscribed: Boolean!
+  clientMutationId: ID
+}
+
 """An object with a Globally Unique ID"""
 interface Node {
   """The Globally Unique ID of this object"""
@@ -5989,6 +6927,13 @@ type NotificationItem {
   dataJson: String
   read: Boolean!
   createdAt: String!
+}
+
+type NotificationPreferenceItem {
+  category: String!
+  label: String!
+  description: String!
+  emailEnabled: Boolean!
 }
 
 input NotifyNoteMentionInput {
@@ -6066,6 +7011,15 @@ type OpenShiftItem {
   startTime: String
   endTime: String
   stateCode: String
+}
+
+type OperationalFieldNoticeItem {
+  id: Int!
+  kind: String!
+  status: String!
+  detail: String!
+  eventId: Int
+  createdAt: String!
 }
 
 interface OutputInterface {
@@ -6162,88 +7116,6 @@ type PayrollActionResponse {
   clientMutationId: ID
 }
 
-type PayrollTimesheet {
-  startDate: String!
-  endDate: String!
-  rows: [PayrollTimesheetRow!]!
-  totalHours: Float!
-  totalEstimatedPay: Float
-  flaggedRows: Int!
-}
-
-type HoursCheckFlag {
-  code: String!
-  title: String!
-  severity: String!
-  summary: String!
-  action: String!
-  facts: [HoursFlagFact!]!
-  usesLocation: Boolean!
-  aiReason: String
-  reviewed: Boolean!
-  staleReview: Boolean!
-  reviewedBy: String
-  reviewedAt: String
-  reviewNote: String
-}
-
-type HoursCheckReport {
-  startDate: String!
-  endDate: String!
-  totalShifts: Int!
-  flaggedShifts: Int!
-  needsLookShifts: Int!
-  byRule: [HoursRuleCount!]!
-  thresholds: [HoursThreshold!]!
-  shifts: [HoursCheckShift!]!
-}
-
-type HoursCheckShift {
-  eventUuid: String!
-  eventName: String!
-  ambassadorUuid: String!
-  ambassadorName: String!
-  date: String
-  needsLook: Boolean!
-  flags: [HoursCheckFlag!]!
-}
-
-type HoursFlagFact {
-  label: String!
-  value: String!
-}
-
-type HoursFlagReviewResponse {
-  success: Boolean!
-  message: String!
-  reviewedBy: String
-  reviewedAt: String
-  clientMutationId: ID
-}
-
-type HoursRuleCount {
-  code: String!
-  title: String!
-  severity: String!
-  count: Int!
-  unreviewed: Int!
-}
-
-type HoursThreshold {
-  key: String!
-  value: Float!
-}
-
-input MarkHoursFlagReviewedInput {
-  tenantId: ID!
-  eventUuid: String!
-  ambassadorUuid: String!
-  code: String!
-  note: String = null
-  undo: Boolean! = false
-  clientMutationId: ID = null
-}
-
 type PayrollShiftRow {
   eventUuid: String!
   eventName: String!
@@ -6264,6 +7136,15 @@ type PayrollShiftRow {
   ambassadorUuid: String
   ambassadorName: String
   ambassadorPhone: String
+}
+
+type PayrollTimesheet {
+  startDate: String!
+  endDate: String!
+  rows: [PayrollTimesheetRow!]!
+  totalHours: Float!
+  totalEstimatedPay: Float
+  flaggedRows: Int!
 }
 
 type PayrollTimesheetRow {
@@ -6303,6 +7184,78 @@ type PerformanceInsights {
   growthRate: Float!
 }
 
+type PhotoGalleryPage {
+  total: Int!
+  photos: [GalleryPhoto!]!
+  categories: [String!]!
+  states: [String!]!
+}
+
+input PhotoLibraryFilterInput {
+  text: String = null
+  shows: [String!] = null
+  crowdSizes: [String!] = null
+  settings: [String!] = null
+  productIds: [String!] = null
+  store: String = null
+  states: [String!] = null
+  startDate: String = null
+  endDate: String = null
+  minQuality: Int = null
+  peoplePresent: Boolean = null
+  hideIssues: Boolean! = false
+  approvedOnly: Boolean! = true
+  picksOnly: Boolean! = false
+  sort: String = null
+}
+
+type PhotoLibraryFilters {
+  text: String!
+  shows: [String!]!
+  crowdSizes: [String!]!
+  settings: [String!]!
+  productIds: [String!]!
+  store: String!
+  states: [String!]!
+  startDate: String
+  endDate: String
+  minQuality: Int
+  peoplePresent: Boolean
+  hideIssues: Boolean!
+  sort: String!
+}
+
+type PhotoLibraryOption {
+  key: String!
+  label: String!
+}
+
+type PhotoLibraryPage {
+  total: Int!
+  inScope: Int!
+  tagged: Int!
+  photos: [LibraryPhoto!]!
+  states: [String!]!
+  products: [PhotoLibraryOption!]!
+  showOptions: [PhotoLibraryOption!]!
+  crowdOptions: [PhotoLibraryOption!]!
+  settingOptions: [PhotoLibraryOption!]!
+  approvedOnly: Boolean!
+}
+
+type PhotoSearchInterpretation {
+  ok: Boolean!
+  reason: String!
+  filters: PhotoLibraryFilters!
+  chips: [String!]!
+}
+
+type PilotMutationOutcome {
+  ok: Boolean!
+  error: String
+  targetUuid: String
+}
+
 input PlanFieldMarketingInput {
   clientMutationId: ID = null
   market: String!
@@ -6325,8 +7278,22 @@ input PlanFieldMarketingInput {
   startTime: String! = ""
   endTime: String! = ""
   supportScope: String! = ""
+  setupDay: Boolean! = false
   submit: Boolean! = false
   tenantId: ID = null
+}
+
+type PlanRecapSuggestion {
+  recapId: String!
+  kind: String!
+  name: String!
+  date: String!
+  baName: String!
+  status: String!
+  href: String!
+  reasons: [String!]!
+  currentPlanName: String
+  metrics: [RecapPlanMetric!]!
 }
 
 type PlanResultRecap {
@@ -6373,6 +7340,50 @@ type PlanSummary {
   activity: String!
   activityLabel: String!
   requestCode: String
+}
+
+type PosImportHistoryItem {
+  uuid: String!
+  retailerBanner: String!
+  periodStart: String!
+  periodEnd: String!
+  version: Int!
+  isActiveVersion: Boolean!
+  feedCompleteness: String!
+  filename: String!
+  totalRows: Int!
+  matchedRows: Int!
+  unmatchedRows: Int!
+  createdAt: String!
+}
+
+type PosMissingCellItem {
+  storeKey: String!
+  storeLabel: String!
+  productId: Int!
+  productName: String!
+  weekStart: String!
+  status: String!
+}
+
+type PosStoreWeekItem {
+  storeKey: String!
+  storeLabel: String!
+  weekStart: String!
+  weekEnd: String!
+  demoCount: Int!
+  sharedStoreWeek: Boolean!
+  repObservedUnits: Int!
+  registerUnits: Int
+  crewPurchasedUnits: Int!
+  adjustedRegisterUnits: Int
+  observedVsBaselineDiff: String
+  incrementalLiftUnits: String
+  eligibleBrandCost: String
+  incrementalContribution: String
+  roi: String
+  roiWithheldReason: String
+  skuCellsJson: String!
 }
 
 input PostEventToBoardInput {
@@ -6444,6 +7455,24 @@ input ProductFiltersInput {
   productTypeId: ID = null
 }
 
+type ProductRegionState {
+  state: String!
+  recaps: Int!
+  soldStatus: String!
+  soldProduct: String
+  soldUnits: Int!
+  soldRecaps: Int!
+  sampledStatus: String!
+  sampledProduct: String
+  sampledUnits: Int!
+  sampledRecaps: Int!
+  spokenStatus: String!
+  spokenProduct: String
+  spokenPositive: Int!
+  spokenNegative: Int!
+  spokenRecaps: Int!
+}
+
 input ProductSampleInput {
   clientMutationId: ID = null
   productId: ID = null
@@ -6503,6 +7532,61 @@ input ProductTypeFiltersInput {
   tenantUuid: ID = null
 }
 
+type ProgramShareLink {
+  enabled: Boolean!
+  token: String
+  expiresAt: String
+  expired: Boolean!
+  views: Int!
+  lastViewedAt: String
+}
+
+type ProviderAgreementItem {
+  uuid: String!
+  providerUuid: String!
+  providerName: String!
+  name: String!
+  contractedDemoFee: String
+  includedHours: String!
+  extraHourRate: String
+  mileageRate: String
+  adminFeePercent: String!
+  adminFeeBases: [String!]!
+  taxPercent: String!
+}
+
+type ProviderAssignmentItem {
+  uuid: String!
+  providerUuid: String!
+  providerName: String!
+  scopeType: String!
+  programName: String
+  visitUuid: String
+  storeLabel: String
+  status: String!
+  submissionCode: String!
+  dueDate: String
+  notes: String!
+  responseNote: String!
+}
+
+type ProviderImportWorkspace {
+  presets: [ImportPresetItem!]!
+  savedMappings: [SavedImportMappingItem!]!
+  recentJobs: [ImportJobItem!]!
+  reviewQueue: [ImportRowPreviewItem!]!
+}
+
+type ProviderOrgItem {
+  uuid: String!
+  name: String!
+  slug: String!
+  contactEmail: String!
+  isIgniteManaged: Boolean!
+  includeInCombinedReporting: Boolean!
+  inclusionNotes: String!
+}
+
 type PublicAmbassadorCreationResponse {
   success: Boolean!
   message: String!
@@ -6542,10 +7626,6 @@ type QuarterOption {
 }
 
 type Query {
-  myLegalStatus: LegalStatus!
-  legalAcceptanceReport(pendingOnly: Boolean! = false, search: String = null): LegalAcceptanceReport!
-  """The signed-in person's connected AI apps (Claude, ChatGPT, ...)."""
-  myAiConnections: AiConnectorInfo!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6558,56 +7638,28 @@ type Query {
   staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   staffingSearch(question: String = null, filter: StaffingSearchFilterInput = null): StaffingSearchResult
   clientLiveToken(tenantId: ID!): String!
-  liveShiftBoard(date: String = null, tenantId: ID = null): [LiveBoardShift!]!
-  """
-  Who the staffing sheets have on each shift for `date` (default today), beside Spark's bookings. Ignite staff only. Read-only.
-  """
   sheetShifts(date: String = null, tenantId: ID = null): [SheetShiftRow!]!
+  liveShiftBoard(date: String = null, tenantId: ID = null): [LiveBoardShift!]!
+  accountListEntries(tenantId: ID!): [AccountListEntryType!]!
+  storeNameSuggestions(tenantId: ID!): StoreNameSuggestions!
   eventConfirmationFormOptions(tenantId: ID!): EventConfirmationFormOptions!
   upcomingShiftsForConfirmation(tenantId: ID!): [ConfirmationShiftOption!]!
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
-  myReportSubscription(tenantId: ID = null): Boolean!
-  checkinFieldIssues(tenantId: ID!, days: Int! = 7): [CheckinIssueSummary!]!
-  baProductQa(tenantId: ID!): BaProductQa
-  tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
-  tenantConsumerBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): ConsumerBreakdown
-  tenantWhatChanged(tenantId: ID!, startDate: String = null, endDate: String = null): WhatChanged
-  tenantCallouts(tenantId: ID!, startDate: String = null, endDate: String = null): [DashboardCallout!]!
-  chartAnswer(tenantId: ID!, chart: String!, question: String!, startDate: String = null, endDate: String = null): ChartAnswer!
-  tenantSampleNext(tenantId: ID!): SampleNext
-  listSearch(tenantId: ID!, list: String!, question: String = null, filter: ListSearchFilterInput = null): ListSearchResult
-  storeProfile(tenantId: ID!, storeKey: String!): StoreProfile
-  recapStoreKey(tenantId: ID!, recapId: ID!): String
-  resolveStoreKey(tenantId: ID!, storeKey: String = null, requestId: ID = null, recapId: ID = null, storeName: String = null, address: String = null): String
-  tenantStoreLinks(tenantId: ID!): [StoreLink!]!
-  monthHighlight(tenantId: ID!, month: String!): MonthHighlight
-  tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
-
-  """
-  Search a brand's recap photos. Structured filters plus free text over each photo's caption, tags, products, store, city and state.
-  Never a receipt; brand users see their own approved recaps only.
-  Sorted by relevance (with text) or quality. At most 120 a page.
-  """
-  photoLibrary(tenantId: ID!, filters: PhotoLibraryFilterInput = null, first: Int! = 60, offset: Int! = 0): PhotoLibraryPage!
-
-  """
-  Typed words → photo library filters, for the search box. Without the model the words are searched as typed (`ok` false, with a reason).
-  """
-  interpretPhotoSearch(tenantId: ID!, text: String!): PhotoSearchInterpretation!
-  tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
-  tenantBoothDayCounting(tenantId: ID!): Boolean!
-  programShareLink(tenantId: ID = null): ProgramShareLink!
-  myNotificationPreferences: [NotificationPreferenceItem!]!
   payrollTimesheetShifts(startDate: String!, endDate: String!, ambassadorUuid: String!, tenantId: ID = null): [PayrollShiftRow!]!
   payrollTimesheetExport(startDate: String!, endDate: String!, tenantId: ID = null): [PayrollShiftRow!]!
   payrollHoursCheck(startDate: String!, endDate: String!, tenantId: ID!, explain: Boolean! = false): HoursCheckReport!
+  resolveStoreKey(tenantId: ID!, storeKey: String = null, requestId: ID = null, recapId: ID = null, storeName: String = null, address: String = null): String
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
   activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
   fieldMarketing(month: String = null, tenantId: ID = null, market: String = null, quarter: String = null, activity: String = null, includeDeleted: Boolean! = false): FieldMarketingBoard!
   recapPlanPicker(recapId: ID!, kind: String!, query: String = null): RecapPlanPicker!
+  planRecapSuggestions(planId: String!): [PlanRecapSuggestion!]!
   fieldMarketingPlanResults(planId: String!): PlanResults!
+  fieldMarketingEventRecaps(tenantId: ID = null, month: String = null, start: String = null, end: String = null, markets: [String!] = null, types: [String!] = null, attached: String = null): FieldMarketingEventRecaps!
+  jumpSearch(q: String!, tenantId: ID = null, first: Int = null): JumpSearchResult!
+  tenantRequestsRollup(tenantId: ID = null, startDate: Date = null, endDate: Date = null, dateField: String! = "date"): TenantRequestsRollup!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
@@ -6644,8 +7696,6 @@ type Query {
   accountMapPins(tenantId: ID = null, first: Int = null, offset: Int = null): [AccountMapPin!]!
   accountMapPinTotal(tenantId: ID = null): Int!
   accountMapCoverage(tenantId: ID = null): AccountMapCoverage!
-  accountListEntries(tenantId: ID!): [AccountListEntryType!]!
-  storeNameSuggestions(tenantId: ID!): StoreNameSuggestions!
   request(id: ID = null, uuid: ID = null): Request
   activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!
@@ -6698,33 +7748,54 @@ type Query {
   tenantInsights(tenantId: ID!, startDate: String = null, endDate: String = null): TenantInsights!
   tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
-  tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
-  tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
-  tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
-  tenantMentionTrends(tenantId: ID!, endDate: String = null, months: Int = null): TenantMentionTrends!
+  recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
+  recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
+  recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
+  recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
+  programShareLink(tenantId: ID = null): ProgramShareLink!
+  tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
+  tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
+  tenantConsumerBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): ConsumerBreakdown
+  tenantPhotoGallery(tenantId: ID!, startDate: String = null, endDate: String = null, state: String = null, store: String = null, category: String = null, includePaperwork: Boolean! = false, first: Int! = 60, offset: Int! = 0, picksOnly: Boolean! = false): PhotoGalleryPage!
+  tenantBoothDayCounting(tenantId: ID!): Boolean!
+  myReportSubscription(tenantId: ID = null): Boolean!
+  checkinFieldIssues(tenantId: ID!, days: Int! = 7): [CheckinIssueSummary!]!
+  baProductQa(tenantId: ID!): BaProductQa
   recapShelfReadings(recapId: ID!): RecapShelfReadings!
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
-  weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
-  tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
-  tenantStoreInsights(tenantId: ID!): TenantStoreInsights
-  brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
-  brandInsightReview: [BrandInsightReviewBrand!]
-  recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
-  recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
-  recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
-  recapReceiptAudit(recapId: ID!): RecapReceiptAudit
-  recapStaffFlags(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, kind: String = null, unresolvedOnly: Boolean! = true, first: Int! = 200): [RecapStaffFlag!]!
-  receiptSpendSummary(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, includeCsv: Boolean! = false): ReceiptSpendSummary
-  recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
-  recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
+  tenantWhatChanged(tenantId: ID!, startDate: String = null, endDate: String = null): WhatChanged
+  tenantCallouts(tenantId: ID!, startDate: String = null, endDate: String = null): [DashboardCallout!]!
+  chartAnswer(tenantId: ID!, chart: String!, question: String!, startDate: String = null, endDate: String = null): ChartAnswer!
+  tenantSampleNext(tenantId: ID!): SampleNext
   recapPhotoPicks(recapId: ID!): RecapPhotoPicksResult!
   clientRecapDraft(uuid: String!): ClientRecapDraftResult!
   clientRecapDrafts(tenantId: ID!, first: Int! = 20): [ClientRecapDraftSummary!]!
   clientRecapDraftPdf(uuid: String!): ClientRecapDraftPdf!
   clientRecapDecks(tenantId: ID!, first: Int! = 20): [ClientRecapDeckSummary!]!
   clientRecapDeckPdf(uuid: String!): ClientRecapDraftPdf!
-  recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
-  recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
+  listSearch(tenantId: ID!, list: String!, question: String = null, filter: ListSearchFilterInput = null): ListSearchResult
+  storeProfile(tenantId: ID!, storeKey: String!): StoreProfile
+  recapStoreKey(tenantId: ID!, recapId: ID!): String
+  tenantStoreLinks(tenantId: ID!): [StoreLink!]!
+  monthHighlight(tenantId: ID!, month: String!): MonthHighlight
+  myNotificationPreferences: [NotificationPreferenceItem!]!
+  recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
+  tenantFeedbackThemes(tenantId: ID!, startDate: String = null, endDate: String = null): TenantFeedbackThemes!
+  tenantCompetitorMentions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantCompetitorMentions!
+  tenantProductRegions(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProductRegions!
+  tenantMentionTrends(tenantId: ID!, endDate: String = null, months: Int = null): TenantMentionTrends!
+  photoLibrary(tenantId: ID!, filters: PhotoLibraryFilterInput = null, first: Int! = 60, offset: Int! = 0): PhotoLibraryPage!
+  interpretPhotoSearch(tenantId: ID!, text: String!): PhotoSearchInterpretation!
+  tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
+  weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
+  tenantStoreInsights(tenantId: ID!): TenantStoreInsights
+  brandInsightReview: [BrandInsightReviewBrand!]
+  brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
+  recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
+  recapReceiptAudit(recapId: ID!): RecapReceiptAudit
+  recapStaffFlags(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, kind: String = null, unresolvedOnly: Boolean! = true, first: Int! = 200): [RecapStaffFlag!]!
+  receiptSpendSummary(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, includeCsv: Boolean! = false): ReceiptSpendSummary
+  recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   tenantBaActivation(tenantId: ID!): [BaActivationRow!]!
@@ -6788,6 +7859,8 @@ type Query {
   tenantForms(tenantId: ID!): [CustomFormType!]!
   tenantForm(id: ID!): CustomFormType
   tenantSupportTickets(tenantId: ID!): [SupportTicketType!]!
+  tenantLaunchDonors: [DonorTemplateOption!]!
+  systemHealth: SystemHealthType
   healthcheck: String!
   serverInfo: ServerInfoType!
   tenantPublic(requestUrlName: String!): TenantType
@@ -6884,6 +7957,21 @@ type Query {
   jobBoard(tenantId: ID = null): JobBoard!
   clockLinks: ClockLinks!
   clockSessions(linkId: ID!, limit: Int! = 100): [ClockSession!]!
+  myAiConnections: AiConnectorInfo!
+  salesAssistLinks: [SalesAssistLink!]!
+  salesAssistDrafts(kind: String = null, first: Int! = 50): [SalesAssistDraftItem!]!
+  myLegalStatus: LegalStatus!
+  legalAcceptanceReport(pendingOnly: Boolean! = false, search: String = null): LegalAcceptanceReport!
+  myWorkspaceContexts: [WorkspaceContextItem!]!
+  workspaceOverview(tenantId: ID = null): WorkspaceOverview!
+  providerImportWorkspace(providerUuid: String = null): ProviderImportWorkspace!
+  canonicalVisits(periodStart: String = null, periodEnd: String = null, storeKey: String = null, providerUuid: String = null): [CanonicalVisitItem!]!
+  brandCostDashboard(groupBy: String! = "store", periodStart: String = null, periodEnd: String = null, providerUuid: String = null): BrandCostDashboard!
+  financeExceptionQueue(exceptionType: String = null, status: String = null, providerUuid: String = null, storeKey: String = null, periodStart: String = null, periodEnd: String = null): FinanceQueueView!
+  retailerPosDashboard(periodStart: String = null, periodEnd: String = null, storeKey: String = null, contributionPerUnit: String = null): RetailerPosDashboard!
+  storeRecommendationActions(storeKey: String = null): [StoreActionItem!]!
+  weeklyBuyerStoreReport(periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null): WeeklyBuyerReport!
+  exportWeeklyBuyerReport(format: String! = "csv", periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null): WeeklyBuyerReportExport!
 }
 
 """
@@ -7220,8 +8308,49 @@ type RecapExportResponse {
   fileUrl: String
 }
 
+type RecapFeedbackExtract {
+  themes: [String!]!
+  competitorProducts: [String!]!
+  objections: [String!]!
+  purchaseIntent: String
+  quotes: [String!]!
+}
+
+type RecapFieldMetric {
+  fieldId: ID!
+  name: String!
+  fieldType: String!
+  section: String!
+  currentMetric: String
+  confirmedMetric: String
+  packSize: Int
+  confirmedBy: String!
+  confirmedAt: DateTime
+  canCount: Boolean!
+}
+
+input RecapFieldMetricInput {
+  fieldId: ID!
+  metric: String = null
+  packSize: Int = null
+}
+
+type RecapFieldTotal {
+  label: String!
+  kind: String!
+  total: Float!
+  average: Float!
+  recaps: Int!
+  isPercent: Boolean!
+}
+
+type RecapFieldTotalSection {
+  section: String!
+  fields: [RecapFieldTotal!]!
+}
+
 """
-RecapFile(id, uuid, name, file, approved, recap, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
+RecapFile(id, uuid, name, file, approved, content_sha256, recap, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
 """
 type RecapFile implements Node {
   """The Globally Unique ID of this object"""
@@ -7290,6 +8419,12 @@ input RecapFiltersInput {
   recapType: String = null
 }
 
+type RecapFlagExplanation {
+  summary: String
+  source: String!
+  flagCount: Int!
+}
+
 type RecapGlobalKPIByRMM {
   rmmId: ID!
   rmmName: String!
@@ -7327,6 +8462,19 @@ type RecapMetricPart {
   value: Int!
 }
 
+type RecapMetricSuggestion {
+  fieldId: ID!
+  metric: String!
+  packSize: Int
+  reason: String!
+}
+
+type RecapMetricSuggestionResult {
+  ok: Boolean!
+  reason: String!
+  suggestions: [RecapMetricSuggestion!]!
+}
+
 type RecapMonthlyDataPoint {
   month: String!
   consumersSampled: Int!
@@ -7352,6 +8500,44 @@ type RecapPerformanceInsights {
   topConvertingMarket: TopConvertingMarket
   highestWillingnessToBuy: MarketWithWillingness
   strongestBrandAwareness: MarketWithBrandAwareness
+}
+
+type RecapPhotoPick {
+  fileId: String!
+  url: String!
+  category: String!
+  status: String!
+  note: String!
+  score: Int
+  caption: String!
+  modelPick: Boolean!
+  staffChoice: String!
+  isPick: Boolean!
+  canPick: Boolean!
+}
+
+type RecapPhotoPicksResult {
+  ok: Boolean!
+  reason: String!
+  items: [RecapPhotoPick!]!
+}
+
+type RecapPhotoReuseItem {
+  fileId: String!
+  fileUrl: String!
+  status: String!
+  label: String!
+  matches: [RecapPhotoReuseMatch!]!
+}
+
+type RecapPhotoReuseMatch {
+  recapId: String!
+  eventDate: String!
+  fileUrl: String!
+}
+
+type RecapPhotoReuseResult {
+  items: [RecapPhotoReuseItem!]!
 }
 
 type RecapPlanMetric {
@@ -7393,55 +8579,12 @@ type RecapQualityResult {
   flags: [RecapQualityFlag!]!
 }
 
-type RecapReviewFlag {
-  code: String!
-  label: String!
-  severity: String!
-}
-
-type RecapFeedbackExtract {
-  themes: [String!]!
-  competitorProducts: [String!]!
-  objections: [String!]!
-  purchaseIntent: String
-  quotes: [String!]!
-}
-
-"""
-Ops reviewer note for one recap. Lives on the admin detail page only.
-"""
-type RecapReviewerSummary {
-  whatHappened: String!
-  looksOff: [RecapReviewFlag!]!
-  followUpQuestion: String!
-  cached: Boolean!
-  source: String!
-  feedback: RecapFeedbackExtract
-}
-
-type RecapReviewCheck {
-  code: String!
-  label: String!
-  status: String!
-  detail: String!
-}
-
-"""
-Why a recap was flagged, in a line. Staff only. `summary` is null when there
-is no line to show.
-"""
-type RecapFlagExplanation {
-  summary: String
-  source: String!
-  flagCount: Int!
-}
-
-type ReceiptLineItem {
-  name: String!
-  qty: Float
-  unitPrice: String
-  amount: String!
-  isBrand: Boolean!
+type RecapReceiptAudit {
+  readings: [RecapReceiptReading!]!
+  flags: [RecapStaffFlag!]!
+  totals: ReceiptSpendTotals!
+  waitingCount: Int!
+  flagsEnabled: Boolean!
 }
 
 type RecapReceiptReading {
@@ -7474,117 +8617,17 @@ type RecapReceiptReading {
   alsoOnRecapUuids: [String!]!
 }
 
-type RecapStaffFlag {
-  id: ID!
-  recapId: ID!
-  recapUuid: String!
-  tenantId: ID!
-  tenantName: String!
-  eventName: String!
-  eventDate: String!
-  kind: String!
-  kindLabel: String!
-  severity: String!
-  explanation: String!
-  otherRecapUuid: String
-  createdAt: String
-  resolvedAt: String
-  resolvedByName: String
-  resolutionNote: String!
-  autoCleared: Boolean!
-}
-
-type ReceiptSpendTotals {
-  product: String!
-  other: String!
-  unitemized: String!
-  fees: String!
-  tax: String!
-  total: String!
-  receipts: Int!
-}
-
-type RecapReceiptAudit {
-  readings: [RecapReceiptReading!]!
-  flags: [RecapStaffFlag!]!
-  totals: ReceiptSpendTotals!
-  waitingCount: Int!
-  flagsEnabled: Boolean!
-}
-
-type ReceiptSpendRecapRow {
-  recapId: ID!
-  recapUuid: String!
-  eventName: String!
-  eventDate: String!
-  openFlags: [String!]!
-  totals: ReceiptSpendTotals!
-}
-
-type ReceiptSpendSummary {
-  totals: ReceiptSpendTotals!
-  recaps: [ReceiptSpendRecapRow!]!
-  receiptRows: Int!
-  csv: String
-}
-
-type ResolveRecapFlagPayload {
-  success: Boolean!
-  message: String!
-  flag: RecapStaffFlag
-}
-
-type RecapStandardMetric {
-  key: String!
+type RecapReviewCheck {
+  code: String!
   label: String!
+  status: String!
+  detail: String!
 }
 
-"""
-One recap template field and what Spark counts it as. Staff only.
-"""
-type RecapFieldMetric {
-  fieldId: ID!
-  name: String!
-  fieldType: String!
-  section: String!
-  currentMetric: String
-  confirmedMetric: String
-  packSize: Int
-  confirmedBy: String!
-  confirmedAt: DateTime
-  canCount: Boolean!
-}
-
-type RecapTemplateMetricMapping {
-  templateId: ID!
-  fields: [RecapFieldMetric!]!
-  missingMetrics: [RecapStandardMetric!]!
-  metricOptions: [RecapStandardMetric!]!
-}
-
-type RecapMetricSuggestion {
-  fieldId: ID!
-  metric: String!
-  packSize: Int
-  reason: String!
-}
-
-type RecapMetricSuggestionResult {
-  ok: Boolean!
-  reason: String!
-  suggestions: [RecapMetricSuggestion!]!
-}
-
-type SaveRecapMetricMappingResult {
-  ok: Boolean!
-  message: String!
-  mapping: RecapTemplateMetricMapping
-}
-
-input RecapFieldMetricInput {
-  fieldId: ID!
-  metric: String = null
-  packSize: Int = null
+type RecapReviewFlag {
+  code: String!
+  label: String!
+  severity: String!
 }
 
 type RecapReviewFlagSummary {
@@ -7597,143 +8640,13 @@ type RecapReviewFlagsForRecap {
   flags: [RecapReviewFlagSummary!]!
 }
 
-type RecapPhotoPick {
-  fileId: String!
-  url: String!
-  category: String!
-  status: String!
-  note: String!
-  score: Int
-  caption: String!
-  modelPick: Boolean!
-  staffChoice: String!
-  isPick: Boolean!
-  canPick: Boolean!
-}
-
-type RecapPhotoPicksResult {
-  ok: Boolean!
-  reason: String!
-  items: [RecapPhotoPick!]!
-}
-
-type ClientRecapNumber {
-  label: String!
-  value: Int!
-}
-
-type ClientRecapBar {
-  label: String!
-  value: Int!
-}
-
-type ClientRecapDraftPhoto {
-  id: String!
-  url: String!
-  category: String!
-  caption: String!
-  store: String!
-  state: String!
-  eventDate: String!
-  isPick: Boolean!
-}
-
-type ClientRecapVisit {
-  key: String!
-  day: String!
-  store: String!
-  state: String!
-  reason: String!
-  label: String!
-  evidence: String!
-  kept: Boolean!
-}
-
-type ClientRecapQuoteChoice {
-  text: String!
-  hidden: Boolean!
-}
-
-type ClientRecapDraftType {
-  uuid: String!
-  tenantId: String!
-  tenantName: String!
-  startDate: String!
-  endDate: String!
-  period: String!
-  title: String!
-  summary: String!
-  takeaways: [String!]!
-  textSource: String!
-  numbers: [ClientRecapNumber!]!
-  weeks: [ClientRecapBar!]!
-  stores: [ClientRecapBar!]!
-  states: [ClientRecapBar!]!
-  quotes: [String!]!
-  photos: [ClientRecapDraftPhoto!]!
-  createdAt: String!
-  updatedAt: String!
-  status: String!
-  canEdit: Boolean!
-  buildNote: String!
-  readyAt: String!
-  nextSteps: [String!]!
-  deckNumbers: [ClientRecapNumber!]!
-  noProductNote: String!
-  leftOutVisits: [ClientRecapVisit!]!
-  visitsToCheck: [ClientRecapVisit!]!
-  leftOutCount: Int!
-  quoteChoices: [ClientRecapQuoteChoice!]!
-}
-
-type ClientRecapDraftResult {
-  ok: Boolean!
-  reason: String!
-  draft: ClientRecapDraftType
-}
-
-type ClientRecapDraftSummary {
-  uuid: String!
-  tenantName: String!
-  title: String!
-  period: String!
-  updatedAt: String!
-}
-
-type ClientRecapDeckSummary {
-  uuid: String!
-  tenantName: String!
-  title: String!
-  period: String!
-  readyAt: String!
-}
-
-type ClientRecapDraftPdf {
-  ok: Boolean!
-  reason: String!
-  filename: String!
-  pdfBase64: String!
-}
-
-"""
-Photo reuse check for one recap. A check, not a score.
-"""
-type RecapPhotoReuseResult {
-  items: [RecapPhotoReuseItem!]!
-}
-
-type RecapPhotoReuseItem {
-  fileId: String!
-  fileUrl: String!
-  status: String!
-  label: String!
-  matches: [RecapPhotoReuseMatch!]!
-}
-
-type RecapPhotoReuseMatch {
-  recapId: String!
-  eventDate: String!
-  fileUrl: String!
+type RecapReviewerSummary {
+  whatHappened: String!
+  looksOff: [RecapReviewFlag!]!
+  followUpQuestion: String!
+  cached: Boolean!
+  source: String!
+  feedback: RecapFeedbackExtract
 }
 
 """
@@ -7769,6 +8682,44 @@ type RecapSectionDetailResponse {
   message: String!
   clientMutationId: ID
   recapSection: RecapSection
+}
+
+type RecapShelfReadings {
+  allowed: Boolean!
+  photos: [ShelfPhotoReading!]!
+  message: String!
+}
+
+type RecapStaffFlag {
+  id: ID!
+  recapId: ID!
+  recapUuid: String!
+  tenantId: ID!
+  tenantName: String!
+  eventName: String!
+  eventDate: String!
+  kind: String!
+  kindLabel: String!
+  severity: String!
+  explanation: String!
+  otherRecapUuid: String
+  createdAt: String
+  resolvedAt: String
+  resolvedByName: String
+  resolutionNote: String!
+  autoCleared: Boolean!
+}
+
+type RecapStandardMetric {
+  key: String!
+  label: String!
+}
+
+type RecapTemplateMetricMapping {
+  templateId: ID!
+  fields: [RecapFieldMetric!]!
+  missingMetrics: [RecapStandardMetric!]!
+  metricOptions: [RecapStandardMetric!]!
 }
 
 type RecapTypeCount {
@@ -7830,6 +8781,40 @@ type ReceiptCampaignType implements Node {
   totalPaid: String!
   totalCommitted: String!
   budgetRemaining: String
+}
+
+type ReceiptLineItem {
+  name: String!
+  qty: Float
+  unitPrice: String
+  amount: String!
+  isBrand: Boolean!
+}
+
+type ReceiptSpendRecapRow {
+  recapId: ID!
+  recapUuid: String!
+  eventName: String!
+  eventDate: String!
+  openFlags: [String!]!
+  totals: ReceiptSpendTotals!
+}
+
+type ReceiptSpendSummary {
+  totals: ReceiptSpendTotals!
+  recaps: [ReceiptSpendRecapRow!]!
+  receiptRows: Int!
+  csv: String
+}
+
+type ReceiptSpendTotals {
+  product: String!
+  other: String!
+  unitemized: String!
+  fees: String!
+  tax: String!
+  total: String!
+  receipts: Int!
 }
 
 type RecentEvent {
@@ -7938,7 +8923,7 @@ type RenameCatalogLabelResponse {
 }
 
 """
-Request(id, uuid, name, date, deleted_at, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, scheduling_status, is_non_active_product_required, account_spend_amount, event_assets_needed, load_in_time, onsite_poc, additional_team_details, cases_to_be_shipped, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, activation_plan, billing_entity, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, deleted_at, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, scheduling_status, is_non_active_product_required, account_spend_amount, event_assets_needed, load_in_time, onsite_poc, additional_team_details, cases_to_be_shipped, ba_count, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, activation_plan, billing_entity, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -8078,6 +9063,11 @@ type RequestCountableEdge {
   node: Request!
 }
 
+type RequestDayBucket {
+  date: String!
+  count: Int!
+}
+
 type RequestDetailResponse {
   success: Boolean!
   message: String!
@@ -8116,21 +9106,60 @@ input RequestFiltersInput {
   statusSlug: String = null
   statusSlugs: [String!] = null
   schedulingStatus: String = null
+  unstaffed: Boolean = null
   activationPlanId: ID = null
   hasActivationPlan: Boolean = null
-
-  """True = has an event with no ambassador assigned; False = at least one assigned."""
-  unstaffed: Boolean = null
   stateCode: String = null
   createdWithinHours: Int = null
   edited: Boolean = null
   reviewed: Boolean = null
 }
 
+type RequestIntakeDraft {
+  date: String!
+  dateAsTyped: String!
+  yearAssumed: Boolean!
+  dateWarning: String!
+  startTime: String!
+  startAsTyped: String!
+  endTime: String!
+  endAsTyped: String!
+  timeAssumed: Boolean!
+  storeName: String!
+  matchedStoreName: String!
+  storeNumber: String!
+  streetAddress: String!
+  city: String!
+  state: String!
+  zip: String!
+  address: String!
+  notes: String!
+  products: [RequestIntakeProduct!]!
+  unmatchedProducts: [String!]!
+  couldNotRead: [String!]!
+}
+
+type RequestIntakeProduct {
+  uuid: ID!
+  name: String!
+}
+
+type RequestIntakeResult {
+  ok: Boolean!
+  message: String!
+  truncated: Boolean!
+  drafts: [RequestIntakeDraft!]!
+}
+
 input RequestMagicLinkInput {
   clientMutationId: ID = null
   email: String!
   redirect: String = null
+}
+
+type RequestNamedBucket {
+  name: String!
+  count: Int!
 }
 
 input RequestPasswordResetInput {
@@ -8263,11 +9292,6 @@ input RequestTypeFiltersInput {
   tenantUuid: ID = null
 }
 
-type ResendBaWelcomeResponse {
-  success: Boolean!
-  message: String!
-}
-
 input RescheduleEventInput {
   clientMutationId: ID = null
   eventId: ID!
@@ -8284,12 +9308,29 @@ type RescheduleEventResponse {
   requestMoved: Boolean!
 }
 
+type ResendBaWelcomeResponse {
+  success: Boolean!
+  message: String!
+}
+
 input ResetPasswordWithCodeInput {
   clientMutationId: ID = null
   email: String!
   code: String!
   password1: String!
   password2: String!
+}
+
+input ResolveRecapFlagInput {
+  flagId: ID!
+  note: String! = ""
+  reopen: Boolean! = false
+}
+
+type ResolveRecapFlagPayload {
+  success: Boolean!
+  message: String!
+  flag: RecapStaffFlag
 }
 
 input ResolveShiftExtensionInput {
@@ -8304,6 +9345,18 @@ input RestoreFieldMarketingInput {
   clientMutationId: ID = null
   eventId: String!
   tenantId: ID = null
+}
+
+input RestoreMissingRecapsInput {
+  clientMutationId: ID = null
+  dismissalUuids: [ID!]!
+}
+
+type RestoreMissingRecapsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  restoredCount: Int!
 }
 
 """
@@ -8359,10 +9412,46 @@ type RetailerOption {
   address: String!
 }
 
-input ResolveRecapFlagInput {
-  flagId: ID!
-  note: String! = ""
-  reopen: Boolean! = false
+type RetailerPosDashboard {
+  available: Boolean!
+  unavailableMessage: String
+  retailerBanners: [String!]!
+  matchedStoreSkuWeeks: Int!
+  eligibleStoreSkuWeeks: Int!
+  coverageRatio: String
+  unmatchedRowCount: Int!
+  missingRows: [PosMissingCellItem!]!
+  repObservedUnits: Int!
+  registerUnits: Int
+  crewPurchasedUnits: Int!
+  adjustedRegisterUnits: Int
+  observedVsBaselineDiff: String
+  incrementalLiftUnits: String
+  incrementalContribution: String
+  eligibleBrandCost: String
+  roi: String
+  liftWithheldReason: String
+  roiWithheldReason: String
+  imports: [PosImportHistoryItem!]!
+  unmatchedRows: [UnmatchedPosRowItem!]!
+  storeWeeks: [PosStoreWeekItem!]!
+}
+
+type RetailerProposalResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  retailerName: String
+}
+
+type RetailerProposalType {
+  id: ID!
+  name: String!
+  confidence: String!
+  source: String!
+  sourceLabel: String!
+  reason: String!
+  isNewRetailer: Boolean!
 }
 
 input ReviewReceiptInput {
@@ -8414,6 +9503,11 @@ type ReviewScoreDetailResponse {
   reviewScore: ReviewScore
 }
 
+type RevokeAiConnectionResult {
+  ok: Boolean!
+  message: String!
+}
+
 enum RoleFilterEnum {
   AMBASSADOR
   CLIENT
@@ -8435,6 +9529,44 @@ input RunReceiptOcrInput {
   id: ID!
 }
 
+type SalesAssistDraftItem {
+  id: ID!
+  kind: String!
+  status: String!
+  reason: String!
+  tenantName: String
+  closeLeadId: String!
+  leadName: String!
+  periodStart: String
+  periodEnd: String
+  noteText: String!
+  emailTo: String!
+  emailSubject: String!
+  emailBody: String!
+  closeNoteId: String!
+  closeEmailId: String!
+  estCostUsd: Float!
+  createdAt: String!
+}
+
+type SalesAssistLink {
+  id: ID!
+  tenantId: ID!
+  tenantName: String!
+  closeLeadId: String!
+  closeOpportunityId: String!
+  renewalDate: String
+  contactEmail: String!
+  active: Boolean!
+  linkedByName: String
+}
+
+type SalesAssistResult {
+  ok: Boolean!
+  reason: String
+  link: SalesAssistLink
+}
+
 """
 SalesPerformance(id, uuid, price, product, recap, type_of_good, created_by, updated_by, created_at, updated_at)
 """
@@ -8454,6 +9586,21 @@ input SalesPerformanceInput {
   productId: ID = null
   typeOfGoodId: ID = null
   price: Float = null
+}
+
+type SampleNext {
+  items: [SampleNextItem!]!
+}
+
+type SampleNextItem {
+  key: String!
+  kind: String!
+  name: String!
+  address: String!
+  market: String!
+  reason: String!
+  lat: Float
+  lng: Float
 }
 
 type SamplesPerHour {
@@ -8488,6 +9635,38 @@ input SaveJobPostAsGigTemplateInput {
   clientMutationId: ID = null
   jobId: ID!
   name: String!
+}
+
+type SaveRecapMetricMappingResult {
+  ok: Boolean!
+  message: String!
+  mapping: RecapTemplateMetricMapping
+}
+
+input SaveStoreLogisticsNotesInput {
+  tenantId: ID!
+  storeKey: String!
+  notes: String!
+  clientMutationId: ID = null
+}
+
+type SaveStoreLogisticsNotesPayload {
+  success: Boolean!
+  message: String!
+  storeKey: String
+  logisticsNotes: String!
+  logisticsNotesUpdatedAt: String
+  clientMutationId: ID
+}
+
+type SavedImportMappingItem {
+  uuid: String!
+  providerUuid: String!
+  providerName: String!
+  name: String!
+  presetKey: String!
+  columnMapJson: String!
+  isDefault: Boolean!
 }
 
 input SendChatMessageInput {
@@ -8552,6 +9731,19 @@ type ServerInfoType {
   databaseOk: Boolean!
 }
 
+input SetBoothDayCountingInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  enabled: Boolean!
+}
+
+type SetBoothDayCountingResponse {
+  success: Boolean!
+  message: String!
+  enabled: Boolean!
+  clientMutationId: ID
+}
+
 input SetClientWeeklyDigestEnabledInput {
   clientMutationId: ID = null
   tenantId: ID!
@@ -8602,6 +9794,7 @@ input SetJobBoardGigInput {
   gigId: ID!
   openShifts: Int = null
   listed: Boolean = null
+  publicNotes: String = null
 }
 
 input SetJobBriefingInput {
@@ -8618,25 +9811,6 @@ input SetLinkedSheetInput {
   sheetUrl: String = null
 }
 
-input SetMyPreferencesInput {
-  clientMutationId: ID = null
-  prefs: JSON = null
-}
-
-type SetMyPreferencesResponse {
-  success: Boolean!
-  message: String!
-  preferences: UserPreferencesType
-  clientMutationId: ID
-}
-
-type NotificationPreferenceItem {
-  category: String!
-  label: String!
-  description: String!
-  emailEnabled: Boolean!
-}
-
 input SetMyNotificationPreferenceInput {
   clientMutationId: ID = null
   category: String!
@@ -8651,26 +9825,22 @@ type SetMyNotificationPreferenceResponse {
   clientMutationId: ID
 }
 
-type ProgramShareLink {
-  enabled: Boolean!
-  token: String
-  expiresAt: String
-  expired: Boolean!
-  views: Int!
-  lastViewedAt: String
-}
-
-input SetBoothDayCountingInput {
+input SetMyPreferencesInput {
   clientMutationId: ID = null
-  tenantId: ID!
-  enabled: Boolean!
+  prefs: JSON = null
 }
 
-type SetBoothDayCountingResponse {
+type SetMyPreferencesResponse {
   success: Boolean!
   message: String!
-  enabled: Boolean!
+  preferences: UserPreferencesType
   clientMutationId: ID
+}
+
+input SetMyReportSubscriptionInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  subscribed: Boolean!
 }
 
 input SetProgramShareEnabledInput {
@@ -8686,865 +9856,6 @@ type SetProgramShareEnabledResponse {
   enabled: Boolean!
   token: String
   expiresAt: String
-  clientMutationId: ID
-}
-
-type RecapFieldTotal {
-  label: String!
-  kind: String!
-  total: Float!
-  average: Float!
-  recaps: Int!
-  isPercent: Boolean!
-}
-
-type RecapFieldTotalSection {
-  section: String!
-  fields: [RecapFieldTotal!]!
-}
-
-type GalleryPhoto {
-  id: String!
-  url: String!
-  category: String!
-  recapUuid: String!
-  store: String!
-  state: String!
-  eventDate: String!
-  isPick: Boolean!
-  caption: String!
-}
-
-type PhotoGalleryPage {
-  total: Int!
-  photos: [GalleryPhoto!]!
-  categories: [String!]!
-  states: [String!]!
-}
-
-input PhotoLibraryFilterInput {
-  text: String = null
-  shows: [String!] = null
-  crowdSizes: [String!] = null
-  settings: [String!] = null
-  productIds: [String!] = null
-  store: String = null
-  states: [String!] = null
-  startDate: String = null
-  endDate: String = null
-  minQuality: Int = null
-  peoplePresent: Boolean = null
-  hideIssues: Boolean! = false
-  approvedOnly: Boolean! = true
-  picksOnly: Boolean! = false
-  sort: String = null
-}
-
-type PhotoLibraryOption {
-  key: String!
-  label: String!
-}
-
-type LibraryPhoto {
-  id: String!
-  url: String!
-  caption: String!
-  category: String!
-  shows: [String!]!
-  showLabels: [String!]!
-  crowdSize: String!
-  crowdLabel: String!
-  setting: String!
-  settingLabel: String!
-  peoplePresent: Boolean
-  qualityScore: Int
-  issues: [String!]!
-  products: [String!]!
-  store: String!
-  city: String!
-  state: String!
-  eventDate: String!
-  recapUuid: String!
-  isPick: Boolean!
-  approved: Boolean!
-  tagged: Boolean!
-}
-
-type PhotoLibraryPage {
-  total: Int!
-  inScope: Int!
-  tagged: Int!
-  photos: [LibraryPhoto!]!
-  states: [String!]!
-  products: [PhotoLibraryOption!]!
-  showOptions: [PhotoLibraryOption!]!
-  crowdOptions: [PhotoLibraryOption!]!
-  settingOptions: [PhotoLibraryOption!]!
-  approvedOnly: Boolean!
-}
-
-type PhotoLibraryFilters {
-  text: String!
-  shows: [String!]!
-  crowdSizes: [String!]!
-  settings: [String!]!
-  productIds: [String!]!
-  store: String!
-  states: [String!]!
-  startDate: String
-  endDate: String
-  minQuality: Int
-  peoplePresent: Boolean
-  hideIssues: Boolean!
-  sort: String!
-}
-
-type PhotoSearchInterpretation {
-  ok: Boolean!
-  reason: String!
-  filters: PhotoLibraryFilters!
-  chips: [String!]!
-}
-
-type EfficiencyRow {
-  label: String!
-  recaps: Int!
-  sampled: Int!
-  sold: Int!
-  hours: Float!
-  samplesPerHour: Float
-  unitsPerHour: Float
-}
-
-type ConsumerWeek {
-  weekStart: String!
-  consumers: Int!
-  recaps: Int!
-}
-
-type ConsumerBreakdownRow {
-  label: String!
-  kind: String!
-  consumers: Int!
-  recaps: Int!
-}
-
-type ConsumerBreakdown {
-  total: Int!
-  recaps: Int!
-  events: Int!
-  byWeek: [ConsumerWeek!]!
-  byStore: [ConsumerBreakdownRow!]!
-  byState: [ConsumerBreakdownRow!]!
-  storeCount: Int!
-  stateCount: Int!
-}
-
-type FeedbackTheme {
-  section: String!
-  label: String!
-  recapCount: Int!
-  quote: String!
-}
-
-type TenantFeedbackThemes {
-  status: String!
-  themes: [FeedbackTheme!]!
-  recapCount: Int!
-  commentCount: Int!
-  truncated: Boolean!
-  generatedAt: String
-}
-
-type CompetitorBrand {
-  brand: String!
-  recapCount: Int!
-  preferOurs: Int!
-  preferTheirs: Int!
-  neutral: Int!
-  quote: String!
-}
-
-type TenantCompetitorMentions {
-  status: String!
-  brands: [CompetitorBrand!]!
-  mentionCommentCount: Int!
-  recapCount: Int!
-  commentCount: Int!
-  truncated: Boolean!
-  generatedAt: String
-  startDate: String
-  endDate: String
-}
-
-type ProductRegionState {
-  state: String!
-  recaps: Int!
-  soldStatus: String!
-  soldProduct: String
-  soldUnits: Int!
-  soldRecaps: Int!
-  sampledStatus: String!
-  sampledProduct: String
-  sampledUnits: Int!
-  sampledRecaps: Int!
-  spokenStatus: String!
-  spokenProduct: String
-  spokenPositive: Int!
-  spokenNegative: Int!
-  spokenRecaps: Int!
-}
-
-type TenantMentionTrends {
-  status: String!
-  months: [String!]!
-  recapCounts: [Int!]!
-  compareMonth: String
-  priorMonth: String
-  minMonthRecaps: Int!
-  minTrendMentions: Int!
-  themes: [MentionSeries!]!
-  brands: [MentionSeries!]!
-  otherCount: Int!
-  headlines: [String!]!
-  taggedAt: String
-}
-
-type MentionSeries {
-  key: String!
-  label: String!
-  polarity: String!
-  counts: [Int!]!
-  total: Int!
-  current: Int!
-  previous: Int!
-  currentShare: Int!
-  previousShare: Int!
-  direction: String!
-  quote: String!
-}
-
-type TenantProductRegions {
-  status: String!
-  commentsStatus: String!
-  hasSold: Boolean!
-  hasSampled: Boolean!
-  states: [ProductRegionState!]!
-  recapCount: Int!
-  minStateRecaps: Int!
-  generatedAt: String
-  startDate: String
-  endDate: String
-}
-
-type ShelfAnswers {
-  productOnShelf: String!
-  facings: Int
-  priceTagVisible: String!
-  price: String
-  outOfStockGap: String!
-}
-
-type ShelfCorrection {
-  answers: ShelfAnswers!
-  note: String!
-  correctedByName: String!
-  correctedAt: String!
-}
-
-type ShelfPhotoReading {
-  fileId: ID!
-  fileUrl: String!
-  bucketName: String!
-  status: String!
-  reading: ShelfAnswers
-  correction: ShelfCorrection
-}
-
-type RecapShelfReadings {
-  allowed: Boolean!
-  photos: [ShelfPhotoReading!]!
-  message: String!
-}
-
-input CorrectShelfReadingInput {
-  fileId: ID!
-  productOnShelf: String!
-  priceTagVisible: String!
-  outOfStockGap: String!
-  facings: Int = null
-  price: String = null
-  note: String! = ""
-}
-
-type CorrectShelfReadingPayload {
-  success: Boolean!
-  message: String!
-  photo: ShelfPhotoReading
-}
-
-type ShelfNotFoundStore {
-  storeName: String!
-  eventDate: String!
-}
-
-type ShelfSummary {
-  status: String!
-  visits: Int!
-  onShelf: Int!
-  notFound: Int!
-  unclear: Int!
-  priceTagVisible: Int!
-  unreadVisits: Int!
-  notFoundStores: [ShelfNotFoundStore!]!
-  notFoundMore: Int!
-}
-
-type WhatChanged {
-  text: String!
-  source: String!
-  previousStartDate: String
-  previousEndDate: String
-}
-
-type CalloutNumber {
-  label: String!
-  value: String!
-}
-
-type CalloutLink {
-  store: String
-  state: String
-  startDate: String
-  endDate: String
-}
-
-type StoreInsight {
-  id: ID!
-  kind: String!
-  code: String!
-  subject: String!
-  text: String!
-  periodStart: String!
-  periodEnd: String!
-  isDraft: Boolean!
-}
-
-type TenantStoreInsights {
-  recommendations: [StoreInsight!]!
-  alerts: [StoreInsight!]!
-}
-
-type BrandChatClearResult {
-  ok: Boolean!
-  reason: String
-  cleared: Int!
-}
-
-type BrandChatLink {
-  label: String!
-  url: String!
-}
-
-type BrandChatReply {
-  ok: Boolean!
-  reason: String
-  conversationId: ID
-  turn: BrandChatTurnType
-  questionsLeftThisHour: Int!
-}
-
-type BrandChatSource {
-  tool: String!
-  label: String!
-  detail: String!
-  link: String!
-  linkLabel: String!
-}
-
-type BrandChatTurnType {
-  id: ID!
-  conversationId: ID!
-  question: String!
-  answer: String!
-  status: String!
-  sources: [BrandChatSource!]!
-  links: [BrandChatLink!]!
-  createdAt: String!
-}
-
-type BrandChatView {
-  ok: Boolean!
-  reason: String
-  brandName: String!
-  conversationId: ID
-  turns: [BrandChatTurnType!]!
-  suggestions: [String!]!
-  questionsPerHour: Int!
-  questionsLeftThisHour: Int!
-}
-
-type BrandInsightReviewItem {
-  id: ID!
-  kind: String!
-  code: String!
-  subject: String!
-  text: String!
-  template: String!
-  factsText: String!
-  source: String!
-  status: String!
-  periodStart: String!
-  periodEnd: String!
-  generatedAt: String!
-  reviewedByName: String
-  reviewedAt: String
-}
-
-type BrandInsightReviewBrand {
-  tenantId: ID!
-  tenantName: String!
-  drafts: Int!
-  items: [BrandInsightReviewItem!]!
-}
-
-type BrandInsightResult {
-  ok: Boolean!
-  reason: String
-  item: BrandInsightReviewItem
-}
-
-type BrandInsightBatchResult {
-  ok: Boolean!
-  reason: String
-  count: Int!
-}
-
-type AiConnection {
-  id: ID!
-  appName: String!
-  brandName: String!
-  userEmail: String
-  createdAt: String!
-  lastUsedAt: String
-  callsLast30Days: Int!
-}
-
-type AiConnectorInfo {
-  connectorUrl: String!
-  helpUrl: String!
-  dailyCallLimit: Int!
-  isAdminView: Boolean!
-  connections: [AiConnection!]!
-}
-
-type RevokeAiConnectionResult {
-  ok: Boolean!
-  message: String!
-}
-
-type TenantWeeklySummary {
-  weekStart: String!
-  weekEnd: String!
-  text: String!
-  isDraft: Boolean!
-  reviewedAt: String
-}
-
-type WeeklyClientSummary {
-  id: ID!
-  period: String!
-  weekStart: String!
-  weekEnd: String!
-  body: String!
-  editedBody: String!
-  text: String!
-  status: String!
-  generatedAt: String!
-  reviewedByName: String
-  reviewedAt: String
-}
-
-type WeeklyClientSummaryRow {
-  tenantId: ID!
-  tenantName: String!
-  approvedRecaps: Int!
-  pendingRecaps: Int!
-  summary: WeeklyClientSummary
-}
-
-type WeeklyClientSummaryWeek {
-  period: String!
-  weekStart: String!
-  weekEnd: String!
-  rows: [WeeklyClientSummaryRow!]!
-}
-
-type WeeklyClientSummaryResult {
-  ok: Boolean!
-  reason: String
-  summary: WeeklyClientSummary
-}
-
-type DashboardCallout {
-  key: String!
-  kind: String!
-  text: String!
-  numbers: [CalloutNumber!]!
-  link: CalloutLink!
-}
-
-type ChartAnswer {
-  ok: Boolean!
-  answered: Boolean!
-  answer: String!
-  reason: String
-}
-
-type SampleNextItem {
-  key: String!
-  kind: String!
-  name: String!
-  address: String!
-  market: String!
-  reason: String!
-  lat: Float
-  lng: Float
-}
-
-type SampleNext {
-  items: [SampleNextItem!]!
-}
-
-type ListSearchCondition {
-  metric: String!
-  op: String!
-  value: Float!
-}
-
-type ListSearchFilter {
-  state: String
-  city: String
-  store: String
-  dateFrom: String
-  dateTo: String
-  status: String
-  activationType: String
-  product: String
-  conditions: [ListSearchCondition!]!
-}
-
-type ListSearchRow {
-  kind: String!
-  uuid: String!
-  title: String!
-  date: String
-  store: String!
-  city: String!
-  state: String!
-  activationType: String!
-  status: String!
-  requestUuid: String
-  recapCount: Int
-  consumers: Int
-  unitsSold: Int
-  conversion: Float
-}
-
-type ListSearchResult {
-  list: String!
-  filter: ListSearchFilter!
-  interpreted: Boolean!
-  modelAvailable: Boolean!
-  ignored: [String!]!
-  reason: String
-  rows: [ListSearchRow!]!
-  total: Int!
-}
-
-input ListSearchConditionInput {
-  metric: String!
-  op: String!
-  value: Float!
-}
-
-input ListSearchFilterInput {
-  state: String = null
-  city: String = null
-  store: String = null
-  dateFrom: String = null
-  dateTo: String = null
-  status: String = null
-  activationType: String = null
-  product: String = null
-  conditions: [ListSearchConditionInput!] = null
-}
-
-type StoreVisit {
-  eventId: ID!
-  eventUuid: String!
-  requestUuid: String
-  title: String!
-  date: String
-  activationType: String!
-  status: String!
-  recapUuid: String
-  recapKind: String
-  consumers: Int
-  unitsSold: Int
-  conversion: Float
-}
-
-type StoreTotals {
-  visits: Int!
-  upcoming: Int!
-  approvedRecaps: Int!
-  consumers: Int!
-  unitsSold: Int!
-  conversion: Float
-  averageConsumers: Float
-  averageUnitsSold: Float
-  firstVisit: String
-  lastVisit: String
-}
-
-type StoreProduct {
-  label: String!
-  samples: Int!
-  sold: Int
-}
-
-type StoreComment {
-  text: String!
-  kind: String!
-  recapUuid: String
-  recapKind: String
-}
-
-type StorePhoto {
-  url: String!
-  category: String!
-  recapUuid: String!
-  eventDate: String!
-}
-
-type StorePerson {
-  name: String!
-  visits: Int!
-  lastDate: String
-}
-
-type StoreFlag {
-  recapUuid: String!
-  recapKind: String!
-  date: String
-  labels: [String!]!
-}
-
-type StoreStaffView {
-  people: [StorePerson!]!
-  flags: [StoreFlag!]!
-  inReview: Int!
-}
-
-type StoreProfile {
-  storeKey: String!
-  name: String!
-  address: String!
-  city: String!
-  state: String!
-  summary: String!
-  summarySource: String!
-  totals: StoreTotals!
-  visits: [StoreVisit!]!
-  visitTotal: Int!
-  products: [StoreProduct!]!
-  comments: [StoreComment!]!
-  photos: [StorePhoto!]!
-  staff: StoreStaffView
-  logisticsNotes: String!
-  logisticsNotesUpdatedAt: String
-}
-
-input SaveStoreLogisticsNotesInput {
-  tenantId: ID!
-  storeKey: String!
-  notes: String!
-  clientMutationId: ID = null
-}
-
-type SaveStoreLogisticsNotesPayload {
-  success: Boolean!
-  message: String!
-  storeKey: String
-  logisticsNotes: String!
-  logisticsNotesUpdatedAt: String
-  clientMutationId: ID
-}
-
-input WaveRequestItemInput {
-  storeName: String!
-  date: String!
-  startTime: String!
-  endTime: String!
-  address: String! = ""
-  city: String! = ""
-  state: String! = ""
-  storeNumber: String! = ""
-  latitude: Float = null
-  longitude: Float = null
-  timezoneId: ID = null
-  timezoneCode: String = null
-  name: String = null
-}
-
-input CreateRequestsWaveInput {
-  requestTypeId: ID!
-  items: [WaveRequestItemInput!]!
-  tenantId: ID = null
-  eventTypeId: ID = null
-  defaultTimezoneId: ID = null
-  schedulingStatus: String! = "needs_scheduling"
-  productIds: [ID!] = null
-  notes: String! = ""
-  dryRun: Boolean! = false
-  rollbackOnError: Boolean! = true
-  clientMutationId: ID = null
-}
-
-type CreateRequestsWaveResponse {
-  success: Boolean!
-  message: String!
-  totalRows: Int!
-  successCount: Int!
-  failedCount: Int!
-  skippedCount: Int!
-  rolledBack: Boolean!
-  errors: [String!]
-  rows: [RequestBatchRowResult!]
-  clientMutationId: ID
-}
-
-type StoreLink {
-  name: String!
-  storeKey: String!
-}
-
-type HighlightStore {
-  storeKey: String!
-  name: String!
-  market: String!
-  conversion: Float!
-  consumers: Int!
-  unitsSold: Int!
-  recaps: Int!
-  recapUuid: String
-  recapKind: String
-}
-
-type HighlightQuote {
-  text: String!
-  recapUuid: String
-  recapKind: String
-}
-
-type HighlightPhoto {
-  url: String!
-  category: String!
-  recapUuid: String!
-}
-
-type MonthHighlight {
-  month: String!
-  label: String!
-  caption: String!
-  captionSource: String!
-  recaps: Int!
-  store: HighlightStore
-  quote: HighlightQuote
-  photo: HighlightPhoto
-}
-
-type FieldEfficiency {
-  total: EfficiencyRow!
-  byWeekday: [EfficiencyRow!]!
-  byDaypart: [EfficiencyRow!]!
-  topStores: [EfficiencyRow!]!
-  recapsWithoutHours: Int!
-}
-
-input IssueCheckinCodeInput {
-  clientMutationId: ID = null
-  tenantId: ID!
-}
-
-type IssueCheckinCodeResponse {
-  success: Boolean!
-  message: String!
-  code: String
-  url: String
-  created: Boolean!
-  clientMutationId: ID
-}
-
-type CheckinIssueSummary {
-  kind: String!
-  label: String!
-  count: Int!
-  events: Int!
-  lastAt: String!
-  lastDetail: String!
-}
-
-type BaProductQa {
-  notes: String!
-  hasMaterial: Boolean!
-  aiAvailable: Boolean!
-  questions: [BaProductQuestionRow!]!
-  websiteUrl: String!
-  websitePages: Int!
-  websiteProducts: Int!
-  documentCount: Int!
-  websiteRefreshedAt: String!
-  websiteRefreshMessage: String!
-  documentsRefreshedAt: String!
-  sources: [BaProductSource!]!
-}
-
-type BaProductQuestionRow {
-  question: String!
-  answer: String!
-  outcome: String!
-  askedAt: String!
-  eventName: String!
-  source: String!
-}
-
-type BaProductSource {
-  id: ID!
-  kind: String!
-  kindLabel: String!
-  title: String!
-  url: String!
-  label: String!
-  status: String!
-  error: String!
-  excluded: Boolean!
-  chars: Int!
-  extractedAt: String!
-  checkedAt: String!
-}
-
-input SetMyReportSubscriptionInput {
-  clientMutationId: ID = null
-  tenantId: ID!
-  subscribed: Boolean!
-}
-
-type MyReportSubscriptionResponse {
-  success: Boolean!
-  message: String!
-  subscribed: Boolean!
   clientMutationId: ID
 }
 
@@ -9591,6 +9902,79 @@ type ShareRecapsByEmailResponse {
   clientMutationId: ID
   sentCount: Int!
   sharedCount: Int!
+}
+
+type SheetConfirmationAutomationInfo {
+  key: String!
+  label: String!
+  sheetId: String!
+  sheetUrl: String!
+}
+
+type SheetShiftRow {
+  uuid: ID!
+  day: String!
+  startText: String!
+  endText: String!
+  storeName: String!
+  address: String!
+  baName: String!
+  brandName: String!
+  sourceLabel: String!
+  sheetUrl: String!
+  match: String!
+  eventUuid: String
+  bookedNames: [String!]!
+  agrees: Boolean
+  syncedAt: String!
+}
+
+type SheetSyncErrorRow {
+  slug: String!
+  requestId: Int
+  errorSnippet: String!
+  lastSyncAt: String
+}
+
+type ShelfAnswers {
+  productOnShelf: String!
+  facings: Int
+  priceTagVisible: String!
+  price: String
+  outOfStockGap: String!
+}
+
+type ShelfCorrection {
+  answers: ShelfAnswers!
+  note: String!
+  correctedByName: String!
+  correctedAt: String!
+}
+
+type ShelfNotFoundStore {
+  storeName: String!
+  eventDate: String!
+}
+
+type ShelfPhotoReading {
+  fileId: ID!
+  fileUrl: String!
+  bucketName: String!
+  status: String!
+  reading: ShelfAnswers
+  correction: ShelfCorrection
+}
+
+type ShelfSummary {
+  status: String!
+  visits: Int!
+  onShelf: Int!
+  notFound: Int!
+  unclear: Int!
+  priceTagVisible: Int!
+  unreadVisits: Int!
+  notFoundStores: [ShelfNotFoundStore!]!
+  notFoundMore: Int!
 }
 
 type ShiftContext {
@@ -9651,6 +10035,12 @@ type SidebarRequestCounts {
   upcoming: Int!
   done30d: Int!
   recapsDue: Int!
+}
+
+type SimpleCatalogItem {
+  id: Int!
+  name: String!
+  subtitle: String!
 }
 
 input SkillFiltersInput {
@@ -9771,17 +10161,9 @@ type StaffingBoardShift {
   tenantId: String
   assigned: [StaffingBoardBA!]!
   isStaffed: Boolean!
-}
-
-input StaffingSearchFilterInput {
-  retailer: String = null
-  city: String = null
-  state: String = null
-  brand: String = null
-  dateFrom: String = null
-  dateTo: String = null
-  minShifts: Int = null
-  mustBeFree: Boolean = null
+  lat: Float
+  lng: Float
+  locationSource: String
 }
 
 type StaffingSearchConflict {
@@ -9803,6 +10185,17 @@ type StaffingSearchFilter {
   dateTo: String
   minShifts: Int!
   mustBeFree: Boolean!
+}
+
+input StaffingSearchFilterInput {
+  retailer: String = null
+  city: String = null
+  state: String = null
+  brand: String = null
+  dateFrom: String = null
+  dateTo: String = null
+  minShifts: Int = null
+  mustBeFree: Boolean = null
 }
 
 type StaffingSearchMatch {
@@ -9902,6 +10295,195 @@ type StatusDetailResponse {
   status: Status
 }
 
+type StoreActionItem {
+  uuid: String!
+  findingId: String!
+  findingCode: String!
+  findingScopeKey: String!
+  storeKey: String!
+  storeLabel: String!
+  actionType: String!
+  status: String!
+  providerUuid: String
+  providerName: String
+  previousProviderName: String
+  ownerEmail: String
+  targetDate: String
+  dueDate: String
+  holdReason: String!
+  nextReviewDate: String
+  providerResponseStatus: String!
+  providerResponseNote: String!
+  restockVerificationMethod: String!
+  restockVerificationNote: String!
+  submissionCode: String
+  linkedRequestUuid: String
+  outcomeVisitUuid: String
+  decisionSnapshotJson: String!
+  outcomeSummaryJson: String!
+  historyLogJson: String!
+  createdAt: String!
+}
+
+type StoreComment {
+  text: String!
+  kind: String!
+  recapUuid: String
+  recapKind: String
+}
+
+type StoreFlag {
+  recapUuid: String!
+  recapKind: String!
+  date: String
+  labels: [String!]!
+}
+
+type StoreInsight {
+  id: ID!
+  kind: String!
+  code: String!
+  subject: String!
+  text: String!
+  periodStart: String!
+  periodEnd: String!
+  isDraft: Boolean!
+  scopeKey: String!
+  visitCount: Int
+  comparisonPeriod: String!
+  supportedCost: String
+  adjustedPosUnits: Int
+  eligibleStores: [InsightEligibleStore!]!
+  currentActionUuid: String
+  currentActionType: String
+  currentActionStatus: String
+  currentActionOwner: String
+  currentActionProvider: String
+}
+
+type StoreLink {
+  name: String!
+  storeKey: String!
+}
+
+type StoreNameAccepted {
+  uuid: ID!
+  name: String!
+  canonicalName: String!
+  records: Int!
+}
+
+type StoreNameAlias {
+  uuid: ID!
+  name: String!
+  records: Int!
+  places: String!
+}
+
+type StoreNameCheck {
+  ok: Boolean!
+  message: String!
+  namesChecked: Int!
+  groupsFound: Int!
+  aiUsed: Boolean!
+}
+
+type StoreNameDecision {
+  ok: Boolean!
+  message: String!
+  changed: Int!
+  affectedRecords: Int!
+}
+
+type StoreNameGroup {
+  groupKey: String!
+  canonicalName: String!
+  kind: String!
+  source: String!
+  reason: String!
+  canonicalRecords: Int!
+  affectedRecords: Int!
+  names: [StoreNameAlias!]!
+}
+
+type StoreNameSuggestions {
+  groups: [StoreNameGroup!]!
+  accepted: [StoreNameAccepted!]!
+  maxGroupSize: Int!
+}
+
+type StorePerson {
+  name: String!
+  visits: Int!
+  lastDate: String
+}
+
+type StorePhoto {
+  url: String!
+  category: String!
+  recapUuid: String!
+  eventDate: String!
+}
+
+type StoreProduct {
+  label: String!
+  samples: Int!
+  sold: Int
+}
+
+type StoreProfile {
+  storeKey: String!
+  name: String!
+  address: String!
+  city: String!
+  state: String!
+  summary: String!
+  summarySource: String!
+  totals: StoreTotals!
+  visits: [StoreVisit!]!
+  visitTotal: Int!
+  products: [StoreProduct!]!
+  comments: [StoreComment!]!
+  photos: [StorePhoto!]!
+  staff: StoreStaffView
+  logisticsNotes: String!
+  logisticsNotesUpdatedAt: String
+}
+
+type StoreStaffView {
+  people: [StorePerson!]!
+  flags: [StoreFlag!]!
+  inReview: Int!
+}
+
+type StoreTotals {
+  visits: Int!
+  upcoming: Int!
+  approvedRecaps: Int!
+  consumers: Int!
+  unitsSold: Int!
+  conversion: Float
+  averageConsumers: Float
+  averageUnitsSold: Float
+  firstVisit: String
+  lastVisit: String
+}
+
+type StoreVisit {
+  eventId: ID!
+  eventUuid: String!
+  requestUuid: String
+  title: String!
+  date: String
+  activationType: String!
+  status: String!
+  recapUuid: String
+  recapKind: String
+  consumers: Int
+  unitsSold: Int
+  conversion: Float
+}
+
 input SubmitFieldMarketingInput {
   clientMutationId: ID = null
   eventId: String!
@@ -9955,6 +10537,22 @@ input SuspendEventInput {
   id: ID!
 }
 
+type SystemHealthType {
+  serverTime: String!
+  gitSha: String!
+  revision: String!
+  databaseOk: Boolean!
+  errors24h: Int!
+  errors7d: Int!
+  distinctSignatures: Int!
+  recentErrors: [BackendErrorRow!]!
+  cronRuns: [CronRunRow!]!
+  sheetSyncErrorTenantCount: Int!
+  sheetSyncErrors: [SheetSyncErrorRow!]!
+  walkupOrphanFiledCount: Int!
+  walkupOrphanFiledFamusCount: Int!
+}
+
 type TenantActivationBreakdown {
   buckets: [TenantActivationBucket!]!
   byType: [TenantActivationTypeCount!]!
@@ -9979,6 +10577,18 @@ type TenantAiAnswer {
   answer: String!
   reason: String
   chart: AiChart
+}
+
+type TenantCompetitorMentions {
+  status: String!
+  brands: [CompetitorBrand!]!
+  mentionCommentCount: Int!
+  recapCount: Int!
+  commentCount: Int!
+  truncated: Boolean!
+  generatedAt: String
+  startDate: String
+  endDate: String
 }
 
 type TenantConversionKpis {
@@ -10014,6 +10624,17 @@ type TenantFavoriteAmbassador {
   firstName: String!
   lastName: String!
   email: String!
+}
+
+type TenantFeedbackThemes {
+  status: String!
+  themes: [FeedbackTheme!]!
+  recapCount: Int!
+  commentCount: Int!
+  truncated: Boolean!
+  generatedAt: String
+  startDate: String
+  endDate: String
 }
 
 type TenantFieldCadence {
@@ -10056,14 +10677,6 @@ type TenantInsights {
   generatedAt: String
   items: [TenantInsightItem!]!
   scopeLabel: String
-}
-
-type TenantWeeklyNarration {
-  weekStart: String!
-  weekEnd: String!
-  body: String!
-  filedRecaps: Int!
-  generatedAt: String!
 }
 
 type TenantKpiComparison {
@@ -10122,6 +10735,75 @@ type TenantKpis {
   program: TenantProgramMetrics
 }
 
+input TenantLaunchInput {
+  clientMutationId: ID = null
+  name: String!
+  slug: String!
+  brandColor: String = null
+  logoUrl: String = null
+  donorTemplateId: ID = null
+  newTemplateName: String = null
+  labelSwaps: [String!] = null
+  catalogCsv: String = null
+  shopifyJson: String = null
+  catalogRows: [CatalogRowInput!] = null
+  codePrefix: String = null
+  downloadImages: Boolean! = false
+}
+
+type TenantLaunchPreview {
+  name: String!
+  slug: String!
+  existingTenant: LaunchExistingTenant
+  existingCheckinCode: String
+  checkinUrl: String!
+  sparkFormUrl: String!
+  donor: LaunchDonorInfo
+  sections: [LaunchSectionPreview!]!
+  photoBuckets: [LaunchBucketPreview!]!
+  locationMode: String!
+  catalog: [LaunchCatalogPreview!]!
+  catalogCount: Int!
+  errors: [String!]!
+  productFields: [LaunchProductFieldPreview!]!
+  swapChanges: [LaunchSwapChange!]!
+  warnings: [String!]!
+}
+
+type TenantLaunchResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  tenantCreated: Boolean!
+  templateId: Int
+  templateName: String
+  checkinCode: String
+  codeMinted: Boolean!
+  checkinUrl: String
+  sparkFormUrl: String
+  catalogCreated: Int!
+  catalogReused: Int!
+  catalogTotal: Int!
+  warnings: [String!]!
+  preview: TenantLaunchPreview
+  clientMutationId: ID
+}
+
+type TenantMentionTrends {
+  status: String!
+  months: [String!]!
+  recapCounts: [Int!]!
+  compareMonth: String
+  priorMonth: String
+  minMonthRecaps: Int!
+  minTrendMentions: Int!
+  themes: [MentionSeries!]!
+  brands: [MentionSeries!]!
+  otherCount: Int!
+  headlines: [String!]!
+  taggedAt: String
+}
+
 type TenantMetroBreakdown {
   metros: [String!]!
   weeks: [MetroWeek!]!
@@ -10130,6 +10812,19 @@ type TenantMetroBreakdown {
 type TenantOption {
   id: ID!
   name: String!
+}
+
+type TenantProductRegions {
+  status: String!
+  commentsStatus: String!
+  hasSold: Boolean!
+  hasSampled: Boolean!
+  states: [ProductRegionState!]!
+  recapCount: Int!
+  minStateRecaps: Int!
+  generatedAt: String
+  startDate: String
+  endDate: String
 }
 
 type TenantProgramHealth {
@@ -10158,6 +10853,13 @@ type TenantProgramMetrics {
   willingToPurchase: Int!
 }
 
+type TenantRequestsRollup {
+  totalCount: Int!
+  byDay: [RequestDayBucket!]!
+  byRequestType: [RequestNamedBucket!]!
+  topRetailers: [RequestNamedBucket!]!
+}
+
 type TenantSentiment {
   overallSentiment: String!
   positivePct: Int!
@@ -10179,6 +10881,11 @@ type TenantSkuPulse {
 type TenantSkuPulseItem {
   product: String!
   samples: Int!
+}
+
+type TenantStoreInsights {
+  recommendations: [StoreInsight!]!
+  alerts: [StoreInsight!]!
 }
 
 type TenantThemeResponse {
@@ -10204,7 +10911,7 @@ type TenantThemeType implements Node {
 }
 
 """
-Tenant(id, uuid, name, image, request_url_name, slug, checkin_code, checkin_recap_code, checkin_recap_excludes_aggregates, checkin_team_code, checkin_team_label, checkin_team_title, insights_trend_series, activation_mix_includes_walkups, default_track_mileage, default_mileage_rate, checkin_location_mode, checkin_markets, checkin_storage_units, checkin_event_type, checkin_program_picker, checkin_training_url, checkin_photo_buckets, checkin_resources, linked_sheet_url, recap_export_sheet_url, master_tracker_tab_name, master_tracker_insert_by_date, master_tracker_layout, linked_sheet_last_sync_at, linked_sheet_last_sync_error, linked_sheet_last_request_id, recap_export_tab_name, recap_export_on_submit, suppress_job_reminder_emails, recap_summary_tab_name, default_external_rmm, recap_recipient_emails, scheduled_report_enabled, client_weekly_digest_enabled, brand_group, created_by, updated_by, created_at, updated_at)
+Tenant(id, uuid, name, image, request_url_name, slug, checkin_code, retail_sheet_id, checkin_recap_code, checkin_recap_excludes_aggregates, checkin_team_code, checkin_team_label, checkin_team_title, insights_trend_series, activation_mix_includes_walkups, default_track_mileage, default_mileage_rate, checkin_location_mode, checkin_markets, checkin_storage_units, checkin_event_type, checkin_program_picker, checkin_training_url, checkin_photo_buckets, checkin_resources, checkin_timesheet_only, ba_product_notes, brand_website_url, linked_sheet_url, recap_export_sheet_url, master_tracker_tab_name, master_tracker_insert_by_date, master_tracker_layout, linked_sheet_last_sync_at, linked_sheet_last_sync_error, linked_sheet_last_request_id, recap_export_tab_name, recap_export_on_submit, suppress_job_reminder_emails, recap_summary_tab_name, default_external_rmm, recap_recipient_emails, recap_skip_emails, auto_approve_requests, request_approved_cc_emails, program_share_enabled, count_one_recap_per_booth_day, program_share_expires_at, program_share_views, program_share_last_viewed_at, scheduled_report_enabled, client_weekly_digest_enabled, brand_group, created_by, updated_by, created_at, updated_at)
 """
 type TenantType implements Node {
   """The Globally Unique ID of this object"""
@@ -10230,12 +10937,14 @@ type TenantType implements Node {
   checkinCode: String
   checkinTeamCode: String
   checkinTeamTitle: String!
+  autoApproveRequests: Boolean!
   checkinPhotoBuckets: [String!]!
 
   """Brand group this tenant belongs to (multi-brand activations)."""
   brandGroup: BrandGroupType
   checkinEventTypeNames: [String!]!
   recapRecipientEmails: String!
+  recapSkipEmails: String!
   defaultExternalRmm: SparkUserType
   image: String
 }
@@ -10252,6 +10961,22 @@ type TenantTypeCountableEdge {
 
   """The item at the end of the edge"""
   node: TenantType!
+}
+
+type TenantWeeklyNarration {
+  weekStart: String!
+  weekEnd: String!
+  body: String!
+  filedRecaps: Int!
+  generatedAt: String!
+}
+
+type TenantWeeklySummary {
+  weekStart: String!
+  weekEnd: String!
+  text: String!
+  isDraft: Boolean!
+  reviewedAt: String
 }
 
 """
@@ -10369,6 +11094,19 @@ input UnarchiveRecapInput {
 input UnassignAmbassadorJobInput {
   clientMutationId: ID = null
   ambassadorJobId: ID!
+}
+
+type UnmatchedPosRowItem {
+  uuid: String!
+  rowNumber: Int!
+  rawRetailer: String!
+  rawStoreId: String!
+  rawStoreName: String!
+  rawSku: String!
+  rawWeekStart: String!
+  registerUnits: Int
+  matchStatus: String!
+  matchNote: String!
 }
 
 type UpcomingShift {
@@ -10538,6 +11276,16 @@ input UpdateClientInput {
   name: String!
   email: String!
   id: ID!
+}
+
+input UpdateClockLinkInput {
+  clientMutationId: ID = null
+  linkId: ID!
+  label: String = null
+  isActive: Boolean = null
+  tenantId: ID = null
+  clearTenant: Boolean! = false
+  sheetUrl: String = null
 }
 
 input UpdateCompanyFileInput {
@@ -10746,6 +11494,7 @@ input UpdateFieldMarketingInput {
   startTime: String! = ""
   endTime: String! = ""
   supportScope: String! = ""
+  setupDay: Boolean! = false
   tenantId: ID = null
 }
 
@@ -11184,6 +11933,7 @@ input UserFiltersInput {
   tenantId: ID = null
   name: String = null
   email: String = null
+  search: String = null
   role: RoleFilterEnum = null
 }
 
@@ -11229,13 +11979,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
+  lastName: String
   email: String!
   firstName: String
+  id: ID!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  id: ID!
-  lastName: String
   archived: Boolean!
   verified: Boolean!
 }
@@ -11253,6 +12003,20 @@ type VerifyTokenType implements OutputInterface {
   errors: ExpectedError
   token: TokenType
   user: UserType
+}
+
+type VisitSubmissionItem {
+  uuid: String!
+  providerName: String
+  sourceKind: String!
+  providerEventId: String!
+  recapStatus: String!
+  excludeFromAggregates: Boolean!
+  version: Int!
+  samplesDistributed: Int
+  consumersSampled: Int
+  repObservedUnits: Int
+  notes: String!
 }
 
 type WalkupActionResponse {
@@ -11296,6 +12060,105 @@ type WalkupShiftType {
   storeChangeRetailerUuid: String
 }
 
+input WaveRequestItemInput {
+  storeName: String!
+  date: String!
+  startTime: String!
+  endTime: String!
+  address: String! = ""
+  city: String! = ""
+  state: String! = ""
+  storeNumber: String! = ""
+  latitude: Float = null
+  longitude: Float = null
+  timezoneId: ID = null
+  timezoneCode: String = null
+  name: String = null
+}
+
+type WeeklyBuyerReport {
+  periodStart: String!
+  periodEnd: String!
+  posAvailable: Boolean!
+  totalVisits: Int!
+  totalSupportedCost: String!
+  rows: [WeeklyBuyerStoreRow!]!
+}
+
+type WeeklyBuyerReportExport {
+  filename: String!
+  mimeType: String!
+  isBase64: Boolean!
+  content: String!
+}
+
+type WeeklyBuyerStoreRow {
+  storeKey: String!
+  storeLabel: String!
+  retailerBanner: String!
+  market: String!
+  providers: [String!]!
+  visitCount: Int!
+  supportedBrandCost: String!
+  totalBrandCost: String
+  hasIncompleteCost: Boolean!
+  samplesDistributed: Int!
+  repObservedUnits: Int!
+  matchedRegisterUnits: Int
+  adjustedRegisterUnits: Int
+  posCoverageLabel: String!
+  recommendationId: String
+  recommendationCode: String
+  recommendationSummary: String
+  currentActionUuid: String
+  currentActionType: String
+  currentActionStatus: String
+  currentActionOwner: String
+  currentActionProvider: String
+}
+
+type WeeklyClientSummary {
+  id: ID!
+  period: String!
+  weekStart: String!
+  weekEnd: String!
+  body: String!
+  editedBody: String!
+  text: String!
+  status: String!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
+}
+
+type WeeklyClientSummaryResult {
+  ok: Boolean!
+  reason: String
+  summary: WeeklyClientSummary
+}
+
+type WeeklyClientSummaryRow {
+  tenantId: ID!
+  tenantName: String!
+  approvedRecaps: Int!
+  pendingRecaps: Int!
+  summary: WeeklyClientSummary
+}
+
+type WeeklyClientSummaryWeek {
+  period: String!
+  weekStart: String!
+  weekEnd: String!
+  rows: [WeeklyClientSummaryRow!]!
+}
+
+type WhatChanged {
+  text: String!
+  source: String!
+  previousStartDate: String
+  previousEndDate: String
+}
+
 type WingspanPayment {
   id: ID!
   contractorName: String
@@ -11328,90 +12191,79 @@ input WithdrawJobApplicationInput {
   applicationId: ID!
 }
 
-scalar dict
-
-type ClockActionResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-}
-
-type ClockLink {
-  id: ID!
-  label: String!
-  url: String!
-  tenantId: ID
-  tenantName: String
-  sheetUrl: String
-  isActive: Boolean!
+type WorkspaceAuditItem {
+  uuid: String!
+  actorEmail: String
+  category: String!
+  action: String!
+  summary: String!
   createdAt: String!
-  sessionCount: Int!
-  openCount: Int!
-  lastClockAt: String
-  syncPending: Int!
-  syncError: String
 }
 
-input ClockLinkIdInput {
-  clientMutationId: ID = null
-  linkId: ID!
+type WorkspaceContextItem {
+  membershipUuid: String
+  tenantUuid: String!
+  tenantName: String!
+  tenantSlug: String!
+  workspaceRole: String!
+  providerUuid: String
+  providerName: String
+  canApproveRecaps: Boolean!
+  canApproveFinance: Boolean!
+  canApproveSpend: Boolean!
+  displayLabel: String!
+  isCurrent: Boolean!
 }
 
-type ClockLinkResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  link: ClockLink
-}
-
-type ClockLinks {
-  available: Boolean!
-  serviceAccountEmail: String
-  links: [ClockLink!]!
-}
-
-type ClockSession {
-  id: ID!
-  firstName: String!
-  lastName: String!
+type WorkspaceInvitationItem {
+  uuid: String!
   email: String!
-  market: String!
-  address: String!
-  timezone: String!
-  clockInAt: String!
-  clockInGps: String!
-  clockInAccuracyM: Float
-  clockInMapUrl: String
-  clockOutAt: String
-  clockOutGps: String
-  clockOutAccuracyM: Float
-  clockOutMapUrl: String
-  durationMinutes: Int
-  sheetSynced: Boolean!
-  sheetError: String
+  workspaceRole: String!
+  providerName: String
+  status: String!
+  token: String!
+  expiresAt: String!
 }
 
-input CreateClockLinkInput {
-  clientMutationId: ID = null
-  label: String!
-  tenantId: ID = null
-  sheetMode: String! = "create"
-  sheetUrl: String = null
-  shareWith: [String!] = null
-  timezone: String = null
+type WorkspaceMemberItem {
+  uuid: String!
+  userId: Int!
+  email: String!
+  fullName: String!
+  workspaceRole: String!
+  providerUuid: String
+  providerName: String
+  canApproveRecaps: Boolean!
+  canApproveFinance: Boolean!
+  canApproveSpend: Boolean!
+  status: String!
+  createdAt: String!
 }
 
-input DeleteClockSessionInput {
-  clientMutationId: ID = null
-  sessionId: ID!
+type WorkspaceOverview {
+  tenantUuid: String!
+  tenantName: String!
+  mode: String!
+  planTier: String!
+  defaultContributionPerUnit: String
+  viewerRole: String!
+  viewerProviderUuid: String
+  viewerProviderName: String
+  isBrandAdmin: Boolean!
+  canViewConsolidated: Boolean!
+  canEditBrandOps: Boolean!
+  canApproveRecaps: Boolean!
+  canEditFinance: Boolean!
+  canApproveSpend: Boolean!
+  canManagePos: Boolean!
+  providers: [ProviderOrgItem!]!
+  members: [WorkspaceMemberItem!]!
+  invitations: [WorkspaceInvitationItem!]!
+  assignments: [ProviderAssignmentItem!]!
+  auditLogs: [WorkspaceAuditItem!]!
+  programs: [SimpleCatalogItem!]!
+  stores: [SimpleCatalogItem!]!
+  products: [SimpleCatalogItem!]!
 }
 
-input UpdateClockLinkInput {
-  clientMutationId: ID = null
-  linkId: ID!
-  label: String = null
-  isActive: Boolean = null
-  tenantId: ID = null
-  clearTenant: Boolean! = false
-  sheetUrl: String = null
-}
+scalar dict

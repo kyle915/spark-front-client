@@ -37,7 +37,17 @@ import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 // or a recap with HEIC photos never download them.
 
 import { lazy, type ComponentType } from "react";
-import { Navigate } from "react-router";
+import { Navigate, useParams } from "react-router";
+
+const BaLegacyRedirect = () => {
+  const { uuid } = useParams<{ uuid: string }>();
+  return (
+    <Navigate
+      to={uuid ? `/talent?ba=${encodeURIComponent(uuid)}` : "/talent"}
+      replace
+    />
+  );
+};
 
 // A failed dynamic import almost always means a STALE CHUNK: the tab is still
 // running an older index.html (in memory) whose hashed chunk filenames were
@@ -602,6 +612,11 @@ const PublicRoutes = {
       isPublic: true,
     },
     {
+      path: "/jobs/release/:releaseToken",
+      component: <PublicJobBoard />,
+      isPublic: true,
+    },
+    {
       path: "/jobs/:token",
       component: <PublicJobBoard />,
       isPublic: true,
@@ -1101,10 +1116,9 @@ const RequestsLinks = {
       isPublic: false,
     },
     {
-      // Retired → /talent (see /ba above). The talent roster opens each
-      // BA's full profile in a modal on click.
+      // Retired → /talent?ba=:uuid so BAProfileModal auto-opens on arrival.
       path: "/ba/:uuid",
-      component: <Navigate to="/talent" replace />,
+      component: <BaLegacyRedirect />,
       isPublic: false,
     },
     {
@@ -1736,6 +1750,55 @@ const PlansLinks = {
 };
 
 /* -----------------------------------------------------------
+  STANDALONE SPARK MILESTONE 1 WORKSPACE, COSTS, POS & ACTIONS
+----------------------------------------------------------- */
+const BrandWorkspacePage = lazyDefault(
+  () => import("@/pilot/BrandWorkspacePage"),
+);
+const ProviderImportsPage = lazyDefault(
+  () => import("@/pilot/ProviderImportsPage"),
+);
+const DemoCostsPage = lazyDefault(() => import("@/pilot/DemoCostsPage"));
+const FinanceQueuePage = lazyDefault(() => import("@/pilot/FinanceQueuePage"));
+const RetailerPosPage = lazyDefault(() => import("@/pilot/RetailerPosPage"));
+const BuyerReportPage = lazyDefault(() => import("@/pilot/BuyerReportPage"));
+
+const PilotLinks = {
+  routes: [
+    {
+      path: "/workspace",
+      component: <BrandWorkspacePage />,
+      isPublic: false,
+    },
+    {
+      path: "/imports",
+      component: <ProviderImportsPage />,
+      isPublic: false,
+    },
+    {
+      path: "/demo-costs",
+      component: <DemoCostsPage />,
+      isPublic: false,
+    },
+    {
+      path: "/finance-queue",
+      component: <FinanceQueuePage />,
+      isPublic: false,
+    },
+    {
+      path: "/retailer-pos",
+      component: <RetailerPosPage />,
+      isPublic: false,
+    },
+    {
+      path: "/buyer-report",
+      component: <BuyerReportPage />,
+      isPublic: false,
+    },
+  ],
+};
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -1809,4 +1872,5 @@ export const appRoutes = [
   ...SettingsLinks.routes,
   ...GoalsLinks.routes,
   ...PlansLinks.routes,
+  ...PilotLinks.routes,
 ];

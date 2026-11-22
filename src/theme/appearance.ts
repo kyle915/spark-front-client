@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 /**
  * Light / dark appearance for the signed-in app. Light is the default; a
  * person's own choice (account menu → Appearance) is remembered per browser.
@@ -72,9 +74,25 @@ export const setAppearance = (mode: Appearance): void => {
 };
 
 export const onAppearanceChange = (fn: () => void): (() => void) => {
+  if (typeof window === "undefined") return () => {};
+  const onStorage = (e: StorageEvent) => {
+    if (!e.key || e.key === KEY) fn();
+  };
   window.addEventListener(EVENT, fn);
-  return () => window.removeEventListener(EVENT, fn);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(EVENT, fn);
+    window.removeEventListener("storage", onStorage);
+  };
 };
+
+/**
+ * Reactive hook returning the current `"light" | "dark"` appearance so
+ * topbar controls, Chart.js canvases, and SVG geo heatmaps repaint in place
+ * without reloading the browser tab.
+ */
+export const useAppearance = (): Appearance =>
+  useSyncExternalStore(onAppearanceChange, readAppearance, () => DEFAULT_APPEARANCE);
 
 export const isLightMode = (): boolean =>
   typeof document !== "undefined" &&
