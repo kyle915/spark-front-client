@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { RoiPacingPageQuery } from "@/api/queries/RoiPacingQueries";
@@ -6,6 +6,7 @@ import { UpsertDemoBudgetTargetMutation } from "@/api/mutations/RoiPacingMutatio
 import type { RoiPacingQueriesPageQuery as PacingQueryType } from "@/api/queries/__generated__/RoiPacingQueriesPageQuery.graphql";
 import type { RoiPacingMutationsUpsertDemoBudgetTargetMutation as UpsertMutationType } from "@/api/mutations/__generated__/RoiPacingMutationsUpsertDemoBudgetTargetMutation.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { syncedTargetEditorAmount } from "./roiPacingHelpers";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -120,6 +121,18 @@ const PacingBody: React.FC<{
   );
   const [amount, setAmount] = useState(pacing?.targetAmount ?? "");
   const [banner, setBanner] = useState<string | null>(null);
+
+  // When the selected month (or its server target) changes, resync the
+  // editor so Save cannot write last month's figure into the new month.
+  useEffect(() => {
+    setAmount(
+      syncedTargetEditorAmount({
+        selectedMonth: month,
+        serverMonth: pacing?.month ?? null,
+        serverTarget: pacing?.targetAmount ?? null,
+      }),
+    );
+  }, [month, pacing?.month, pacing?.targetAmount]);
 
   if (!pacing) {
     return (

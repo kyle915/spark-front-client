@@ -46,6 +46,23 @@ export function spendBarPct(projected: number, target: number): number {
   return Math.min(Math.max(projected / target, 0), 1.25);
 }
 
+/** Value for the monthly target input after a month/server refetch.
+ * Always adopts the server target for the selected month (empty when unset)
+ * so a prior month's draft cannot be saved into a newly selected month. */
+export function syncedTargetEditorAmount(args: {
+  selectedMonth: string;
+  serverMonth: string | null | undefined;
+  serverTarget: string | null | undefined;
+}): string {
+  const selected = (args.selectedMonth || "").slice(0, 7);
+  const server = (args.serverMonth || "").slice(0, 7);
+  if (server && selected && server !== selected) {
+    // Query still resolving the previous month — keep blank until match.
+    return "";
+  }
+  return args.serverTarget ?? "";
+}
+
 export function flattenAttentionRows(
   buckets: Array<{
     key: string;

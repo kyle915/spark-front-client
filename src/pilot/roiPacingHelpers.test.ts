@@ -5,6 +5,7 @@ import {
   formatPaceRate,
   paceStatusLabel,
   spendBarPct,
+  syncedTargetEditorAmount,
 } from "./roiPacingHelpers";
 
 describe("roiPacingHelpers", () => {
@@ -26,6 +27,30 @@ describe("roiPacingHelpers", () => {
     expect(spendBarPct(500, 1000)).toBe(0.5);
     expect(spendBarPct(2000, 1000)).toBe(1.25);
     expect(spendBarPct(100, 0)).toBe(0);
+  });
+
+  it("resyncs the target editor to the selected month's server value", () => {
+    expect(
+      syncedTargetEditorAmount({
+        selectedMonth: "2026-12",
+        serverMonth: "2026-12-01",
+        serverTarget: "8000.00",
+      }),
+    ).toBe("8000.00");
+    expect(
+      syncedTargetEditorAmount({
+        selectedMonth: "2026-12",
+        serverMonth: "2026-11-01",
+        serverTarget: "5000.00",
+      }),
+    ).toBe("");
+    expect(
+      syncedTargetEditorAmount({
+        selectedMonth: "2026-12",
+        serverMonth: "2026-12-01",
+        serverTarget: null,
+      }),
+    ).toBe("");
   });
 
   it("flattens attention buckets into deep-link rows", () => {
