@@ -25,13 +25,25 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-const FOREST = "#14532d";
+/** Dark ops queue uses Spark lime; light surfaces keep high-contrast forest. */
+function queueAccent(): { color: string; border: string } {
+  if (typeof document === "undefined") {
+    return { color: "var(--spark-lime)", border: "rgba(var(--spark-accent-rgb),0.35)" };
+  }
+  const theme = document.documentElement.getAttribute("data-theme");
+  const isLight = theme === "light" || theme === "lemonade";
+  if (isLight) {
+    return { color: "#14532d", border: "rgba(20,83,45,0.35)" };
+  }
+  return { color: "var(--spark-lime)", border: "rgba(var(--spark-accent-rgb),0.35)" };
+}
 
 const Inner: React.FC<{
   tenantId: string | null;
   refreshKey: number;
   onBumped: () => void;
 }> = ({ tenantId, refreshKey, onBumped }) => {
+  const accent = queueAccent();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [commitStatus, busy] =
     useMutation<UpdateIgniteStaffingRequestStatusMutationType>(
@@ -112,8 +124,8 @@ const Inner: React.FC<{
                 className="mono text-[10px] shrink-0"
                 style={{
                   letterSpacing: "0.12em",
-                  color: FOREST,
-                  border: "1px solid rgba(20,83,45,0.35)",
+                  color: accent.color,
+                  border: `1px solid ${accent.border}`,
                   borderRadius: 999,
                   padding: "3px 10px",
                 }}
@@ -133,7 +145,7 @@ const Inner: React.FC<{
                     style={
                       st === "declined"
                         ? { color: "var(--spark-orange)" }
-                        : { color: FOREST }
+                        : { color: accent.color }
                     }
                   >
                     → {STATUS_LABEL[st] ?? st}
