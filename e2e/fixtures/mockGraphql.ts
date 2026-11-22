@@ -1055,6 +1055,53 @@ function buildGraphqlData(
     };
   }
 
+  // SPA-35 Buyer Pitch Decks — share card on /buyer-report loads this query
+  // alongside the main buyer report. Missing mock → undefined → .length crash.
+  if (
+    op === "PitchDeckQueriesBuyerPitchDecksQuery" ||
+    queryText.includes("buyerPitchDecks")
+  ) {
+    return {
+      buyerPitchDecks: [
+        {
+          uuid: "deck-demo-1",
+          token: "pitch-demo-token-aaaa",
+          title: "Sprouts Line Review",
+          subtitle: "",
+          buyerName: "Category Buyer",
+          periodStart: "2026-10-24",
+          periodEnd: "2026-11-22",
+          retailerFilter: "Sprouts",
+          marketFilter: "",
+          includeCosts: false,
+          hasPasscode: true,
+          expiresAt: "2026-12-22T00:00:00Z",
+          revokedAt: null,
+          photoCount: 2,
+          viewCount: 0,
+          createdAt: "2026-11-20T18:00:00Z",
+          createdByEmail: "kyle@igniteproductions.co",
+        },
+      ],
+    };
+  }
+  if (
+    op === "PitchDeckQueriesPhotoWallQuery" ||
+    queryText.includes("photoWall(")
+  ) {
+    return {
+      photoWall: {
+        total: 0,
+        pinnedCount: 0,
+        retailers: [],
+        markets: [],
+        skus: [],
+        categories: [],
+        photos: [],
+      },
+    };
+  }
+
   // Safe empty stubs for dashboard / chart / attention queries so Relay
   // consumers render (or quietly no-op) without throwing before StoreInsights.
   if (queryText.includes("eventDashboard")) {

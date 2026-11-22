@@ -201,12 +201,12 @@ const DecksList: React.FC<{
         <p className="text-[11px] uppercase tracking-wider" style={META}>
           Recent decks
         </p>
-        {data.buyerPitchDecks.length === 0 && (
+        {(data.buyerPitchDecks ?? []).length === 0 && (
           <p className="text-xs" style={META}>
             No decks yet for this brand.
           </p>
         )}
-        {data.buyerPitchDecks.map((deck) => (
+        {(data.buyerPitchDecks ?? []).map((deck) => (
           <div
             key={deck.uuid}
             className="flex flex-wrap items-center justify-between gap-2 text-xs py-2"
