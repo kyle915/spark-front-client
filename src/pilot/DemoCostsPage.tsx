@@ -8,6 +8,7 @@ import {
   type CostEvidenceKind,
   type CostSettlementKind,
 } from "./pilotHelpers";
+import { PlanGateCallout } from "./PlanGateCallout";
 import { PilotQueriesDemoCostsPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsUpsertAgreementMutation,
@@ -121,6 +122,14 @@ const DemoCostsBody: React.FC<{
           Open Finance Exception Queue →
         </Link>
       </header>
+
+      {dash.planGated ? (
+        <PlanGateCallout
+          title="Actual Demo Costs & Rate Card Reconciliation"
+          message={dash.planUpgradeMessage}
+          requiredPlan={dash.requiredPlan}
+        />
+      ) : null}
 
       {banner && (
         <div

@@ -49,6 +49,7 @@ export function workspaceRoleLabel(role: string): string {
     default: {
       // Runtime fallback for unknown server strings while keeping exhaustive check
       if (typeof role === "string" && role) {
+        if (role === "field_contributor") return "Field Contributor";
         return role.replace(/_/g, " ");
       }
       return assertNever(known);
@@ -417,6 +418,414 @@ export function formatSingleWorkspaceBadgeLabel(ctx: {
   if (brand) return brand;
   if (provider) return provider;
   return (ctx.displayLabel ?? "").trim();
+}
+
+export const PILOT_CONTRAST_PALETTE = {
+  dark: {
+    pageBg: "#0A0B0D",
+    cardBg: "#141416",
+    text: "#f2f3ee",
+    ctaBg: "#f2f3ee",
+    ctaFg: "#0A0B0D",
+    okBg: "#0d2e24",
+    okFg: "#6ee7b7",
+    infoBg: "#0f2942",
+    infoFg: "#93c5fd",
+    warnBg: "#332407",
+    warnFg: "#fcd34d",
+    dangerBg: "#361512",
+    dangerFg: "#fca5a5",
+    neutralBg: "#1e2430",
+    neutralFg: "#e2e8f0",
+    meterTrack: "#181b20",
+    meterOk: "#34d399",
+    meterWarn: "#fbbf24",
+    meterDanger: "#ff7849",
+  },
+  light: {
+    pageBg: "#f6f6f2",
+    cardBg: "#ffffff",
+    text: "#14160f",
+    ctaBg: "#14160f",
+    ctaFg: "#ffffff",
+    okBg: "#ecfdf5",
+    okFg: "#065f46",
+    infoBg: "#eff6ff",
+    infoFg: "#1e40af",
+    warnBg: "#fffbeb",
+    warnFg: "#92400e",
+    dangerBg: "#fef2f2",
+    dangerFg: "#991b1b",
+    neutralBg: "#f1f5f9",
+    neutralFg: "#334155",
+    meterTrack: "#e2e8f0",
+    meterOk: "#065f46",
+    meterWarn: "#92400e",
+    meterDanger: "#9a3412",
+  },
+} as const;
+
+export type PlanCodeKind =
+  | "free"
+  | "core"
+  | "pro"
+  | "scale"
+  | "pilot_pro"
+  | "managed_sow";
+
+export type SubscriptionStatusKind =
+  | "free_active"
+  | "pilot_active"
+  | "pilot_expired"
+  | "checkout_pending"
+  | "active"
+  | "past_due"
+  | "cancel_at_period_end"
+  | "canceled"
+  | "managed_sow";
+
+export function planBadgeMeta(planCode: string): {
+  label: string;
+  priceSummary: string;
+  bg: string;
+  fg: string;
+} {
+  const known = planCode as PlanCodeKind;
+  switch (known) {
+    case "free":
+      return {
+        label: "Free",
+        priceSummary: "$0/mo · 5 visits",
+        bg: "var(--pilot-neutral-bg)",
+        fg: "var(--pilot-neutral-fg)",
+      };
+    case "core":
+      return {
+        label: "Core",
+        priceSummary: "$299/mo · 50 visits",
+        bg: "var(--pilot-info-bg)",
+        fg: "var(--pilot-info-fg)",
+      };
+    case "pro":
+      return {
+        label: "Pro",
+        priceSummary: "$750/mo · 100 visits",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
+      };
+    case "pilot_pro":
+      return {
+        label: "60-Day Pro Pilot",
+        priceSummary: "$1,500 pilot · 100 visits/mo",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
+      };
+    case "scale":
+      return {
+        label: "Scale",
+        priceSummary: "From $1,500/mo · 250 visits",
+        bg: "var(--pilot-warn-bg)",
+        fg: "var(--pilot-warn-fg)",
+      };
+    case "managed_sow":
+      return {
+        label: "Managed SOW",
+        priceSummary: "Contracted Ignite SOW",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
+      };
+    default: {
+      if (typeof planCode === "string" && planCode) {
+        return {
+          label: planCode.toUpperCase(),
+          priceSummary: "Custom plan",
+          bg: "var(--pilot-neutral-bg)",
+          fg: "var(--pilot-neutral-fg)",
+        };
+      }
+      return assertNever(known);
+    }
+  }
+}
+
+export function subscriptionStatusBadge(status: string): {
+  label: string;
+  bg: string;
+  fg: string;
+} {
+  const known = status as SubscriptionStatusKind;
+  switch (known) {
+    case "free_active":
+      return {
+        label: "Free Active",
+        bg: "var(--pilot-neutral-bg)",
+        fg: "var(--pilot-neutral-fg)",
+      };
+    case "pilot_active":
+      return {
+        label: "60-Day Pilot Active",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
+      };
+    case "pilot_expired":
+      return {
+        label: "Pilot Ended · Free Fallback",
+        bg: "var(--pilot-warn-bg)",
+        fg: "var(--pilot-warn-fg)",
+      };
+    case "checkout_pending":
+      return {
+        label: "Checkout Open",
+        bg: "var(--pilot-info-bg)",
+        fg: "var(--pilot-info-fg)",
+      };
+    case "active":
+      return {
+        label: "Active Recurring",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
+      };
+    case "past_due":
+      return {
+        label: "Payment Past Due",
+        bg: "var(--pilot-danger-bg)",
+        fg: "var(--pilot-danger-fg)",
+      };
+    case "cancel_at_period_end":
+      return {
+        label: "Cancels at Period End (Paid-Through)",
+        bg: "var(--pilot-warn-bg)",
+        fg: "var(--pilot-warn-fg)",
+      };
+    case "canceled":
+      return {
+        label: "Cancelled · Free Tier",
+        bg: "var(--pilot-neutral-bg)",
+        fg: "var(--pilot-neutral-fg)",
+      };
+    case "managed_sow":
+      return {
+        label: "Ignite Managed SOW",
+        bg: "var(--pilot-ok-bg)",
+        fg: "var(--pilot-ok-fg)",
+      };
+    default: {
+      if (typeof status === "string" && status) {
+        return {
+          label: status.replace(/_/g, " "),
+          bg: "var(--pilot-neutral-bg)",
+          fg: "var(--pilot-neutral-fg)",
+        };
+      }
+      return assertNever(known);
+    }
+  }
+}
+
+export function computeVisitMeterProgress(params: {
+  completedVisitsUsed: number;
+  effectiveVisitCap: number | null | undefined;
+  overageAgreementApproved?: boolean;
+}): {
+  percent: number;
+  summaryLabel: string;
+  remainingLabel: string;
+  barColor: string;
+  isAtCap: boolean;
+} {
+  const used = Math.max(0, params.completedVisitsUsed || 0);
+  const cap = params.effectiveVisitCap;
+  if (cap == null || cap <= 0) {
+    return {
+      percent: 18,
+      summaryLabel: `${used} completed visits (Managed SOW — uncapped)`,
+      remainingLabel: "Included in contracted SOW",
+      barColor: "var(--pilot-meter-ok)",
+      isAtCap: false,
+    };
+  }
+  const pct = Math.min(100, Math.round((used / cap) * 100));
+  const isAtCap = used >= cap;
+  const over = Math.max(0, used - cap);
+  if (isAtCap) {
+    return {
+      percent: 100,
+      summaryLabel: `${used} / ${cap} completed visits`,
+      remainingLabel: params.overageAgreementApproved
+        ? `${over} over allowance (approved volume band active)`
+        : over > 0
+          ? `${over} completed from already-underway shifts (no automatic charge) · Upgrade to book new visits`
+          : "Monthly allowance reached · In-progress fieldwork still submits cleanly",
+      barColor: params.overageAgreementApproved
+        ? "var(--pilot-meter-warn)"
+        : "var(--pilot-meter-danger)",
+      isAtCap: true,
+    };
+  }
+  const rem = cap - used;
+  return {
+    percent: pct,
+    summaryLabel: `${used} / ${cap} completed visits`,
+    remainingLabel: `${rem} included visit${rem === 1 ? "" : "s"} remaining this month`,
+    barColor: pct >= 80 ? "var(--pilot-meter-warn)" : "var(--pilot-meter-ok)",
+    isAtCap: false,
+  };
+}
+
+export function formatPilotCountdown(
+  pilotEndsAtIso: string | null | undefined,
+  nowMs: number = Date.now(),
+): string {
+  if (!pilotEndsAtIso) return "60-day Pro pilot";
+  const endMs = Date.parse(pilotEndsAtIso);
+  if (Number.isNaN(endMs)) return "60-day Pro pilot";
+  const diffDays = Math.ceil((endMs - nowMs) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) {
+    return `Pilot window ended (${pilotEndsAtIso.slice(0, 10)})`;
+  }
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} left in 60-day Pro pilot (ends ${pilotEndsAtIso.slice(0, 10)})`;
+}
+
+/**
+ * Compute `YYYY-MM-DD` in the workspace's business timezone rather than UTC so
+ * afternoon/evening US field submissions never roll over into tomorrow's date.
+ */
+export function currentDateInTimezone(
+  tzName: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  const candidates = [(tzName || "").trim(), "America/Chicago"].filter(Boolean);
+  for (const candidateTz of candidates) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: candidateTz,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(now);
+      const year = parts.find((p) => p.type === "year")?.value;
+      const month = parts.find((p) => p.type === "month")?.value;
+      const day = parts.find((p) => p.type === "day")?.value;
+      if (year && month && day) {
+        return `${year}-${month}-${day}`;
+      }
+    } catch {
+      /* invalid IANA timezone — fall back to America/Chicago */
+    }
+  }
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export interface OnboardingSignupFormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  brandName: string;
+  businessTimezone: string;
+  acceptTerms: boolean;
+}
+
+export function createInitialOnboardingSignupState(): OnboardingSignupFormState {
+  return {
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    brandName: "",
+    businessTimezone: "America/Chicago",
+    acceptTerms: false,
+  };
+}
+
+export interface OnboardingQuickRecapState {
+  storeName: string;
+  city: string;
+  stateCode: string;
+  visitDate: string;
+  samplesDistributed: string;
+  consumersSampled: string;
+  repObservedUnits: string;
+}
+
+export function createInitialQuickRecapState(
+  businessTimezone?: string | null,
+  now: Date = new Date(),
+): OnboardingQuickRecapState {
+  return {
+    storeName: "",
+    city: "",
+    stateCode: "",
+    visitDate: currentDateInTimezone(businessTimezone, now),
+    samplesDistributed: "",
+    consumersSampled: "",
+    repObservedUnits: "",
+  };
+}
+
+function parseRequiredNonNegativeInt(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+export function validateOnboardingQuickRecap(
+  form: OnboardingQuickRecapState,
+  businessTimezone?: string | null,
+  now: Date = new Date(),
+):
+  | {
+      ok: true;
+      payload: {
+        storeName: string;
+        city: string;
+        stateCode: string;
+        visitDate: string;
+        samplesDistributed: number;
+        consumersSampled: number;
+        repObservedUnits: number;
+      };
+    }
+  | { ok: false; error: string } {
+  const storeName = form.storeName.trim();
+  if (!storeName) {
+    return {
+      ok: false,
+      error: "Enter the real store or venue name before logging a field recap.",
+    };
+  }
+  const samples = parseRequiredNonNegativeInt(form.samplesDistributed);
+  const consumers = parseRequiredNonNegativeInt(form.consumersSampled);
+  const units = parseRequiredNonNegativeInt(form.repObservedUnits);
+  if (samples === null || consumers === null || units === null) {
+    return {
+      ok: false,
+      error:
+        "Enter actual Samples, Consumers Sampled, and Observed Units (0 or more) before submitting.",
+    };
+  }
+  const rawDate = form.visitDate.trim();
+  const visitDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+    ? rawDate
+    : currentDateInTimezone(businessTimezone, now);
+
+  return {
+    ok: true,
+    payload: {
+      storeName,
+      city: form.city.trim(),
+      stateCode: form.stateCode.trim().toUpperCase(),
+      visitDate,
+      samplesDistributed: samples,
+      consumersSampled: consumers,
+      repObservedUnits: units,
+    },
+  };
 }
 
 export interface WorkspaceContextItem {

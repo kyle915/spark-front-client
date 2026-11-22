@@ -7,26 +7,39 @@ vi.mock("@/lib/prefetchHotRelayData", () => ({
 }));
 
 import {
+  PILOT_CONTRAST_PALETTE,
   applyWorkspaceContextSelection,
   buildInitialShiftFormState,
+  computeVisitMeterProgress,
+  createInitialOnboardingSignupState,
+  createInitialQuickRecapState,
+  currentDateInTimezone,
   buildUnifiedWorkspaceOptions,
   evidenceBadgeMeta,
   exceptionStatusLabel,
   filterVisibleWorkspaceContexts,
   formatCoveragePercent,
   formatHonestMoney,
+  formatPilotCountdown,
   formatSingleWorkspaceBadgeLabel,
   formatWorkspaceOptionSubtitle,
   isArchivedWorkspaceLabel,
+  planBadgeMeta,
   resolveActiveWorkspaceContextKey,
   settlementBadgeMeta,
   storeActionLabel,
+  subscriptionStatusBadge,
+  validateOnboardingQuickRecap,
   workspaceContextOptionKey,
   workspaceOptionMatchesQuery,
   workspaceRoleLabel,
 } from "./pilotHelpers";
 import { useAuthStore } from "@/store/authStore";
-import { isPublicFieldPath, providerSubmitUrl } from "@/utils/publicHosts";
+import {
+  isPublicFieldPath,
+  providerSubmitUrl,
+  workspaceSharePublicUrl,
+} from "@/utils/publicHosts";
 
 function createMemoryStorage(): Storage {
   const map = new Map<string, string>();
@@ -265,8 +278,6 @@ describe("pilotHelpers", () => {
       "Brew Dr",
     ]);
 
-    // Managed workspaces have membershipUuid: null — active key MUST resolve to
-    // "tenant:uuid-liquid-death" rather than "" (which caused <select> to fall back to index 0 Alcohol Armor!).
     expect(
       resolveActiveWorkspaceContextKey(visible, {
         tenantUuid: "uuid-liquid-death",
@@ -274,7 +285,6 @@ describe("pilotHelpers", () => {
       }),
     ).toBe("tenant:uuid-liquid-death");
 
-    // Switching sidebar to Alcohol Armor immediately selects "tenant:uuid-alcohol-armor".
     expect(
       resolveActiveWorkspaceContextKey(visible, {
         tenantUuid: "uuid-alcohol-armor",
@@ -282,7 +292,6 @@ describe("pilotHelpers", () => {
       }),
     ).toBe("tenant:uuid-alcohol-armor");
 
-    // Agency membership context resolves to "membership:mem-agency-brew".
     expect(
       resolveActiveWorkspaceContextKey(visible, {
         tenantUuid: "uuid-brew-dr",
@@ -293,7 +302,6 @@ describe("pilotHelpers", () => {
       "membership:mem-agency-brew",
     );
 
-    // If an archived tenant happens to be currently selected, keep it visible until switched away.
     const visibleWhenArchivedSelected = filterVisibleWorkspaceContexts(
       rawContexts,
       { tenantUuid: "uuid-carbliss", membershipUuid: null },
@@ -316,6 +324,163 @@ describe("pilotHelpers", () => {
         displayLabel: "Liquid Death · FieldPulse (Agency Manager)",
       }),
     ).toBe("Liquid Death · FieldPulse");
+  });
+
+  it("formats Milestone 2 plan badges, subscription states, visit meter caps, and pilot countdowns", () => {
+    expect(planBadgeMeta("free").priceSummary).toBe("$0/mo · 5 visits");
+    expect(planBadgeMeta("core").priceSummary).toBe("$299/mo · 50 visits");
+    expect(planBadgeMeta("pro").priceSummary).toBe("$750/mo · 100 visits");
+    expect(planBadgeMeta("pilot_pro").label).toBe("60-Day Pro Pilot");
+    expect(planBadgeMeta("scale").label).toBe("Scale");
+    expect(planBadgeMeta("managed_sow").label).toBe("Managed SOW");
+
+    expect(subscriptionStatusBadge("past_due").label).toBe("Payment Past Due");
+    expect(subscriptionStatusBadge("cancel_at_period_end").label).toContain(
+      "Paid-Through",
+    );
+
+    const underCap = computeVisitMeterProgress({
+      completedVisitsUsed: 3,
+      effectiveVisitCap: 5,
+    });
+    expect(underCap.percent).toBe(60);
+    expect(underCap.isAtCap).toBe(false);
+    expect(underCap.remainingLabel).toBe("2 included visits remaining this month");
+
+    const atCapWithInProgress = computeVisitMeterProgress({
+      completedVisitsUsed: 6,
+      effectiveVisitCap: 5,
+    });
+    expect(atCapWithInProgress.percent).toBe(100);
+    expect(atCapWithInProgress.isAtCap).toBe(true);
+    expect(atCapWithInProgress.remainingLabel).toContain("no automatic charge");
+
+    const managedMeter = computeVisitMeterProgress({
+      completedVisitsUsed: 42,
+      effectiveVisitCap: null,
+    });
+    expect(managedMeter.isAtCap).toBe(false);
+    expect(managedMeter.summaryLabel).toContain("Managed SOW");
+
+    const countdown = formatPilotCountdown(
+      "2026-12-31T00:00:00Z",
+      Date.parse("2026-11-01T00:00:00Z"),
+    );
+    expect(countdown).toBe("60 days left in 60-day Pro pilot (ends 2026-12-31)");
+
+    expect(workspaceSharePublicUrl("wsl_demo123")).toBe(
+      "https://client.igniteproductions.co/workspace-share/wsl_demo123",
+    );
+    expect(isPublicFieldPath("/workspace-share/wsl_demo123")).toBe(true);
+
+    const lateEveningUtc = new Date("2026-11-23T02:30:00Z");
+    expect(currentDateInTimezone("America/Los_Angeles", lateEveningUtc)).toBe(
+      "2026-11-22",
+    );
+    expect(currentDateInTimezone("America/Chicago", lateEveningUtc)).toBe(
+      "2026-11-22",
+    );
+    expect(currentDateInTimezone("Invalid/Timezone", lateEveningUtc)).toBe(
+      "2026-11-22",
+    );
+    expect(currentDateInTimezone("UTC", lateEveningUtc)).toBe("2026-11-23");
+
+    const signupState = createInitialOnboardingSignupState();
+    expect(signupState.acceptTerms).toBe(false);
+
+    const quickInit = createInitialQuickRecapState(
+      "America/Los_Angeles",
+      lateEveningUtc,
+    );
+    expect(quickInit).toEqual({
+      storeName: "",
+      city: "",
+      stateCode: "",
+      visitDate: "2026-11-22",
+      samplesDistributed: "",
+      consumersSampled: "",
+      repObservedUnits: "",
+    });
+    expect(validateOnboardingQuickRecap(quickInit).ok).toBe(false);
+    expect(
+      validateOnboardingQuickRecap({
+        ...quickInit,
+        storeName: "Sunset Market #14",
+      }).ok,
+    ).toBe(false);
+    expect(
+      validateOnboardingQuickRecap({
+        storeName: " Sunset Market #14 ",
+        city: " Austin ",
+        stateCode: "tx",
+        visitDate: quickInit.visitDate,
+        samplesDistributed: "84",
+        consumersSampled: "68",
+        repObservedUnits: "19",
+      }),
+    ).toEqual({
+      ok: true,
+      payload: {
+        storeName: "Sunset Market #14",
+        city: "Austin",
+        stateCode: "TX",
+        visitDate: "2026-11-22",
+        samplesDistributed: 84,
+        consumersSampled: 68,
+        repObservedUnits: 19,
+      },
+    });
+  });
+
+  it("enforces WCAG AA+ contrast ratios across both dark and light Milestone 2 palettes with zero neon lime", () => {
+    function relativeLuminance(hex: string): number {
+      const clean = hex.replace("#", "");
+      const [r, g, b] = [0, 2, 4].map((idx) => {
+        const s = parseInt(clean.slice(idx, idx + 2), 16) / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function contrastRatio(fgHex: string, bgHex: string): number {
+      const l1 = relativeLuminance(fgHex);
+      const l2 = relativeLuminance(bgHex);
+      const lighter = Math.max(l1, l2);
+      const darker = Math.min(l1, l2);
+      return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    for (const mode of ["dark", "light"] as const) {
+      const p = PILOT_CONTRAST_PALETTE[mode];
+      const allValues = Object.values(p).map((v) => v.toLowerCase());
+      for (const banned of ["#c5f546", "#c8ff00", "#b8ff00", "#d4ff00"]) {
+        expect(allValues).not.toContain(banned);
+      }
+
+      expect(contrastRatio(p.ctaFg, p.ctaBg)).toBeGreaterThanOrEqual(7.0);
+      expect(contrastRatio(p.text, p.pageBg)).toBeGreaterThanOrEqual(7.0);
+      expect(contrastRatio(p.text, p.cardBg)).toBeGreaterThanOrEqual(7.0);
+
+      for (const [fg, bg] of [
+        [p.okFg, p.okBg],
+        [p.okFg, p.cardBg],
+        [p.okFg, p.pageBg],
+        [p.infoFg, p.infoBg],
+        [p.infoFg, p.cardBg],
+        [p.warnFg, p.warnBg],
+        [p.warnFg, p.cardBg],
+        [p.dangerFg, p.dangerBg],
+        [p.dangerFg, p.cardBg],
+        [p.neutralFg, p.neutralBg],
+        [p.neutralFg, p.cardBg],
+      ] as const) {
+        expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5);
+      }
+
+      for (const bar of [p.meterOk, p.meterWarn, p.meterDanger] as const) {
+        expect(contrastRatio(bar, p.meterTrack)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 
   it("merges myWorkspaceContexts with TenantQuery metadata, hides [ARCHIVED], and formats subtitles", () => {

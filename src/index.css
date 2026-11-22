@@ -469,6 +469,32 @@ code, kbd, samp, pre, .mono-code {
   --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
   --font-stencil: 'Bungee', 'Impact', sans-serif;
+  /* Milestone 2 standalone onboarding & subscription tokens (WCAG AA+ >= 4.5:1; zero neon lime) */
+  --spark-field-bg: #0f1115;
+  --pilot-cta-bg: #f2f3ee;
+  --pilot-cta-fg: #0A0B0D;
+  --pilot-ok-bg: #0d2e24;
+  --pilot-ok-fg: #6ee7b7;
+  --pilot-ok-border: rgba(52, 211, 153, 0.42);
+  --pilot-ok-subtle: rgba(16, 185, 129, 0.08);
+  --pilot-info-bg: #0f2942;
+  --pilot-info-fg: #93c5fd;
+  --pilot-info-border: rgba(96, 165, 250, 0.42);
+  --pilot-warn-bg: #332407;
+  --pilot-warn-fg: #fcd34d;
+  --pilot-warn-border: rgba(251, 191, 36, 0.42);
+  --pilot-danger-bg: #361512;
+  --pilot-danger-fg: #fca5a5;
+  --pilot-danger-border: rgba(239, 90, 42, 0.5);
+  --pilot-neutral-bg: #1e2430;
+  --pilot-neutral-fg: #e2e8f0;
+  --pilot-neutral-border: rgba(148, 163, 184, 0.35);
+  --pilot-meter-track: #181b20;
+  --pilot-meter-ok: #34d399;
+  --pilot-meter-warn: #fbbf24;
+  --pilot-meter-danger: #ff7849;
+  --pilot-brand-dot: #ef5a2a;
+  --pilot-control-accent: #10b981;
 }
 
 /* === Light mode =========================================================
@@ -546,6 +572,31 @@ code, kbd, samp, pre, .mono-code {
   --color-warning-content: #ffffff;
   --color-error: #c9304c;
   --color-error-content: #ffffff;
+  /* Milestone 2 standalone onboarding & subscription tokens (WCAG AA+ >= 4.5:1; zero neon lime) */
+  --pilot-cta-bg: #14160f;
+  --pilot-cta-fg: #ffffff;
+  --pilot-ok-bg: #ecfdf5;
+  --pilot-ok-fg: #065f46;
+  --pilot-ok-border: #6ee7b7;
+  --pilot-ok-subtle: #f0fdf4;
+  --pilot-info-bg: #eff6ff;
+  --pilot-info-fg: #1e40af;
+  --pilot-info-border: #93c5fd;
+  --pilot-warn-bg: #fffbeb;
+  --pilot-warn-fg: #92400e;
+  --pilot-warn-border: #fcd34d;
+  --pilot-danger-bg: #fef2f2;
+  --pilot-danger-fg: #991b1b;
+  --pilot-danger-border: #fca5a5;
+  --pilot-neutral-bg: #f1f5f9;
+  --pilot-neutral-fg: #334155;
+  --pilot-neutral-border: #cbd5e1;
+  --pilot-meter-track: #e2e8f0;
+  --pilot-meter-ok: #065f46;
+  --pilot-meter-warn: #92400e;
+  --pilot-meter-danger: #9a3412;
+  --pilot-brand-dot: #d2481b;
+  --pilot-control-accent: #047857;
 }
 
 /* Tinted chips: the pastel dark-mode inks are unreadable on white. */

@@ -251,6 +251,13 @@ const SECTIONS: NavSection[] = [
         to: "/retailer-pos",
         clientLabel: "Retailer POS & ROI",
       },
+      {
+        label: "Plans & Billing",
+        Icon: CreditCard,
+        to: "/plans-billing",
+        // Ignite-admin internal test mode until CLIENT_BILLING_LAUNCHED.
+        adminOnly: true,
+      },
       { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],
   },

@@ -1,6 +1,7 @@
 import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { formatCoveragePercent, formatHonestMoney } from "./pilotHelpers";
+import { PlanGateCallout } from "./PlanGateCallout";
 import { PilotQueriesRetailerPosPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsImportPosMutation,
@@ -108,6 +109,14 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
           </p>
         </div>
       </header>
+
+      {pos.planGated ? (
+        <PlanGateCallout
+          title="Retailer POS Sales Lift & ROI Measurement"
+          message={pos.planUpgradeMessage}
+          requiredPlan={pos.requiredPlan}
+        />
+      ) : null}
 
       {feedback && (
         <div

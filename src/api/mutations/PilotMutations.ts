@@ -579,3 +579,272 @@ export const PilotMutationsVerifyRestockMutation = graphql`
     }
   }
 `;
+
+export const PilotMutationsStartSelfServeOnboardingMutation = graphql`
+  mutation PilotMutationsStartSelfServeOnboardingMutation(
+    $email: String!
+    $password: String!
+    $firstName: String!
+    $lastName: String!
+    $brandName: String!
+    $businessTimezone: String!
+    $acceptTerms: Boolean!
+    $forceNewWorkspace: Boolean!
+    $invitationToken: String!
+  ) {
+    startSelfServeOnboarding(
+      email: $email
+      password: $password
+      firstName: $firstName
+      lastName: $lastName
+      brandName: $brandName
+      businessTimezone: $businessTimezone
+      acceptTerms: $acceptTerms
+      forceNewWorkspace: $forceNewWorkspace
+      invitationToken: $invitationToken
+    ) {
+      ok
+      error
+      token
+      refreshToken
+      tenantUuid
+      tenantName
+      tenantSlug
+      membershipUuid
+      workspaceRole
+      resumedExisting
+      resolvedManaged
+      joinedInvitation
+    }
+  }
+`;
+
+export const PilotMutationsSelectStarterProgramMutation = graphql`
+  mutation PilotMutationsSelectStarterProgramMutation(
+    $starterKey: String!
+    $customProgramName: String!
+    $starterSkuName: String!
+  ) {
+    selectOnboardingStarterProgram(
+      starterKey: $starterKey
+      customProgramName: $customProgramName
+      starterSkuName: $starterSkuName
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsOnboardingInviteContributorMutation = graphql`
+  mutation PilotMutationsOnboardingInviteContributorMutation(
+    $email: String!
+    $workspaceRole: String!
+    $providerName: String!
+  ) {
+    onboardingInviteContributor(
+      email: $email
+      workspaceRole: $workspaceRole
+      providerName: $providerName
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsScheduleStandaloneVisitMutation = graphql`
+  mutation PilotMutationsScheduleStandaloneVisitMutation(
+    $storeName: String!
+    $visitDate: String!
+    $address: String!
+    $city: String!
+    $stateCode: String!
+    $notes: String!
+  ) {
+    scheduleStandaloneVisit(
+      storeName: $storeName
+      visitDate: $visitDate
+      address: $address
+      city: $city
+      stateCode: $stateCode
+      notes: $notes
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsApproveCanonicalVisitMutation = graphql`
+  mutation PilotMutationsApproveCanonicalVisitMutation($visitUuid: String!) {
+    approveCanonicalVisitRecap(visitUuid: $visitUuid) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsReverseCanonicalVisitMutation = graphql`
+  mutation PilotMutationsReverseCanonicalVisitMutation(
+    $visitUuid: String!
+    $newStatus: String!
+    $reason: String!
+  ) {
+    reverseCanonicalVisit(
+      visitUuid: $visitUuid
+      newStatus: $newStatus
+      reason: $reason
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsCreateSubscriptionCheckoutMutation = graphql`
+  mutation PilotMutationsCreateSubscriptionCheckoutMutation(
+    $targetPlanCode: String!
+    $explicitTermsAccepted: Boolean!
+    $idempotencyKey: String
+    $successUrl: String
+    $cancelUrl: String
+  ) {
+    createSubscriptionCheckout(
+      targetPlanCode: $targetPlanCode
+      explicitTermsAccepted: $explicitTermsAccepted
+      idempotencyKey: $idempotencyKey
+      successUrl: $successUrl
+      cancelUrl: $cancelUrl
+    ) {
+      ok
+      error
+      stripeSessionId
+      checkoutUrl
+      mode
+      alreadyCompleted
+      disclosure
+    }
+  }
+`;
+
+export const PilotMutationsCompleteTestCheckoutMutation = graphql`
+  mutation PilotMutationsCompleteTestCheckoutMutation(
+    $stripeSessionId: String!
+  ) {
+    completeTestSubscriptionCheckout(stripeSessionId: $stripeSessionId) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsCreatePortalSessionMutation = graphql`
+  mutation PilotMutationsCreatePortalSessionMutation($returnUrl: String) {
+    createSubscriptionPortalSession(returnUrl: $returnUrl) {
+      ok
+      error
+      portalUrl
+      mode
+    }
+  }
+`;
+
+export const PilotMutationsChangeSubscriptionPlanMutation = graphql`
+  mutation PilotMutationsChangeSubscriptionPlanMutation(
+    $targetPlanCode: String!
+    $explicitTermsAccepted: Boolean!
+  ) {
+    changeSubscriptionPlan(
+      targetPlanCode: $targetPlanCode
+      explicitTermsAccepted: $explicitTermsAccepted
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsCancelSubscriptionMutation = graphql`
+  mutation PilotMutationsCancelSubscriptionMutation(
+    $immediate: Boolean!
+    $reason: String!
+  ) {
+    cancelSubscription(immediate: $immediate, reason: $reason) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsApproveVolumeBandMutation = graphql`
+  mutation PilotMutationsApproveVolumeBandMutation(
+    $agreedVolumeBandVisits: Int
+    $overageAgreementApproved: Boolean!
+    $overageUnitPriceUsd: String
+  ) {
+    approveVolumeBandOrOverage(
+      agreedVolumeBandVisits: $agreedVolumeBandVisits
+      overageAgreementApproved: $overageAgreementApproved
+      overageUnitPriceUsd: $overageUnitPriceUsd
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsProvisionProPilotMutation = graphql`
+  mutation PilotMutationsProvisionProPilotMutation(
+    $tenantUuid: String!
+    $pilotFeeUsd: String!
+    $durationDays: Int!
+    $includedVisitsMonthly: Int!
+  ) {
+    provisionProPilotWorkspace(
+      tenantUuid: $tenantUuid
+      pilotFeeUsd: $pilotFeeUsd
+      durationDays: $durationDays
+      includedVisitsMonthly: $includedVisitsMonthly
+    ) {
+      ok
+      error
+      targetUuid
+      status
+    }
+  }
+`;
+
+export const PilotMutationsRunBillingTestCheckMutation = graphql`
+  mutation PilotMutationsRunBillingTestCheckMutation($tenantUuid: String) {
+    runBillingTestCheck(tenantUuid: $tenantUuid) {
+      ok
+      error
+      billingMode
+      transport
+      signatureVerified
+      idempotencyVerified
+      probeEventId
+      summary
+    }
+  }
+`;
+

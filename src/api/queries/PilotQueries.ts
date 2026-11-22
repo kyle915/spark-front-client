@@ -204,6 +204,9 @@ export const PilotQueriesDemoCostsPageQuery = graphql`
       providerUuid: $providerUuid
     ) {
       groupBy
+      planGated
+      planUpgradeMessage
+      requiredPlan
       agreements {
         uuid
         providerUuid
@@ -322,6 +325,9 @@ export const PilotQueriesFinanceQueuePageQuery = graphql`
       periodStart: $periodStart
       periodEnd: $periodEnd
     ) {
+      planGated
+      planUpgradeMessage
+      requiredPlan
       exceptions {
         uuid
         exceptionType
@@ -393,6 +399,9 @@ export const PilotQueriesRetailerPosPageQuery = graphql`
     ) {
       available
       unavailableMessage
+      planGated
+      planUpgradeMessage
+      requiredPlan
       retailerBanners
       matchedStoreSkuWeeks
       eligibleStoreSkuWeeks
@@ -511,6 +520,9 @@ export const PilotQueriesBuyerReportPageQuery = graphql`
       posAvailable
       totalVisits
       totalSupportedCost
+      planGated
+      planUpgradeMessage
+      requiredPlan
       rows {
         storeKey
         storeLabel
@@ -592,3 +604,209 @@ export const PilotQueriesExportBuyerReportQuery = graphql`
     }
   }
 `;
+
+export const PilotQueriesStarterCatalogQuery = graphql`
+  query PilotQueriesStarterCatalogQuery {
+    selfServeStarterCatalog {
+      signupEnabled
+      starters {
+        key
+        name
+        slug
+        description
+        templateName
+        defaultSkuHint
+      }
+    }
+  }
+`;
+
+export const PilotQueriesOnboardingStateQuery = graphql`
+  query PilotQueriesOnboardingStateQuery {
+    onboardingState {
+      tenantUuid
+      tenantName
+      tenantSlug
+      workspaceMode
+      planCode
+      planDisplayName
+      businessTimezone
+      stepsCompleted
+      totalSteps
+      stepWorkspaceCreated
+      stepProgramSelected
+      stepContributorInvited
+      stepMobileLinkOpened
+      stepFirstVisitCompleted
+      starterTemplateKey
+      starterProgramName
+      starterRecapTemplateName
+      submissionCode
+      firstVisitUuid
+      firstVisitStoreLabel
+      firstVisitStatus
+      firstSharedToken
+      completedVisitsUsed
+      includedVisits
+      recentVisits {
+        uuid
+        storeLabel
+        visitDate
+        status
+        samplesDistributed
+        consumersSampled
+        repObservedUnits
+        completedAt
+        submissionCount
+      }
+      starters {
+        key
+        name
+        slug
+        description
+        templateName
+        defaultSkuHint
+      }
+    }
+  }
+`;
+
+export const PilotQueriesPlansAndBillingQuery = graphql`
+  query PilotQueriesPlansAndBillingQuery {
+    plansAndBillingOverview {
+      billingEnabled
+      stripeMode
+      stripeConfiguredRemotely
+      tenantUuid
+      tenantName
+      workspaceMode
+      businessTimezone
+      canManageBilling
+      isIgniteAdmin
+      configuredPlanCode
+      effectivePlanCode
+      planDisplayName
+      subscriptionStatus
+      pendingPlanCode
+      addonPlanCode
+      monthlyPriceUsd
+      isManagedSow
+      isPilot
+      pilotFeeUsd
+      pilotStartsAt
+      pilotEndsAt
+      currentPeriodStart
+      currentPeriodEnd
+      paidThroughAt
+      cancelAtPeriodEnd
+      hasPaymentFailure
+      paymentFailureMessage
+      recurringBillingAccepted
+      viewerAndContributorSeatsFree
+      billingSeparationNotice
+      usage {
+        monthKey
+        businessTimezone
+        completedVisitsUsed
+        includedVisits
+        effectiveVisitCap
+        remainingVisits
+        atOrOverCap
+        overageUnits
+        overageAgreementApproved
+        canBookNewVisit
+        inProgressFieldworkAlwaysAllowed
+        historicalExcludedCount
+        inProgressOrPendingCount
+        cancelledOrReversedCount
+        coBrandedVisitCount
+        nextUpgradePlan
+        countedVisits {
+          visitUuid
+          storeLabel
+          visitDate
+          completionLocalDate
+          providerName
+          submissionCount
+          coBrandSharePct
+        }
+      }
+      availablePlans {
+        planCode
+        displayName
+        tagline
+        monthlyPriceUsd
+        includedCompletedVisits
+        isQuoteOnly
+        isSelfServeSelectable
+        isCurrent
+        maxActivePrograms
+        maxOperatingProviders
+        maxPosRetailers
+        allowsBrandedForms
+        allowsApprovalsAndReminders
+        allowsExportsAndWeeklyReporting
+        allowsStoreRecommendations
+        allowsProviderCsvImports
+        allowsBrandCostTracking
+        allowsFinanceReviewQueue
+        allowsRetailerPosMeasurement
+        allowsTrackedStoreActions
+      }
+      openCheckouts {
+        stripeSessionId
+        targetPlanCode
+        quotedMonthlyPriceUsd
+        checkoutUrl
+        status
+        effectiveSummary
+      }
+    }
+    billingReadiness {
+      billingMode
+      billingEnabled
+      clientBillingHidden
+      secretKeyConfigured
+      publishableKeyConfigured
+      webhookSecretConfigured
+      corePriceConfigured
+      proPriceConfigured
+      scalePriceConfigured
+      testSimulationActive
+      webhookEndpointUrl
+      recentWebhookCount
+      failedWebhookCount
+      lastWebhookAt
+      lastWebhookEventType
+      lastWebhookStatus
+      recentWebhooks {
+        stripeEventId
+        eventType
+        processingStatus
+        livemode
+        processedAt
+        note
+      }
+    }
+  }
+`;
+
+export const PilotQueriesPreviewPlanChangeQuery = graphql`
+  query PilotQueriesPreviewPlanChangeQuery($targetPlanCode: String!) {
+    previewSubscriptionPlanChange(targetPlanCode: $targetPlanCode) {
+      currentPlanCode
+      targetPlanCode
+      targetDisplayName
+      isQuoteOnly
+      canSelfServeConfirm
+      monthlyPriceUsd
+      chargeTodayUsd
+      includedVisits
+      changeKind
+      effectiveDateLabel
+      paidThroughDate
+      disclosure
+    }
+  }
+`;
+
