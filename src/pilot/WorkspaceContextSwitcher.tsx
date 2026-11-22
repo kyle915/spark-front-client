@@ -5,7 +5,11 @@ import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { TenantQuery } from "@/api/queries/TenantQuery";
-import { switchWorkspace } from "@/layout/workspaceSwitch";
+import {
+  captureWorkspaceSnapshot,
+  restoreWorkspaceSnapshot,
+  switchWorkspace,
+} from "@/layout/workspaceSwitch";
 import type { SwitchableTenant } from "@/lib/tenantDeepLink";
 import { PilotQueriesWorkspaceContextsQuery } from "@/api/queries/PilotQueries";
 import { PilotMutationsSwitchContextMutation } from "@/api/mutations/PilotMutations";
@@ -217,11 +221,12 @@ export const WorkspaceContextSwitcher: React.FC = () => {
     if (!chosen) return;
 
     const cachedTenant = tenantsMapRef.current.get(chosen.tenantUuid);
+    const previousSnapshot = captureWorkspaceSnapshot(location);
     setSwitching(true);
 
     // Execute instant zero-reload workspace + membership switch immediately so
     // sidebar TenantPicker, topbar, Relay store, and Dashboard switch in lockstep.
-    switchWorkspace(
+    const switchedPath = switchWorkspace(
       {
         id: cachedTenant?.id ?? "",
         uuid: chosen.tenantUuid,
@@ -241,6 +246,19 @@ export const WorkspaceContextSwitcher: React.FC = () => {
         navigate,
       },
     );
+
+    const rollbackIfStillOnTarget = () => {
+      const current = useAuthStore.getState();
+      if (
+        current.tenantUuid === chosen.tenantUuid &&
+        (current.membershipUuid ?? null) === (chosen.membershipUuid ?? null)
+      ) {
+        restoreWorkspaceSnapshot(previousSnapshot, {
+          currentFullPath: switchedPath,
+          navigate,
+        });
+      }
+    };
 
     if (!cachedTenant) {
       void fetchFreshTenants(user?.uuid)
@@ -276,11 +294,15 @@ export const WorkspaceContextSwitcher: React.FC = () => {
         membershipUuid: chosen.membershipUuid ?? null,
         tenantUuid: chosen.tenantUuid,
       },
-      onCompleted: () => {
+      onCompleted: (resp) => {
         setSwitching(false);
+        if (!resp?.switchWorkspaceContext?.ok) {
+          rollbackIfStillOnTarget();
+        }
       },
       onError: () => {
         setSwitching(false);
+        rollbackIfStillOnTarget();
       },
     });
   };

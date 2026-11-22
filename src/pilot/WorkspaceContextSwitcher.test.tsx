@@ -29,7 +29,11 @@ vi.mock("@/api/queries/TenantStoreInsightsQuery", () => ({
 
 import environment from "@/api/relay/environment";
 import { WhereToGoNextCard } from "@/components/ai/StoreInsightsCards";
-import { switchWorkspace } from "@/layout/workspaceSwitch";
+import {
+  captureWorkspaceSnapshot,
+  restoreWorkspaceSnapshot,
+  switchWorkspace,
+} from "@/layout/workspaceSwitch";
 import { useAuthStore } from "@/store/authStore";
 import {
   WorkspaceContextSwitcherView,
@@ -221,6 +225,74 @@ describe("WorkspaceContextSwitcher & single-brand client isolation", () => {
     expect(useAuthStore.getState().tenantUuid).toBe("uuid-liquid-death");
     expect(useAuthStore.getState().membershipUuid).toBeNull();
     expect(useAuthStore.getState().workspaceRole).toBeNull();
+  });
+
+  it("rolls back tenant, membership, Relay store, and route when switchWorkspaceContext fails", () => {
+    const switcherSrc = readFileSync(
+      resolve(__dirname, "./WorkspaceContextSwitcher.tsx"),
+      "utf8",
+    );
+    expect(switcherSrc).toContain("!resp?.switchWorkspaceContext?.ok");
+    expect(switcherSrc).toContain("restoreWorkspaceSnapshot(");
+
+    const navigate = vi.fn();
+    useAuthStore.getState().setWorkspaceMembership("mem-ld", "brand_admin");
+    useAuthStore
+      .getState()
+      .setTenant(
+        "uuid-liquid-death",
+        "Tenant:ld",
+        "https://cdn/ld.png",
+        "liquid-death",
+        "liquid-death",
+        "LD-TNBJ8K",
+      );
+
+    const snapshot = captureWorkspaceSnapshot({
+      pathname: "/recap/view/recap-123",
+      search: "?tab=photos",
+    });
+
+    const switchedPath = switchWorkspace(
+      {
+        id: "Tenant:brew",
+        uuid: "uuid-brew-dr",
+        name: "Brew Dr",
+        tenantSlug: "brew-dr-kombucha",
+      },
+      {
+        pathname: "/recap/view/recap-123",
+        search: "?tab=photos",
+        membershipUuid: "mem-revoked",
+        workspaceRole: "provider_manager",
+        navigate,
+      },
+    );
+    expect(switchedPath).toBe("/recaps/list");
+    expect(useAuthStore.getState().tenantUuid).toBe("uuid-brew-dr");
+    expect(useAuthStore.getState().membershipUuid).toBe("mem-revoked");
+
+    commitLocalUpdate(environment, (store) => {
+      store.create("client:unconfirmed-brew-cache", "Dummy");
+    });
+
+    restoreWorkspaceSnapshot(snapshot, {
+      currentFullPath: switchedPath,
+      navigate,
+    });
+
+    expect(useAuthStore.getState().tenantUuid).toBe("uuid-liquid-death");
+    expect(useAuthStore.getState().tenantId).toBe("Tenant:ld");
+    expect(useAuthStore.getState().tenantSlug).toBe("liquid-death");
+    expect(useAuthStore.getState().membershipUuid).toBe("mem-ld");
+    expect(useAuthStore.getState().workspaceRole).toBe("brand_admin");
+    expect(
+      environment.getStore().getSource().get("client:unconfirmed-brew-cache"),
+    ).toBeUndefined();
+    expect(navigate).toHaveBeenLastCalledWith(
+      "/recap/view/recap-123?tab=photos",
+      { replace: true },
+    );
   });
 });
 

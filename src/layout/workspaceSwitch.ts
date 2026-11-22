@@ -106,6 +106,67 @@ export function resolveWorkspaceSwitchPath(
   return `${cleanPath}${keptSearch}${keptHash}`;
 }
 
+export interface WorkspaceSwitchSnapshot {
+  tenantUuid: string | null;
+  tenantId: string | null;
+  tenantSlug: string | null;
+  membershipUuid: string | null;
+  workspaceRole: string | null;
+  logo: string | null;
+  requestUrlName: string | null;
+  checkinCode: string | null;
+  fullPath: string;
+}
+
+export function captureWorkspaceSnapshot(location: {
+  pathname: string;
+  search?: string;
+  hash?: string;
+}): WorkspaceSwitchSnapshot {
+  const state = useAuthStore.getState();
+  return {
+    tenantUuid: state.tenantUuid,
+    tenantId: state.tenantId,
+    tenantSlug: state.tenantSlug,
+    membershipUuid: state.membershipUuid,
+    workspaceRole: state.workspaceRole,
+    logo: state.tenantMeta?.logo ?? null,
+    requestUrlName: state.tenantMeta?.requestUrlName ?? null,
+    checkinCode: state.tenantMeta?.checkinCode ?? null,
+    fullPath: `${location.pathname}${location.search ?? ""}${location.hash ?? ""}`,
+  };
+}
+
+export function restoreWorkspaceSnapshot(
+  snapshot: WorkspaceSwitchSnapshot,
+  options: {
+    currentFullPath?: string;
+    navigate: (to: string, opts?: { replace?: boolean }) => void;
+  },
+): void {
+  const store = useAuthStore.getState();
+  store.setWorkspaceMembership(snapshot.membershipUuid, snapshot.workspaceRole);
+  if (snapshot.tenantUuid) {
+    store.setTenant(
+      snapshot.tenantUuid,
+      snapshot.tenantId ?? "",
+      snapshot.logo,
+      snapshot.requestUrlName,
+      snapshot.tenantSlug,
+      snapshot.checkinCode,
+    );
+  } else {
+    store.clearTenant();
+  }
+  if (
+    options.currentFullPath === undefined ||
+    options.currentFullPath !== snapshot.fullPath
+  ) {
+    options.navigate(snapshot.fullPath, { replace: true });
+  }
+  resetRelayStore();
+}
+
 export interface WorkspaceSwitchNavigationOptions {
   pathname: string;
   search?: string;
