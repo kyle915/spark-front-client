@@ -49,6 +49,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/workspace": { parent: "Workspace", title: "Workspace & Agencies" },
   "/imports": { parent: "Workspace", title: "Provider CSV Imports" },
   "/demo-costs": { parent: "Workspace", title: "Demo Costs" },
+  "/roi-pacing": { parent: "Workspace", title: "Budget Pacing & ROI" },
   "/finance-queue": { parent: "Workspace", title: "Finance Queue" },
   "/retailer-pos": { parent: "Workspace", title: "Retailer POS & ROI" },
   "/plans-billing": { parent: "Workspace", title: "Plans & Billing" },

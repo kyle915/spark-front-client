@@ -492,7 +492,9 @@ describe("StoreInsightsCards Rebook button light/dark contrast", () => {
       "./FinanceQueuePage.tsx",
       "./ProviderImportsPage.tsx",
       "./RetailerPosPage.tsx",
+      "./RoiPacingPage.tsx",
       "./pilotHelpers.ts",
+      "./roiPacingHelpers.ts",
     ];
     for (const rel of portalFiles) {
       const src = readFileSync(resolve(__dirname, rel), "utf8");

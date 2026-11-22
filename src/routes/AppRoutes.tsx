@@ -1771,6 +1771,7 @@ const PlansAndBillingPage = lazyDefault(
 const WorkspaceSharePublicPage = lazyDefault(
   () => import("@/pilot/WorkspaceSharePublicPage"),
 );
+const RoiPacingPage = lazyDefault(() => import("@/pilot/RoiPacingPage"));
 
 const PilotLinks = {
   routes: [
@@ -1806,6 +1807,11 @@ const PilotLinks = {
     {
       path: "/demo-costs",
       component: <DemoCostsPage />,
+      isPublic: false,
+    },
+    {
+      path: "/roi-pacing",
+      component: <RoiPacingPage />,
       isPublic: false,
     },
     {
