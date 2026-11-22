@@ -3814,6 +3814,16 @@ export default function SparkRecapsList() {
                   </button>
                   <ExportReceiptsButton variant="ghost" />
                   <ImportConnecteamButton variant="ghost" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = "/imports";
+                    }}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostBtn}
+                  >
+                    ↑ Import Provider CSV
+                  </button>
                   {!isClient && (
                     <button
                       type="button"
@@ -3891,6 +3901,16 @@ export default function SparkRecapsList() {
               </button>
               <ExportReceiptsButton variant="ghost" />
               <ImportConnecteamButton variant="ghost" />
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/imports";
+                }}
+                className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                style={ghostBtn}
+              >
+                ↑ Import Provider CSV
+              </button>
               {!isClient && (
                 <button
                   type="button"

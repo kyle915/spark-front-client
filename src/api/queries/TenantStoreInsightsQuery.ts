@@ -18,6 +18,20 @@ export const TenantStoreInsightsQuery = graphql`
         periodStart
         periodEnd
         isDraft
+        scopeKey
+        visitCount
+        comparisonPeriod
+        supportedCost
+        adjustedPosUnits
+        eligibleStores {
+          storeKey
+          storeLabel
+        }
+        currentActionUuid
+        currentActionType
+        currentActionStatus
+        currentActionOwner
+        currentActionProvider
       }
       alerts {
         id
@@ -28,6 +42,9 @@ export const TenantStoreInsightsQuery = graphql`
         periodStart
         periodEnd
         isDraft
+        scopeKey
+        visitCount
+        comparisonPeriod
       }
     }
   }

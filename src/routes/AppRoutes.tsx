@@ -1736,6 +1736,55 @@ const PlansLinks = {
 };
 
 /* -----------------------------------------------------------
+  STANDALONE SPARK MILESTONE 1 WORKSPACE, COSTS, POS & ACTIONS
+----------------------------------------------------------- */
+const BrandWorkspacePage = lazyDefault(
+  () => import("@/pilot/BrandWorkspacePage"),
+);
+const ProviderImportsPage = lazyDefault(
+  () => import("@/pilot/ProviderImportsPage"),
+);
+const DemoCostsPage = lazyDefault(() => import("@/pilot/DemoCostsPage"));
+const FinanceQueuePage = lazyDefault(() => import("@/pilot/FinanceQueuePage"));
+const RetailerPosPage = lazyDefault(() => import("@/pilot/RetailerPosPage"));
+const BuyerReportPage = lazyDefault(() => import("@/pilot/BuyerReportPage"));
+
+const PilotLinks = {
+  routes: [
+    {
+      path: "/workspace",
+      component: <BrandWorkspacePage />,
+      isPublic: false,
+    },
+    {
+      path: "/imports",
+      component: <ProviderImportsPage />,
+      isPublic: false,
+    },
+    {
+      path: "/demo-costs",
+      component: <DemoCostsPage />,
+      isPublic: false,
+    },
+    {
+      path: "/finance-queue",
+      component: <FinanceQueuePage />,
+      isPublic: false,
+    },
+    {
+      path: "/retailer-pos",
+      component: <RetailerPosPage />,
+      isPublic: false,
+    },
+    {
+      path: "/buyer-report",
+      component: <BuyerReportPage />,
+      isPublic: false,
+    },
+  ],
+};
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -1809,4 +1858,5 @@ export const appRoutes = [
   ...SettingsLinks.routes,
   ...GoalsLinks.routes,
   ...PlansLinks.routes,
+  ...PilotLinks.routes,
 ];

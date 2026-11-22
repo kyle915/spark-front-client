@@ -19,13 +19,17 @@ import type {
 } from "relay-runtime";
 
 /**
- * The brand selected in the app. For people on more than one brand the
- * server can't tell which one a page means; it uses this when they are a
- * member of it (spark-api utils/graphql/mixins.py, X-Spark-Tenant).
+ * The brand and workspace membership selected in the app. For people on more
+ * than one brand or holding distinct workspace/provider memberships, the
+ * server resolves exact tenant + role scope from X-Spark-Tenant and
+ * X-Spark-Membership.
  */
 function selectedTenantHeader(): Record<string, string> {
-  const uuid = useAuthStore.getState().tenantUuid;
-  return uuid ? { "X-Spark-Tenant": uuid } : {};
+  const { tenantUuid, membershipUuid } = useAuthStore.getState();
+  const headers: Record<string, string> = {};
+  if (tenantUuid) headers["X-Spark-Tenant"] = tenantUuid;
+  if (membershipUuid) headers["X-Spark-Membership"] = membershipUuid;
+  return headers;
 }
 
 async function fetchGraphQL(

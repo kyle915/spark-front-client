@@ -17,6 +17,8 @@ interface AuthState {
   tenantUuid: string | null;
   tenantId: string | null;
   tenantSlug: string | null;
+  membershipUuid: string | null;
+  workspaceRole: string | null;
   tenantMeta: TenantMeta | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -28,6 +30,10 @@ interface AuthState {
   loadFromStorage: () => void;
   setTenantUuid: (uuid: string | null) => void;
   setTenantId: (id: string | null) => void;
+  setWorkspaceMembership: (
+    membershipUuid: string | null,
+    workspaceRole?: string | null
+  ) => void;
   setTenant: (
     tenantUuid: string,
     tenantId: string,
@@ -46,6 +52,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   tenantUuid: null,
   tenantId: null,
   tenantSlug: null,
+  membershipUuid: null,
+  workspaceRole: null,
   tenantMeta: null,
   isAuthenticated: false,
   loading: false,
@@ -121,6 +129,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("@tenantUuid");
     localStorage.removeItem("@tenantId");
     localStorage.removeItem("@tenantSlug");
+    localStorage.removeItem("@membershipUuid");
+    localStorage.removeItem("@workspaceRole");
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
     localStorage.removeItem("@tenantCheckinCode");
@@ -135,6 +145,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       tenantUuid: null,
       tenantId: null,
       tenantSlug: null,
+      membershipUuid: null,
+      workspaceRole: null,
       tenantMeta: null,
       isAuthenticated: false,
       error: null,
@@ -147,6 +159,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const tenantUuid = localStorage.getItem("@tenantUuid");
     const tenantId = localStorage.getItem("@tenantId");
     const tenantSlugFromStorage = localStorage.getItem("@tenantSlug");
+    const membershipUuid = localStorage.getItem("@membershipUuid");
+    const workspaceRole = localStorage.getItem("@workspaceRole");
     const logo = localStorage.getItem("@tenantLogo");
     const requestUrlName = localStorage.getItem("@tenantRequestUrlName");
     const checkinCode = localStorage.getItem("@tenantCheckinCode");
@@ -162,6 +176,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           refreshToken,
           tenantUuid,
           tenantSlug: tenantSlugFromStorage,
+          membershipUuid,
+          workspaceRole,
           isAuthenticated: true,
           tenantId,
           tenantMeta: {
@@ -225,10 +241,29 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 
+  setWorkspaceMembership: (membershipUuid, workspaceRole = null) => {
+    if (membershipUuid) {
+      localStorage.setItem("@membershipUuid", membershipUuid);
+    } else {
+      localStorage.removeItem("@membershipUuid");
+    }
+    if (workspaceRole) {
+      localStorage.setItem("@workspaceRole", workspaceRole);
+    } else {
+      localStorage.removeItem("@workspaceRole");
+    }
+    set({
+      membershipUuid,
+      workspaceRole: workspaceRole ?? null,
+    });
+  },
+
   clearTenant: () => {
     localStorage.removeItem("@tenantUuid");
     localStorage.removeItem("@tenantId");
     localStorage.removeItem("@tenantSlug");
+    localStorage.removeItem("@membershipUuid");
+    localStorage.removeItem("@workspaceRole");
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
     localStorage.removeItem("@tenantCheckinCode");
@@ -237,6 +272,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       tenantUuid: null,
       tenantId: null,
       tenantSlug: null,
+      membershipUuid: null,
+      workspaceRole: null,
       tenantMeta: null,
     });
   },
