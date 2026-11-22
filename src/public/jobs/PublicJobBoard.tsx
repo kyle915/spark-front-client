@@ -1,16 +1,28 @@
 /**
- * Public BA job board (`/jobs/:token`). No login: the token is the link.
+ * Public BA job board (`/jobs/:token`) and signed self-serve shift release
+ * (`/jobs/:token?release=<sig>` or `/jobs/release/:releaseToken`).
  *
  * BAs tick the gigs they can work, leave name / cell / email, and are booked
- * on the spot. The booking email carries the address, clock-in link, and BA
- * materials, so this page never shows a street address or anyone else's
- * details.
+ * on the spot. Public listings never expose street addresses or other BAs'
+ * details; once booked, the confirmation panel offers instant `.ics` download,
+ * Google / Apple Calendar links (with `CLIENT_ORIGIN` check-in + training
+ * links), and signed self-serve shift release (`>36h` instant release; `<=36h`
+ * guardrail + urgent staffing ops escalation).
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
-import { useParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
+import {
+  buildAppleCalendarHref,
+  buildGoogleCalendarUrl,
+  downloadShiftsIcs,
+  resolveShiftCheckinUrl,
+  resolveShiftTrainingUrl,
+  suggestIcsFilename,
+} from "./shiftCalendar";
+import type { BookedShiftCalendarData } from "./shiftCalendar";
 
 const IGNITE_HOME = "https://igniteproductions.co";
 const FALLBACK_ACCENT = "#C4D82E";
@@ -50,11 +62,40 @@ type BoardPayload = {
 
 type ResultStatus = "booked" | "already" | "full" | "conflict" | "unavailable";
 
-type ApplyResult = {
+export type ApplyResult = {
   id: string;
   status: ResultStatus;
   message: string;
   label?: string;
+  shift?: BookedShiftCalendarData;
+};
+
+export type ShiftReleaseStatus =
+  | "can_release"
+  | "urgent_window"
+  | "already_released"
+  | "already_started"
+  | "released"
+  | "escalated";
+
+export type ShiftReleasePayload = {
+  brandLabel: string;
+  typeLabel: string;
+  venue: string;
+  dateLabel: string;
+  timeLabel: string;
+  startsAt: string;
+  hoursUntilStart: number;
+  minLeadHours: number;
+  baFirstName: string;
+  status: ShiftReleaseStatus;
+  canSelfRelease: boolean;
+  contactEmail: string;
+  supportPhone: string;
+  supportPhoneHref: string;
+  boardToken: string | null;
+  spotReopened?: boolean;
+  message?: string;
 };
 
 function apiOrigin(): string {
@@ -111,12 +152,418 @@ function resultStatusLabel(status: ResultStatus): string {
   }
 }
 
+function releaseStatusHeading(info: ShiftReleasePayload): {
+  eyebrowText: string;
+  headline: string;
+  tone: "neutral" | "urgent" | "success";
+} {
+  switch (info.status) {
+    case "can_release":
+      return {
+        eyebrowText: `${info.brandLabel.toUpperCase()} · SHIFT RELEASE`,
+        headline: `Can't make ${info.venue}?`,
+        tone: "neutral",
+      };
+    case "released":
+      return {
+        eyebrowText: "SHIFT RELEASED",
+        headline: "Your spot has been re-opened.",
+        tone: "success",
+      };
+    case "urgent_window":
+      return {
+        eyebrowText: `WITHIN ${info.minLeadHours} HOURS · STAFFING APPROVAL REQUIRED`,
+        headline: `This shift starts in ${Math.max(0, Math.round(info.hoursUntilStart))}h — auto-drop is locked.`,
+        tone: "urgent",
+      };
+    case "escalated":
+      return {
+        eyebrowText: "URGENT ALERT SENT TO STAFFING",
+        headline: "Stay reachable — staffing has been paged.",
+        tone: "urgent",
+      };
+    case "already_released":
+      return {
+        eyebrowText: "SHIFT RELEASED",
+        headline: "This shift has already been released.",
+        tone: "neutral",
+      };
+    case "already_started":
+      return {
+        eyebrowText: "SHIFT IN PROGRESS",
+        headline: "This shift has already started.",
+        tone: "urgent",
+      };
+    default: {
+      const never: never = info.status;
+      return never;
+    }
+  }
+}
+
+function smsHrefFromTel(telHref: string, fallbackPhone: string): string {
+  const digits = (telHref || fallbackPhone).replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length === 10 ? `sms:+1${digits}` : `sms:+${digits}`;
+}
+
+export function BookedShiftActionsCard({
+  shift,
+  accent = FALLBACK_ACCENT,
+  onOpenRelease,
+}: {
+  shift: BookedShiftCalendarData;
+  accent?: string;
+  onOpenRelease?: (releaseToken: string) => void;
+}) {
+  const checkin = resolveShiftCheckinUrl(shift);
+  const training = resolveShiftTrainingUrl(shift);
+  const googleUrl = buildGoogleCalendarUrl(shift);
+  const appleHref = buildAppleCalendarHref([shift]);
+  const icsName = suggestIcsFilename([shift]);
+
+  return (
+    <div style={bookedCard}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#1c1917" }}>
+            {shift.venue}
+          </div>
+          <div style={{ fontSize: 13, color: "#57534e", marginTop: 2 }}>
+            {[shift.dateLabel, shift.timeLabel].filter(Boolean).join(" · ")}
+          </div>
+          {shift.address ? (
+            <div style={{ fontSize: 13, color: "#44403c", marginTop: 3 }}>
+              {shift.address}
+            </div>
+          ) : null}
+        </div>
+        {shift.releaseToken && onOpenRelease ? (
+          <button
+            type="button"
+            onClick={() => onOpenRelease(shift.releaseToken as string)}
+            style={releaseLinkBtn}
+          >
+            Can&apos;t make this shift?
+          </button>
+        ) : shift.releaseUrl ? (
+          <a href={shift.releaseUrl} style={releaseLinkBtn}>
+            Can&apos;t make this shift?
+          </a>
+        ) : null}
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+        <button
+          type="button"
+          onClick={() => downloadShiftsIcs([shift])}
+          style={{
+            ...calBtn,
+            background: "#1c1917",
+            color: "#ffffff",
+            borderColor: "#1c1917",
+          }}
+        >
+          Download .ics
+        </button>
+        <a
+          href={googleUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={calBtn}
+        >
+          Google Calendar
+        </a>
+        <a
+          href={appleHref}
+          download={icsName}
+          style={calBtn}
+        >
+          Apple Calendar
+        </a>
+      </div>
+
+      {checkin || training ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 10, fontSize: 13 }}>
+          {checkin ? (
+            <a
+              href={checkin}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#1c1917", fontWeight: 600, textDecoration: "underline", textDecorationColor: accent }}
+            >
+              Check-in &amp; recap link
+            </a>
+          ) : null}
+          {training ? (
+            <a
+              href={training}
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: "#57534e", fontWeight: 600, textDecoration: "underline" }}
+            >
+              BA training guide
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ShiftReleaseCard({
+  info,
+  reason,
+  onReasonChange,
+  onSubmit,
+  submitting,
+  error,
+  onDismiss,
+  accent = FALLBACK_ACCENT,
+}: {
+  info: ShiftReleasePayload;
+  reason: string;
+  onReasonChange: (next: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  submitting: boolean;
+  error: string;
+  onDismiss?: () => void;
+  accent?: string;
+}) {
+  const { eyebrowText, headline, tone } = releaseStatusHeading(info);
+  const ink = inkOn(accent);
+  const smsHref = smsHrefFromTel(info.supportPhoneHref, info.supportPhone);
+  const telHref = info.supportPhoneHref ? `tel:${info.supportPhoneHref}` : "";
+
+  const borderTone =
+    tone === "urgent" ? ORANGE : tone === "success" ? "#16a34a" : "#e7e5e4";
+
+  return (
+    <section
+      style={{
+        ...panel,
+        marginBottom: 20,
+        borderColor: borderTone,
+        borderWidth: tone === "neutral" ? 1 : 2,
+      }}
+      aria-live="polite"
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+        <p
+          style={{
+            ...eyebrow,
+            color: tone === "urgent" ? ORANGE : tone === "success" ? "#15803d" : eyebrow.color,
+          }}
+        >
+          {eyebrowText}
+        </p>
+        {onDismiss ? (
+          <button type="button" onClick={onDismiss} style={dismissBtn}>
+            Back to board
+          </button>
+        ) : null}
+      </div>
+
+      <h1 style={{ ...title, fontSize: 23, marginBottom: 8 }}>{headline}</h1>
+
+      <div style={releaseMetaBox}>
+        <div style={{ fontWeight: 700, fontSize: 15 }}>
+          {info.brandLabel} · {info.venue}
+        </div>
+        <div style={{ fontSize: 14, color: "#44403c", marginTop: 2 }}>
+          {[info.dateLabel, info.timeLabel, info.typeLabel].filter(Boolean).join(" · ")}
+        </div>
+      </div>
+
+      {info.status === "can_release" ? (
+        <form onSubmit={onSubmit} style={{ marginTop: 14 }} noValidate>
+          <p style={support}>
+            Because this shift is more than {info.minLeadHours} hours out, you can release your spot right here.
+            We&apos;ll immediately re-open the shift and alert local ambassadors + Ignite staffing.
+          </p>
+          <label style={fieldLabel}>
+            Why can&apos;t you make this shift?
+            <textarea
+              style={{ ...input, minHeight: 80, resize: "vertical" }}
+              value={reason}
+              onChange={(e) => onReasonChange(e.target.value.slice(0, 500))}
+              placeholder="Quick note for Ignite staffing (required)"
+              required
+            />
+          </label>
+          {error ? (
+            <p role="alert" style={{ color: ORANGE, fontSize: 14, margin: "10px 0 0" }}>
+              {error}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{
+              ...primaryBtn,
+              background: "#1c1917",
+              color: "#ffffff",
+              marginTop: 14,
+              opacity: submitting ? 0.7 : 1,
+            }}
+          >
+            {submitting ? "Releasing shift…" : "Release my shift"}
+          </button>
+        </form>
+      ) : null}
+
+      {info.status === "urgent_window" ? (
+        <form onSubmit={onSubmit} style={{ marginTop: 14 }} noValidate>
+          <div style={urgentCalloutBox}>
+            <strong>Silent drops are disabled within {info.minLeadHours} hours of shift start.</strong>{" "}
+            Your assignment stays active until Ignite staffing confirms coverage so the event isn&apos;t left
+            short-handed. Send an urgent alert below and text or call staffing right away.
+          </div>
+          <label style={fieldLabel}>
+            What happened?
+            <textarea
+              style={{ ...input, minHeight: 80, resize: "vertical" }}
+              value={reason}
+              onChange={(e) => onReasonChange(e.target.value.slice(0, 500))}
+              placeholder="Let staffing know what came up so we can arrange emergency coverage"
+              required
+            />
+          </label>
+          {error ? (
+            <p role="alert" style={{ color: ORANGE, fontSize: 14, margin: "10px 0 0" }}>
+              {error}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{
+              ...primaryBtn,
+              background: ORANGE,
+              color: "#ffffff",
+              marginTop: 14,
+              opacity: submitting ? 0.7 : 1,
+            }}
+          >
+            {submitting ? "Paging staffing…" : "Send urgent alert to staffing"}
+          </button>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+            {smsHref ? (
+              <a href={smsHref} style={calBtn}>
+                Text {info.supportPhone}
+              </a>
+            ) : null}
+            {telHref ? (
+              <a href={telHref} style={calBtn}>
+                Call {info.supportPhone}
+              </a>
+            ) : null}
+            <a href={`mailto:${info.contactEmail}`} style={calBtn}>
+              Email {info.contactEmail}
+            </a>
+          </div>
+        </form>
+      ) : null}
+
+      {info.status === "released" ? (
+        <div style={{ marginTop: 12 }}>
+          <p style={support}>
+            {info.message ||
+              "Your shift has been released and re-opened for another ambassador. Thanks for giving us a heads-up!"}
+          </p>
+          {info.boardToken && !onDismiss ? (
+            <a
+              href={`/jobs/${encodeURIComponent(info.boardToken)}`}
+              style={{
+                ...primaryBtn,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                background: accent,
+                color: ink,
+                marginTop: 14,
+              }}
+            >
+              Browse other open shifts
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+
+      {info.status === "escalated" ? (
+        <div style={{ marginTop: 12 }}>
+          <div style={urgentCalloutBox}>
+            {info.message ||
+              `We paged Ignite staffing with your urgent note. You are still on the roster until our team confirms coverage — please also text or call ${info.supportPhone} right now.`}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+            {smsHref ? (
+              <a
+                href={smsHref}
+                style={{ ...calBtn, background: "#1c1917", color: "#fff", borderColor: "#1c1917" }}
+              >
+                Text {info.supportPhone}
+              </a>
+            ) : null}
+            {telHref ? (
+              <a href={telHref} style={calBtn}>
+                Call {info.supportPhone}
+              </a>
+            ) : null}
+            <a href={`mailto:${info.contactEmail}`} style={calBtn}>
+              Email {info.contactEmail}
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      {info.status === "already_released" ? (
+        <p style={{ ...support, marginTop: 12 }}>
+          {info.message || "This shift was already released — no further action needed."}
+        </p>
+      ) : null}
+
+      {info.status === "already_started" ? (
+        <div style={{ marginTop: 12 }}>
+          <p style={support}>
+            Shifts that have already started can&apos;t be released online. Please reach Ignite staffing directly:
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+            {smsHref ? (
+              <a href={smsHref} style={calBtn}>
+                Text {info.supportPhone}
+              </a>
+            ) : null}
+            {telHref ? (
+              <a href={telHref} style={calBtn}>
+                Call {info.supportPhone}
+              </a>
+            ) : null}
+            <a href={`mailto:${info.contactEmail}`} style={calBtn}>
+              Email {info.contactEmail}
+            </a>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export default function PublicJobBoard() {
-  const { token = "" } = useParams<{ token: string }>();
+  const { token = "", releaseToken: routeReleaseToken = "" } = useParams<{
+    token?: string;
+    releaseToken?: string;
+  }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryReleaseToken = searchParams.get("release") ?? "";
+  const [inlineReleaseToken, setInlineReleaseToken] = useState("");
+  const activeReleaseToken = inlineReleaseToken || routeReleaseToken || queryReleaseToken;
+
   const origin = useMemo(apiOrigin, []);
   const [board, setBoard] = useState<BoardPayload | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(token));
   const [market, setMarket] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [name, setName] = useState("");
@@ -130,41 +577,154 @@ export default function PublicJobBoard() {
   const [bookedEmail, setBookedEmail] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
 
+  const [releaseInfo, setReleaseInfo] = useState<ShiftReleasePayload | null>(null);
+  const [releaseLoading, setReleaseLoading] = useState(false);
+  const [releaseLoadError, setReleaseLoadError] = useState("");
+  const [releaseReason, setReleaseReason] = useState("");
+  const [releaseError, setReleaseError] = useState("");
+  const [releaseSubmitting, setReleaseSubmitting] = useState(false);
+
+  const effectiveBoardToken = token || releaseInfo?.boardToken || "";
+
   const load = useCallback(async () => {
+    if (!effectiveBoardToken) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError("");
     try {
-      const res = await fetch(`${origin}/api/public/jobs/${encodeURIComponent(token)}`);
+      const res = await fetch(`${origin}/api/public/jobs/${encodeURIComponent(effectiveBoardToken)}`);
       if (res.status === 404) {
-        setLoadError("This job board link isn't active. Ask Ignite for a current one.");
+        if (token) {
+          setLoadError("This job board link isn't active. Ask Ignite for a current one.");
+        }
         return;
       }
       if (!res.ok) {
-        setLoadError("Couldn't load open gigs. Refresh to try again.");
+        if (token) {
+          setLoadError("Couldn't load open gigs. Refresh to try again.");
+        }
         return;
       }
       const data = (await res.json()) as BoardPayload;
       setBoard(data);
       setSelected((prev) => new Set([...prev].filter((id) => data.gigs.some((g) => g.id === id && !g.full))));
     } catch {
-      setLoadError("Couldn't reach Spark. Check your connection and refresh.");
+      if (token) {
+        setLoadError("Couldn't reach Spark. Check your connection and refresh.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [origin, token]);
+  }, [effectiveBoardToken, origin, token]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!activeReleaseToken) {
+      setReleaseInfo(null);
+      setReleaseLoadError("");
+      setReleaseLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setReleaseLoading(true);
+    setReleaseLoadError("");
+    setReleaseError("");
+    void (async () => {
+      try {
+        const res = await fetch(
+          `${origin}/api/public/jobs/release/${encodeURIComponent(activeReleaseToken)}`,
+        );
+        const data = (await res.json().catch(() => ({}))) as Partial<ShiftReleasePayload> & {
+          message?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok || !data.status) {
+          setReleaseLoadError(data.message || "This shift release link is invalid or expired.");
+          setReleaseInfo(null);
+          return;
+        }
+        setReleaseInfo(data as ShiftReleasePayload);
+      } catch {
+        if (!cancelled) {
+          setReleaseLoadError("Couldn't reach Spark. Check your connection and try again.");
+        }
+      } finally {
+        if (!cancelled) {
+          setReleaseLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeReleaseToken, origin]);
+
+  const dismissRelease = useCallback(() => {
+    setInlineReleaseToken("");
+    setReleaseInfo(null);
+    setReleaseLoadError("");
+    setReleaseReason("");
+    setReleaseError("");
+    if (queryReleaseToken) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("release");
+      setSearchParams(next, { replace: true });
+    }
+  }, [queryReleaseToken, searchParams, setSearchParams]);
+
+  const submitRelease = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!activeReleaseToken) return;
+    setReleaseError("");
+    if (releaseReason.trim().length < 3) {
+      setReleaseError("Please add a quick note on why you can't make this shift.");
+      return;
+    }
+    setReleaseSubmitting(true);
+    try {
+      const res = await fetch(
+        `${origin}/api/public/jobs/release/${encodeURIComponent(activeReleaseToken)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: releaseReason.trim() }),
+        },
+      );
+      const data = (await res.json().catch(() => ({}))) as Partial<ShiftReleasePayload> & {
+        message?: string;
+      };
+      if (!res.ok || !data.status) {
+        setReleaseError(data.message || "Couldn't update this shift. Please try again.");
+        return;
+      }
+      setReleaseInfo(data as ShiftReleasePayload);
+      if (data.status === "released") {
+        void load();
+      }
+    } catch {
+      setReleaseError("Couldn't reach Spark. Check your connection and try again.");
+    } finally {
+      setReleaseSubmitting(false);
+    }
+  };
+
   const brand = board?.brand ?? null;
   const accent = brand?.primaryColor || FALLBACK_ACCENT;
   const ink = inkOn(accent);
-  const brandLabel = brand?.label || brand?.name || "";
+  const brandLabel = brand?.label || brand?.name || releaseInfo?.brandLabel || "";
 
   useEffect(() => {
-    if (brandLabel) document.title = `${brandLabel} open shifts · Ignite`;
-  }, [brandLabel]);
+    if (brandLabel) {
+      document.title = activeReleaseToken
+        ? `${brandLabel} shift release · Ignite`
+        : `${brandLabel} open shifts · Ignite`;
+    }
+  }, [activeReleaseToken, brandLabel]);
 
   const gigs = useMemo(
     () => (board?.gigs ?? []).filter((g) => !market || g.market === market),
@@ -184,6 +744,7 @@ export default function PublicJobBoard() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!effectiveBoardToken) return;
     setFormError("");
     if (selected.size === 0) {
       setFormError("Pick at least one gig above.");
@@ -203,7 +764,7 @@ export default function PublicJobBoard() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${origin}/api/public/jobs/${encodeURIComponent(token)}/apply`, {
+      const res = await fetch(`${origin}/api/public/jobs/${encodeURIComponent(effectiveBoardToken)}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -237,6 +798,20 @@ export default function PublicJobBoard() {
   };
 
   const bookedCount = results?.filter((r) => r.status === "booked").length ?? 0;
+  const calendarShifts = useMemo(
+    () =>
+      (results ?? [])
+        .filter((r): r is ApplyResult & { shift: BookedShiftCalendarData } => Boolean(r.shift))
+        .map((r) => ({ ...r.shift, id: r.shift.id || r.id })),
+    [results],
+  );
+
+  const openInlineRelease = (nextReleaseToken: string) => {
+    setReleaseReason("");
+    setReleaseError("");
+    setInlineReleaseToken(nextReleaseToken);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div style={wrap}>
@@ -257,7 +832,41 @@ export default function PublicJobBoard() {
           ) : null}
         </header>
 
-        {loading && !board ? (
+        {activeReleaseToken ? (
+          releaseLoading && !releaseInfo ? (
+            <div style={{ ...panel, marginBottom: 20 }}>
+              <p style={{ margin: 0, color: "#78716c" }}>Loading your shift…</p>
+            </div>
+          ) : releaseLoadError ? (
+            <div style={{ ...panel, marginBottom: 20 }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>{releaseLoadError}</p>
+              {token ? (
+                <button type="button" style={{ ...secondaryBtn, marginTop: 12 }} onClick={dismissRelease}>
+                  View open gigs
+                </button>
+              ) : null}
+            </div>
+          ) : releaseInfo ? (
+            <ShiftReleaseCard
+              info={releaseInfo}
+              reason={releaseReason}
+              onReasonChange={setReleaseReason}
+              onSubmit={submitRelease}
+              submitting={releaseSubmitting}
+              error={releaseError}
+              onDismiss={token ? dismissRelease : undefined}
+              accent={accent}
+            />
+          ) : null
+        ) : null}
+
+        {!effectiveBoardToken && !activeReleaseToken ? (
+          <div style={panel}>
+            <p style={{ margin: 0, fontWeight: 600 }}>
+              This job board link isn&apos;t active. Ask Ignite for a current one.
+            </p>
+          </div>
+        ) : loading && !board && effectiveBoardToken ? (
           <div style={panel}>
             <p style={{ margin: 0, color: "#78716c" }}>Loading open gigs…</p>
           </div>
@@ -277,10 +886,26 @@ export default function PublicJobBoard() {
                 </h1>
                 {bookedCount ? (
                   <p style={support}>
-                    Check <strong>{bookedEmail}</strong> for the address, times, clock-in link, and BA
-                    materials. Add staffing@igniteproductions.co to your contacts so it doesn't land in spam.
+                    Save your shift to your calendar now so you have the venue address, check-in link, and
+                    training guide handy offline. We also emailed everything to <strong>{bookedEmail}</strong>.
                   </p>
                 ) : null}
+
+                {calendarShifts.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => downloadShiftsIcs(calendarShifts)}
+                    style={{
+                      ...primaryBtn,
+                      background: accent,
+                      color: ink,
+                      marginTop: 14,
+                    }}
+                  >
+                    Download all {calendarShifts.length} shifts (.ics)
+                  </button>
+                ) : null}
+
                 <ul style={{ listStyle: "none", padding: 0, margin: "16px 0 0" }}>
                   {results.map((r) => (
                     <li key={r.id} style={resultRow}>
@@ -297,6 +922,15 @@ export default function PublicJobBoard() {
                       {r.status !== "booked" ? (
                         <span style={{ flexBasis: "100%", fontSize: 13, color: "#78716c" }}>{r.message}</span>
                       ) : null}
+                      {r.shift ? (
+                        <div style={{ flexBasis: "100%", marginTop: 8 }}>
+                          <BookedShiftActionsCard
+                            shift={{ ...r.shift, id: r.shift.id || r.id }}
+                            accent={accent}
+                            onOpenRelease={openInlineRelease}
+                          />
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -310,7 +944,7 @@ export default function PublicJobBoard() {
               <p style={eyebrow}>{brandLabel.toUpperCase()} · OPEN SHIFTS</p>
               <h1 style={title}>Pick the gigs you can work.</h1>
               <p style={support}>
-                Tap every gig you can cover, add your info at the bottom, and you're booked. Spots are
+                Tap every gig you can cover, add your info at the bottom, and you&apos;re booked. Spots are
                 first come, first served.
               </p>
               {board.markets.length > 1 ? (
@@ -342,7 +976,7 @@ export default function PublicJobBoard() {
               <div style={panel}>
                 <p style={{ margin: 0, fontWeight: 600 }}>No open gigs right now.</p>
                 <p style={{ ...support, marginTop: 6 }}>
-                  New {brandLabel} gigs show up here as they're booked. Check back soon.
+                  New {brandLabel} gigs show up here as they&apos;re booked. Check back soon.
                 </p>
               </div>
             ) : (
@@ -520,8 +1154,11 @@ export default function PublicJobBoard() {
 
         <p style={footer}>
           Questions?{" "}
-          <a href={`mailto:${board?.contactEmail || "staffing@igniteproductions.co"}`} style={{ color: "#78716c" }}>
-            {board?.contactEmail || "staffing@igniteproductions.co"}
+          <a
+            href={`mailto:${board?.contactEmail || releaseInfo?.contactEmail || "staffing@igniteproductions.co"}`}
+            style={{ color: "#78716c" }}
+          >
+            {board?.contactEmail || releaseInfo?.contactEmail || "staffing@igniteproductions.co"}
           </a>
           {" · "}
           <a href={IGNITE_HOME} style={{ color: "#78716c" }}>
@@ -664,6 +1301,63 @@ const resultRow: CSSProperties = {
   gap: 8,
   padding: "10px 0",
   borderTop: "1px solid #f5f5f4",
+};
+const bookedCard: CSSProperties = {
+  background: "#faf7f1",
+  border: "1px solid #e7e5e4",
+  borderRadius: 14,
+  padding: "14px 14px",
+};
+const calBtn: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "8px 12px",
+  minHeight: 38,
+  borderRadius: 10,
+  border: "1px solid #d6d3d1",
+  background: "#ffffff",
+  color: "#1c1917",
+  fontSize: 13,
+  fontWeight: 600,
+  textDecoration: "none",
+  cursor: "pointer",
+};
+const releaseLinkBtn: CSSProperties = {
+  background: "transparent",
+  border: "none",
+  padding: 0,
+  fontSize: 12,
+  fontWeight: 600,
+  color: "#78716c",
+  textDecoration: "underline",
+  cursor: "pointer",
+};
+const dismissBtn: CSSProperties = {
+  background: "transparent",
+  border: "1px solid #e7e5e4",
+  borderRadius: 999,
+  padding: "4px 10px",
+  fontSize: 12,
+  fontWeight: 600,
+  color: "#57534e",
+  cursor: "pointer",
+};
+const releaseMetaBox: CSSProperties = {
+  background: "#faf7f1",
+  border: "1px solid #e7e5e4",
+  borderRadius: 12,
+  padding: "10px 12px",
+  marginTop: 10,
+};
+const urgentCalloutBox: CSSProperties = {
+  background: "#fdeee8",
+  border: `1px solid ${ORANGE}`,
+  borderRadius: 12,
+  padding: "12px 14px",
+  fontSize: 14,
+  lineHeight: 1.5,
+  color: "#7c2d12",
 };
 const stickyBar: CSSProperties = {
   position: "fixed",

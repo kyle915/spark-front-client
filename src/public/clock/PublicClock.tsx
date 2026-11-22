@@ -5,12 +5,44 @@
  * Clock in. Each punch sends one GPS fix (or why there isn't one). The phone
  * remembers the open punch so Clock out is a single tap; a phone that lost it
  * clocks out by email. Spark mirrors every punch to the link's Google Sheet.
+ *
+ * Dead-zone warehouse support: when a punch fails on connectivity or gateway
+ * timeout, `offlinePunchQueue` holds the punch locally on-device with its
+ * exact tap timestamp (`clientClockedInAt` / `clientClockedOutAt`) and
+ * flushes automatically on reconnect.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { useParams } from "react-router";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
+import {
+  CLOCK_FETCH_TIMEOUT_MS,
+  clearPendingPublicClockIn,
+  clearPendingPublicClockOut,
+  clearPublicClockLostPunch,
+  clockRetryDelayMs,
+  enqueuePublicClockIn,
+  enqueuePublicClockOut,
+  flushPendingPublicClockIn,
+  flushPendingPublicClockOut,
+  formatSavedClockTime,
+  isOfflineClockFailure,
+  newIdempotencyKey,
+  offlineClockBanner,
+  offlineClockOutBanner,
+  provisionalClosedSession,
+  provisionalSessionFromQueuedIn,
+  readCachedPublicClockLink,
+  readPendingPublicClockIn,
+  readPendingPublicClockOut,
+  readPublicClockLostPunch,
+  timedFetchJson,
+  writeCachedPublicClockLink,
+  type LostPunch,
+  type PendingPublicClockIn,
+  type PendingPublicClockOut,
+} from "@/shared/offlinePunchQueue";
 import {
   captureGps,
   deviceTimezone,
@@ -27,7 +59,7 @@ const IGNITE_HOME = "https://igniteproductions.co";
 const FALLBACK_ACCENT = "#C4D82E";
 const ORANGE = "#EF5A2A";
 
-type Brand = {
+export type Brand = {
   name: string;
   primaryColor: string | null;
   image: string | null;
@@ -35,7 +67,7 @@ type Brand = {
   requestUrlName: string | null;
 };
 
-type Session = {
+export type Session = {
   id: string;
   firstName: string;
   lastName: string;
@@ -50,7 +82,7 @@ type Session = {
   durationMinutes: number | null;
 };
 
-type LinkPayload = {
+export type LinkPayload = {
   label: string;
   active: boolean;
   timezone: string;
@@ -58,7 +90,7 @@ type LinkPayload = {
   session: Session | null;
 };
 
-type View =
+export type View =
   | { kind: "loading" }
   | { kind: "missing"; message: string }
   | { kind: "form" }
@@ -102,14 +134,52 @@ function timeIn(iso: string, timezone: string): string {
   }
 }
 
-async function postJson(url: string, body: unknown): Promise<{ status: number; data: Record<string, unknown> }> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  return { status: res.status, data };
+async function postJson(
+  url: string,
+  body: unknown,
+): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+  return timedFetchJson<Record<string, unknown>>(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    CLOCK_FETCH_TIMEOUT_MS,
+  );
+}
+
+function restoreOfflineView(
+  token: string,
+  cached: LinkPayload | null,
+): { link: LinkPayload | null; view: View } | null {
+  const pendingIn = readPendingPublicClockIn(token);
+  const pendingOut = readPendingPublicClockOut(token);
+  if (!cached && !pendingIn) return null;
+  const fallbackTz = cached?.timezone || deviceTimezone() || "America/New_York";
+  if (pendingIn) {
+    const open = provisionalSessionFromQueuedIn(pendingIn, fallbackTz);
+    if (pendingOut) {
+      return {
+        link: cached,
+        view: { kind: "out", session: provisionalClosedSession(open, pendingOut) },
+      };
+    }
+    return { link: cached, view: { kind: "in", session: open } };
+  }
+  if (cached?.session && !cached.session.clockOutAt) {
+    if (pendingOut) {
+      return {
+        link: cached,
+        view: { kind: "out", session: provisionalClosedSession(cached.session, pendingOut) },
+      };
+    }
+    return { link: cached, view: { kind: "in", session: cached.session } };
+  }
+  if (cached) {
+    return { link: cached, view: { kind: "form" } };
+  }
+  return null;
 }
 
 export default function PublicClock() {
@@ -121,38 +191,220 @@ export default function PublicClock() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastGps, setLastGps] = useState<GpsStatus | null>(null);
+  const [queuedIn, setQueuedIn] = useState<PendingPublicClockIn | null>(() =>
+    readPendingPublicClockIn(token),
+  );
+  const [queuedOut, setQueuedOut] = useState<PendingPublicClockOut | null>(() =>
+    readPendingPublicClockOut(token),
+  );
+  const [lostPunch, setLostPunch] = useState<LostPunch | null>(() =>
+    readPublicClockLostPunch(token),
+  );
+  const [flushingNow, setFlushingNow] = useState(false);
+
+  useEffect(() => {
+    setQueuedIn(readPendingPublicClockIn(token));
+    setQueuedOut(readPendingPublicClockOut(token));
+    setLostPunch(readPublicClockLostPunch(token));
+  }, [token]);
 
   useEffect(() => {
     let cancelled = false;
     const { sessionToken } = loadDevice(token);
-    fetch(base, { headers: sessionToken ? { "X-Clock-Session": sessionToken } : {} })
-      .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as Partial<LinkPayload> & { message?: string };
+    timedFetchJson<Partial<LinkPayload> & { message?: string }>(
+      base,
+      { headers: sessionToken ? { "X-Clock-Session": sessionToken } : {} },
+      CLOCK_FETCH_TIMEOUT_MS,
+    )
+      .then(({ ok, status, data }) => {
         if (cancelled) return;
-        if (!res.ok) {
-          setView({ kind: "missing", message: data.message || "This clock link isn't working right now." });
+        if (!ok) {
+          if (isOfflineClockFailure({ status })) {
+            const restored = restoreOfflineView(
+              token,
+              readCachedPublicClockLink<LinkPayload>(token),
+            );
+            if (restored) {
+              setLink(restored.link);
+              setView(restored.view);
+              return;
+            }
+          }
+          setView({
+            kind: "missing",
+            message: data.message || "This clock link isn't working right now.",
+          });
           return;
         }
         const payload = data as LinkPayload;
         setLink(payload);
+        writeCachedPublicClockLink(token, payload);
         if (!payload.active) {
-          setView({ kind: "missing", message: "This clock link is turned off. Check with your manager for the current one." });
+          setView({
+            kind: "missing",
+            message:
+              "This clock link is turned off. Check with your manager for the current one.",
+          });
           return;
         }
+        const pendingIn = readPendingPublicClockIn(token);
+        const pendingOut = readPendingPublicClockOut(token);
         if (payload.session && !payload.session.clockOutAt) {
-          setView({ kind: "in", session: payload.session });
+          if (pendingOut) {
+            setView({
+              kind: "out",
+              session: provisionalClosedSession(payload.session, pendingOut),
+            });
+          } else {
+            setView({ kind: "in", session: payload.session });
+          }
+        } else if (pendingIn) {
+          const open = provisionalSessionFromQueuedIn(pendingIn, payload.timezone);
+          setView(
+            pendingOut
+              ? { kind: "out", session: provisionalClosedSession(open, pendingOut) }
+              : { kind: "in", session: open },
+          );
         } else {
-          if (sessionToken) saveSessionToken(token, null);
+          if (sessionToken && !pendingOut) saveSessionToken(token, null);
           setView({ kind: "form" });
         }
       })
       .catch(() => {
-        if (!cancelled) setView({ kind: "missing", message: "Couldn't reach Spark. Check your signal and reload." });
+        if (cancelled) return;
+        const restored = restoreOfflineView(
+          token,
+          readCachedPublicClockLink<LinkPayload>(token),
+        );
+        if (restored) {
+          setLink(restored.link);
+          setView(restored.view);
+          return;
+        }
+        setView({
+          kind: "missing",
+          message: "Couldn't reach Spark. Check your signal and reload.",
+        });
       });
     return () => {
       cancelled = true;
     };
   }, [base, token]);
+
+  const flushQueues = useCallback(async () => {
+    if (!token) return;
+    let mintedToken = loadDevice(token).sessionToken;
+
+    if (readPendingPublicClockIn(token)) {
+      const inResult = await flushPendingPublicClockIn({
+        token,
+        postIn: async (body) => {
+          const { ok, status, data } = await postJson(`${base}/in`, body);
+          return {
+            ok,
+            status,
+            sessionToken:
+              typeof data.sessionToken === "string" ? data.sessionToken : null,
+            session: (data.session as Session | undefined) ?? null,
+            openSession: (data.openSession as Session | undefined) ?? null,
+            alreadyIn: Boolean(data.alreadyIn),
+          };
+        },
+        onSession: ({ sessionToken, session, conflictSession }) => {
+          if (sessionToken) {
+            mintedToken = sessionToken;
+            saveSessionToken(token, sessionToken);
+          }
+          if (session) {
+            setLink((prev) => {
+              if (!prev) return prev;
+              const updated = { ...prev, session };
+              writeCachedPublicClockLink(token, updated);
+              return updated;
+            });
+            if (!readPendingPublicClockOut(token)) {
+              setView({ kind: "in", session });
+            }
+          } else if (conflictSession) {
+            setView({ kind: "conflict", session: conflictSession });
+          }
+        },
+      });
+      setQueuedIn(readPendingPublicClockIn(token));
+      setLostPunch(readPublicClockLostPunch(token));
+      if (inResult === "rejected") {
+        setView((prev) =>
+          prev.kind === "in" && prev.session.id.startsWith("queued-")
+            ? { kind: "form" }
+            : prev,
+        );
+        return;
+      }
+      if (inResult === "retry") return;
+    }
+
+    if (readPendingPublicClockOut(token)) {
+      const outResult = await flushPendingPublicClockOut({
+        token,
+        latestSessionToken: mintedToken,
+        postOut: async (body) => {
+          const { ok, status, data } = await postJson(`${base}/out`, body);
+          return {
+            ok,
+            status,
+            session: (data.session as Session | undefined) ?? null,
+            alreadyOut: Boolean(data.alreadyOut),
+          };
+        },
+        onClosed: (closedSession) => {
+          saveSessionToken(token, null);
+          setLink((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, session: null };
+            writeCachedPublicClockLink(token, updated);
+            return updated;
+          });
+          if (closedSession) {
+            setView({ kind: "out", session: closedSession });
+          }
+        },
+      });
+      setQueuedOut(readPendingPublicClockOut(token));
+      setLostPunch(readPublicClockLostPunch(token));
+      if (outResult === "rejected") return;
+    }
+  }, [base, token]);
+
+  useEffect(() => {
+    if (!queuedIn && !queuedOut) return;
+    const run = () => {
+      void flushQueues();
+    };
+    const onOnline = () => run();
+    const onVis = () => {
+      if (document.visibilityState === "visible") run();
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVis);
+    run();
+
+    let attempt = 0;
+    let timer: number | undefined;
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        if (document.visibilityState === "visible") run();
+        attempt += 1;
+        schedule();
+      }, clockRetryDelayMs(attempt));
+    };
+    schedule();
+
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVis);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [queuedIn, queuedOut, flushQueues]);
 
   const accent = link?.brand?.primaryColor || FALLBACK_ACCENT;
 
@@ -161,64 +413,213 @@ export default function PublicClock() {
       e.preventDefault();
       setError(null);
       saveProfile(token, profile);
+      const tappedAt = new Date().toISOString();
+      const idemKey = newIdempotencyKey();
+      const tz = deviceTimezone();
       setBusy("Getting your location…");
       const reading = await captureGps();
       setBusy("Clocking you in…");
+
+      const queueOffline = () => {
+        // Clear any leftover closed-shift out queue before starting a new offline shift
+        clearPendingPublicClockOut(token);
+        setQueuedOut(null);
+        const queued = enqueuePublicClockIn({
+          token,
+          id: idemKey,
+          profile,
+          gps: reading.gps,
+          gpsStatus: reading.gpsStatus,
+          timezone: tz,
+          clientClockedInAt: tappedAt,
+        });
+        setQueuedIn(queued);
+        setLastGps(reading.gpsStatus);
+        const provisional = provisionalSessionFromQueuedIn(
+          queued,
+          link?.timezone || tz || "America/New_York",
+        );
+        setView({ kind: "in", session: provisional });
+      };
+
       try {
         const { status, data } = await postJson(`${base}/in`, {
           ...profile,
           ...reading,
-          timezone: deviceTimezone(),
+          timezone: tz,
+          clientClockedInAt: tappedAt,
+          idempotencyKey: idemKey,
         });
-        if (status === 201) {
+        if (status === 201 || (status === 200 && data.alreadyIn)) {
+          clearPendingPublicClockIn(token);
+          setQueuedIn(null);
           saveSessionToken(token, String(data.sessionToken));
+          const created = data.session as Session;
+          setLink((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, session: created };
+            writeCachedPublicClockLink(token, updated);
+            return updated;
+          });
           setLastGps(reading.gpsStatus);
-          setView({ kind: "in", session: data.session as Session });
+          setView({ kind: "in", session: created });
         } else if (status === 409 && data.openSession) {
           setView({ kind: "conflict", session: data.openSession as Session });
+        } else if (isOfflineClockFailure({ status })) {
+          queueOffline();
         } else {
           setError(String(data.message || "Couldn't clock you in. Try again."));
         }
-      } catch {
-        setError("Couldn't reach Spark. Check your signal and try again.");
+      } catch (err) {
+        if (isOfflineClockFailure({ error: err })) {
+          queueOffline();
+        } else {
+          setError("Couldn't reach Spark. Check your signal and try again.");
+        }
       } finally {
         setBusy(null);
       }
     },
-    [base, profile, token],
+    [base, link?.timezone, profile, token],
   );
 
   const clockOut = useCallback(
     async (opts: { email?: string }) => {
       setError(null);
+      const tappedAt = new Date().toISOString();
+      const idemKey = newIdempotencyKey();
       setBusy("Getting your location…");
       const reading = await captureGps();
       setBusy("Clocking you out…");
+
+      // If clock-in is still queued on this phone, try flushing it first;
+      // if still offline, queue clock-out right behind it.
+      if (readPendingPublicClockIn(token)) {
+        await flushQueues();
+      }
       const { sessionToken } = loadDevice(token);
-      const body = opts.email ? { email: opts.email, ...reading } : { sessionToken, ...reading };
+      const activeSession =
+        view.kind === "in" || view.kind === "conflict" ? view.session : null;
+      const fallbackEmail =
+        opts.email || activeSession?.email || profile.email || undefined;
+
+      const queueOfflineOut = () => {
+        const queued = enqueuePublicClockOut({
+          token,
+          id: idemKey,
+          sessionToken,
+          email: fallbackEmail ?? null,
+          gps: reading.gps,
+          gpsStatus: reading.gpsStatus,
+          clientClockedOutAt: tappedAt,
+        });
+        setQueuedOut(queued);
+        setLastGps(reading.gpsStatus);
+        const baseSession: Session =
+          activeSession ??
+          provisionalSessionFromQueuedIn(
+            readPendingPublicClockIn(token) ?? {
+              v: 1,
+              id: "local",
+              token,
+              profile: {
+                ...profile,
+                email: fallbackEmail || profile.email,
+              },
+              gps: null,
+              gpsStatus: "unavailable",
+              timezone: deviceTimezone(),
+              clientClockedInAt: tappedAt,
+              queuedAt: Date.now(),
+            },
+            link?.timezone || "America/New_York",
+          );
+        setView({
+          kind: "out",
+          session: provisionalClosedSession(baseSession, queued),
+        });
+      };
+
+      if (readPendingPublicClockIn(token)) {
+        queueOfflineOut();
+        setBusy(null);
+        return;
+      }
+
+      const body = opts.email
+        ? {
+            email: opts.email,
+            ...reading,
+            clientClockedOutAt: tappedAt,
+            idempotencyKey: idemKey,
+          }
+        : {
+            sessionToken,
+            ...(fallbackEmail ? { email: fallbackEmail } : {}),
+            ...reading,
+            clientClockedOutAt: tappedAt,
+            idempotencyKey: idemKey,
+          };
+
       try {
         const { status, data } = await postJson(`${base}/out`, body);
         if (status === 200 || (status === 409 && data.session)) {
+          clearPendingPublicClockOut(token);
+          setQueuedOut(null);
           saveSessionToken(token, null);
+          setLink((prev) => {
+            if (!prev) return prev;
+            const updated = { ...prev, session: null };
+            writeCachedPublicClockLink(token, updated);
+            return updated;
+          });
           setLastGps(status === 200 ? reading.gpsStatus : null);
           setView({ kind: "out", session: data.session as Session });
+        } else if (isOfflineClockFailure({ status })) {
+          queueOfflineOut();
         } else if (data.error === "no_session") {
           setView({ kind: "byEmail" });
           setError(String(data.message));
         } else {
           setError(String(data.message || "Couldn't clock you out. Try again."));
         }
-      } catch {
-        setError("Couldn't reach Spark. Check your signal and try again.");
+      } catch (err) {
+        if (isOfflineClockFailure({ error: err })) {
+          queueOfflineOut();
+        } else {
+          setError("Couldn't reach Spark. Check your signal and try again.");
+        }
       } finally {
         setBusy(null);
       }
     },
-    [base, token],
+    [base, flushQueues, link?.timezone, profile, token, view],
   );
+
+  const handleManualFlush = () => {
+    setFlushingNow(true);
+    void flushQueues().finally(() => setFlushingNow(false));
+  };
 
   return (
     <Shell brand={link?.brand ?? null} label={link?.label}>
+      {lostPunch ? (
+        <LostPunchAlert
+          lostPunch={lostPunch}
+          onDismiss={() => {
+            clearPublicClockLostPunch(token);
+            setLostPunch(null);
+          }}
+        />
+      ) : null}
+      {queuedIn || queuedOut ? (
+        <QueuedPunchBanner
+          queuedIn={queuedIn}
+          queuedOut={queuedOut}
+          flushing={flushingNow}
+          onSendNow={handleManualFlush}
+        />
+      ) : null}
       {view.kind === "loading" ? <p style={muted}>Loading…</p> : null}
       {view.kind === "missing" ? (
         <div style={card}>
@@ -247,6 +648,7 @@ export default function PublicClock() {
           busy={busy}
           error={error}
           gps={lastGps ?? view.session.clockInGps}
+          queued={Boolean(queuedIn)}
           onClockOut={() => void clockOut({})}
         />
       ) : null}
@@ -254,14 +656,23 @@ export default function PublicClock() {
         <div style={card}>
           <h1 style={h1}>You're already clocked in</h1>
           <p style={{ ...muted, marginTop: 8 }}>
-            {view.session.firstName}, you clocked in {timeIn(view.session.clockInAt, view.session.timezone)} at{" "}
+            {view.session.firstName}, you clocked in{" "}
+            {timeIn(view.session.clockInAt, view.session.timezone)} at{" "}
             {view.session.address}. Clock out of that shift before starting a new one.
           </p>
-          <PrimaryButton accent={accent} busy={busy} onClick={() => void clockOut({ email: view.session.email })}>
+          <PrimaryButton
+            accent={accent}
+            busy={busy}
+            onClick={() => void clockOut({ email: view.session.email })}
+          >
             Clock out now
           </PrimaryButton>
           <ErrorText error={error} />
-          <button type="button" style={linkBtn} onClick={() => setView({ kind: "form" })}>
+          <button
+            type="button"
+            style={linkBtn}
+            onClick={() => setView({ kind: "form" })}
+          >
             Back
           </button>
         </div>
@@ -281,31 +692,152 @@ export default function PublicClock() {
       ) : null}
       {view.kind === "out" ? (
         <div style={card}>
-          <p style={kicker}>CLOCKED OUT</p>
+          <p style={kicker}>
+            {queuedOut ? "CLOCK-OUT SAVED ON THIS PHONE" : "CLOCKED OUT"}
+          </p>
           <h1 style={h1}>
-            Thanks, {view.session.firstName}. {formatDuration(view.session.durationMinutes ?? 0)} logged.
+            Thanks, {view.session.firstName}.{" "}
+            {formatDuration(view.session.durationMinutes ?? 0)} logged.
           </h1>
           <dl style={facts}>
-            <Fact label="In">{timeIn(view.session.clockInAt, view.session.timezone)}</Fact>
+            <Fact label="In">
+              {timeIn(view.session.clockInAt, view.session.timezone)}
+              {queuedIn ? " (queued)" : ""}
+            </Fact>
             {view.session.clockOutAt ? (
-              <Fact label="Out">{timeIn(view.session.clockOutAt, view.session.timezone)}</Fact>
+              <Fact label="Out">
+                {timeIn(view.session.clockOutAt, view.session.timezone)}
+                {queuedOut ? " (queued)" : ""}
+              </Fact>
             ) : null}
             <Fact label="Where">{view.session.address}</Fact>
           </dl>
           <GpsNotice status={lastGps} />
-          <PrimaryButton
-            accent={accent}
-            busy={null}
-            onClick={() => {
-              setLastGps(null);
-              setView({ kind: "form" });
-            }}
-          >
-            Clock in for another shift
-          </PrimaryButton>
+          {!queuedIn && !queuedOut ? (
+            <PrimaryButton
+              accent={accent}
+              busy={null}
+              onClick={() => {
+                setLastGps(null);
+                setView({ kind: "form" });
+              }}
+            >
+              Clock in for another shift
+            </PrimaryButton>
+          ) : null}
         </div>
       ) : null}
     </Shell>
+  );
+}
+
+export function QueuedPunchBanner({
+  queuedIn,
+  queuedOut,
+  flushing,
+  onSendNow,
+}: {
+  queuedIn: PendingPublicClockIn | null;
+  queuedOut: PendingPublicClockOut | null;
+  flushing: boolean;
+  onSendNow: () => void;
+}) {
+  if (!queuedIn && !queuedOut) return null;
+  return (
+    <div
+      role="status"
+      data-testid="public-clock-queued-banner"
+      style={{
+        marginBottom: 14,
+        padding: "12px 14px",
+        borderRadius: 14,
+        border: "1px solid rgba(180, 83, 9, 0.35)",
+        background: "#fffbeb",
+        color: "#78350f",
+        fontSize: 13.5,
+        lineHeight: 1.45,
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 4 }}>
+        Saved offline — syncs automatically when signal returns
+      </div>
+      {queuedIn ? (
+        <div>{offlineClockBanner(queuedIn.clientClockedInAt)}</div>
+      ) : null}
+      {queuedOut ? (
+        <div style={{ marginTop: queuedIn ? 4 : 0 }}>
+          {offlineClockOutBanner(queuedOut.clientClockedOutAt)}
+        </div>
+      ) : null}
+      <div style={{ marginTop: 8 }}>
+        <button
+          type="button"
+          disabled={flushing}
+          onClick={onSendNow}
+          style={{
+            background: "#fff",
+            border: "1px solid #92400e",
+            color: "#78350f",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: flushing ? "wait" : "pointer",
+          }}
+        >
+          {flushing ? "Syncing…" : "Send now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function LostPunchAlert({
+  lostPunch,
+  onDismiss,
+}: {
+  lostPunch: LostPunch;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      style={{
+        marginBottom: 14,
+        padding: "12px 14px",
+        borderRadius: 14,
+        border: "1px solid #b91c1c",
+        background: "#fef2f2",
+        color: "#7f1d1d",
+        fontSize: 13.5,
+        lineHeight: 1.45,
+      }}
+    >
+      <strong>
+        Your {formatSavedClockTime(lostPunch.at) || "saved"} clock-
+        {lostPunch.kind === "in" ? "in" : "out"} couldn't be recorded.
+      </strong>{" "}
+      It was held while you had no service and the server rejected it afterwards.
+      Let your manager know the time so your hours can be adjusted.
+      <div style={{ marginTop: 8 }}>
+        <button
+          type="button"
+          onClick={onDismiss}
+          style={{
+            background: "#fff",
+            border: "1px solid #b91c1c",
+            color: "#7f1d1d",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Got it
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -328,7 +860,8 @@ function ClockInForm({
 }) {
   const field = (key: keyof ClockProfile) => ({
     value: profile[key],
-    onChange: (e: { target: { value: string } }) => setProfile({ ...profile, [key]: e.target.value }),
+    onChange: (e: { target: { value: string } }) =>
+      setProfile({ ...profile, [key]: e.target.value }),
     required: true,
     style: input,
     disabled: Boolean(busy),
@@ -336,8 +869,17 @@ function ClockInForm({
   return (
     <form style={card} onSubmit={onSubmit}>
       <h1 style={h1}>Clock in</h1>
-      <p style={{ ...muted, marginTop: 6 }}>Fill this in once — your phone remembers it for next time.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14 }}>
+      <p style={{ ...muted, marginTop: 6 }}>
+        Fill this in once — your phone remembers it for next time.
+      </p>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+          marginTop: 14,
+        }}
+      >
         <label style={labelStyle}>
           First name
           <input {...field("firstName")} autoComplete="given-name" maxLength={80} />
@@ -349,7 +891,13 @@ function ClockInForm({
       </div>
       <label style={{ ...labelStyle, marginTop: 12 }}>
         Email
-        <input {...field("email")} type="email" inputMode="email" autoComplete="email" maxLength={254} />
+        <input
+          {...field("email")}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          maxLength={254}
+        />
       </label>
       <label style={{ ...labelStyle, marginTop: 12 }}>
         Market
@@ -357,12 +905,23 @@ function ClockInForm({
       </label>
       <label style={{ ...labelStyle, marginTop: 12 }}>
         Address you're working at
-        <input {...field("address")} autoComplete="street-address" placeholder="Store or venue address" maxLength={300} />
+        <input
+          {...field("address")}
+          autoComplete="street-address"
+          placeholder="Store or venue address"
+          maxLength={300}
+        />
       </label>
       <p style={{ ...hint, marginTop: 14 }}>
-        When you tap Clock in, your phone will ask to share your location. Spark saves it once when you clock in and
-        once when you clock out — never in between. If you say no, you can still clock in.{" "}
-        <a href="/privacy-policy#location" target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "underline" }}>
+        When you tap Clock in, your phone will ask to share your location. Spark
+        saves it once when you clock in and once when you clock out — never in
+        between. If you say no, you can still clock in.{" "}
+        <a
+          href="/privacy-policy#location"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "inherit", textDecoration: "underline" }}
+        >
           Privacy Policy
         </a>
       </p>
@@ -370,7 +929,12 @@ function ClockInForm({
         Clock in
       </PrimaryButton>
       <ErrorText error={error} />
-      <button type="button" style={linkBtn} onClick={onLostPhone} disabled={Boolean(busy)}>
+      <button
+        type="button"
+        style={linkBtn}
+        onClick={onLostPhone}
+        disabled={Boolean(busy)}
+      >
         Already clocked in on another phone? Clock out with your email
       </button>
     </form>
@@ -383,6 +947,7 @@ function ClockedIn({
   busy,
   error,
   gps,
+  queued,
   onClockOut,
 }: {
   session: Session;
@@ -390,6 +955,7 @@ function ClockedIn({
   busy: string | null;
   error: string | null;
   gps: GpsStatus | null;
+  queued?: boolean;
   onClockOut: () => void;
 }) {
   const [now, setNow] = useState(() => new Date());
@@ -399,9 +965,12 @@ function ClockedIn({
   }, []);
   return (
     <div style={card}>
-      <p style={{ ...kicker, color: "#3f6212" }}>● ON THE CLOCK</p>
+      <p style={{ ...kicker, color: queued ? "#92400e" : "#3f6212" }}>
+        {queued ? "● ON THE CLOCK · QUEUED OFFLINE" : "● ON THE CLOCK"}
+      </p>
       <h1 style={h1}>
-        {session.firstName}, you're clocked in · {formatDuration(minutesBetween(session.clockInAt, now))}
+        {session.firstName}, you're clocked in ·{" "}
+        {formatDuration(minutesBetween(session.clockInAt, now))}
       </h1>
       <dl style={facts}>
         <Fact label="Since">{timeIn(session.clockInAt, session.timezone)}</Fact>
@@ -409,7 +978,9 @@ function ClockedIn({
         <Fact label="Market">{session.market}</Fact>
       </dl>
       <GpsNotice status={gps} />
-      <p style={{ ...hint, marginTop: 14 }}>Keep this page handy. Tap Clock out when your shift ends.</p>
+      <p style={{ ...hint, marginTop: 14 }}>
+        Keep this page handy. Tap Clock out when your shift ends.
+      </p>
       <PrimaryButton accent={accent} busy={busy} onClick={onClockOut}>
         Clock out
       </PrimaryButton>
@@ -461,7 +1032,12 @@ function ClockOutByEmail({
         Clock out
       </PrimaryButton>
       <ErrorText error={error} />
-      <button type="button" style={linkBtn} onClick={onBack} disabled={Boolean(busy)}>
+      <button
+        type="button"
+        style={linkBtn}
+        onClick={onBack}
+        disabled={Boolean(busy)}
+      >
         Back to clock in
       </button>
     </form>
@@ -545,13 +1121,33 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Shell({ brand, label, children }: { brand: Brand | null; label?: string; children: ReactNode }) {
+function Shell({
+  brand,
+  label,
+  children,
+}: {
+  brand: Brand | null;
+  label?: string;
+  children: ReactNode;
+}) {
   return (
     <div style={wrap}>
       <div style={{ width: "100%", maxWidth: 480 }}>
-        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 22 }}>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 22,
+          }}
+        >
           <a href={IGNITE_HOME} style={{ display: "inline-flex", alignItems: "center" }}>
-            <img src="/legal/spark-logo.png" alt="Spark by Ignite" style={{ height: 26, width: "auto" }} />
+            <img
+              src="/legal/spark-logo.png"
+              alt="Spark by Ignite"
+              style={{ height: 26, width: "auto" }}
+            />
           </a>
           {brand ? (
             <TenantLogo
@@ -597,7 +1193,12 @@ const kicker: CSSProperties = {
   color: "#78716c",
   margin: "0 0 6px",
 };
-const labelStyle: CSSProperties = { display: "block", fontSize: 13, fontWeight: 600, color: "#44403c" };
+const labelStyle: CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#44403c",
+};
 const input: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
