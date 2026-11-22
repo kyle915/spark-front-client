@@ -50,7 +50,11 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   );
   const ws = data.workspaceOverview;
   const pos = data.retailerPosDashboard;
-  const automation = data.posAutomationWorkspace;
+  const automation = data.posAutomationWorkspace ?? {
+    presets: [],
+    feeds: [],
+    recentDrops: [],
+  };
   const visits = data.canonicalVisits;
 
   const [commitImport, importing] = useMutation<ImportPosType>(
