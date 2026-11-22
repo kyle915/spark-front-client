@@ -1,8 +1,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { reportFieldIssue } from "./fieldIssues";
 import { numberHint, wantsDecimalKeypad } from "./numberSanity";
-import { isExpenseReceiptBucket } from "./photoBuckets";
+import { isExpenseReceiptBucket, isShelfPhotoBucket } from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
+import {
+  advisoryFromShelfCoach,
+  mergePhotoAdvisories,
+  requestShelfCoach,
+} from "./shelfCoach";
 import {
   mergeVoiceDraft,
   notesFallback,
@@ -749,10 +754,58 @@ export default function RecapForm({
     }).then((result) => {
       if (!photosRef.current.some((photo) => photo.id === id)) return;
       const advisory = advisoryFromPhotoCheck(result, bucketName);
+      const current = photosRef.current.find((photo) => photo.id === id)?.check;
+      const merged = mergePhotoAdvisories(
+        { kind: advisory.kind, message: advisory.message },
+        current?.kind === "warn" || current?.kind === "ok"
+          ? { kind: current.kind, message: current.message }
+          : null,
+      );
+      if (!merged) return;
       patchPhoto(id, {
         check: {
-          kind: advisory.kind,
-          message: advisory.message,
+          kind: merged.kind,
+          message: merged.message,
+          dismissed: false,
+        },
+      });
+    });
+  };
+
+  // Aisle shelf coach for shelf-bucket photos. Sibling of photo-check; never blocks.
+  const runShelfCoach = (id: string, file: File) => {
+    if (!token || !file.type.startsWith("image/")) return;
+    const photo = photosRef.current.find((ph) => ph.id === id);
+    if (!photo) return;
+    const bucketName =
+      photo.category != null
+        ? (photoBuckets ?? []).find((b) => b.id === photo.category)?.name ?? null
+        : null;
+    // Only coach labelled shelf/stock/cooler buckets — never every photo.
+    if (!isShelfPhotoBucket(bucketName)) return;
+
+    void requestShelfCoach({
+      origin: apiOrigin(),
+      code,
+      session: token,
+      file,
+      contentType: file.type || "image/jpeg",
+    }).then((result) => {
+      if (!photosRef.current.some((ph) => ph.id === id)) return;
+      const shelf = advisoryFromShelfCoach(result);
+      if (shelf.kind === "unavailable") return;
+      const current = photosRef.current.find((ph) => ph.id === id)?.check;
+      const merged = mergePhotoAdvisories(
+        current
+          ? { kind: current.kind === "pending" ? "ok" : current.kind, message: current.message }
+          : null,
+        shelf,
+      );
+      if (!merged) return;
+      patchPhoto(id, {
+        check: {
+          kind: merged.kind,
+          message: merged.message,
           dismissed: false,
         },
       });
@@ -842,6 +895,7 @@ export default function RecapForm({
       if (!submittedRef.current) void saveDraftPhotoFile(code, token, id, thumb);
     })();
     runPhotoCheck(id, file);
+    runShelfCoach(id, file);
     runReceiptRead(id, file, shaTask);
   };
 

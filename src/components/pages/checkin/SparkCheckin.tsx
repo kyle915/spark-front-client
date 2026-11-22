@@ -12,6 +12,7 @@ import {
 } from "./timesheetOnly";
 import MyShiftsCard from "./MyShiftsCard";
 import ProductQuestionsBox from "./ProductQuestionsBox";
+import { StorePrepKitCard } from "./StorePrepKitCard";
 import {
   useCallback,
   useEffect,
@@ -706,6 +707,9 @@ export default function SparkCheckin() {
             button leads; guides sit under it. */}
         {hidePriorEvent ? null : (
           <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
+        )}
+        {hidePriorEvent ? null : (
+          <StorePrepKitCard kit={ctx.storePrepKit} accent={accent} />
         )}
         {hidePriorEvent ? null : (
           <CheckinStepBar

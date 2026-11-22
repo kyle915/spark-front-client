@@ -10,6 +10,18 @@
 
 import { CLIENT_ORIGIN } from "@/utils/publicHosts";
 
+export type BookedShiftPrepKit = {
+  logisticsNotes?: string;
+  lastShelfVisit?: {
+    eventDate?: string;
+    productOnShelf?: string;
+    priceTagVisible?: string;
+    storeName?: string;
+  } | null;
+  skus?: string[];
+  stockRisk?: { level?: string; reason?: string } | null;
+};
+
 export type BookedShiftCalendarData = {
   id?: string;
   title: string;
@@ -28,6 +40,8 @@ export type BookedShiftCalendarData = {
   trainingUrl?: string;
   releaseToken?: string;
   releaseUrl?: string;
+  skus?: string[];
+  storePrepKit?: BookedShiftPrepKit | null;
 };
 
 const DEFAULT_SHIFT_DURATION_MS = 4 * 60 * 60 * 1000;

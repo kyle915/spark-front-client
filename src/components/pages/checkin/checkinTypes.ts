@@ -5,6 +5,7 @@ import type { PayableMileageState } from "./payableMileage";
 import type { ProgramChangeResult, ProgramChangeState } from "./programSwitchRules";
 import type { StoreChangeResult, StoreChangeState } from "./storeFixRules";
 import type { RecapDraft } from "./recapDraft";
+import type { StorePrepKit } from "./storePrepKit";
 
 // Types mirroring the backend payload (ambassadors/checkin_web.build_public_context).
 // Extracted from SparkCheckin.tsx in the step split — same shapes, no changes.
@@ -224,6 +225,9 @@ export type Context = {
   // Product questions box (answers from this brand's notes only). Present
   // only once the BA has identified; absent on older API builds.
   productQa?: ProductQaState;
+  // Pre-shift Store Prep Kit (logistics + last shelf + SKUs + risk). Absent
+  // when empty or on older API builds / timesheet-only tenants.
+  storePrepKit?: StorePrepKit;
   // Standing link only: shifts this BA already clocked that still need a recap.
   unfiledShifts?: UnfiledShift[];
   // Legacy single-URL twin of `resources`, still sent by the API. Read only as
