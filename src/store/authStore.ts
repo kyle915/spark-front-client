@@ -279,10 +279,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setTenantUuid: (uuid) => {
+    const prevUuid = useAuthStore.getState().tenantUuid;
     if (uuid) {
       localStorage.setItem("@tenantUuid", uuid);
     } else {
       localStorage.removeItem("@tenantUuid");
+    }
+
+    if (uuid !== prevUuid) {
+      localStorage.removeItem("@tenantId");
+      localStorage.removeItem("@tenantSlug");
+      localStorage.removeItem("@tenantLogo");
+      localStorage.removeItem("@tenantRequestUrlName");
+      localStorage.removeItem("@tenantCheckinCode");
+      set({
+        tenantUuid: uuid,
+        tenantId: null,
+        tenantSlug: null,
+        tenantMeta: null,
+      });
+      return;
     }
 
     set({ tenantUuid: uuid });

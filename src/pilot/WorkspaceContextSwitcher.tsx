@@ -6,6 +6,7 @@ import { PilotQueriesWorkspaceContextsQuery } from "@/api/queries/PilotQueries";
 import { PilotMutationsSwitchContextMutation } from "@/api/mutations/PilotMutations";
 import type { PilotQueriesWorkspaceContextsQuery as ContextsQueryType } from "@/api/queries/__generated__/PilotQueriesWorkspaceContextsQuery.graphql";
 import type { PilotMutationsSwitchContextMutation as SwitchMutationType } from "@/api/mutations/__generated__/PilotMutationsSwitchContextMutation.graphql";
+import { applyWorkspaceContextSelection } from "./pilotHelpers";
 
 type ContextRow = ContextsQueryType["response"]["myWorkspaceContexts"][number];
 
@@ -82,16 +83,14 @@ export const WorkspaceContextSwitcher: React.FC = () => {
         tenantUuid: chosen.tenantUuid,
       },
       onCompleted: (resp) => {
-        setSwitching(false);
-        if (resp.switchWorkspaceContext?.ok) {
-          const store = useAuthStore.getState();
-          store.setTenantUuid(chosen.tenantUuid);
-          store.setWorkspaceMembership(
-            chosen.membershipUuid ?? null,
-            chosen.workspaceRole,
-          );
-          window.location.reload();
+        if (!resp.switchWorkspaceContext?.ok) {
+          setSwitching(false);
+          return;
         }
+        void applyWorkspaceContextSelection(chosen).finally(() => {
+          setSwitching(false);
+          window.location.reload();
+        });
       },
       onError: () => {
         setSwitching(false);

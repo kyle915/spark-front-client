@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router";
+import { buildInitialShiftFormState, type MobileVisitSeed } from "./pilotHelpers";
 
 interface AssignmentContext {
   ok: boolean;
@@ -10,14 +11,7 @@ interface AssignmentContext {
   scope_type: string;
   program_name: string | null;
   due_date: string | null;
-  visit: {
-    uuid: string;
-    store_label: string;
-    address: string;
-    city: string;
-    state_code: string;
-    visit_date: string;
-  } | null;
+  visit: MobileVisitSeed | null;
   products: { id: number; name: string }[];
 }
 
@@ -66,6 +60,29 @@ export const ProviderMobileSubmitPage: React.FC = () => {
   const [submittedVisitUuid, setSubmittedVisitUuid] = useState<string | null>(
     null,
   );
+
+  const resetFormForShift = (visit: AssignmentContext["visit"] | null | undefined) => {
+    const fresh = buildInitialShiftFormState(visit);
+    setStoreBanner(fresh.storeBanner);
+    setStoreNumber(fresh.storeNumber);
+    setAddress(fresh.address);
+    setCity(fresh.city);
+    setStateCode(fresh.stateCode);
+    setVisitDate(fresh.visitDate);
+    setShiftKey(fresh.shiftKey);
+    setRepName(fresh.repName);
+    setSamplesDistributed(fresh.samplesDistributed);
+    setConsumersSampled(fresh.consumersSampled);
+    setRepObservedUnits(fresh.repObservedUnits);
+    setNotes(fresh.notes);
+    setProductSpendAmount(fresh.productSpendAmount);
+    setSupplySpendAmount(fresh.supplySpendAmount);
+    setIsReceiptItemized(fresh.isReceiptItemized);
+    setPhotos([]);
+    setReceipts([]);
+    setSubmitError(null);
+    setSubmittedVisitUuid(null);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -239,10 +256,7 @@ export const ProviderMobileSubmitPage: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              setSubmittedVisitUuid(null);
-              setPhotos([]);
-              setReceipts([]);
-              setNotes("");
+              resetFormForShift(ctx.visit);
             }}
             className="w-full py-2.5 rounded-xl text-sm font-semibold"
             style={{ background: "#c5f546", color: "#0A0B0D" }}

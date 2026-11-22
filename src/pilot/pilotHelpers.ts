@@ -1,7 +1,14 @@
 /**
- * Pure formatting, badge, and download helpers for Standalone Spark Milestone 1
- * workspaces, costs, finance exceptions, retailer POS, and store actions.
+ * Pure formatting, badge, state-reset, and download helpers for Standalone Spark
+ * Milestone 1 workspaces, costs, finance exceptions, retailer POS, and store actions.
  */
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
+import { TenantQuery } from "@/api/queries/TenantQuery";
+import type { TenantQuery as TenantQueryType } from "@/api/queries/__generated__/TenantQuery.graphql";
+import { applyTenantSwitch } from "@/hooks/useAdoptRecordTenant";
+import type { SwitchableTenant } from "@/lib/tenantDeepLink";
+import { useAuthStore } from "@/store/authStore";
 
 export type WorkspaceRoleKind =
   | "brand_admin"
@@ -196,3 +203,124 @@ export function triggerExportDownload(params: {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export interface MobileVisitSeed {
+  uuid: string;
+  store_label: string;
+  address: string;
+  city: string;
+  state_code: string;
+  visit_date: string;
+}
+
+export interface MobileShiftFormState {
+  storeBanner: string;
+  storeNumber: string;
+  address: string;
+  city: string;
+  stateCode: string;
+  visitDate: string;
+  shiftKey: string;
+  repName: string;
+  samplesDistributed: string;
+  consumersSampled: string;
+  repObservedUnits: string;
+  notes: string;
+  productSpendAmount: string;
+  supplySpendAmount: string;
+  isReceiptItemized: boolean;
+}
+
+export function buildInitialShiftFormState(
+  visit: MobileVisitSeed | null | undefined,
+  todayIso: string = new Date().toISOString().slice(0, 10),
+): MobileShiftFormState {
+  return {
+    storeBanner: visit?.store_label ?? "",
+    storeNumber: "",
+    address: visit?.address ?? "",
+    city: visit?.city ?? "",
+    stateCode: visit?.state_code ?? "",
+    visitDate: visit?.visit_date ?? todayIso,
+    shiftKey: "default",
+    repName: "",
+    samplesDistributed: "",
+    consumersSampled: "",
+    repObservedUnits: "",
+    notes: "",
+    productSpendAmount: "",
+    supplySpendAmount: "",
+    isReceiptItemized: true,
+  };
+}
+
+async function defaultLoadTenants(
+  userUuid?: string | null,
+): Promise<SwitchableTenant[]> {
+  const data = await fetchQuery<TenantQueryType>(
+    environment,
+    TenantQuery,
+    userUuid ? { userUuid } : {},
+    { fetchPolicy: "network-only" },
+  ).toPromise();
+  return (data?.tenants?.edges ?? [])
+    .map((edge) => edge?.node)
+    .filter((n): n is NonNullable<typeof n> => Boolean(n))
+    .map((n) => ({
+      id: n.id,
+      uuid: String(n.uuid),
+      name: n.name ?? null,
+      logo: n.image ?? null,
+      requestUrlName: n.requestUrlName ?? null,
+      tenantSlug: n.tenantSlug ?? null,
+      checkinCode: n.checkinCode ?? null,
+    }));
+}
+
+/**
+ * Persist the selected workspace membership AND refresh/clear all tenant fields
+ * (`tenantId`, `tenantSlug`, `logo`, `requestUrlName`, `checkinCode`) so stale
+ * metadata from the previously selected brand never leaks across reloads.
+ */
+export async function applyWorkspaceContextSelection(
+  chosen: {
+    membershipUuid?: string | null;
+    tenantUuid: string;
+    tenantSlug?: string | null;
+    workspaceRole: string;
+  },
+  loadTenants: (
+    userUuid?: string | null,
+  ) => Promise<SwitchableTenant[]> = defaultLoadTenants,
+): Promise<void> {
+  const store = useAuthStore.getState();
+  store.setWorkspaceMembership(
+    chosen.membershipUuid ?? null,
+    chosen.workspaceRole,
+  );
+  // Immediately clear any previous tenant's Relay ID, logo, request URL, and
+  // check-in code while stamping the new tenantUuid + tenantSlug.
+  store.setTenant(
+    chosen.tenantUuid,
+    "",
+    null,
+    null,
+    chosen.tenantSlug || null,
+    null,
+  );
+
+  try {
+    const tenants = await loadTenants(store.user?.uuid);
+    const match = tenants.find((t) => t.uuid === chosen.tenantUuid);
+    if (match) {
+      applyTenantSwitch({
+        ...match,
+        tenantSlug: match.tenantSlug ?? (chosen.tenantSlug || null),
+      });
+    }
+  } catch {
+    // External provider memberships intentionally have no consolidated TenantQuery
+    // row; the cleared baseline set above keeps tenant state consistent.
+  }
+}
+
