@@ -14,6 +14,51 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-22w",
+    date: "November 22, 2026",
+    title: "Multi-store wave booking and slide-over store drawer",
+    items: [
+      "On the Account Map, select multiple stores (or all filtered stores) to schedule a multi-store demo wave in one slide-over sheet: pick your activation type, dates, start and end times, SKUs and notes without exporting a spreadsheet.",
+      "Click any store on the Master Tracker, Recaps, Approvals or Insights to open its visits, totals, products and photos in a slide-over Store Drawer without losing your active table or report filters.",
+      "Both the Store Drawer and full store page include header quick actions: Schedule visit prefills a new request for that store, and Staff can use Rebook last crew to book the previous ambassador team again.",
+      "Save persistent store logistics notes on any store, including parking, demo table setup and manager check-in, so future shifts keep those details on hand.",
+    ],
+  },
+  {
+    id: "2026-11-22j",
+    date: "November 22, 2026",
+    title: "Instant workspace switching and upgraded Jump (⌘K)",
+    items: [
+      "Switch between client workspaces without a full page reload while keeping your active route on lists, maps, schedules and reports instead of resetting to Home.",
+      "Jump (⌘K / Ctrl K) now runs single-query search across pages, stores, requests, events and recaps with built-in quick actions: Switch client, Copy link (standing check-in or public request link) and New request.",
+      "Staff: selecting an ambassador in Jump opens their profile cleanly on the talent roster.",
+      "Multi-page dashboards, approvals and reports load faster, with automatic session refresh in the background so long forms and uploads don't time out.",
+    ],
+  },
+  {
+    id: "2026-11-22r",
+    date: "November 22, 2026",
+    title: "Receipt spend auto-fill, pre-submit checks and Camera Roll",
+    staffOnly: true,
+    items: [
+      "Uploading a receipt photo during a check-in recap now reads the receipt spend automatically and offers one-tap auto-fill beneath the spend box to accept or ignore.",
+      "Before submit, the check-in recap warns the BA when a receipt shows the wrong store, the wrong date or a duplicate receipt already submitted on another recap.",
+      "Shift and tally-sheet photo fields on mobile check-in now support uploading from Camera Roll as well as live camera capture.",
+    ],
+  },
+  {
+    id: "2026-11-22c",
+    date: "November 22, 2026",
+    title: "Live shift tap counter, offline clock and job board self-serve",
+    staffOnly: true,
+    items: [
+      "While clocked in on a check-in link, BAs have an offline SKU sample and unit tap counter plus a shopper quote scratchpad that auto-fill the recap form at shift end.",
+      "Standalone time-clock links (/clock/:token) now queue punches offline in back-of-store dead zones and send the original punch time once signal returns.",
+      "Booked shifts on the job board (/jobs/:token) include .ics download and Google Calendar links with the shift's check-in and prep details.",
+      "BAs can release a shift themselves on /jobs/:token more than 36 hours before start time with a reason, reopening the slot and notifying staffing; inside 36 hours, Spark directs them straight to staffing.",
+    ],
+  },
+  {
     id: "2026-11-21s",
     date: "November 21, 2026",
     title: "BAs can fix a wrong store after clocking in",
