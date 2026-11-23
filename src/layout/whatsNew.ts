@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23ae",
+    date: "November 23, 2026",
+    title: "Famus recaps end with a store sign-off",
+    items: [
+      "On a Famus recap, the form now ends with a store sign-off. The clerk types a first name and one last initial, then signs with a finger or a mouse.",
+      "That name and signature stay on the recap. Staff and the client both see them when the recap is opened.",
+    ],
+  },
+  {
     id: "2026-11-23ad",
     date: "November 23, 2026",
     title: "Check-in boxes say what to type",

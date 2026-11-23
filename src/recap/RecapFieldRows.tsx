@@ -71,6 +71,12 @@ export type RecapShareField = {
   imageUrl?: string | null;
 };
 
+function shareImageSrc(field: RecapShareField): string | null {
+  if (field.imageUrl) return field.imageUrl;
+  const value = (field.value ?? "").trim();
+  return value.startsWith("data:image/") ? value : null;
+}
+
 /** Public / client recap: section cards with grouped metric rows. */
 export function RecapShareFieldSections({
   sections,
@@ -86,19 +92,19 @@ export function RecapShareFieldSections({
     <div className={cn(className)}>
       {sections.map((section) => {
         const withValue = section.fields.filter(
-          (f) => f.imageUrl || Boolean((f.value ?? "").trim()),
+          (f) => shareImageSrc(f) || Boolean((f.value ?? "").trim()),
         );
         const dropOffs = withValue.filter((f) => isDropOffLocationsField(f));
         const rows = withValue.filter(
           (f) =>
-            !f.imageUrl &&
+            !shareImageSrc(f) &&
             (f.value ?? "").length <= 50 &&
             !isDropOffLocationsField(f),
         );
-        const images = withValue.filter((f) => f.imageUrl);
+        const images = withValue.filter((f) => shareImageSrc(f));
         const notes = withValue.filter(
           (f) =>
-            !f.imageUrl &&
+            !shareImageSrc(f) &&
             (f.value ?? "").length > 50 &&
             !isDropOffLocationsField(f),
         );
@@ -178,9 +184,14 @@ export function RecapShareFieldSections({
                   <RecapFieldBlockLabel label={f.name} />
                 )}
                 <img
-                  src={f.imageUrl ?? ""}
+                  src={shareImageSrc(f) ?? ""}
                   alt={formatRecapFieldLabel(f.name)}
                   className="max-h-64 w-auto rounded-lg object-contain"
+                  style={
+                    (shareImageSrc(f) ?? "").startsWith("data:image/")
+                      ? { background: "#ffffff", border: "1px solid #1c1917" }
+                      : undefined
+                  }
                 />
               </div>
             ))}

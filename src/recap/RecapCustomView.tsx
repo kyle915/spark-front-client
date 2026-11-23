@@ -154,6 +154,8 @@ import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMu
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 import PushToPlanButton from "@/field/PushToPlanButton";
 import { recapTypeForRow } from "@/lib/activationBucket";
+import { SignaturePad } from "./SignaturePad";
+import { isLetterType, isSignatureType, letterValue, signatureSrc } from "./retailerSignoff";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 import { RecapBestPhotosPanel } from "./RecapBestPhotosPanel";
 import { RecapShelfPanel } from "./RecapShelfPanel";
@@ -170,8 +172,10 @@ const RecapReceiptsPanel = lazy(() => import("./RecapReceiptsPanel"));
 // an "image" / "choice" field is.
 function customFieldKind(
   typeName: string | null | undefined,
-): "image" | "select" | "multiselect" | "other" {
+): "image" | "select" | "multiselect" | "signature" | "letter" | "other" {
   const name = (typeName ?? "").toLowerCase();
+  if (name === "signature") return "signature";
+  if (name === "letter") return "letter";
   if (name.includes("image") || name.includes("photo") || name.includes("img"))
     return "image";
   if (name === "multiselect" || name.includes("multi")) return "multiselect";
@@ -197,6 +201,7 @@ function customFieldHasDisplayValue(
   }
   const kind = customFieldKind(field.customFieldType?.name);
   const value = field.value ?? "";
+  if (kind === "signature") return Boolean(signatureSrc(value));
   if (kind === "image") return Boolean(value);
   if (kind === "select" || kind === "multiselect") {
     return parseChoiceList(value).length > 0;
@@ -2380,6 +2385,7 @@ const RecapCustomViewInner = ({
                     const kind = customFieldKind(field.customFieldType?.name);
                     if (
                       kind === "image" ||
+                      kind === "signature" ||
                       kind === "select" ||
                       kind === "multiselect" ||
                       isDropOffLocationsField(field)
@@ -2419,6 +2425,21 @@ const RecapCustomViewInner = ({
                                       inputClassName="spark-input w-28 text-right text-sm"
                                       ariaLabel={field.name ?? "Spend amount"}
                                       hint={false}
+                                    />
+                                  ) : isLetterType(field.customFieldType?.name) ? (
+                                    <input
+                                      type="text"
+                                      maxLength={1}
+                                      aria-label={field.name ?? "Last initial"}
+                                      autoCapitalize="characters"
+                                      value={editedValues[fieldId] ?? ""}
+                                      onChange={(e) =>
+                                        setEditedValues((prev) => ({
+                                          ...prev,
+                                          [fieldId]: letterValue(e.target.value),
+                                        }))
+                                      }
+                                      className="spark-input w-16 text-right text-sm uppercase"
                                     />
                                   ) : (
                                   <input
@@ -2489,6 +2510,44 @@ const RecapCustomViewInner = ({
                             </Suspense>
                           ) : (
                             <DropOffLocationsReadout value={displayValue} />
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (kind === "signature" || isSignatureType(field.customFieldType?.name)) {
+                      const src = signatureSrc(displayValue);
+                      return (
+                        <div
+                          key={field.id}
+                          className="rounded-xl p-4 space-y-2 xl:col-span-2"
+                          style={inset}
+                        >
+                          {!recapLabelsMatch(field.name, section.name) && (
+                            <RecapFieldBlockLabel label={field.name} />
+                          )}
+                          {isEditingValues ? (
+                            <SignaturePad
+                              value={src ?? ""}
+                              onChange={(v) =>
+                                setEditedValues((prev) => ({
+                                  ...prev,
+                                  [fieldId]: v,
+                                }))
+                              }
+                              helperColor="var(--recap-text, #14160f)"
+                            />
+                          ) : src ? (
+                            <img
+                              src={src}
+                              alt={field.name ?? "Signature"}
+                              className="max-h-40 w-auto rounded-lg bg-white object-contain"
+                              style={{ border: "1px solid #1c1917" }}
+                            />
+                          ) : (
+                            <p className="text-sm md:text-base" style={{ color: "var(--recap-text, #14160f)" }}>
+                              —
+                            </p>
                           )}
                         </div>
                       );

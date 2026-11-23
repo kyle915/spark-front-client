@@ -70,10 +70,20 @@ export function previewApiUrl(code: string, programId?: string | null): string {
   return programId ? `${base}?program=${encodeURIComponent(programId)}` : base;
 }
 
-export type FieldKind = "number" | "choice" | "multi" | "photo" | "long" | "text";
+export type FieldKind =
+  | "number"
+  | "choice"
+  | "multi"
+  | "photo"
+  | "long"
+  | "text"
+  | "signature"
+  | "letter";
 
 export function fieldKind(type: string): FieldKind {
   const t = (type || "").toLowerCase();
+  if (t === "signature") return "signature";
+  if (t === "letter") return "letter";
   if (isPhotoType(t)) return "photo";
   const choice = choiceKind(t);
   if (choice === "multiselect") return "multi";
@@ -85,7 +95,8 @@ export function fieldKind(type: string): FieldKind {
 
 /** Short type hint shown under each question. */
 export function fieldTypeHint(field: Pick<PreviewField, "type" | "options">): string {
-  switch (fieldKind(field.type)) {
+  const kind = fieldKind(field.type);
+  switch (kind) {
     case "number":
       return "Number";
     case "choice":
@@ -96,8 +107,16 @@ export function fieldTypeHint(field: Pick<PreviewField, "type" | "options">): st
       return "Photos";
     case "long":
       return "A few sentences";
-    default:
+    case "signature":
+      return "Sign with a finger or mouse";
+    case "letter":
+      return "One letter";
+    case "text":
       return "Short answer";
+    default: {
+      const _never: never = kind;
+      return _never;
+    }
   }
 }
 
@@ -170,6 +189,8 @@ export function buildChecklist(payload: RecapPreviewPayload): Checklist {
       });
     } else if (kind === "photo") {
       photos.push({ text: stripColon(f.name), note: note ?? "required" });
+    } else if (kind === "signature" || kind === "letter") {
+      answers.push({ text: stripColon(f.name), note });
     }
   }
 

@@ -3,6 +3,14 @@ import {
   isProductsSampledMultiselect,
   productSamplesFromSelections,
 } from "@/recap/productsSampledQty";
+import {
+  clerkFirstNameError,
+  clerkFirstNameValue,
+  isLetterType,
+  isSignatureType,
+  letterValue,
+  signatureError,
+} from "@/recap/retailerSignoff";
 
 export type CoBrandField = {
   id: string;
@@ -92,9 +100,26 @@ export function useCoBrandRecap(
     if (active.length === 0) return "Pick the other brand(s) you sampled, or choose No.";
     for (const brand of active) {
       for (const s of brand.sections) {
+        const signoff = s.fields.some((f) => isSignatureType(f.type));
         for (const f of s.fields) {
           if (!f.required || isPhoto(f.type)) continue;
-          if (isEmpty(values[brand.tenantId]?.[f.id])) {
+          const raw = values[brand.tenantId]?.[f.id];
+          const text = Array.isArray(raw) ? "" : String(raw ?? "");
+          if (isSignatureType(f.type)) {
+            const err = signatureError(text);
+            if (err) return `${brand.name}: ${err}`;
+            continue;
+          }
+          if (isLetterType(f.type)) {
+            if (!letterValue(text)) return `${brand.name}: Last initial is one letter.`;
+            continue;
+          }
+          if (signoff && f.name.trim().toLowerCase() === "first name") {
+            const err = clerkFirstNameError(text);
+            if (err) return `${brand.name}: ${err}`;
+            continue;
+          }
+          if (isEmpty(raw)) {
             return `${brand.name}: please fill in "${f.name}".`;
           }
         }
@@ -119,10 +144,19 @@ export function useCoBrandRecap(
       return {
         tenantId: brand.tenantId,
         fieldValues: Object.entries(brandValues)
-          .map(([id, v]) => ({
-            customFieldId: id,
-            value: Array.isArray(v) ? JSON.stringify(v) : String(v),
-          }))
+          .map(([id, v]) => {
+            const field = fields.find((f) => f.id === id);
+            let value = Array.isArray(v) ? JSON.stringify(v) : String(v);
+            if (field && isLetterType(field.type)) value = letterValue(value);
+            if (
+              field &&
+              field.name.trim().toLowerCase() === "first name" &&
+              fields.some((f) => isSignatureType(f.type))
+            ) {
+              value = clerkFirstNameValue(value);
+            }
+            return { customFieldId: id, value };
+          })
           .filter((fv) => fv.value !== "" && fv.value !== "[]"),
         productSamples: productSamplesFromSelections(
           picked,

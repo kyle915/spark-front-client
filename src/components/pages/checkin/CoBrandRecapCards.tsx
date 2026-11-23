@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { isSignatureType } from "@/recap/retailerSignoff";
 import { isPhoto, type CoBrand, type CoBrandField, type CoBrandRecapState } from "./coBrandRecap";
 
 const pill = (on: boolean, accent: string): CSSProperties => ({
@@ -92,6 +93,11 @@ export function CoBrandSections({
             <h2 style={headingStyle}>
               {brand.name} · {section.name}
             </h2>
+            {section.fields.some((f) => isSignatureType(f.type)) ? (
+              <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.45, color: "#44403c" }}>
+                The store clerk types a first name and last initial, then signs.
+              </p>
+            ) : null}
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
               {section.fields
                 .filter((f) => !isPhoto(f.type))

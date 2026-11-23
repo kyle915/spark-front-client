@@ -54,11 +54,21 @@ import {
   card,
   errText,
   h2,
+  helperText,
   input,
   label,
   primaryBtn,
   secondaryBtn,
 } from "./checkinStyles";
+import { SignaturePad } from "@/recap/SignaturePad";
+import {
+  clerkFirstNameError,
+  clerkFirstNameValue,
+  isLetterType,
+  isSignatureType,
+  letterValue,
+  signatureError,
+} from "@/recap/retailerSignoff";
 import { CorpoCardYesNo, PhotoBucketZone, PhotoFileInputs, PhotoGrid } from "./RecapPhotoStep";
 import {
   engagementsFromSamplesGiven,
@@ -1271,6 +1281,26 @@ export default function RecapForm({
       for (const f of s.fields) {
         if (!f.required || isPhotoType(f.type) || !isFieldShown(f, valuesForSubmit)) continue;
         const v = valuesForSubmit[f.id];
+        if (isSignatureType(f.type)) {
+          const err = signatureError(Array.isArray(v) ? "" : String(v ?? ""));
+          if (err) return setErr(err);
+          continue;
+        }
+        if (isLetterType(f.type)) {
+          const letter = letterValue(Array.isArray(v) ? "" : String(v ?? ""));
+          if (!letter) return setErr("Last initial is one letter.");
+          valuesForSubmit[f.id] = letter;
+          continue;
+        }
+        if (
+          f.name.trim().toLowerCase() === "first name" &&
+          s.fields.some((other) => isSignatureType(other.type))
+        ) {
+          const raw = Array.isArray(v) ? "" : String(v ?? "");
+          const err = clerkFirstNameError(raw);
+          if (err) return setErr(err);
+          valuesForSubmit[f.id] = clerkFirstNameValue(raw);
+        }
         if (isDropOffLocationsField(f)) {
           const dropErr = validateDropOffLocationsValue(
             Array.isArray(v) ? JSON.stringify(v) : String(v ?? ""),
@@ -1819,6 +1849,11 @@ export default function RecapForm({
         return (
         <div key={section.id} style={card}>
           <h2 style={h2}>{labelBrand ? `${brandName} · ${section.name}` : section.name}</h2>
+          {fields.some((f) => isSignatureType(f.type)) ? (
+            <p style={{ ...helperText, margin: "6px 0 0" }}>
+              The store clerk types a first name and last initial, then signs.
+            </p>
+          ) : null}
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
             {fields.map((f) => (
               <div key={f.id} data-completeness-target={f.id}>
@@ -2536,6 +2571,44 @@ function FieldInput({
         theme="checkin"
         accent={accent}
       />
+    );
+  }
+
+  if (isSignatureType(field.type)) {
+    return (
+      <div data-completeness-target={field.id}>
+        <label style={label}>
+          {field.name}
+          {req}
+        </label>
+        <SignaturePad
+          value={typeof value === "string" ? value : ""}
+          onChange={(v) => onChange(v)}
+        />
+      </div>
+    );
+  }
+
+  if (isLetterType(field.type)) {
+    const shown = typeof value === "string" ? value : "";
+    return (
+      <div data-completeness-target={field.id}>
+        <label style={label}>
+          {field.name}
+          {req}
+        </label>
+        <input
+          style={{ ...input, maxWidth: 88, textTransform: "uppercase" }}
+          maxLength={1}
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label={field.name}
+          value={shown}
+          onChange={(e) => onChange(letterValue(e.target.value))}
+        />
+        <p style={{ ...helperText, margin: "6px 0 0" }}>One letter.</p>
+      </div>
     );
   }
 

@@ -48,6 +48,14 @@ import {
   productSamplesFromDropOffs,
   validateDropOffLocationsValue,
 } from "./dropOffLocations";
+import { SignaturePad } from "./SignaturePad";
+import {
+  clerkFirstNameError,
+  clerkFirstNameValue,
+  isLetterType,
+  letterValue,
+  signatureError,
+} from "./retailerSignoff";
 import { SpendAmountInput } from "./SpendAmountInput";
 import {
   isSpendAmountField,
@@ -131,8 +139,10 @@ type TemplateField = NonNullable<TemplateNode["customField"]>[number];
 
 function fieldKind(
   field: TemplateField,
-): "text" | "number" | "longtext" | "image" | "select" | "multiselect" {
+): "text" | "number" | "longtext" | "image" | "select" | "multiselect" | "signature" | "letter" {
   const name = (field?.customFieldType?.name ?? "").toLowerCase();
+  if (name === "signature") return "signature";
+  if (name === "letter") return "letter";
   if (name === "multiselect" || name.includes("multiselect")) return "multiselect";
   if (name === "select" || name.includes("dropdown")) return "select";
   if (name.includes("image") || name.includes("photo") || name.includes("img"))
@@ -464,6 +474,38 @@ export default function SparkRecapCreate() {
     // send blank fields — the detail view renders every template field
     // anyway (it iterates the template, not just stored values), so an
     // unfilled field shows "—" without us persisting an empty row.
+    const signoffForm = (selectedTemplate.customField ?? []).some(
+      (f) => f && fieldKind(f) === "signature",
+    );
+    for (const f of selectedTemplate.customField ?? []) {
+      if (!f) continue;
+      const id = String(f.id);
+      if (
+        signoffForm &&
+        (f.name ?? "").trim().toLowerCase() === "first name"
+      ) {
+        const err = clerkFirstNameError(nextFieldValues[id] ?? "", Boolean(f.required));
+        if (err) {
+          showAlert(err, "warning");
+          return;
+        }
+        nextFieldValues[id] = clerkFirstNameValue(nextFieldValues[id] ?? "");
+      }
+      if (fieldKind(f) === "letter") {
+        nextFieldValues[id] = letterValue(nextFieldValues[id] ?? "");
+        if (f.required && !nextFieldValues[id]) {
+          showAlert("Last initial is one letter.", "warning");
+          return;
+        }
+      }
+      if (fieldKind(f) === "signature" && (f.required || (nextFieldValues[id] ?? "").trim())) {
+        const err = signatureError(nextFieldValues[id] ?? "", Boolean(f.required));
+        if (err) {
+          showAlert(err, "warning");
+          return;
+        }
+      }
+    }
     const customFieldValues = (selectedTemplate.customField ?? [])
       .filter((f): f is NonNullable<typeof f> => Boolean(f))
       // Image fields are captured via the uploader → files[], not as a
@@ -1359,6 +1401,11 @@ const CustomTemplateFields: React.FC<{
     <>
       {sections.map((section) => (
         <Card key={section.name} title={section.name.toUpperCase()}>
+          {section.fields.some((f) => fieldKind(f) === "signature") ? (
+            <p className="text-sm mb-3" style={{ color: "var(--spark-text)" }}>
+              The store clerk types a first name and last initial, then signs.
+            </p>
+          ) : null}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {section.fields.map((f) => {
               const id = String(f.id);
@@ -1524,6 +1571,36 @@ const CustomTemplateFields: React.FC<{
                       </div>
                     </Field>
                   </div>
+                );
+              }
+              if (fieldKind(f) === "signature") {
+                return (
+                  <div key={id} className="sm:col-span-2">
+                    <Field label={label}>
+                      <SignaturePad
+                        value={values[id] ?? ""}
+                        onChange={(v) => onChange(id, v)}
+                        helperColor="var(--spark-text)"
+                      />
+                    </Field>
+                  </div>
+                );
+              }
+              if (fieldKind(f) === "letter" || isLetterType(f.customFieldType?.name)) {
+                return (
+                  <Field key={id} label={label}>
+                    <input
+                      value={values[id] ?? ""}
+                      maxLength={1}
+                      aria-label={f.name ?? "Last initial"}
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      onChange={(e) => onChange(id, letterValue(e.target.value))}
+                      className={inputCls}
+                      style={{ maxWidth: 88, textTransform: "uppercase" }}
+                    />
+                  </Field>
                 );
               }
               if (isSpendAmountField({
