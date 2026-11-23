@@ -70,27 +70,31 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-22c")).toBe(true);
   });
 
-  it("routes November 23 ship-wave notes to matching client and staff audiences", () => {
+  it("routes November 23 landed ship notes to matching client and staff audiences", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Client + staff: Photo Wall / pitch decks, POS + digests, Shifts Board readability
+    // Landed on main: Photo Wall / pitch decks, POS + digests, Shifts Board
     for (const id of ["2026-11-23p", "2026-11-23r", "2026-11-23c"] as const) {
       expect(clientIds.has(id)).toBe(true);
       expect(staffIds.has(id)).toBe(true);
     }
 
-    // Ignite staff only: attention strip, shelf coach, Clean/Needs Eyes, map-this-store, UTMs
+    // Landed staff-only: onboarding UTMs → Close
+    expect(clientIds.has("2026-11-23u")).toBe(false);
+    expect(staffIds.has("2026-11-23u")).toBe(true);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-23u")?.staffOnly).toBe(true);
+
+    // In-flight features stay out of this batch until their PRs merge
     for (const id of [
       "2026-11-23a",
       "2026-11-23s",
       "2026-11-23e",
       "2026-11-23m",
-      "2026-11-23u",
     ] as const) {
       expect(clientIds.has(id)).toBe(false);
-      expect(staffIds.has(id)).toBe(true);
-      expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
+      expect(staffIds.has(id)).toBe(false);
+      expect(WHATS_NEW.some((e) => e.id === id)).toBe(false);
     }
 
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23p");

@@ -40,46 +40,6 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
-    id: "2026-11-23a",
-    date: "November 23, 2026",
-    title: "Today's attention is staff-only (cleaner admin strip)",
-    staffOnly: true,
-    items: [
-      "Brand clients no longer see Today's attention on the dashboard — ops queues stay Ignite-side.",
-      "For staff, the strip groups by bucket with counts, a View all link, and compact action buttons.",
-    ],
-  },
-  {
-    id: "2026-11-23s",
-    date: "November 23, 2026",
-    title: "AI aisle coach and Store Prep Kit on BA shift cards",
-    staffOnly: true,
-    items: [
-      "When a BA uploads a shelf-bucket photo on check-in, Spark can nudge clearer aisle framing before they submit (non-blocking; works offline without blocking the shift).",
-      "A Store Prep Kit card on check-in and booked job-board shifts pulls logistics, last shelf notes, SKUs, BA materials and stock-risk so ambassadors walk in prepared.",
-    ],
-  },
-  {
-    id: "2026-11-23e",
-    date: "November 23, 2026",
-    title: "Clean vs Needs Eyes photo triage on Needs review",
-    staffOnly: true,
-    items: [
-      "On Needs review, staff can filter All / Clean / Needs Eyes so photo-ready recaps sort first and exceptions get eyes.",
-      "Approve all Clean only lights up after triage finishes — pending or missing labels never count as Clean. Brand clients never see the pill or counts.",
-    ],
-  },
-  {
-    id: "2026-11-23m",
-    date: "November 23, 2026",
-    title: "Map this store: suggested match without the typing jank",
-    staffOnly: true,
-    items: [
-      "Opening Map this store on an unmatched recap now suggests a store from the typed address (Places + OpenAI) with Confirm when confidence is high — you still confirm before it sticks.",
-      "Searching while mapping no longer remounts the card on every keystroke, so focus and typing stay stable.",
-    ],
-  },
-  {
     id: "2026-11-23u",
     date: "November 23, 2026",
     title: "Onboarding marketing UTMs land in Close",
