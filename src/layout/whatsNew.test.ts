@@ -100,9 +100,11 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only: Send, walk-up attach, nudge-all-overdue, denser attention, route lock,
-    // finance queue, map-this-store, triage, shelf coach, attention, UTMs
+    // Staff-only: Check-In Studio, Needs Eyes/CSV, Send, walk-up attach,
+    // nudge-all-overdue, denser attention, route lock, finance queue,
+    // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23aa",
       "2026-11-23z",
       "2026-11-23y",
       "2026-11-23o",
@@ -121,9 +123,9 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Client newest is deck captions. Staff see the Needs Eyes / CSV note first.
+    // Client newest is deck captions. Staff see Check-In Studio first.
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23v");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23z");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23aa");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -149,7 +151,7 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23z");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23aa");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -163,7 +165,7 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Client tip is 2026-11-23v and staff tip is 2026-11-23z — legacy email tip clears neither.
+    // Client tip is 2026-11-23v and staff tip is 2026-11-23aa — legacy email tip clears neither.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
 
