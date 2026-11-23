@@ -260,15 +260,28 @@ const PublicPitch: React.FC = () => {
   const kpis = data.kpis || {};
   const photos = data.photos || [];
   const sellStory = (data.sellStory || data.introNote || "").trim();
-  const lightbox: PhotoLightboxItem[] = photos.map((p) => ({
-    url: p.url,
-    // Prefer the sell-story caption already drafted on the photo; keep
-    // store as a quiet secondary when the caption does not already name it.
-    caption: p.caption
-      ? p.caption
-      : [p.store, p.category].filter(Boolean).join(" · "),
-    name: p.store || p.retailer,
-  }));
+  const lightbox: PhotoLightboxItem[] = photos.map((p) => {
+    const store = (p.store || p.retailer || "").trim();
+    const secondary = [store, p.category].filter(Boolean).join(" · ");
+    const sellCaption = (p.caption || "").trim();
+    // Keep store/category even when a sell-story caption exists — PhotoLightbox
+    // used to drop `name` whenever `caption` was set.
+    let caption = sellCaption;
+    if (sellCaption && secondary) {
+      const alreadyNamesStore =
+        !!store && sellCaption.toLowerCase().includes(store.toLowerCase());
+      caption = alreadyNamesStore
+        ? sellCaption
+        : `${sellCaption} · ${secondary}`;
+    } else if (!sellCaption) {
+      caption = secondary;
+    }
+    return {
+      url: p.url,
+      caption,
+      name: store || p.category || undefined,
+    };
+  });
 
   return (
     <RecapDocument page>

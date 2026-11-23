@@ -188,7 +188,21 @@ export function PhotoLightbox({
                 maxWidth: 720,
               }}
             >
-              {photo.caption || photo.name}
+              {photo.caption && photo.name &&
+              photo.caption.trim().toLowerCase() !==
+                photo.name.trim().toLowerCase() &&
+              !photo.caption
+                .toLowerCase()
+                .includes(photo.name.trim().toLowerCase()) ? (
+                <>
+                  <span style={{ color: C.text }}>{photo.caption}</span>
+                  <span style={{ display: "block", marginTop: 4, fontSize: 12 }}>
+                    {photo.name}
+                  </span>
+                </>
+              ) : (
+                photo.caption || photo.name
+              )}
             </figcaption>
           )}
           <p
