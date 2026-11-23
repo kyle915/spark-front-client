@@ -27,6 +27,8 @@ export const MissingRecapEventsQuery = graphql`
         name
         email
         isApproved
+        lastNudgedAt
+        lastNudgeChannel
       }
     }
   }
