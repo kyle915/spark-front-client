@@ -100,9 +100,12 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only: Send, walk-up attach, nudge-all-overdue, denser attention, route lock,
-    // finance queue, map-this-store, triage, shelf coach, attention, UTMs
+    // Staff-only: operating screens, Check-In Studio, Needs Eyes/CSV, Send, walk-up attach,
+    // nudge-all-overdue, denser attention, route lock, finance queue,
+    // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23x",
+      "2026-11-23aa",
       "2026-11-23z",
       "2026-11-23y",
       "2026-11-23o",
@@ -122,9 +125,9 @@ describe("whatsNewFor", () => {
     }
 
     // Newest tip is Ask AI on the current program year (client-visible, so staff see it first too)
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23x");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23x");
-    expect(WHATS_NEW.find((e) => e.id === "2026-11-23x")?.staffOnly).toBeFalsy();
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23ab");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23ab");
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-23ab")?.staffOnly).toBeFalsy();
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -144,13 +147,13 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23x");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23ab");
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23x");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23ab");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -164,7 +167,7 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Newest client and staff tip is 2026-11-23x — the older email tip clears neither.
+    // Newest client and staff tip is 2026-11-23ab — the older email tip clears neither.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
 

@@ -349,7 +349,7 @@ export const SparkTopbar: React.FC = () => {
             onClick={() => setMenuOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            aria-label="Account menu"
+            aria-label={unseenNews ? "Account menu, what's new" : "Account menu"}
             className="spark-focus-ring relative w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center"
           >
             {initial}
@@ -357,9 +357,10 @@ export const SparkTopbar: React.FC = () => {
               <span
                 aria-hidden
                 className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full"
+                title="What's new"
                 style={{
-                  background: "var(--spark-sky)",
-                  border: "2px solid var(--spark-bg)",
+                  background: "#f6f6f2",
+                  boxShadow: "0 0 0 2px #ef5a2a",
                 }}
               />
             ) : null}

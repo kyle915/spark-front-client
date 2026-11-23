@@ -14,12 +14,36 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-23x",
+    id: "2026-11-23ab",
     date: "November 23, 2026",
     title: "Ask AI uses this year's program",
     items: [
       "Ask AI now answers “last month”, “this month”, and “which stores should we hit in December” from the current year and the same Home numbers (events run, consumers sampled, and who said they'd buy), instead of empty results from 2022 or 2023.",
       "Suggested questions name the month and year they mean. Each answer still shows the Spark source it came from, and it still only uses this brand's data.",
+    ],
+  },
+  {
+    id: "2026-11-23x",
+    date: "November 23, 2026",
+    title: "The work sits above the controls",
+    staffOnly: true,
+    items: [
+      "Recaps has one search. The number is labeled Engagements. Cards, dates, export, map, select, pin, and jump are under More.",
+      "Master Tracker keeps the request count. All-time consumers, first-time, and products purchased stay on Insights. Export says how many rows are actually in the file.",
+      "Account map opens on the map, coverage, and store list. Each suggestion is one line. Select all stays off until the stores are filtered.",
+      "Walk-ups pins this brand's standing code and adds a brand or code search. Photo buckets stay closed until you open the row. Codes are not reminted.",
+      "An empty Today links the recap, missing-recap, and approval queues. The Master Tracker count is quiet text, not a queue badge.",
+    ],
+  },
+  {
+    id: "2026-11-23aa",
+    date: "November 23, 2026",
+    title: "Standing Check-In Studio on Walk-ups",
+    staffOnly: true,
+    items: [
+      "On Walk-ups → Standing codes, staff can edit programs, photo buckets, BA PDF/link materials, and location mode (store address vs market picker) without a setup workflow ticket.",
+      "The live standing check-in code stays immutable once issued — Studio never remints or rotates it. Issue a code only when the brand has none yet.",
+      "All standing codes across brands still list under the studio for copy/QR, including client-team twin links.",
     ],
   },
   {
