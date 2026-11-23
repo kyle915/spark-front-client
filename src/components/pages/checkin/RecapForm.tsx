@@ -2371,15 +2371,22 @@ function MultiselectFieldInput({
         </p>
       ) : null}
       {searchable ? (
+        <>
+        <label htmlFor={`checkin-sku-search-${field.id}`} style={{ ...labelStyle, marginTop: 8 }}>
+          Search SKUs or brand line
+        </label>
         <input
-          style={{ ...input, marginTop: 8 }}
+          id={`checkin-sku-search-${field.id}`}
+          style={{ ...input, marginTop: 0 }}
           type="search"
           value={skuFilter}
           onChange={(e) => setSkuFilter(e.target.value)}
           placeholder="Search SKUs or brand line…"
+          aria-label="Search SKUs or brand line"
           enterKeyHint="search"
           autoComplete="off"
         />
+        </>
       ) : null}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
         {visibleOptions.map((o) => {

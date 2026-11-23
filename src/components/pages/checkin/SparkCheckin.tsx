@@ -48,6 +48,7 @@ import {
   h2,
   helperText,
   input,
+  label,
   primaryBtn,
   resourceCard,
   secondaryBtn,
@@ -2549,9 +2550,13 @@ function CheckedInFlow({
             Where are you sampling? Tap this at each spot. We grab the
             location for you — the name is just so you recognise it later.
           </p>
+          <label htmlFor="checkin-stop-name" style={label}>
+            Spot name (optional)
+          </label>
           <input
-            style={input}
-            placeholder="Spot name (optional) — e.g. Whole Foods patio"
+            id="checkin-stop-name"
+            style={{ ...input, marginTop: 0 }}
+            placeholder="e.g. Whole Foods patio"
             value={stopName}
             onChange={(e) => setStopName(e.target.value)}
           />
@@ -2705,7 +2710,7 @@ function Shell({
   brand?: Context["brand"] | null;
 }) {
   return (
-    <div style={wrap}>
+    <div className="spark-checkin" style={wrap}>
       <div style={{ width: "100%", maxWidth: 560 }}>
         <header
           style={{

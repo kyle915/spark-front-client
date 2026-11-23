@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { h2, helperText } from "./checkinStyles";
+import { h2, helperText, label } from "./checkinStyles";
 import {
   MAX_RECORDING_MS,
   RECORDING_BITS_PER_SECOND,
@@ -340,7 +340,11 @@ export function VoiceRecapCard({
             {transcript.trim() ? "What we heard (you can edit it)" : "Or type it instead"}
           </summary>
         )}
+        <label htmlFor="checkin-voice-notes" style={{ ...label, marginTop: 8 }}>
+          What happened on your shift
+        </label>
         <textarea
+          id="checkin-voice-notes"
           value={transcript}
           onChange={(event) => remember(event.target.value)}
           placeholder={TYPE_WHAT_HAPPENED}

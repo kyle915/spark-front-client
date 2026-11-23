@@ -759,6 +759,16 @@ input::placeholder,
 textarea::placeholder {
   color: rgba(var(--spark-ink-rgb), 0.64);
 }
+/* Walk-up check-in is a cream page that still sits on the dark spark-v2
+   theme, so the rule above paints placeholders white (rgba 255,255,255,0.64)
+   on white boxes and the field looks empty. Stone on white clears WCAG AA.
+   Never lime or neon here. */
+.spark-checkin input::placeholder,
+.spark-checkin textarea::placeholder {
+  color: #44403c;
+  -webkit-text-fill-color: #44403c;
+  opacity: 1;
+}
 .spark-input:hover { border-color: rgba(var(--spark-accent-rgb), 0.35); }
 .spark-input:focus {
   border-color: rgba(var(--spark-accent-rgb), 0.7);

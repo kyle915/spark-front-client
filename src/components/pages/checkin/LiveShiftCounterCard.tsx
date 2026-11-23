@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Template } from "./checkinTypes";
-import { card, h2, helperText, input, secondaryBtn } from "./checkinStyles";
+import { card, h2, helperText, input, label, secondaryBtn } from "./checkinStyles";
 import type { StorageLike } from "./offlineClock";
 import {
   hasLiveCounterActivity,
@@ -433,7 +433,12 @@ export default function LiveShiftCounterCard({
               </div>
 
               {skus.length > 8 ? (
+                <>
+                <label htmlFor="checkin-sku-filter" style={{ ...label, display: "block", marginBottom: 4 }}>
+                  Filter SKUs
+                </label>
                 <input
+                  id="checkin-sku-filter"
                   type="search"
                   value={skuFilter}
                   onChange={(e) => setSkuFilter(e.target.value)}
@@ -441,6 +446,7 @@ export default function LiveShiftCounterCard({
                   aria-label="Filter SKUs"
                   style={{ ...input, marginTop: 0, marginBottom: 10, minHeight: 42, padding: "9px 12px", fontSize: 14 }}
                 />
+                </>
               ) : null}
 
               <div
