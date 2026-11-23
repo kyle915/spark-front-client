@@ -520,16 +520,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         </div>
       ) : null}
 
-      <AccountUploader list={list} />
-
-      <SampleNextList
-        tenantId={tenantId}
-        selectedKeys={selectedWaveKeys}
-        onToggleStore={toggleWaveStore}
-        onSelectStores={selectManyWaveStores}
-        refreshKey={waveRefreshKey}
-      />
-
       <SparkFilterBar
         label="Stores"
         search={
@@ -608,7 +598,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             Clear filters
           </button>
         ) : null}
-        {filtered.length > 0 ? (
+        {filtered.length > 0 && filtering ? (
           <button
             type="button"
             onClick={toggleSelectAllFiltered}
@@ -708,6 +698,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   : counts.all.toLocaleString("en-US")}
               </span>
             </h3>
+            {filtered.length > 0 ? (
+              <div className="mt-2">
+                <AccountUploader list={list} quiet />
+              </div>
+            ) : null}
             <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
               {shown.neverVisited.toLocaleString("en-US")} never visited ·{" "}
               {shown.sampled.toLocaleString("en-US")} sampled ·{" "}
@@ -715,9 +710,16 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </p>
           </div>
           {filtered.length === 0 ? (
-            <p className="p-6 text-sm" style={{ color: "var(--spark-text-meta)" }}>
-              {emptyList}
-            </p>
+            <div className="p-6">
+              <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+                {emptyList}
+              </p>
+              {!filtering ? (
+                <div className="mt-3">
+                  <AccountUploader list={list} quiet />
+                </div>
+              ) : null}
+            </div>
           ) : (
             <ul className="overflow-y-auto flex-1">
               {filtered.slice(0, LIST_ROWS).map((s) => (
@@ -746,6 +748,15 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           )}
         </div>
       </div>
+
+      <SampleNextList
+        tenantId={tenantId}
+        selectedKeys={selectedWaveKeys}
+        onToggleStore={toggleWaveStore}
+        onSelectStores={selectManyWaveStores}
+        refreshKey={waveRefreshKey}
+      />
+
       <WaveScheduleSheet
         open={waveSheetOpen}
         onClose={() => setWaveSheetOpen(false)}

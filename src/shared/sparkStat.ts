@@ -237,7 +237,7 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
 
 /**
  * Recaps list strip — numbers from the loaded/filtered set, never invented.
- * IN VIEW / ENG / SOLD stay all-program; CONV is sold ÷ the per-recap
+ * IN VIEW / ENGAGEMENTS / SOLD stay all-program; CONV is sold ÷ the per-recap
  * base over Retail + On-Premise only (Event activations excluded).
  * Product retail uses consumers sampled; dry demos use people engaged.
  */
@@ -253,7 +253,7 @@ export function recapListKpis(input: {
   conversionSold: number;
   /** Dry demos inside the CONV totals (people-engaged base). */
   conversionDryDemos?: number;
-  /** 3rd-party recaps in view, left out of Eng / Sold / Conv. */
+  /** 3rd-party recaps in view, left out of Engagements / Sold / Conv. */
   notInTotals?: number;
   /** Active type chip. Event / Guerilla / Seeding have no CONV. */
   recapType?: RecapActivationFilter;
@@ -286,13 +286,12 @@ export function recapListKpis(input: {
           : undefined,
     },
     {
-      label: "Eng",
+      label: "Engagements",
       value:
         seeding && input.engagements === 0
           ? "—"
           : input.engagements.toLocaleString(),
       hint: seeding ? withNotInTotals("Drop-offs, not sampling") : notInTotalsHint,
-      tone: "lime",
     },
     {
       label: "Sold",

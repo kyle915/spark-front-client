@@ -19,6 +19,9 @@ import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import useSidebarCounts from "@/hooks/useSidebarCounts";
+import { showsMissingRecaps } from "@/field/missingRecaps";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import useBaLabel from "@/hooks/useBaLabel";
 import { SparkBentoTile } from "@/shared/SparkStatBlocks";
 import { todayGroundKpis } from "@/shared/sparkStat";
@@ -52,6 +55,47 @@ const prefersReducedMotion = (): boolean =>
 
 const plural = (n: number, one: string, many: string): string =>
   n === 1 ? one : many;
+
+/** Live queue counts that already exist. Not a new KPI. */
+function TodayQueueLine() {
+  const counts = useSidebarCounts();
+  const { tenantSlug, tenantMeta } = useAuthStore();
+  const missingOn = showsMissingRecaps(tenantSlug, tenantMeta?.requestUrlName);
+  const parts: { to: string; text: string }[] = [
+    {
+      to: "/recaps/list?status=needs_review",
+      text: `${counts.recapsNeedsReview.toLocaleString("en-US")} ${
+        counts.recapsNeedsReview === 1 ? "recap needs review" : "recaps need review"
+      }`,
+    },
+  ];
+  if (missingOn) {
+    parts.push({
+      to: "/recaps/missing",
+      text: `${counts.recapsDue.toLocaleString("en-US")} missing ${
+        counts.recapsDue === 1 ? "recap" : "recaps"
+      }`,
+    });
+  }
+  parts.push({
+    to: "/approvals",
+    text: `${counts.approvals.toLocaleString("en-US")} ${
+      counts.approvals === 1 ? "approval" : "approvals"
+    }`,
+  });
+  return (
+    <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
+      {parts.map((part, index) => (
+        <span key={part.to}>
+          {index > 0 ? " · " : null}
+          <Link to={part.to} className="underline" style={{ color: "var(--spark-text)" }}>
+            {part.text}
+          </Link>
+        </span>
+      ))}
+    </p>
+  );
+}
 
 function EventRow({
   event,
@@ -354,6 +398,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             See upcoming events
           </Link>
         </p>
+        {!isClient ? (
+          <ErrorBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <TodayQueueLine />
+            </Suspense>
+          </ErrorBoundary>
+        ) : null}
       </div>
     );
   }

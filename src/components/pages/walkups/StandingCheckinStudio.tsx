@@ -17,6 +17,7 @@ import { useAlertStore } from "@/store/alertStore";
 import { checkinUrl } from "@/utils/publicHosts";
 import IssueCheckinLinkButton from "@/components/dashboard/IssueCheckinLinkButton";
 import CheckinQr from "./CheckinQr";
+import { matchesStandingCodeQuery } from "./standingCodeSearch";
 import {
   bucketsToPayload,
   emptyBucket,
@@ -591,6 +592,25 @@ const StandingCheckinStudio: React.FC = () => {
     null;
 
   const coded = nodes.filter((n) => (n.checkinCode ?? "").trim());
+  const [codeQuery, setCodeQuery] = useState("");
+  const activeCode = (active?.checkinCode ?? "").trim();
+  const shownCodes = coded.filter((tenant) => {
+    const isPinned =
+      Boolean(activeCode) &&
+      (String(tenant.id) === String(active?.id) ||
+        String(tenant.uuid) === String(active?.uuid));
+    if (isPinned) return false;
+    const programNames = (tenant.checkinPrograms ?? [])
+      .map((program) => program?.name)
+      .filter((name): name is string => Boolean(name));
+    return matchesStandingCodeQuery(codeQuery, {
+      name: tenant.name,
+      code: tenant.checkinCode,
+      teamCode: tenant.checkinTeamCode,
+      teamTitle: tenant.checkinTeamTitle,
+      programs: programNames.length ? programNames : tenant.checkinEventTypeNames,
+    });
+  });
 
   const copy = async (url: string): Promise<void> => {
     try {
@@ -621,7 +641,7 @@ const StandingCheckinStudio: React.FC = () => {
 
       <div className="spark-card p-4">
         <p className="mono mb-3" style={labelMeta}>
-          ALL STANDING CODES
+          {activeCode ? "OTHER STANDING CODES" : "ALL STANDING CODES"}
         </p>
         {coded.length === 0 ? (
           <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
@@ -629,127 +649,88 @@ const StandingCheckinStudio: React.FC = () => {
             brand.
           </p>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {coded.map((tenant) => {
-              const code = (tenant.checkinCode ?? "").trim();
-              const url = checkinUrl(code);
-              const isActive =
-                String(tenant.id) === String(active?.id) ||
-                String(tenant.uuid) === String(active?.uuid);
-              const programs =
-                (tenant.checkinPrograms ?? []).map((p) => p.name).filter(Boolean)
-                  .length > 0
-                  ? (tenant.checkinPrograms ?? []).map((p) => p.name)
-                  : (tenant.checkinEventTypeNames ?? []);
-              const buckets = tenant.checkinPhotoBuckets ?? [];
-              const teamCode = (tenant.checkinTeamCode ?? "").trim();
-              const teamUrl = teamCode ? checkinUrl(teamCode) : "";
-              return (
-                <Fragment key={tenant.id}>
-                  <li
-                    className="rounded-xl p-3"
-                    style={{
-                      border: isActive
-                        ? "1px solid rgba(var(--spark-accent-rgb),0.55)"
-                        : "1px solid var(--spark-border)",
-                      background: isActive
-                        ? "rgba(var(--spark-accent-rgb),0.06)"
-                        : "transparent",
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">
-                          {tenant.name}
-                          {isActive ? (
-                            <span
-                              className="mono text-[10px] ml-2"
-                              style={{
-                                color: "var(--spark-lime)",
-                                letterSpacing: "0.12em",
-                              }}
-                            >
-                              ACTIVE
-                            </span>
-                          ) : null}
-                        </p>
-                        <p
-                          className="mono text-xs mt-1"
-                          style={{ color: "var(--spark-text-secondary)" }}
-                        >
-                          {code}
-                        </p>
-                        <p
-                          className="text-xs mt-1 break-all"
-                          style={{ color: "var(--spark-text-meta)" }}
-                        >
-                          {url}
-                        </p>
-                        <p
-                          className="text-xs mt-2"
-                          style={{ color: "var(--spark-text-secondary)" }}
-                        >
-                          {programs.length
-                            ? programs.join(" · ")
-                            : "No programs listed"}
-                        </p>
-                        <p
-                          className="text-xs mt-1"
-                          style={{ color: "var(--spark-text-meta)" }}
-                        >
-                          {(tenant.checkinLocationMode || "address") === "market"
-                            ? "Market picker"
-                            : "Store address"}
-                          {" · "}
-                          {buckets.length
-                            ? buckets.join(" · ")
-                            : "No photo buckets"}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void copy(url);
-                        }}
-                        className="px-3 py-2 rounded-xl text-xs font-semibold shrink-0"
-                        style={{
-                          background: "transparent",
-                          color: "var(--spark-text)",
-                          border: "1px solid var(--spark-border)",
-                        }}
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  </li>
-                  {teamCode ? (
+          <>
+            <input
+              type="search"
+              value={codeQuery}
+              onChange={(e) => setCodeQuery(e.target.value)}
+              placeholder="Search brand or code"
+              aria-label="Search standing codes by brand or code"
+              className="w-full rounded-xl text-sm mb-3"
+              style={{
+                padding: "0.65rem 0.85rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                outline: "none",
+              }}
+            />
+            <ul className="flex flex-col gap-2">
+              {shownCodes.map((tenant) => {
+                const code = (tenant.checkinCode ?? "").trim();
+                const url = checkinUrl(code);
+                const programs =
+                  (tenant.checkinPrograms ?? []).map((p) => p.name).filter(Boolean)
+                    .length > 0
+                    ? (tenant.checkinPrograms ?? []).map((p) => p.name)
+                    : (tenant.checkinEventTypeNames ?? []);
+                const buckets = tenant.checkinPhotoBuckets ?? [];
+                const teamCode = (tenant.checkinTeamCode ?? "").trim();
+                const teamUrl = teamCode ? checkinUrl(teamCode) : "";
+                return (
+                  <Fragment key={tenant.id}>
                     <li
                       className="rounded-xl p-3"
                       style={{ border: "1px solid var(--spark-border)" }}
                     >
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold">
-                            {tenant.checkinTeamTitle?.trim() ||
-                              `${tenant.name} · Client team recaps (no clock)`}
-                          </p>
+                          <p className="text-sm font-semibold">{tenant.name}</p>
                           <p
                             className="mono text-xs mt-1"
                             style={{ color: "var(--spark-text-secondary)" }}
                           >
-                            {teamCode}
+                            {code}
                           </p>
-                          <p
-                            className="text-xs mt-1 break-all"
-                            style={{ color: "var(--spark-text-meta)" }}
-                          >
-                            {teamUrl}
-                          </p>
+                          <details className="mt-2">
+                            <summary
+                              className="text-xs cursor-pointer"
+                              style={{ color: "var(--spark-text-meta)" }}
+                            >
+                              Programs and photo buckets
+                            </summary>
+                            <p
+                              className="text-xs mt-2 break-all"
+                              style={{ color: "var(--spark-text-meta)" }}
+                            >
+                              {url}
+                            </p>
+                            <p
+                              className="text-xs mt-1"
+                              style={{ color: "var(--spark-text-secondary)" }}
+                            >
+                              {programs.length
+                                ? programs.join(" · ")
+                                : "No programs listed"}
+                            </p>
+                            <p
+                              className="text-xs mt-1"
+                              style={{ color: "var(--spark-text-meta)" }}
+                            >
+                              {(tenant.checkinLocationMode || "address") === "market"
+                                ? "Market picker"
+                                : "Store address"}
+                              {" · "}
+                              {buckets.length
+                                ? buckets.join(" · ")
+                                : "No photo buckets"}
+                            </p>
+                          </details>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            void copy(teamUrl);
+                            void copy(url);
                           }}
                           className="px-3 py-2 rounded-xl text-xs font-semibold shrink-0"
                           style={{
@@ -762,11 +743,67 @@ const StandingCheckinStudio: React.FC = () => {
                         </button>
                       </div>
                     </li>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </ul>
+                    {teamCode ? (
+                      <li
+                        className="rounded-xl p-3"
+                        style={{ border: "1px solid var(--spark-border)" }}
+                      >
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">
+                              {tenant.checkinTeamTitle?.trim() ||
+                                `${tenant.name} · Client team recaps (no clock)`}
+                            </p>
+                            <p
+                              className="mono text-xs mt-1"
+                              style={{ color: "var(--spark-text-secondary)" }}
+                            >
+                              {teamCode}
+                            </p>
+                            <details className="mt-2">
+                              <summary
+                                className="text-xs cursor-pointer"
+                                style={{ color: "var(--spark-text-meta)" }}
+                              >
+                                Link
+                              </summary>
+                              <p
+                                className="text-xs mt-2 break-all"
+                                style={{ color: "var(--spark-text-meta)" }}
+                              >
+                                {teamUrl}
+                              </p>
+                            </details>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void copy(teamUrl);
+                            }}
+                            className="px-3 py-2 rounded-xl text-xs font-semibold shrink-0"
+                            style={{
+                              background: "transparent",
+                              color: "var(--spark-text)",
+                              border: "1px solid var(--spark-border)",
+                            }}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </li>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </ul>
+            {shownCodes.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+                {codeQuery.trim()
+                  ? "No standing code matches that."
+                  : "No other standing codes."}
+              </p>
+            ) : null}
+          </>
         )}
       </div>
     </div>

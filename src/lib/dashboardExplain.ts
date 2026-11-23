@@ -65,3 +65,30 @@ export function cleanChartQuestion(raw: string): string {
 export function sampleNextKindLabel(kind: string): string {
   return kind === "revisit" ? "Worth going back to" : "Never visited";
 }
+
+/**
+ * One stat clause for a where-to-sample-next row: rate versus the brand
+ * average, and how long since the last visit. The server reason is a
+ * paragraph; the map shows this line instead.
+ */
+export function sampleNextStatLine(reason: string): string {
+  const text = reason.replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const average = text.match(/average of\s+(\d+(?:\.\d+)?)\s*%/i);
+  const rates = [...text.matchAll(/(\d+(?:\.\d+)?)\s*%/g)].map((match) => match[1]);
+  const storeRate = rates.find((rate) => rate !== average?.[1]) ?? (average ? undefined : rates[0]);
+  const weeks = text.match(/(\d+)\s+weeks?/i);
+  const days = weeks ? null : text.match(/(\d+)\s+days?/i);
+  const parts: string[] = [];
+  if (storeRate && average) parts.push(`${storeRate}% vs ${average[1]}%`);
+  else if (storeRate) parts.push(`${storeRate}%`);
+  else if (average) parts.push(`vs ${average[1]}%`);
+  if (weeks) {
+    const n = Number(weeks[1]);
+    parts.push(`${n.toLocaleString("en-US")} ${n === 1 ? "week" : "weeks"}`);
+  } else if (days) {
+    const n = Number(days[1]);
+    parts.push(`${n.toLocaleString("en-US")} ${n === 1 ? "day" : "days"}`);
+  }
+  return parts.join(" · ");
+}

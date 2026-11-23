@@ -81,7 +81,14 @@ function statusLine(list: AccountListState): string {
   return `${parts.join(" · ")}.`;
 }
 
-export function AccountUploader({ list }: { list: AccountListState }) {
+export function AccountUploader({
+  list,
+  quiet = false,
+}: {
+  list: AccountListState;
+  /** Text action, for the empty store list. The full card is the hero. */
+  quiet?: boolean;
+}) {
   const showAlert = useAlertStore((s) => s.showAlert);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
@@ -111,6 +118,62 @@ export function AccountUploader({ list }: { list: AccountListState }) {
     }
   };
 
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".csv,.xlsx,.xls"
+      style={{ display: "none" }}
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) void onFile(f);
+        e.target.value = "";
+      }}
+    />
+  );
+
+  if (quiet) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {fileInput}
+        {list.status !== "ready" ? (
+          <p className="text-xs" style={{ color: "var(--spark-text-meta)" }} role="status">
+            {statusLine(list)}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={!canUpload}
+          className="text-xs underline disabled:no-underline disabled:opacity-50"
+          style={{
+            color: "var(--spark-text-secondary)",
+            background: "none",
+            border: 0,
+            padding: 0,
+            cursor: canUpload ? "pointer" : "default",
+          }}
+        >
+          {busy ? "Saving" : "Upload account list"}
+        </button>
+        <button
+          type="button"
+          onClick={downloadTemplate}
+          className="text-xs underline"
+          style={{
+            color: "var(--spark-text-meta)",
+            background: "none",
+            border: 0,
+            padding: 0,
+            cursor: "pointer",
+          }}
+        >
+          Template
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className="spark-card px-4 py-3 flex items-center justify-between flex-wrap gap-3"
@@ -121,17 +184,7 @@ export function AccountUploader({ list }: { list: AccountListState }) {
         if (f && canUpload) void onFile(f);
       }}
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".csv,.xlsx,.xls"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void onFile(f);
-          e.target.value = "";
-        }}
-      />
+      {fileInput}
       <div className="min-w-0">
         <h3 className="text-sm font-semibold">Account list</h3>
         <p

@@ -22,9 +22,6 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
-import { useConsumersSampled } from "@/hooks/useConsumersSampled";
-import { useFirstTimeConsumers } from "@/hooks/useFirstTimeConsumers";
-import { useProductsPurchased } from "@/hooks/useProductsPurchased";
 import { useAuthStore } from "@/store/authStore";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -44,7 +41,10 @@ import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
   trackerDateRangeToServer,
+  trackerExportMatching,
+  trackerExportScope,
   trackerSortToServer,
+  trackerStatusCount,
   trackerStatusToServer,
   VALID_TRACKER_DATE_RANGES,
   type TrackerCustomRange,
@@ -1610,44 +1610,6 @@ const RmmFilterInner: React.FC<{
   );
 };
 
-/**
- * Consumers-sampled KPI, isolated in its OWN query boundary.
- *
- * `eventDashboard` is the heaviest query on this page and scales with tenant
- * size (worst on big tenants like Liquid Death). It used to be fetched in the
- * MasterTracker body — and because the app has a single router-level Suspense
- * boundary, that suspension BLOCKED THE WHOLE PAGE (the rows included) on every
- * cold load / hard refresh, purely to fill this one number. Isolated here it
- * suspends only this stat: the table + the rest of the totals strip paint
- * immediately and this figure streams in behind a "…" placeholder.
- */
-const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const consumers = useConsumersSampled(tenantId, 0);
-  return <CountReel value={consumers} />;
-};
-
-/**
- * FIRST-TIME strip — same isolation pattern as ConsumersStat. Pulled from
- * tenantKpis so custom-recap "First Time …" fields (Torch, LD, etc.) count.
- * Renders "—" when the tenant has no first-time signal yet (honest empty).
- */
-const FirstTimeStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const firstTime = useFirstTimeConsumers(tenantId, 0);
-  return firstTime == null ? "—" : <CountReel value={firstTime} />;
-};
-
-/**
- * PRODUCTS PURCHASED strip — tenantKpis.productsSold (same soldUnits matcher
- * as Insights / recap list: cans/packs primary, purchase/sold fallback).
- * Torch: single cans + packs purchased fields. Honest "—" when empty.
- */
-const ProductsPurchasedStat: React.FC<{ tenantId: string }> = ({
-  tenantId,
-}) => {
-  const purchased = useProductsPurchased(tenantId, 0);
-  return purchased == null ? "—" : <CountReel value={purchased} />;
-};
-
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
@@ -1999,10 +1961,18 @@ export default function MasterTracker() {
     [],
   );
 
-  // NOTE: the heavy `eventDashboard` aggregation (consumers-sampled KPI) is no
-  // longer fetched here — it moved into <ConsumersStat>, isolated in its own
-  // Suspense boundary, so it can't block the whole page on a cold load. See the
-  // component's docstring.
+  const exportMatching = trackerExportMatching(
+    search,
+    visibleRows.length,
+    trackerStatusCount(activeStatus, counts, total),
+  );
+  const exportScope = trackerExportScope(visibleRows.length, exportMatching);
+  const exportTitle =
+    visibleRows.length === 0
+      ? "Nothing to export"
+      : exportMatching > visibleRows.length
+        ? `Downloads the ${visibleRows.length.toLocaleString("en-US")} requests loaded in this view, not all ${exportMatching.toLocaleString("en-US")}. Scroll to load more if the file should include the rest.`
+        : `Download ${visibleRows.length.toLocaleString("en-US")} requests as CSV`;
 
   // Per-tenant linked Google Sheet — kyle's brief: "Link the master
   // tracker to a living breathing google sheet file. Per-client."
@@ -2074,25 +2044,23 @@ export default function MasterTracker() {
               title={
                 visibleRows.length === 0
                   ? "Nothing to copy"
-                  : `Copy ${visibleRows.length} rows as TSV — paste straight into Google Sheets`
+                  : exportMatching > visibleRows.length
+                    ? `Copies the ${visibleRows.length.toLocaleString("en-US")} loaded rows, not all ${exportMatching.toLocaleString("en-US")}.`
+                    : `Copy ${visibleRows.length.toLocaleString("en-US")} rows as TSV — paste straight into Google Sheets`
               }
             >
               {copyState === "copied"
-                ? `Copied (${visibleRows.length})`
+                ? `Copied (${exportScope})`
                 : copyState === "copying"
                   ? "Copying…"
-                  : `Copy for Sheets${visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}`}
+                  : `Copy for Sheets${exportScope ? ` (${exportScope})` : ""}`}
             </SparkGhostButton>
             <SparkGhostButton
               onClick={exportCsv}
               disabled={visibleRows.length === 0}
-              title={
-                visibleRows.length === 0
-                  ? "Nothing to export"
-                  : `Download ${visibleRows.length} rows as CSV`
-              }
+              title={exportTitle}
             >
-              Export CSV{visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}
+              Export CSV{exportScope ? ` (${exportScope})` : ""}
             </SparkGhostButton>
             <SparkGhostButton onClick={() => setCancelDemoOpen(true)}>
               Cancel event
@@ -2172,15 +2140,7 @@ export default function MasterTracker() {
           }
         >
           {STATUS_FILTERS.map((f) => {
-            const n =
-              f.key === "all"
-                ? total
-                : f.key === "active"
-                  ? (counts.pending ?? 0) +
-                    (counts.queue ?? 0) +
-                    (counts.approved ?? 0) +
-                    (counts.scheduled ?? 0)
-                  : (counts[f.key] ?? 0);
+            const n = trackerStatusCount(f.key, counts, total);
             const active = f.key === activeStatus;
             return (
               <button
@@ -2342,100 +2302,22 @@ export default function MasterTracker() {
           </div>
         ) : null}
 
-        {/* Totals strip — shadcn-admin-style KPI lockup under filters */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 spark-tracker-kpis">
-          <div className="spark-card p-3">
+        {/* Request count only. Sampled totals live on Insights. */}
+        <div className="spark-tracker-kpis">
+          <div className="spark-card p-3 max-w-sm">
             <p className="label-mini">Scheduled</p>
             <p
               className="tab-num text-2xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
-              title="Master Tracker requests (all statuses). Insights 'events' count only those with filed recaps."
+              title="Master Tracker requests, the same number as All. Not the rows loaded on this page, and not Insights events."
             >
-              {/* Match the status chips (all-time, this tenant). Distinct from
-                  Insights Program KPIs events (= activations that produced a
-                  recap). */}
               <CountReel value={total} />
             </p>
             <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
+              className="text-xs mt-1"
+              style={{ color: "var(--spark-text-secondary)" }}
             >
-              TRACKER REQUESTS
-            </p>
-          </div>
-          <div className="spark-card p-3">
-            <p className="label-mini">Consumers</p>
-            <p className="tab-num text-2xl font-bold mt-1">
-              {tenantId ? (
-                <Suspense
-                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
-                >
-                  <ConsumersStat tenantId={tenantId} />
-                </Suspense>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
-              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
-            >
-              ALL-TIME · ALL MARKETS
-            </p>
-          </div>
-          <div className="spark-card p-3">
-            <p className="label-mini">First-time</p>
-            <p className="tab-num text-2xl font-bold mt-1">
-              {tenantId ? (
-                <Suspense
-                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
-                >
-                  <FirstTimeStat tenantId={tenantId} />
-                </Suspense>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
-              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
-            >
-              ALL-TIME · ALL MARKETS
-            </p>
-          </div>
-          <div className="spark-card p-3">
-            <p className="label-mini">Products purchased</p>
-            <p className="tab-num text-2xl font-bold mt-1">
-              {tenantId ? (
-                <Suspense
-                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
-                >
-                  <ProductsPurchasedStat tenantId={tenantId} />
-                </Suspense>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
-              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
-            >
-              ALL-TIME · ALL MARKETS
+              Tracker requests. Matches All, not the rows in view.
             </p>
           </div>
         </div>
