@@ -14,7 +14,7 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-23w",
+    id: "2026-11-23y",
     date: "November 23, 2026",
     title: "One-click Send on Client summaries",
     staffOnly: true,
@@ -42,6 +42,15 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     items: [
       "On Missing Recaps, Nudge all overdue (24h+) pushes every BA on shifts overdue a day or more — same push as the per-row Nudge button, skipping anyone nudged in the last 12 hours.",
       "Each BA row shows when they were last nudged (cron or admin) so weekend clear-outs don't double-ping.",
+    ],
+  },
+  {
+    id: "2026-11-23w",
+    date: "November 23, 2026",
+    title: "Recap fields fill the page (photos stay right)",
+    items: [
+      "On recap detail and shared /r links, Shift Overview, Brand Results, Brand Feedback and Follow-up sit in a two-column grid that uses the full width — no more skinny left stack with empty space.",
+      "Photos stay on the right on wide screens; stats still sit under the title.",
     ],
   },
   {
