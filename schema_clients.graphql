@@ -4732,6 +4732,11 @@ type FeedbackTheme {
   quote: String!
 }
 
+type ThemeSentence {
+  section: String!
+  text: String!
+}
+
 type FieldCallout {
   market: String
   corridor: String
@@ -4745,6 +4750,9 @@ type FieldEfficiency {
   byDaypart: [EfficiencyRow!]!
   topStores: [EfficiencyRow!]!
   recapsWithoutHours: Int!
+  headline: String!
+  headlineSource: String!
+  ratesHeld: Int!
 }
 
 type FieldMarketingBoard {
@@ -5200,6 +5208,8 @@ type HighlightStore {
   recaps: Int!
   recapUuid: String
   recapKind: String
+  linkedConsumers: Int!
+  linkedUnitsSold: Int!
 }
 
 type HoursCheckFlag {
@@ -6797,6 +6807,9 @@ type Mutation {
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
   sendWeeklyClientSummary(id: ID!, recipients: [String!]!, message: String = null): WeeklyClientSummaryResult!
+  generateProgramBrief(tenantId: ID!, startDate: String!, endDate: String!, preset: String! = "custom"): ProgramBriefResult!
+  saveProgramBrief(id: ID!, paragraph: String!, bullets: [String!]!, quote: String! = ""): ProgramBriefResult!
+  setProgramBriefReviewed(id: ID!, reviewed: Boolean!): ProgramBriefResult!
   setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
   publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
@@ -8257,6 +8270,7 @@ type Query {
   photoLibrary(tenantId: ID!, filters: PhotoLibraryFilterInput = null, first: Int! = 60, offset: Int! = 0): PhotoLibraryPage!
   interpretPhotoSearch(tenantId: ID!, text: String!): PhotoSearchInterpretation!
   tenantWeeklySummary(tenantId: ID!): TenantWeeklySummary
+  programBrief(tenantId: ID!, startDate: String!, endDate: String!): ProgramBriefView
   weeklyClientSummaries(weekStart: String = null, period: String! = "week"): WeeklyClientSummaryWeek
   tenantStoreInsights(tenantId: ID!): TenantStoreInsights
   brandInsightReview: [BrandInsightReviewBrand!]
@@ -8826,6 +8840,7 @@ type RecapFieldTotal {
   average: Float!
   recaps: Int!
   isPercent: Boolean!
+  sampledQuestion: Boolean!
 }
 
 type RecapFieldTotalSection {
@@ -11282,6 +11297,7 @@ type TenantFavoriteAmbassador {
 type TenantFeedbackThemes {
   status: String!
   themes: [FeedbackTheme!]!
+  sentences: [ThemeSentence!]!
   recapCount: Int!
   commentCount: Int!
   truncated: Boolean!
@@ -11626,6 +11642,35 @@ type TenantWeeklyNarration {
   body: String!
   filedRecaps: Int!
   generatedAt: String!
+}
+
+type ProgramBrief {
+  id: ID!
+  startDate: String!
+  endDate: String!
+  preset: String!
+  paragraph: String!
+  bullets: [String!]!
+  quote: String
+  status: String!
+  isDraft: Boolean!
+  stale: Boolean!
+  autoReviewed: Boolean!
+  generatedAt: String!
+  reviewedByName: String
+  reviewedAt: String
+}
+
+type ProgramBriefView {
+  enough: Boolean!
+  approvedRecaps: Int!
+  brief: ProgramBrief
+}
+
+type ProgramBriefResult {
+  ok: Boolean!
+  reason: String
+  brief: ProgramBrief
 }
 
 type TenantWeeklySummary {

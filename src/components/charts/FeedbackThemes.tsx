@@ -137,11 +137,18 @@ const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       ) : null}
 
       <div className="grid gap-x-8 gap-y-6 md:grid-cols-3">
-        {sections.map((section) => (
+        {sections.map((section) => {
+          const sentence = result.sentences.find((s) => s.section === section.key)?.text ?? "";
+          return (
           <div key={section.key} className="min-w-0">
             <h4 className="text-[13px] font-medium mb-2" style={SECONDARY}>
               {section.title}
             </h4>
+            {sentence ? (
+              <p className="text-sm leading-relaxed mb-2" style={{ color: "var(--spark-text)" }}>
+                {sentence}
+              </p>
+            ) : null}
             <ul className="m-0 p-0 list-none flex flex-col gap-3">
               {section.themes.map((theme) => (
                 <li key={theme.label} className="min-w-0">
@@ -152,7 +159,7 @@ const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
                       {recapsLabel(theme.recapCount)}
                     </span>
                   </p>
-                  {theme.quote ? (
+                  {theme.quote && theme.quote !== sentence ? (
                     <p className="text-sm mt-0.5 break-words" style={SECONDARY}>
                       “{theme.quote}”
                     </p>
@@ -161,7 +168,8 @@ const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
               ))}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

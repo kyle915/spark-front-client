@@ -108,7 +108,7 @@ describe("what sells where", () => {
         row({ sampledStatus: "ready", sampledProduct: "Berry Blast", sampledUnits: 1, sampledRecaps: 3 }),
         "sampled",
       ).basis,
-    ).toBe("1 sample · of 3 recaps");
+    ).toBe("1 sample handed out · of 3 recaps");
   });
 
   it("says not enough data rather than naming a product on thin data", () => {

@@ -3,9 +3,11 @@ import { graphql } from "react-relay";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import type { FieldEfficiencySectionQuery as QueryType } from "./__generated__/FieldEfficiencySectionQuery.graphql";
 import {
+  cleanRates,
   efficiencyHeadline,
   samplesPerHourText,
   unitsPerHourText,
+  unitsSoldText,
   type EfficiencyRow,
 } from "./fieldEfficiency";
 
@@ -49,17 +51,20 @@ const Query = graphql`
         unitsPerHour
       }
       recapsWithoutHours
+      headline
+      ratesHeld
     }
   }
 `;
 
 const meta = { color: "var(--spark-text-meta)" } as const;
 
-const Table: React.FC<{ title: string; first: string; rows: readonly EfficiencyRow[] }> = ({
-  title,
-  first,
-  rows,
-}) => (
+const Table: React.FC<{
+  title: string;
+  first: string;
+  rows: readonly EfficiencyRow[];
+  showSold?: boolean;
+}> = ({ title, first, rows, showSold = false }) => (
   <section className="spark-card p-5" aria-label={title}>
     <h4 className="label-mini mb-3">{title}</h4>
     <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
@@ -71,6 +76,11 @@ const Table: React.FC<{ title: string; first: string; rows: readonly EfficiencyR
           <th className="text-right font-medium pb-2" style={meta}>
             Activations
           </th>
+          {showSold ? (
+            <th className="text-right font-medium pb-2" style={meta}>
+              Units sold
+            </th>
+          ) : null}
           <th className="text-right font-medium pb-2" style={meta}>
             Samples / hr
           </th>
@@ -86,6 +96,9 @@ const Table: React.FC<{ title: string; first: string; rows: readonly EfficiencyR
               {r.label}
             </td>
             <td className="py-2 text-right tabular-nums">{r.recaps}</td>
+            {showSold ? (
+              <td className="py-2 text-right tabular-nums font-semibold">{unitsSoldText(r)}</td>
+            ) : null}
             <td className="py-2 text-right tabular-nums">{samplesPerHourText(r)}</td>
             <td className="py-2 text-right tabular-nums font-semibold">{unitsPerHourText(r)}</td>
           </tr>
@@ -115,7 +128,11 @@ const Body: React.FC<{ tenantId: string; startDate: string; endDate: string }> =
       </p>
     );
   }
-  const headline = efficiencyHeadline(eff.byWeekday, eff.byDaypart);
+  const weekdays = eff.byWeekday.map(cleanRates);
+  const dayparts = eff.byDaypart.map(cleanRates);
+  const stores = eff.topStores.map(cleanRates);
+  const headline =
+    eff.headline.trim() || efficiencyHeadline(weekdays, dayparts) || "";
   return (
     <>
       <div className="flex items-end gap-10 flex-wrap mb-4">
@@ -134,20 +151,23 @@ const Body: React.FC<{ tenantId: string; startDate: string; endDate: string }> =
         {headline ? <p className="text-sm max-w-md">{headline}</p> : null}
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
-        {eff.byWeekday.length > 0 ? (
-          <Table title="By day of week" first="Day" rows={eff.byWeekday} />
+        {weekdays.length > 0 ? (
+          <Table title="By day of week" first="Day" rows={weekdays} />
         ) : null}
-        {eff.byDaypart.length > 0 ? (
-          <Table title="By time of day" first="Shift start" rows={eff.byDaypart} />
+        {dayparts.length > 0 ? (
+          <Table title="By time of day" first="Shift start" rows={dayparts} />
         ) : null}
-        {eff.topStores.length > 0 ? (
-          <Table title="Top stores by units sold" first="Store" rows={eff.topStores} />
+        {stores.length > 0 ? (
+          <Table title="Top stores by units sold" first="Store" rows={stores} showSold />
         ) : null}
       </div>
       <p className="text-xs mt-3" style={meta}>
         Hours are clocked ambassador time.
         {eff.recapsWithoutHours > 0
           ? ` ${eff.recapsWithoutHours} activation${eff.recapsWithoutHours === 1 ? " has" : "s have"} no clock times and ${eff.recapsWithoutHours === 1 ? "is" : "are"} left out of the per-hour figures.`
+          : ""}
+        {eff.ratesHeld > 0
+          ? " A per-hour figure is held when the clocked time cannot support it."
           : ""}
       </p>
     </>

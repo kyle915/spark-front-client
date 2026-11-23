@@ -14,12 +14,34 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-23ab",
+    id: "2026-11-23ac",
     date: "November 23, 2026",
     title: "Ask AI uses this year's program",
     items: [
       "Ask AI now answers “last month”, “this month”, and “which stores should we hit in December” from the current year and the same Home numbers (events run, consumers sampled, and who said they'd buy), instead of empty results from 2022 or 2023.",
       "Suggested questions name the month and year they mean. Each answer still shows the Spark source it came from, and it still only uses this brand's data.",
+    ],
+  },
+  {
+    id: "2026-11-23b",
+    date: "November 23, 2026",
+    title: "Program report opens with a brief",
+    items: [
+      "The program report starts with a short brief of what worked in the dates you pick, written from approved recaps. A 30- or 90-day range is shown once every number checks out. A longer or custom range stays with Ignite until it is marked reviewed.",
+      "Themes, other brands, shelf, and the best field photos already on the report now sit up top. The full charts are still below.",
+    ],
+  },
+  {
+    id: "2026-11-23ab",
+    date: "November 23, 2026",
+    title: "Program report keeps one set of numbers",
+    items: [
+      "The tile row now includes conversion: units sold divided by consumers sampled, with both counts, for retail and on-premise only. Purchase intent stays “of N asked.”",
+      "The month highlight states the store’s approved recaps, sampled, and sold, and the counts on the recap the link opens. A quote is one whole comment.",
+      "The two consumers-sampled questions sit under that headline. The store chart labels the leftover bar “No store on the event.”",
+      "Top stores show units sold. A per-hour figure is held when the clocked time cannot support it, including a rate like 5,500 samples an hour.",
+      "Best photos are one frame per store and date. What consumers said sits above the photos, with one sentence per theme.",
+      "Another brand or a product is named only when a comment spells it. Samples handed out stay labeled as samples handed out.",
     ],
   },
   {

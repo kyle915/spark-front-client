@@ -452,6 +452,31 @@ function buildGraphqlData(
     };
   }
 
+  if (queryText.includes("programBrief")) {
+    return {
+      programBrief: {
+        enough: true,
+        approvedRecaps: 4,
+        brief: {
+          id: "ProgramBrief:1",
+          startDate: "2026-10-24",
+          endDate: "2026-11-23",
+          preset: "30",
+          paragraph: "4 events ran and 40 consumers were sampled.",
+          bullets: ["Citrus flavor came up on 3 recaps."],
+          quote: "Loved the citrus flavor.",
+          status: "reviewed",
+          isDraft: false,
+          stale: false,
+          autoReviewed: true,
+          generatedAt: "2026-11-23T12:00:00Z",
+          reviewedByName: null,
+          reviewedAt: "2026-11-23T12:00:00Z",
+        },
+      },
+    };
+  }
+
   if (queryText.includes("tenantWeeklySummary")) {
     return {
       tenantWeeklySummary: {
