@@ -60,6 +60,10 @@ describe("recap preview helpers", () => {
     expect(fieldTypeHint({ type: "multiselect", options: [] })).toBe("Pick all that apply");
     expect(fieldTypeHint({ type: "long_text", options: [] })).toBe("A few sentences");
     expect(fieldTypeHint({ type: "text", options: [] })).toBe("Short answer");
+    expect(fieldTypeHint({ type: "signature", options: [] })).toBe("Sign with a finger or mouse");
+    expect(fieldTypeHint({ type: "letter", options: [] })).toBe("One letter");
+    expect(fieldKind("letter")).toBe("letter");
+    expect(fieldKind("signature")).toBe("signature");
   });
 
   it("explains a conditional question", () => {

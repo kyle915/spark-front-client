@@ -1,4 +1,11 @@
 import { validateDropOffLocationsValue, isDropOffLocationsField } from "@/recap/dropOffLocations";
+import {
+  clerkFirstNameError,
+  isLetterType,
+  isSignatureType,
+  letterValue,
+  signatureError,
+} from "@/recap/retailerSignoff";
 import { isSpendAmountField, spendAmountError, spendAmountStored } from "@/recap/spendAmount";
 import { isFieldShown, type ShowWhen } from "./fieldConditions";
 import { isExpenseReceiptBucket } from "./photoBuckets";
@@ -146,6 +153,46 @@ export function buildCompletenessItems(input: CompletenessInput): CompletenessIt
   for (const f of fields) {
     if (isPhotoType(f.type) || !isFieldShown(f, values)) continue;
     const v = values[f.id];
+    if (isSignatureType(f.type)) {
+      const raw = Array.isArray(v) ? "" : String(v ?? "");
+      const err = signatureError(raw, f.required);
+      if (err && (f.required || raw.trim())) {
+        items.push({
+          id: `field:${f.id}`,
+          kind: "required-field",
+          label: err,
+          target: f.id,
+        });
+      }
+      continue;
+    }
+    if (isLetterType(f.type)) {
+      if (f.required && !letterValue(Array.isArray(v) ? "" : String(v ?? ""))) {
+        items.push({
+          id: `field:${f.id}`,
+          kind: "required-field",
+          label: "Last initial is one letter.",
+          target: f.id,
+        });
+      }
+      continue;
+    }
+    if (
+      f.required &&
+      f.name.trim().toLowerCase() === "first name" &&
+      fields.some((other) => isSignatureType(other.type))
+    ) {
+      const err = clerkFirstNameError(Array.isArray(v) ? "" : String(v ?? ""));
+      if (err) {
+        items.push({
+          id: `field:${f.id}`,
+          kind: "required-field",
+          label: err,
+          target: f.id,
+        });
+        continue;
+      }
+    }
     if (f.required) {
       if (isDropOffLocationsField(f)) {
         const err = validateDropOffLocationsValue(Array.isArray(v) ? JSON.stringify(v) : String(v ?? ""));
