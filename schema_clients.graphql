@@ -5499,6 +5499,64 @@ type IssueCheckinCodeResponse {
   clientMutationId: ID
 }
 
+input CheckinResourceInput {
+  label: String!
+  url: String!
+  kind: String! = "pdf"
+  note: String = null
+  hideOnRecapOnly: Boolean = null
+}
+
+input UpdateStandingCheckinConfigInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  locationMode: String = null
+  photoBuckets: JSON = null
+  resources: [CheckinResourceInput!] = null
+  clearResources: Boolean! = false
+  eventTypeIds: [ID!] = null
+}
+
+type StandingCheckinResourceType {
+  label: String!
+  kind: String!
+  url: String!
+  note: String
+  hideOnRecapOnly: Boolean!
+}
+
+type StandingCheckinProgramType {
+  id: ID!
+  name: String!
+  isDefault: Boolean!
+}
+
+type UpdateStandingCheckinConfigResponse {
+  success: Boolean!
+  message: String!
+  checkinCode: String
+  locationMode: String
+  photoBuckets: JSON
+  resources: [StandingCheckinResourceType!]
+  programs: [StandingCheckinProgramType!]
+  changedFields: [String!]
+  clientMutationId: ID
+}
+
+type StandingCheckinResourceGql {
+  label: String!
+  kind: String!
+  url: String!
+  note: String
+  hideOnRecapOnly: Boolean!
+}
+
+type StandingCheckinProgramGql {
+  id: ID!
+  name: String!
+  isDefault: Boolean!
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
 """
@@ -6730,6 +6788,7 @@ type Mutation {
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int = null, targetSamplesDistributed: Int = null, targetProductsSold: Int = null, targetTotalEngagements: Int = null): TenantGoals!
   setProgramShareEnabled(input: SetProgramShareEnabledInput!): SetProgramShareEnabledResponse!
   issueCheckinCode(input: IssueCheckinCodeInput!): IssueCheckinCodeResponse!
+  updateStandingCheckinConfig(input: UpdateStandingCheckinConfigInput!): UpdateStandingCheckinConfigResponse!
   setBoothDayCounting(input: SetBoothDayCountingInput!): SetBoothDayCountingResponse!
   setMyReportSubscription(input: SetMyReportSubscriptionInput!): MyReportSubscriptionResponse!
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
@@ -11480,6 +11539,10 @@ type TenantType implements Node {
   checkinTeamTitle: String!
   autoApproveRequests: Boolean!
   checkinPhotoBuckets: [String!]!
+  checkinLocationMode: String!
+  checkinPhotoBucketsConfig: JSON
+  checkinResources: [StandingCheckinResourceGql!]!
+  checkinPrograms: [StandingCheckinProgramGql!]!
 
   """Brand group this tenant belongs to (multi-brand activations)."""
   brandGroup: BrandGroupType

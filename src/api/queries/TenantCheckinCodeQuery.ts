@@ -1,10 +1,10 @@
 import { graphql } from "react-relay";
 
 /**
- * The active tenant's STANDING check-in code, if one has been issued.
+ * The active tenant's STANDING check-in code and Studio config.
  *
- * Deliberately tiny and on its own (same shape as LinkedSheetQuery) so the
- * banner can mount anywhere without dragging in a heavier tenant payload.
+ * Deliberately on its own (same shape as LinkedSheetQuery) so the Walk-ups
+ * Standing tab can mount without dragging in a heavier tenant payload.
  *
  * There is no tenant-by-id query on this schema, so we fetch the viewer's
  * tenants and pick the active one client-side — see usePublicFormLink.
@@ -23,6 +23,20 @@ export const TenantCheckinCodeQuery = graphql`
           checkinTeamTitle
           checkinPhotoBuckets
           checkinEventTypeNames
+          checkinLocationMode
+          checkinPhotoBucketsConfig
+          checkinResources {
+            label
+            kind
+            url
+            note
+            hideOnRecapOnly
+          }
+          checkinPrograms {
+            id
+            name
+            isDefault
+          }
         }
       }
     }
