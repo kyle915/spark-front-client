@@ -754,11 +754,8 @@ export const SHORTCUTS: { scope: string; keys: [string, string][] }[] = [
   },
 ];
 
-/** Where "Send feedback" goes (product owners). */
-export const FEEDBACK_RECIPIENTS = [
-  "kyle@igniteproductions.co",
-  "nevena@igniteproductions.co",
-];
+/** Shared inbox for the account-menu "Send feedback" mailto. */
+export const FEEDBACK_RECIPIENTS = ["events@igniteproductions.co"];
 
 /**
  * mailto: link for product feedback, pre-filled with the page the person was
