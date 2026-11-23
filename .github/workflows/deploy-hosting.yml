@@ -1,10 +1,16 @@
 name: Deploy to Firebase Hosting
 
 on:
-  push:
-    branches:
-      - develop
+  # Production Hosting deploys on push to main (deploy-prod.yml).
+  # This file is the manual escape hatch only. It does not run on
+  # pull_request and it does not run on push to develop.
   workflow_dispatch:
+
+# Queued runs of this ref are cancelled. An upload already in progress
+# is not cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 # Background — why this workflow is shaped the way it is:
 #
