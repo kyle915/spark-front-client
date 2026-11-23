@@ -550,12 +550,12 @@ const ClientInner: React.FC = () => {
       )}
 
       {activeTab === "overview" && (<>
-        {/* Desktop: program snapshot left, weekly summary in the right
-            column so brand users see last week without scrolling past
-            photos. Narrow: stack — weekly under the program card.
-            When there is no summary the right slot is :empty and the
-            grid stays one column so the program card stays full width. */}
-        <div className="grid grid-cols-1 gap-5 lg:gap-6 items-start lg:has-[.client-weekly-slot:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]">
+        {/* Wide desktop only (xl+): program snapshot left, weekly summary
+            right — at lg the w-64 sidebar leaves too little content width
+            for three KPI/photo columns beside a 280px summary. Narrower
+            viewports stack. Empty right slot keeps the program card full
+            width. */}
+        <div className="grid grid-cols-1 gap-5 xl:gap-6 items-start xl:has-[.client-weekly-slot:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]">
           <div className="min-w-0 space-y-5">
             {tenantId ? (
               <Suspense fallback={<PanelSkeleton label="Loading your program" />}>
@@ -564,11 +564,11 @@ const ClientInner: React.FC = () => {
             ) : null}
           </div>
           {tenantId ? (
-            <div className="client-weekly-slot min-w-0 lg:sticky lg:top-4 self-start">
+            <div className="client-weekly-slot min-w-0 xl:sticky xl:top-4 self-start">
               <WeeklySummaryCard
                 tenantId={tenantId}
                 forClient
-                className="p-5 sm:p-6 lg:p-6"
+                className="p-5 sm:p-6 xl:p-6"
               />
             </div>
           ) : null}

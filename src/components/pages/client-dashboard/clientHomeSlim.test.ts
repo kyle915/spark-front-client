@@ -23,11 +23,11 @@ describe("client home stays slim", () => {
     // not below photos/recaps on Overview.
     expect(dash).toContain("client-weekly-slot");
     expect(dash).toContain(
-      "lg:has-[.client-weekly-slot:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]",
+      "xl:has-[.client-weekly-slot:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]",
     );
     expect(dash).toContain("<WeeklySummaryCard");
     expect(dash).toContain("forClient");
-    expect(dash).toContain("lg:sticky");
+    expect(dash).toContain("xl:sticky");
     expect(dash).not.toContain("WeeklyNarrationCard");
     expect(dash).toContain("<ClientApprovalsBody");
     expect(dash).not.toContain("tenantWeeklySummary");
