@@ -35,6 +35,15 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-23w",
+    date: "November 23, 2026",
+    title: "Recap fields fill the page (photos stay right)",
+    items: [
+      "On recap detail and shared /r links, Shift Overview, Brand Results, Brand Feedback and Follow-up sit in a two-column grid that uses the full width — no more skinny left stack with empty space.",
+      "Photos stay on the right on wide screens; stats still sit under the title.",
+    ],
+  },
+  {
     id: "2026-11-23t",
     date: "November 23, 2026",
     title: "Email links open the right brand, plus check-in prep polish",
