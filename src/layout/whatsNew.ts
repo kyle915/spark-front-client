@@ -639,6 +639,7 @@ export function markWhatsNewSeen(isClient = false): void {
     const latest = whatsNewFor(isClient)[0];
     if (!latest) return;
     window.localStorage.setItem(whatsNewSeenKey(isClient), latest.id);
+    window.dispatchEvent(new Event("spark:whats-new"));
   } catch {
     /* storage unavailable */
   }

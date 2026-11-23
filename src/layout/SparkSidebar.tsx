@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { showsMissingRecaps } from "@/field/missingRecaps";
@@ -10,6 +10,7 @@ import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
 import { useMobileNav } from "./MobileNavContext";
+import { hasUnseenWhatsNew } from "./whatsNew";
 import {
   Activity,
   LayoutDashboard,
@@ -61,7 +62,7 @@ import {
  * classes lifted from spark-demo/index.html so React renders the same pixels.
  */
 
-type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold" | "muted";
+type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold" | "muted" | "quiet";
 
 type NavItem = {
   label: string;
@@ -502,14 +503,18 @@ const NavRow: React.FC<{
         <Icon size={16} />
       </span>
       <span className="truncate spark-sidebar-label">{label}</span>
-      {item.chip && (
+      {item.chip?.tone === "quiet" ? (
+        <span className="nav-count-quiet" aria-label={item.chip.label ?? item.chip.text}>
+          {item.chip.text}
+        </span>
+      ) : item.chip ? (
         <span
           className={`nav-badge ${badgeClass(item.chip.tone)}`}
           aria-label={item.chip.label}
         >
           {item.chip.text}
         </span>
-      )}
+      ) : null}
     </>
   );
   if (item.stub || !effectiveTo) {
@@ -575,8 +580,12 @@ const SidebarNav: React.FC<{
         };
       }
       if (it.to === "/requests/list" && counts.tracker > 0) {
-        // Inventory count — outline, not the lime Create Request alarm.
-        chip = { text: String(counts.tracker), tone: "muted" };
+        // Catalog size, not a queue. Quiet text, not a pill beside orange counts.
+        chip = {
+          text: counts.tracker.toLocaleString("en-US"),
+          tone: "quiet",
+          label: `${counts.tracker.toLocaleString("en-US")} tracker requests`,
+        };
       }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
@@ -677,6 +686,17 @@ export const SparkSidebar: React.FC = () => {
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
+  const [unseenNews, setUnseenNews] = useState(() => hasUnseenWhatsNew(isClient));
+  useEffect(() => {
+    const sync = () => setUnseenNews(hasUnseenWhatsNew(isClient));
+    sync();
+    window.addEventListener("spark:whats-new", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("spark:whats-new", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [isClient]);
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
   const tenantFallback = (
@@ -815,7 +835,10 @@ export const SparkSidebar: React.FC = () => {
         className="spark-sidebar-footer px-3 py-3 flex items-center gap-3"
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
-        <span className="spark-avatar">{initial}</span>
+        <span className="spark-avatar">
+          {initial}
+          {unseenNews ? <span className="spark-avatar-dot" aria-hidden /> : null}
+        </span>
         <div className="flex-1 min-w-0 spark-sidebar-expand-only">
           <p className="text-sm font-semibold truncate">
             {user?.firstName ?? user?.email ?? "User"}

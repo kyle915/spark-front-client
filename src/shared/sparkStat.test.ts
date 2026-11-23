@@ -10,6 +10,7 @@ import {
   sumConversionBases,
   attentionSnapshotKpis,
   todayGroundKpis,
+  todayQueueLinks,
 } from "./sparkStat";
 
 describe("sumConversionBases", () => {
@@ -154,7 +155,7 @@ describe("recapListKpis", () => {
       }),
     ).toEqual([
       { label: "In view", value: "12", hint: "50 loaded" },
-      { label: "Eng", value: "200", tone: "lime" },
+      { label: "Engagements", value: "200", tone: "lime" },
       { label: "Sold", value: "40" },
       {
         label: "Conv",
@@ -177,7 +178,7 @@ describe("recapListKpis", () => {
       conversionEngagements: 1_000,
       conversionSold: 200,
     });
-    expect(kpis.find((k) => k.label === "Eng")?.value).toBe("31,485");
+    expect(kpis.find((k) => k.label === "Engagements")?.value).toBe("31,485");
     expect(kpis.find((k) => k.label === "Sold")?.value).toBe("224");
     expect(kpis.find((k) => k.label === "Conv")).toEqual({
       label: "Conv",
@@ -246,7 +247,7 @@ describe("recap type on the list strip", () => {
         hint: "n/a · Retail + on-prem only",
         tone: "default",
       });
-      expect(kpis.find((k) => k.label === "Eng")?.value).toBe("400");
+      expect(kpis.find((k) => k.label === "Engagements")?.value).toBe("400");
       expect(kpis.find((k) => k.label === "Sold")?.value).toBe("30");
     },
   );
@@ -258,7 +259,7 @@ describe("recap type on the list strip", () => {
       sold: 0,
       recapType: "seeding",
     });
-    expect(kpis.find((k) => k.label === "Eng")).toMatchObject({
+    expect(kpis.find((k) => k.label === "Engagements")).toMatchObject({
       value: "—",
       hint: "Drop-offs, not sampling",
     });
@@ -311,7 +312,7 @@ describe("3rd-party recaps stay out of totals", () => {
       conversionSold: 20,
       notInTotals: 1,
     });
-    expect(kpis.find((k) => k.label === "Eng")?.hint).toBe("excl. 1 3rd-party");
+    expect(kpis.find((k) => k.label === "Engagements")?.hint).toBe("excl. 1 3rd-party");
     expect(kpis.find((k) => k.label === "Sold")?.hint).toBe("excl. 1 3rd-party");
     expect(kpis.find((k) => k.label === "Conv")?.hint).toBe("Retail + on-prem · excl. 1 3rd-party");
   });
@@ -380,6 +381,19 @@ describe("todayGroundKpis", () => {
       { label: "On the clock", value: "2", count: 2 },
       { label: "Not clocked in yet", value: "1", count: 1, tone: "orange" },
     ]);
+  });
+
+  it("links the live queues and skips zeros", () => {
+    expect(
+      todayQueueLinks({ recapsNeedsReview: 1, recapsDue: 1, approvals: 89 }),
+    ).toEqual([
+      { to: "/recaps/list?status=needs_review", text: "1 recap needs review" },
+      { to: "/recaps/missing", text: "1 missing recap" },
+      { to: "/approvals", text: "89 approvals" },
+    ]);
+    expect(
+      todayQueueLinks({ recapsNeedsReview: 0, recapsDue: 0, approvals: 0 }),
+    ).toEqual([]);
   });
 
   it("shows a plain zero when everyone due is in", () => {

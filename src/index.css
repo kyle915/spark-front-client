@@ -1963,6 +1963,16 @@ a.spark-upcoming-row:focus-visible {
 .nav-badge--new { background: #f2f3ee; color: #14160f; }
 /* A plain count. */
 .nav-badge--count { background: rgba(242, 243, 238, 0.14); color: rgba(242, 243, 238, 0.86); font-weight: 600; }
+/* A catalog count, not a queue. Text only, so it does not sit next to orange pills. */
+.nav-count-quiet {
+  margin-left: auto;
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(242, 243, 238, 0.55);
+  letter-spacing: 0;
+}
 .nav-section {
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.7rem;
@@ -2044,6 +2054,7 @@ a.spark-upcoming-row:focus-visible {
 
 /* === Avatar (lime gradient) === */
 .spark-avatar {
+  position: relative;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -2054,6 +2065,16 @@ a.spark-upcoming-row:focus-visible {
   font-weight: 700;
   font-size: 0.85rem;
   flex-shrink: 0;
+}
+.spark-avatar-dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--spark-sky, #5fb8ef);
+  border: 2px solid var(--spark-bg, #0a0b0d);
 }
 
 /* === Big greeting numbers === */

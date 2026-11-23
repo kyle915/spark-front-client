@@ -12,6 +12,8 @@ import {
   metresBetween,
   noPositionWords,
   normaliseAddress,
+  isDateRetailerName,
+  retailerGroupKey,
   retailerOptions,
   stateOptions,
   storeCounts,
@@ -301,9 +303,29 @@ describe("search and filters", () => {
   it("offers states and retailers found in the stores, biggest banner first", () => {
     expect(stateOptions(stores)).toEqual(["AZ", "CA"]);
     expect(retailerOptions(stores)).toEqual([
-      { name: "Total Wine", count: 2 },
-      { name: "Albertsons 524", count: 1 },
-      { name: "Fry's Food", count: 1 },
+      { key: "total wine", name: "Total Wine", count: 2 },
+      { key: "albertsons 524", name: "Albertsons 524", count: 1 },
+      { key: "fry's food", name: "Fry's Food", count: 1 },
+    ]);
+  });
+
+  it("groups chains that differ only by case or hyphen, and drops dates", () => {
+    const mixed = buildStores([
+      pin({ retailerName: "Kroger", storeKey: "k1", lat: 33.1, lng: -111.1 }),
+      pin({ retailerName: "KROGER", storeKey: "k2", lat: 33.2, lng: -111.2 }),
+      pin({ retailerName: "7-Eleven", storeKey: "e1", lat: 33.3, lng: -111.3 }),
+      pin({ retailerName: "7 ELEVEN", storeKey: "e2", lat: 33.4, lng: -111.4 }),
+      pin({ retailerName: "04/01/2026", storeKey: "d1", lat: 33.5, lng: -111.5 }),
+    ]);
+    expect(isDateRetailerName("04/01/2026")).toBe(true);
+    expect(retailerGroupKey("7-Eleven")).toBe(retailerGroupKey("7 ELEVEN"));
+    expect(retailerOptions(mixed)).toEqual([
+      { key: "7 eleven", name: "7-Eleven", count: 2 },
+      { key: "kroger", name: "Kroger", count: 2 },
+    ]);
+    expect(filterStores(mixed, { ...NO_FILTERS, retailer: "kroger" }).map((s) => s.key).sort()).toEqual([
+      "k1",
+      "k2",
     ]);
   });
 

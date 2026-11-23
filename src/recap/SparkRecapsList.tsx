@@ -109,7 +109,7 @@ import {
 } from "@/lib/activationBucket";
 import { BaNameFilter } from "./BaNameFilter";
 import { RecapTypeChips } from "./RecapTypeChips";
-import ListSearch from "@/components/search/ListSearch";
+import { scanRecapLine } from "./scanLine";
 import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
 import { useRecapReviewFlags } from "./useRecapReviewFlags";
 import type { ReviewFlagSummary } from "./reviewCheckDisplay";
@@ -286,7 +286,7 @@ function demoteEngWhenConvIsLime<
   );
   if (!convIsPrimary) return items;
   return items.map((k) =>
-    k.label === "Eng" ? { ...k, tone: "default" } : k,
+    k.label === "Engagements" ? { ...k, tone: "default" } : k,
   );
 }
 
@@ -832,7 +832,7 @@ const RecapCard: React.FC<{
               ? recap.engagements.toLocaleString()
               : "—"
           }
-          label="Eng"
+          label="Engagements"
         />
         <SparkStat
           value={
@@ -889,9 +889,8 @@ const RecapCompactRow: React.FC<{
   forceApproved?: boolean;
   onOpenRecap?: ((recap: Recap) => void) | null;
   reviewFlags?: readonly ReviewFlagSummary[] | null;
-}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap, reviewFlags }) => {
+}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap }) => {
   const baLabel = useBaLabel();
-  const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
   const { isClient } = useSparkRole();
@@ -902,13 +901,19 @@ const RecapCompactRow: React.FC<{
     archivedAt: recap.archivedAt,
     isClient,
   });
-  const statusText = status.text;
+  const line = scanRecapLine({
+    who: baLabel(recap.baName) || "Unattributed",
+    activation: (recap.requestType || "").trim() || recapActivationFilterLabel(recap.recapType),
+    date: formatDate(recap.date),
+    status: status.text,
+    engagements: recap.engagements,
+  });
   return (
     <div
       className="spark-inset-row relative"
       style={{
         minHeight: 40,
-        padding: "3px 10px",
+        padding: "8px 10px",
         gap: 8,
         background: focused
           ? "rgba(239,90,42,0.14)"
@@ -926,7 +931,7 @@ const RecapCompactRow: React.FC<{
       <Link
         to={href}
         onClick={() => onOpenRecap?.(recap)}
-        aria-label={`Open recap ${recap.name}`}
+        aria-label={line}
         className="absolute inset-0 z-[1]"
       />
       {(selectMode || selected) && (
@@ -942,126 +947,9 @@ const RecapCompactRow: React.FC<{
           />
         </label>
       )}
-      <div
-        className="relative z-10 shrink-0 overflow-hidden"
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 8,
-          background: "rgba(239,90,42,0.08)",
-        }}
-      >
-        {recap.heroImage && !heroFailed ? (
-          <img
-            src={recap.heroImage}
-            alt=""
-            className="w-full h-full object-cover"
-            onError={() => setHeroFailed(true)}
-          />
-        ) : recap.heroImage && heroFailed ? (
-          <span className="chip chip-orange absolute inset-0 grid place-items-center text-[8px]">
-            Photo failed
-          </span>
-        ) : (
-          <span className="grid place-items-center w-full h-full text-base" aria-hidden>
-            ◈
-          </span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1 relative z-10">
-        <p className="text-[13px] font-semibold leading-tight truncate">{baLabel(recap.baName) || "Unattributed"}</p>
-        {recap.isThirdParty ? (
-          <div className="mt-1 flex items-center gap-1 flex-wrap">
-            <ThirdPartyRecapBadge compact notInTotals={recap.excludeFromAggregates} />
-            {recap.storeMappingStatus === "unmatched" ? (
-              <span className="chip chip-orange chip-sm">Map store</span>
-            ) : null}
-          </div>
-        ) : recap.sourceLabel ? (
-          <div className="mt-1 flex items-center gap-1 flex-wrap">
-            <RecapSourceBadge compact label={recap.sourceLabel} />
-          </div>
-        ) : null}
-        {!emptyShell && !approved ? (
-          <div className="mt-1">
-            <RecapReviewFlagBadges flags={reviewFlags} compact />
-          </div>
-        ) : null}
-        <p
-          className="mono text-[10px] truncate"
-          style={{ letterSpacing: "0.12em", color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
-        >
-          {recap.retailerName && recap.retailerName !== "—" ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                useStoreSheetStore.getState().openStoreSheet({
-                  recapId: recap.uuid,
-                  storeName: recap.retailerName,
-                  fallbackTitle: recap.retailerName,
-                });
-              }}
-              title={`Open store profile for ${recap.retailerName}`}
-              className="relative z-20 underline underline-offset-2 cursor-pointer mono text-[10px]"
-              style={{
-                color: "var(--spark-text-secondary)",
-                background: "none",
-                border: 0,
-                padding: 0,
-                letterSpacing: "0.12em",
-              }}
-            >
-              {recap.retailerName}
-            </button>
-          ) : (
-            recap.name
-          )}
-          {recap.date ? ` · ${formatDate(recap.date)}` : ""}
-        </p>
-      </div>
-      <span
-        className={`relative z-10 chip chip-sm shrink-0 ${
-          status.tone === "neutral"
-            ? ""
-            : status.tone === "done"
-              ? "chip-lime"
-              : "chip-orange"
-        }`}
-        style={
-          status.tone === "neutral"
-            ? {
-                background: "rgba(var(--spark-ink-rgb),0.06)",
-                border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
-                color: "var(--spark-text-secondary)",
-              }
-            : undefined
-        }
-      >
-        {statusText}
-      </span>
-      <div className="relative z-10 hidden sm:flex items-center gap-2 shrink-0">
-        <SparkStat
-          size="sm"
-          tone="lime"
-          value={
-            recap.engagements != null
-              ? recap.engagements.toLocaleString()
-              : "—"
-          }
-          label="Eng"
-        />
-        <SparkStat
-          size="sm"
-          value={
-            recap.productsSold != null
-              ? recap.productsSold.toLocaleString()
-              : "—"
-          }
-          label="Sold"
-        />
-      </div>
+      <p className="relative z-10 min-w-0 flex-1 truncate text-[13px] leading-tight">
+        {line}
+      </p>
     </div>
   );
 };
@@ -2553,7 +2441,10 @@ export default function SparkRecapsList() {
   const reviewFlagsById = useRecapReviewFlags(flagTargets, flagsEnabled);
   // Staff-only Clean / Needs Eyes. Never enable for client chrome.
   const [triageFilter, setTriageFilter] = useState<RecapTriageFilter>("all");
-  const triageById = useRecapReviewTriage(flagTargets, flagsEnabled);
+  const { byId: triageById, settled: triageSettled } = useRecapReviewTriage(
+    flagTargets,
+    flagsEnabled,
+  );
   const triageCounts = useMemo(
     () =>
       countRecapTriage(
@@ -3490,11 +3381,8 @@ export default function SparkRecapsList() {
             ) : null
           }
         />
-        {tenantId ? (
-          <ListSearch list="recaps" tenantId={String(tenantId)} isClient={isClient} />
-        ) : null}
         <div
-          className="sticky top-0 z-20 spark-sticky-filters flex flex-col"
+          className="sticky top-0 z-20 relative spark-sticky-filters flex flex-col"
           style={{
             background: "rgba(var(--spark-bg-rgb),0.94)",
             border: "1px solid rgba(var(--spark-ink-rgb),0.07)",
@@ -3622,11 +3510,29 @@ export default function SparkRecapsList() {
                 ))}
               </div>
             )}
-            {!isClient && flagsEnabled && (
+            <span
+              className="rounded-xl px-2.5 py-2 text-xs font-semibold shrink-0"
+              style={{
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              {datePreset === "30d"
+                ? "30 days"
+                : datePreset === "90d"
+                  ? "90 days"
+                  : datePreset === "all"
+                    ? "All dates"
+                    : "Custom dates"}
+            </span>
+            {!isClient &&
+              flagsEnabled &&
+              flagTargets.length > 0 &&
+              !(triageSettled && triageCounts.clean === 0) && (
               <button
                 type="button"
                 disabled={
-                  !triageReady ||
+                  !triageSettled ||
                   triageCounts.clean === 0 ||
                   isBulkApproving ||
                   approvePhase !== "idle"
@@ -3635,15 +3541,15 @@ export default function SparkRecapsList() {
                 className="rounded-xl px-3 py-2 text-xs font-bold shrink-0 disabled:opacity-40"
                 style={ghostBtn}
                 title={
-                  !triageReady
+                  !triageSettled
                     ? "Waiting for Clean / Needs Eyes labels…"
                     : "Approve every Clean recap on this page — Needs Eyes stays for review"
                 }
               >
                 {isBulkApproving && approvePhase !== "idle"
                   ? "Approving…"
-                  : !triageReady
-                    ? "Scoring Clean…"
+                  : !triageSettled
+                    ? "Scoring…"
                     : `Approve all Clean · ${triageCounts.clean}`}
               </button>
             )}
@@ -3652,9 +3558,8 @@ export default function SparkRecapsList() {
               active={activationFilter}
               onChange={setActivationFilter}
             />
-            {/* Phone: collapse density / Jump / Map / Select / Pin / dates / export */}
-            {/* Menu anchors to the sticky card, not the button, so it never runs off a phone screen. */}
-            <div className="md:hidden">
+            {/* Cards, dates, export, map, select, pin, and jump live in one overflow. */}
+            <div>
               <button
                 type="button"
                 onClick={() => {
@@ -3843,230 +3748,11 @@ export default function SparkRecapsList() {
             />
           </div>
 
-          {/* Desktop: full control strip (unchanged tools, minus status / New which sit above) */}
-          <div className="hidden md:flex flex-wrap gap-2 items-center">
-            <div
-              className="flex overflow-hidden"
-              style={{ border: "1px solid var(--spark-border)", borderRadius: 12 }}
-            >
-              {(
-                [
-                  ["cards", "Cards"],
-                  ["compact", "Scan"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setDensity(key)}
-                  className="px-2.5 py-2 text-xs font-semibold"
-                  style={{
-                    background:
-                      density === key ? "rgba(var(--spark-ok-rgb),0.16)" : "transparent",
-                    color:
-                      density === key
-                        ? "var(--spark-lime)"
-                        : "rgba(var(--spark-ink-rgb),0.65)",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={(e) => dispatchOpenJump(e.currentTarget)}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={ghostBtn}
-              title="Jump to a recap"
-            >
-              Jump to a recap
-              <span
-                className="mono ml-2 text-[10px]"
-                style={{ letterSpacing: "0.12em", opacity: 0.65 }}
-              >
-                ⌘K
-              </span>
-            </button>
-            {!isClient && (
-              <button
-                type="button"
-                onClick={() => setNeedsStoreMap((v) => !v)}
-                className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={needsStoreMap ? limeBtn : ghostBtn}
-              >
-                Map store
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setSelectMode((v) => !v)}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={selectMode ? limeBtn : ghostBtn}
-              title="Select multiple recaps for bulk actions"
-            >
-              {selectMode ? "Selecting" : "Select"}
-            </button>
-            {!isClient && (
-              <button
-                type="button"
-                onClick={pinCurrentView}
-                className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={ghostBtn}
-                title="Save the current filters as a named view"
-              >
-                Pin view
-              </button>
-            )}
-            {savedViews.length > 0 && (
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  const v = savedViews.find((x) => x.name === e.target.value);
-                  if (v) applyView(v);
-                  e.currentTarget.value = "";
-                }}
-                className="rounded-xl text-sm"
-                style={{ ...filterStyle, maxWidth: 180 }}
-              >
-                <option value="">Saved views…</option>
-                {savedViews.map((v) => (
-                  <option key={v.name} value={v.name}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {!isClient && missingRecapsOn && (
-              <button
-                type="button"
-                onClick={() => navigate("/recaps/missing")}
-                className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={ghostBtn}
-                title="Events in the last 30 days with no recap filed"
-              >
-                Missing
-              </button>
-            )}
-            <div
-              className="flex rounded-xl overflow-hidden"
-              style={{ border: "1px solid var(--spark-border)" }}
-            >
-              {(["30d", "90d", "all"] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => applyDatePreset(p)}
-                  className="px-2.5 py-2 text-xs font-semibold"
-                  style={{
-                    background:
-                      datePreset === p ? "rgba(var(--spark-ok-rgb),0.16)" : "transparent",
-                    color:
-                      datePreset === p
-                        ? "var(--spark-lime)"
-                        : "rgba(var(--spark-ink-rgb),0.65)",
-                  }}
-                >
-                  {p === "all" ? "All dates" : `${parseInt(p, 10)} days`}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={showAllPublished}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={ghostBtn}
-              title="Show every published recap, all dates"
-            >
-              All published
-            </button>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setToolsOpen(false);
-                  setOpsOpen((v) => !v);
-                }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={ghostBtn}
-              >
-                Export / Import ▾
-              </button>
-              {opsOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
-                  style={{
-                    background: "rgba(var(--spark-bg-rgb),0.98)",
-                    border: "1px solid var(--spark-border)",
-                    boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
-                  }}
-                >
-                  <LinkedSheetChip />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      exportCsv();
-                      setOpsOpen(false);
-                    }}
-                    disabled={visibleRecaps.length === 0}
-                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                    style={{
-                      ...ghostBtn,
-                      opacity: visibleRecaps.length === 0 ? 0.5 : 1,
-                    }}
-                  >
-                    ↓ Export CSV
-                    {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void copyForSheets();
-                      setOpsOpen(false);
-                    }}
-                    disabled={
-                      visibleRecaps.length === 0 || recapCopyState === "copying"
-                    }
-                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                    style={ghostBtn}
-                  >
-                    {recapCopyState === "copied"
-                      ? `✓ Copied (${visibleRecaps.length})`
-                      : "Copy for Sheets"}
-                  </button>
-                  <ExportReceiptsButton variant="ghost" />
-                  <ImportConnecteamButton variant="ghost" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.location.href = "/imports";
-                    }}
-                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                    style={ghostBtn}
-                  >
-                    ↑ Import Provider CSV
-                  </button>
-                  {!isClient && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.location.href = "/recaps/templates";
-                      }}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                      style={ghostBtn}
-                    >
-                      + Build template
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Mobile: Export menu when opened from More */}
           {opsOpen && (
             <div
-              className="md:hidden flex flex-col gap-1 p-2 rounded-2xl"
+              className="flex flex-col gap-1 p-2 rounded-2xl"
               style={{
                 background: "rgba(var(--spark-bg-rgb),0.98)",
                 border: "1px solid var(--spark-border)",
@@ -4378,7 +4064,7 @@ export default function SparkRecapsList() {
           >
             <option value="date-desc">Newest first</option>
             <option value="date-asc">Oldest first</option>
-            <option value="eng-desc">Most consumers</option>
+            <option value="eng-desc">Most engagements</option>
             <option value="sold-desc">Most products sold</option>
           </select>
         </div>

@@ -31,6 +31,7 @@ import {
   filterStores,
   hasFilters,
   noPositionWords,
+  retailerGroupKey,
   retailerOptions,
   stateOptions,
   storeCounts,
@@ -466,7 +467,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     [pageSize],
   );
   const onlyRetailer = useCallback((name: string) => {
-    setRetailerFilter(name);
+    setRetailerFilter(retailerGroupKey(name) || name);
     setSelectedKey(null);
   }, []);
 
@@ -519,16 +520,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </button>
         </div>
       ) : null}
-
-      <AccountUploader list={list} />
-
-      <SampleNextList
-        tenantId={tenantId}
-        selectedKeys={selectedWaveKeys}
-        onToggleStore={toggleWaveStore}
-        onSelectStores={selectManyWaveStores}
-        refreshKey={waveRefreshKey}
-      />
 
       <SparkFilterBar
         label="Stores"
@@ -588,7 +579,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         >
           <option value="all">All retailers</option>
           {retailers.map((r) => (
-            <option key={r.name} value={r.name}>
+            <option key={r.key} value={r.key}>
               {r.name} · {r.count}
             </option>
           ))}
@@ -608,7 +599,14 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             Clear filters
           </button>
         ) : null}
-        {filtered.length > 0 ? (
+        {roster && roster.rosterTotal > 0 ? (
+          <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+            Account roster: {roster.rosterTotal.toLocaleString("en-US")}{" "}
+            {roster.rosterTotal === 1 ? "account" : "accounts"},{" "}
+            {roster.neverVisited.toLocaleString("en-US")} with no filed visit.
+          </span>
+        ) : null}
+        {filtering && filtered.length > 0 ? (
           <button
             type="button"
             onClick={toggleSelectAllFiltered}
@@ -649,16 +647,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </div>
         ) : null}
       </SparkFilterBar>
-
-      {roster && roster.rosterTotal > 0 ? (
-        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
-          Account roster: {roster.rosterTotal.toLocaleString("en-US")}{" "}
-          {roster.rosterTotal === 1 ? "account" : "accounts"},{" "}
-          {roster.neverVisited.toLocaleString("en-US")} with no filed visit. A
-          roster account appears here once it has a request or is on the
-          uploaded list.
-        </p>
-      ) : null}
 
       <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]">
         <div className="spark-card overflow-hidden order-1 flex flex-col h-[460px] lg:h-[640px]">
@@ -746,6 +734,14 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           )}
         </div>
       </div>
+      <SampleNextList
+        tenantId={tenantId}
+        selectedKeys={selectedWaveKeys}
+        onToggleStore={toggleWaveStore}
+        onSelectStores={selectManyWaveStores}
+        refreshKey={waveRefreshKey}
+      />
+      <AccountUploader list={list} quiet />
       <WaveScheduleSheet
         open={waveSheetOpen}
         onClose={() => setWaveSheetOpen(false)}

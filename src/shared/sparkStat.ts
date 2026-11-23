@@ -237,7 +237,7 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
 
 /**
  * Recaps list strip — numbers from the loaded/filtered set, never invented.
- * IN VIEW / ENG / SOLD stay all-program; CONV is sold ÷ the per-recap
+ * In view / Engagements / Sold stay all-program; CONV is sold ÷ the per-recap
  * base over Retail + On-Premise only (Event activations excluded).
  * Product retail uses consumers sampled; dry demos use people engaged.
  */
@@ -253,7 +253,7 @@ export function recapListKpis(input: {
   conversionSold: number;
   /** Dry demos inside the CONV totals (people-engaged base). */
   conversionDryDemos?: number;
-  /** 3rd-party recaps in view, left out of Eng / Sold / Conv. */
+  /** 3rd-party recaps in view, left out of Engagements / Sold / Conv. */
   notInTotals?: number;
   /** Active type chip. Event / Guerilla / Seeding have no CONV. */
   recapType?: RecapActivationFilter;
@@ -286,7 +286,7 @@ export function recapListKpis(input: {
           : undefined,
     },
     {
-      label: "Eng",
+      label: "Engagements",
       value:
         seeding && input.engagements === 0
           ? "—"
@@ -340,6 +340,37 @@ export function todayGroundKpis(input: {
       tone: input.notClockedIn > 0 ? "orange" : "default",
     },
   ];
+}
+
+/** Live queue links already counted in the sidebar. Empty counts are omitted. */
+export function todayQueueLinks(counts: {
+  recapsNeedsReview: number;
+  recapsDue: number;
+  approvals: number;
+}): Array<{ to: string; text: string }> {
+  const links: Array<{ to: string; text: string }> = [];
+  const review = counts.recapsNeedsReview;
+  if (review > 0) {
+    links.push({
+      to: "/recaps/list?status=needs_review",
+      text: `${review.toLocaleString("en-US")} ${review === 1 ? "recap needs review" : "recaps need review"}`,
+    });
+  }
+  const missing = counts.recapsDue;
+  if (missing > 0) {
+    links.push({
+      to: "/recaps/missing",
+      text: `${missing.toLocaleString("en-US")} missing ${missing === 1 ? "recap" : "recaps"}`,
+    });
+  }
+  const approvals = counts.approvals;
+  if (approvals > 0) {
+    links.push({
+      to: "/approvals",
+      text: `${approvals.toLocaleString("en-US")} ${approvals === 1 ? "approval" : "approvals"}`,
+    });
+  }
+  return links;
 }
 
 export function padIndex(n: number): string {

@@ -5,6 +5,7 @@ import {
   cleanChartQuestion,
   MAX_CHART_QUESTION,
   sampleNextKindLabel,
+  sampleNextLine,
 } from "./dashboardExplain";
 
 describe("calloutRecapsHref", () => {
@@ -71,5 +72,28 @@ describe("sampleNextKindLabel", () => {
   it("reads in plain words", () => {
     expect(sampleNextKindLabel("revisit")).toBe("Worth going back to");
     expect(sampleNextKindLabel("never_visited")).toBe("Never visited");
+  });
+});
+
+describe("sampleNextLine", () => {
+  it("keeps the store, the rate against the average, and the weeks", () => {
+    expect(
+      sampleNextLine({
+        name: "Walmart",
+        market: "TX",
+        reason:
+          "Converted at 55.9% against a 15.2% average, last visited 44 weeks ago.",
+      }),
+    ).toBe("Walmart · TX · 55.9% vs 15.2% · 44 weeks");
+  });
+
+  it("does not invent a rate the reason does not contain", () => {
+    expect(
+      sampleNextLine({
+        name: "H-E-B",
+        market: "TX",
+        reason: "Never visited. No store nearby has results to compare yet.",
+      }),
+    ).toBe("H-E-B · TX · never visited");
   });
 });

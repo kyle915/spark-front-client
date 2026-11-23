@@ -1,4 +1,5 @@
 import {
+  Fragment,
   Suspense,
   startTransition,
   useCallback,
@@ -21,7 +22,8 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useBaLabel from "@/hooks/useBaLabel";
 import { SparkBentoTile } from "@/shared/SparkStatBlocks";
-import { todayGroundKpis } from "@/shared/sparkStat";
+import { todayGroundKpis, todayQueueLinks } from "@/shared/sparkStat";
+import useSidebarCounts from "@/hooks/useSidebarCounts";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import TodayMapView, { MapLegend, StatusPin } from "./TodayMapView";
 import {
@@ -52,6 +54,29 @@ const prefersReducedMotion = (): boolean =>
 
 const plural = (n: number, one: string, many: string): string =>
   n === 1 ? one : many;
+
+/** One sentence of the queues that already have a sidebar count. */
+function TodayQueueLine() {
+  const counts = useSidebarCounts();
+  const links = todayQueueLinks({
+    recapsNeedsReview: counts.recapsNeedsReview,
+    recapsDue: counts.recapsDue,
+    approvals: counts.approvals,
+  });
+  if (links.length === 0) return null;
+  return (
+    <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
+      {links.map((link, i) => (
+        <Fragment key={link.to}>
+          {i > 0 ? " · " : null}
+          <Link to={link.to} className="underline" style={{ color: "var(--spark-text)" }}>
+            {link.text}
+          </Link>
+        </Fragment>
+      ))}
+    </p>
+  );
+}
 
 function EventRow({
   event,
@@ -329,18 +354,18 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     [navigate],
   );
 
-  const tiles = (
+  const visibleTiles = todayGroundKpis(counts).filter((k) => (k.count ?? 0) > 0);
+  const tiles = visibleTiles.length > 0 ? (
     <div className="spark-bento" aria-label="Today on the ground">
-      {todayGroundKpis(counts).map((k) => (
+      {visibleTiles.map((k) => (
         <SparkBentoTile key={k.label} {...k} />
       ))}
     </div>
-  );
+  ) : null;
 
   if (coverage.layout === "empty") {
     return (
       <div className="space-y-4">
-        {tiles}
         <p
           className="spark-card px-4 py-3 text-sm"
           style={{ color: "var(--spark-text-secondary)" }}
@@ -354,6 +379,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             See upcoming events
           </Link>
         </p>
+        <Suspense fallback={null}>
+          <TodayQueueLine />
+        </Suspense>
       </div>
     );
   }

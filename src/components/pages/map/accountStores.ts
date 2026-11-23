@@ -261,7 +261,7 @@ export type StoreFilters = {
   coverage: CoverageFilter;
   /** Two-letter state code, or "all". */
   state: string;
-  /** Exact store / banner name, or "all". */
+  /** Banner group key (case and hyphen folded), a raw name, or "all". */
   retailer: string;
 };
 
@@ -294,7 +294,12 @@ export function filterStores(
       return false;
     }
     if (f.state !== "all" && s.state !== f.state) return false;
-    if (f.retailer !== "all" && s.name !== f.retailer) return false;
+    if (
+      f.retailer !== "all" &&
+      retailerGroupKey(s.name) !== retailerGroupKey(f.retailer)
+    ) {
+      return false;
+    }
     return matchesSearch(s, f.q);
   });
 }
@@ -331,15 +336,62 @@ export function storeCounts(stores: ReadonlyArray<Store>): StoreCounts {
   return c;
 }
 
+const DATE_RETAILER_RE =
+  /^(?:\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2})$/;
+
+/** A retailer menu entry that is only a calendar date, not a chain. */
+export function isDateRetailerName(name: string): boolean {
+  return DATE_RETAILER_RE.test(name.trim());
+}
+
+/**
+ * Chains that differ only by case, hyphen, or spacing.
+ * "Kroger" and "KROGER" share a key; "7-Eleven" and "7 ELEVEN" do too.
+ */
+export function retailerGroupKey(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[-–—_/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function preferredRetailerLabel(counts: Map<string, number>): string {
+  const entries = [...counts.entries()];
+  const mixed = entries.filter(([name]) => /[a-z]/.test(name));
+  const pool = mixed.length > 0 ? mixed : entries;
+  pool.sort(
+    (a, b) => b[1] - a[1] || a[0].length - b[0].length || a[0].localeCompare(b[0]),
+  );
+  return pool[0][0];
+}
+
 /** Store names with how many stores carry each, biggest banner first. */
 export function retailerOptions(
   stores: ReadonlyArray<Store>,
-): Array<{ name: string; count: number }> {
-  const counts = new Map<string, number>();
-  for (const s of stores) counts.set(s.name, (counts.get(s.name) ?? 0) + 1);
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([name, count]) => ({ name, count }));
+): Array<{ name: string; count: number; key: string }> {
+  const groups = new Map<string, { counts: Map<string, number>; total: number }>();
+  for (const s of stores) {
+    const raw = s.name.trim();
+    if (!raw || isDateRetailerName(raw)) continue;
+    const key = retailerGroupKey(raw);
+    if (!key) continue;
+    let group = groups.get(key);
+    if (!group) {
+      group = { counts: new Map(), total: 0 };
+      groups.set(key, group);
+    }
+    group.counts.set(raw, (group.counts.get(raw) ?? 0) + 1);
+    group.total += 1;
+  }
+  return [...groups.entries()]
+    .map(([key, group]) => ({
+      key,
+      name: preferredRetailerLabel(group.counts),
+      count: group.total,
+    }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 export function stateOptions(stores: ReadonlyArray<Store>): string[] {

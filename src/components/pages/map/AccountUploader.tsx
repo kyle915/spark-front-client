@@ -81,7 +81,14 @@ function statusLine(list: AccountListState): string {
   return `${parts.join(" · ")}.`;
 }
 
-export function AccountUploader({ list }: { list: AccountListState }) {
+export function AccountUploader({
+  list,
+  quiet = false,
+}: {
+  list: AccountListState;
+  /** A secondary action under the map, not the page hero. */
+  quiet?: boolean;
+}) {
   const showAlert = useAlertStore((s) => s.showAlert);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
@@ -113,7 +120,7 @@ export function AccountUploader({ list }: { list: AccountListState }) {
 
   return (
     <div
-      className="spark-card px-4 py-3 flex items-center justify-between flex-wrap gap-3"
+      className={`${quiet ? "px-1 py-2" : "spark-card px-4 py-3"} flex items-center justify-between flex-wrap gap-3`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
@@ -141,10 +148,12 @@ export function AccountUploader({ list }: { list: AccountListState }) {
         >
           {statusLine(list)}
         </p>
-        <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
-          Upload a CSV or Excel file with the columns name, address, city,
-          state, zip and chain. The list is saved for this brand.
-        </p>
+        {quiet ? null : (
+          <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
+            Upload a CSV or Excel file with the columns name, address, city,
+            state, zip and chain. The list is saved for this brand.
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <button type="button" onClick={downloadTemplate} className="spark-btn-ghost">
@@ -154,7 +163,7 @@ export function AccountUploader({ list }: { list: AccountListState }) {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={!canUpload}
-          className="spark-btn-primary"
+          className={quiet ? "spark-btn-ghost" : "spark-btn-primary"}
         >
           {busy ? "Saving" : "Choose file"}
         </button>

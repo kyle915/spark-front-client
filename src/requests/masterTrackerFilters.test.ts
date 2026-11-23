@@ -3,6 +3,8 @@ import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
   trackerDateRangeToServer,
+  trackerExportScope,
+  trackerStatusMatchCount,
   trackerStatusToServer,
   trackerSortToServer,
 } from "./masterTrackerFilters";
@@ -31,12 +33,14 @@ describe("masterTrackerFilters", () => {
 
   it("parses URL search params and falls back to defaults for unknown values", () => {
     expect(parseTrackerUrlParams(new URLSearchParams())).toEqual({
-      status: "active",
+      status: "pending",
       dateRange: "all",
       market: "all",
       planId: null,
       customRange: null,
     });
+    expect(parseTrackerUrlParams(new URLSearchParams("plan=42")).status).toBe("all");
+    expect(parseTrackerUrlParams(new URLSearchParams("when=next30")).status).toBe("all");
 
     expect(
       parseTrackerUrlParams(
@@ -55,7 +59,7 @@ describe("masterTrackerFilters", () => {
         new URLSearchParams("status=bogus&when=yesterday&market=ALL"),
       ),
     ).toEqual({
-      status: "active",
+      status: "pending",
       dateRange: "all",
       market: "all",
       planId: null,
@@ -141,11 +145,21 @@ describe("masterTrackerFilters", () => {
     expect(updated.get("plan")).toBe("99");
 
     const cleared = buildTrackerUrlParams(updated, {
-      status: "active",
+      status: "pending",
       dateRange: "all",
       market: "all",
       planId: null,
     });
     expect(cleared.toString()).toBe("foo=bar");
+
+    const allStatuses = buildTrackerUrlParams(new URLSearchParams("foo=bar"), {
+      status: "all",
+    });
+    expect(allStatuses.get("status")).toBe("all");
+    expect(trackerExportScope(50, 1068)).toBe("50 of 1,068 loaded");
+    expect(trackerExportScope(1, 1)).toBe("1 loaded");
+    expect(
+      trackerStatusMatchCount("active", { pending: 1, queue: 0, approved: 1, scheduled: 0 }, 1068),
+    ).toBe(2);
   });
 });

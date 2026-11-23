@@ -22,9 +22,6 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
-import { useConsumersSampled } from "@/hooks/useConsumersSampled";
-import { useFirstTimeConsumers } from "@/hooks/useFirstTimeConsumers";
-import { useProductsPurchased } from "@/hooks/useProductsPurchased";
 import { useAuthStore } from "@/store/authStore";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -43,6 +40,8 @@ import { CountReel } from "@/motion/CountReel";
 import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
+  trackerExportScope,
+  trackerStatusMatchCount,
   trackerDateRangeToServer,
   trackerSortToServer,
   trackerStatusToServer,
@@ -1610,44 +1609,6 @@ const RmmFilterInner: React.FC<{
   );
 };
 
-/**
- * Consumers-sampled KPI, isolated in its OWN query boundary.
- *
- * `eventDashboard` is the heaviest query on this page and scales with tenant
- * size (worst on big tenants like Liquid Death). It used to be fetched in the
- * MasterTracker body — and because the app has a single router-level Suspense
- * boundary, that suspension BLOCKED THE WHOLE PAGE (the rows included) on every
- * cold load / hard refresh, purely to fill this one number. Isolated here it
- * suspends only this stat: the table + the rest of the totals strip paint
- * immediately and this figure streams in behind a "…" placeholder.
- */
-const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const consumers = useConsumersSampled(tenantId, 0);
-  return <CountReel value={consumers} />;
-};
-
-/**
- * FIRST-TIME strip — same isolation pattern as ConsumersStat. Pulled from
- * tenantKpis so custom-recap "First Time …" fields (Torch, LD, etc.) count.
- * Renders "—" when the tenant has no first-time signal yet (honest empty).
- */
-const FirstTimeStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const firstTime = useFirstTimeConsumers(tenantId, 0);
-  return firstTime == null ? "—" : <CountReel value={firstTime} />;
-};
-
-/**
- * PRODUCTS PURCHASED strip — tenantKpis.productsSold (same soldUnits matcher
- * as Insights / recap list: cans/packs primary, purchase/sold fallback).
- * Torch: single cans + packs purchased fields. Honest "—" when empty.
- */
-const ProductsPurchasedStat: React.FC<{ tenantId: string }> = ({
-  tenantId,
-}) => {
-  const purchased = useProductsPurchased(tenantId, 0);
-  return purchased == null ? "—" : <CountReel value={purchased} />;
-};
-
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
@@ -1770,7 +1731,7 @@ export default function MasterTracker() {
     ],
   );
   const applyView = (v: TrackerViewSnapshot) => {
-    const nextStatus = v.activeStatus ?? "active";
+    const nextStatus = v.activeStatus ?? "pending";
     const foundRange =
       VALID_TRACKER_DATE_RANGES.find((d) => d === v.dateRange) ?? "all";
     // Saved views don't capture custom from/to bounds, so a stored
@@ -2015,6 +1976,7 @@ export default function MasterTracker() {
   const { url: linkedSheetUrl, setUrl: persistLinkedSheet } =
     useLinkedSheetUrl();
   const [editingSheet, setEditingSheet] = useState(false);
+  const [sheetMenuOpen, setSheetMenuOpen] = useState(false);
   const [sheetDraft, setSheetDraft] = useState(linkedSheetUrl);
   useEffect(() => {
     setSheetDraft(linkedSheetUrl);
@@ -2025,6 +1987,16 @@ export default function MasterTracker() {
     if (!res.ok && res.message) {
       window.alert(res.message);
     }
+  };
+  const exportScope = trackerExportScope(
+    visibleRows.length,
+    trackerStatusMatchCount(activeStatus, counts, total),
+  );
+  const exportLabel = exportScope ? ` (${exportScope})` : "";
+  const ghostMenuBtn: React.CSSProperties = {
+    background: "transparent",
+    color: "var(--spark-text)",
+    border: 0,
   };
 
   return (
@@ -2041,62 +2013,105 @@ export default function MasterTracker() {
           }
           action={
             <>
-            {linkedSheetUrl ? (
-              <a
-                href={linkedSheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="spark-btn-ghost"
-                style={{
-                  color: "var(--spark-sky)",
-                  borderColor: "rgba(95,184,239,0.35)",
-                }}
-                title="Open the brand's linked Google Sheet in a new tab"
+            <div className="relative">
+              <SparkGhostButton
+                onClick={() => setSheetMenuOpen((v) => !v)}
+                title="Sheet link, upload, and export"
               >
-                Linked sheet ↗
-              </a>
-            ) : null}
-            <SparkGhostButton
-              onClick={() => {
-                setSheetDraft(linkedSheetUrl);
-                setEditingSheet(true);
-              }}
-              title="Link this brand to a Google Sheet for tracking"
-            >
-              {linkedSheetUrl ? "Edit sheet link" : "+ Link sheet"}
-            </SparkGhostButton>
-            <SparkGhostButton onClick={() => navigate("/requests/bulk-upload")}>
-              Bulk upload
-            </SparkGhostButton>
-            <SparkGhostButton
-              onClick={copyForSheets}
-              disabled={visibleRows.length === 0 || copyState === "copying"}
-              title={
-                visibleRows.length === 0
-                  ? "Nothing to copy"
-                  : `Copy ${visibleRows.length} rows as TSV — paste straight into Google Sheets`
-              }
-            >
-              {copyState === "copied"
-                ? `Copied (${visibleRows.length})`
-                : copyState === "copying"
-                  ? "Copying…"
-                  : `Copy for Sheets${visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}`}
-            </SparkGhostButton>
-            <SparkGhostButton
-              onClick={exportCsv}
-              disabled={visibleRows.length === 0}
-              title={
-                visibleRows.length === 0
-                  ? "Nothing to export"
-                  : `Download ${visibleRows.length} rows as CSV`
-              }
-            >
-              Export CSV{visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}
-            </SparkGhostButton>
-            <SparkGhostButton onClick={() => setCancelDemoOpen(true)}>
-              Cancel event
-            </SparkGhostButton>
+                Sheet & export{sheetMenuOpen ? " ▴" : " ▾"}
+              </SparkGhostButton>
+              {sheetMenuOpen ? (
+                <div
+                  className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[260px] rounded-2xl"
+                  style={{
+                    background: "rgba(var(--spark-bg-rgb),0.98)",
+                    border: "1px solid var(--spark-border)",
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.28)",
+                  }}
+                  role="menu"
+                >
+                  <p className="px-3 py-1 text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                    {exportScope
+                      ? `Copy and export use ${exportScope} for this status, not every tracker request.`
+                      : "Nothing is loaded to copy or export."}
+                  </p>
+                  {linkedSheetUrl ? (
+                    <a
+                      href={linkedSheetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                      style={{ color: "var(--spark-sky)" }}
+                      onClick={() => setSheetMenuOpen(false)}
+                    >
+                      Linked sheet
+                    </a>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostMenuBtn}
+                    onClick={() => {
+                      setSheetDraft(linkedSheetUrl);
+                      setEditingSheet(true);
+                      setSheetMenuOpen(false);
+                    }}
+                  >
+                    {linkedSheetUrl ? "Edit sheet link" : "Link sheet"}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostMenuBtn}
+                    onClick={() => {
+                      setSheetMenuOpen(false);
+                      navigate("/requests/bulk-upload");
+                    }}
+                  >
+                    Bulk upload
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostMenuBtn}
+                    disabled={visibleRows.length === 0 || copyState === "copying"}
+                    onClick={() => {
+                      void copyForSheets();
+                      setSheetMenuOpen(false);
+                    }}
+                  >
+                    {copyState === "copied"
+                      ? `Copied${exportLabel}`
+                      : copyState === "copying"
+                        ? "Copying…"
+                        : `Copy for Sheets${exportLabel}`}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostMenuBtn}
+                    disabled={visibleRows.length === 0}
+                    onClick={() => {
+                      exportCsv();
+                      setSheetMenuOpen(false);
+                    }}
+                  >
+                    Export CSV{exportLabel}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostMenuBtn}
+                    onClick={() => {
+                      setSheetMenuOpen(false);
+                      setCancelDemoOpen(true);
+                    }}
+                  >
+                    Cancel event
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <SparkPrimaryButton
               onClick={() =>
                 navigate(
@@ -2342,100 +2357,21 @@ export default function MasterTracker() {
           </div>
         ) : null}
 
-        {/* Totals strip — shadcn-admin-style KPI lockup under filters */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 spark-tracker-kpis">
-          <div className="spark-card p-3">
+        <div className="spark-tracker-kpis">
+          <div className="spark-card p-3 max-w-xs">
             <p className="label-mini">Scheduled</p>
             <p
               className="tab-num text-2xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
-              title="Master Tracker requests (all statuses). Insights 'events' count only those with filed recaps."
+              title="Tracker requests, every status. The same count as All, not the rows on screen. Insights counts events that filed a recap."
             >
-              {/* Match the status chips (all-time, this tenant). Distinct from
-                  Insights Program KPIs events (= activations that produced a
-                  recap). */}
               <CountReel value={total} />
             </p>
             <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
+              className="text-xs mt-1"
+              style={{ color: "var(--spark-text-meta)" }}
             >
-              TRACKER REQUESTS
-            </p>
-          </div>
-          <div className="spark-card p-3">
-            <p className="label-mini">Consumers</p>
-            <p className="tab-num text-2xl font-bold mt-1">
-              {tenantId ? (
-                <Suspense
-                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
-                >
-                  <ConsumersStat tenantId={tenantId} />
-                </Suspense>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
-              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
-            >
-              ALL-TIME · ALL MARKETS
-            </p>
-          </div>
-          <div className="spark-card p-3">
-            <p className="label-mini">First-time</p>
-            <p className="tab-num text-2xl font-bold mt-1">
-              {tenantId ? (
-                <Suspense
-                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
-                >
-                  <FirstTimeStat tenantId={tenantId} />
-                </Suspense>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
-              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
-            >
-              ALL-TIME · ALL MARKETS
-            </p>
-          </div>
-          <div className="spark-card p-3">
-            <p className="label-mini">Products purchased</p>
-            <p className="tab-num text-2xl font-bold mt-1">
-              {tenantId ? (
-                <Suspense
-                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
-                >
-                  <ProductsPurchasedStat tenantId={tenantId} />
-                </Suspense>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p
-              className="mono text-[9px] mt-1"
-              style={{
-                letterSpacing: "0.12em",
-                color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
-              }}
-              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
-            >
-              ALL-TIME · ALL MARKETS
+              Matches All, not the rows in view
             </p>
           </div>
         </div>

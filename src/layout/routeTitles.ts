@@ -30,7 +30,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/plans": { parent: "Requests", title: "Plans" },
   "/approvals": { parent: "Review", title: "Approvals" },
   "/my-approvals": { parent: "Review", title: "Approvals" },
-  "/walkups": { parent: "Review", title: "Walk-ups" },
+  "/walkups": { parent: "Walk-ups", title: "Walk-ups" },
   "/people": { parent: "People", title: "People" },
   "/people/pending": { parent: "People", title: "Pending Ambassadors" },
   "/talent": { parent: "People", title: "Search Talent" },
@@ -94,6 +94,20 @@ export function routeTitleFor(
     parent: hit.parent,
     title: opts.isClient && hit.clientTitle ? hit.clientTitle : hit.title,
   };
+}
+
+/**
+ * Hide a repeated parent (RECAPS / RECAPS, WALK-UPS / WALK-UPS).
+ * Today keeps TODAY / TODAY on purpose.
+ */
+export function breadcrumbShowsParent(
+  pathname: string,
+  parent: string,
+  title: string,
+): boolean {
+  const clean = pathname.replace(/\/+$/, "") || "/";
+  if (clean === "/today") return true;
+  return parent.trim().toLowerCase() !== title.trim().toLowerCase();
 }
 
 /** Fallback for routes not in the table: "live-board" → "Live Board". */

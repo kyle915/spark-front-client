@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantCheckinCodeQuery } from "@/api/queries/TenantCheckinCodeQuery";
 import type { TenantCheckinCodeQuery as TenantCheckinCodeQueryType } from "@api/queries/__generated__/TenantCheckinCodeQuery.graphql";
@@ -48,6 +48,20 @@ const StandingCheckinLink: React.FC = () => {
     null;
 
   const coded = nodes.filter((n) => (n.checkinCode ?? "").trim());
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const needle = query.trim().toLowerCase();
+  const listed = useMemo(
+    () =>
+      coded.filter((tenant) => {
+        if (!needle) return true;
+        const code = (tenant.checkinCode ?? "").toLowerCase();
+        const team = (tenant.checkinTeamCode ?? "").toLowerCase();
+        const name = (tenant.name ?? "").toLowerCase();
+        return name.includes(needle) || code.includes(needle) || team.includes(needle);
+      }),
+    [coded, needle],
+  );
   if (coded.length === 0) return null;
 
   const activeCode = (active?.checkinCode ?? "").trim();
@@ -123,14 +137,36 @@ const StandingCheckinLink: React.FC = () => {
       ) : null}
 
       <div className="spark-card p-4">
-        <p
-          className="mono text-[10px] mb-3"
-          style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
-        >
-          STANDING CODES
-        </p>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
+          >
+            STANDING CODES
+          </p>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search brand or code"
+            aria-label="Search standing codes by brand or code"
+            className="rounded-xl text-sm px-3 py-2"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              minWidth: 180,
+              maxWidth: 280,
+            }}
+          />
+        </div>
         <ul className="flex flex-col gap-2">
-          {coded.map((tenant) => {
+          {listed.length === 0 ? (
+            <li className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+              No standing code matches that search.
+            </li>
+          ) : null}
+          {listed.map((tenant) => {
             const code = (tenant.checkinCode ?? "").trim();
             const url = checkinUrl(code);
             const isActive =
@@ -173,9 +209,29 @@ const StandingCheckinLink: React.FC = () => {
                     <p className="text-xs mt-2" style={{ color: "var(--spark-text-secondary)" }}>
                       {programs.length ? programs.join(" · ") : "No programs listed"}
                     </p>
-                    <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
-                      {buckets.length ? buckets.join(" · ") : "No photo buckets"}
-                    </p>
+                    <button
+                      type="button"
+                      className="text-xs mt-1 underline"
+                      style={{
+                        color: "var(--spark-text-meta)",
+                        background: "none",
+                        border: 0,
+                        padding: 0,
+                      }}
+                      aria-expanded={openId === String(tenant.id)}
+                      onClick={() =>
+                        setOpenId((current) =>
+                          current === String(tenant.id) ? null : String(tenant.id),
+                        )
+                      }
+                    >
+                      {openId === String(tenant.id) ? "Hide photo buckets" : "Photo buckets"}
+                    </button>
+                    {openId === String(tenant.id) ? (
+                      <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
+                        {buckets.length ? buckets.join(" · ") : "No photo buckets"}
+                      </p>
+                    ) : null}
                   </div>
                   <button
                     type="button"

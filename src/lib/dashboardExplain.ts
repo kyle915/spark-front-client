@@ -65,3 +65,31 @@ export function cleanChartQuestion(raw: string): string {
 export function sampleNextKindLabel(kind: string): string {
   return kind === "revisit" ? "Worth going back to" : "Never visited";
 }
+
+/**
+ * One line for a where-to-sample-next row: store, rate vs the brand
+ * average, and weeks. Numbers come only from the reason the server sent.
+ */
+export function sampleNextLine(item: {
+  name: string;
+  market?: string | null;
+  reason: string;
+}): string {
+  const place = [item.name.trim(), (item.market ?? "").trim()].filter(Boolean).join(" · ");
+  const reason = item.reason.replace(/\s+/g, " ").trim();
+  const percents = [...reason.matchAll(/(\d+(?:\.\d+)?)%/g)].map((m) => m[1]);
+  const weeksMatch = reason.match(/(\d+)\s+weeks?/i);
+  const parts: string[] = [];
+  if (place) parts.push(place);
+  if (/never visited/i.test(reason)) parts.push("never visited");
+  if (percents.length >= 2) parts.push(`${percents[0]}% vs ${percents[1]}%`);
+  else if (percents.length === 1) parts.push(`${percents[0]}%`);
+  if (weeksMatch) {
+    const weeks = Number(weeksMatch[1]);
+    if (Number.isFinite(weeks)) {
+      parts.push(`${weeks.toLocaleString("en-US")} ${weeks === 1 ? "week" : "weeks"}`);
+    }
+  }
+  if (parts.length <= (place ? 1 : 0) && reason) parts.push(reason);
+  return parts.join(" · ");
+}

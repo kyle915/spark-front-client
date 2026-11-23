@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { documentTitleFor, humanizeSegment, routeTitleFor } from "./routeTitles";
+import {
+  breadcrumbShowsParent,
+  documentTitleFor,
+  humanizeSegment,
+  routeTitleFor,
+} from "./routeTitles";
 
 describe("routeTitleFor", () => {
   it("names list pages properly", () => {
@@ -13,6 +18,18 @@ describe("routeTitleFor", () => {
   });
   it("returns null for unknown routes", () => {
     expect(routeTitleFor("/nope")).toBeNull();
+  });
+  it("names walk-ups after the page, not Review", () => {
+    expect(routeTitleFor("/walkups")).toEqual({ parent: "Walk-ups", title: "Walk-ups" });
+  });
+});
+
+describe("breadcrumbShowsParent", () => {
+  it("drops a repeated crumb except on Today", () => {
+    expect(breadcrumbShowsParent("/recaps/list", "Recaps", "Recaps")).toBe(false);
+    expect(breadcrumbShowsParent("/walkups", "Walk-ups", "Walk-ups")).toBe(false);
+    expect(breadcrumbShowsParent("/today", "Today", "Today")).toBe(true);
+    expect(breadcrumbShowsParent("/requests/list", "Requests", "Master Tracker")).toBe(true);
   });
 });
 

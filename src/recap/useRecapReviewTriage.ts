@@ -25,11 +25,14 @@ const MAX_BATCH = 50;
 export function useRecapReviewTriage(
   targets: readonly FlagTarget[],
   enabled: boolean,
-): Map<string, RecapTriageSummary> {
+): { byId: Map<string, RecapTriageSummary>; settled: boolean } {
   const environment = useRelayEnvironment();
   const [byId, setById] = useState<Map<string, RecapTriageSummary>>(
     () => new Map(),
   );
+  const [settled, setSettled] = useState(() => !enabled || targets.length === 0);
+  const targetsRef = useRef(targets);
+  targetsRef.current = targets;
   const signature = useMemo(() => {
     if (!enabled) return "";
     return targets
@@ -37,23 +40,21 @@ export function useRecapReviewTriage(
       .map((t) => `${t.kind}:${t.id}`)
       .join("|");
   }, [enabled, targets]);
-  const lastSig = useRef("");
-
   useEffect(() => {
     if (!enabled || !signature) {
       setById(new Map());
-      lastSig.current = "";
+      setSettled(true);
       return;
     }
-    if (signature === lastSig.current) return;
-    lastSig.current = signature;
+    setSettled(false);
 
     let cancelled = false;
-    const legacyIds = targets
+    const batch = targetsRef.current;
+    const legacyIds = batch
       .filter((t) => t.kind === "legacy")
       .map((t) => t.id)
       .slice(0, MAX_BATCH);
-    const customIds = targets
+    const customIds = batch
       .filter((t) => t.kind === "custom")
       .map((t) => t.id)
       .slice(0, MAX_BATCH);
@@ -119,13 +120,15 @@ export function useRecapReviewTriage(
         );
       }
       await Promise.all(pulls);
-      if (!cancelled) setById(next);
+      if (cancelled) return;
+      setById(next);
+      setSettled(true);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [enabled, environment, signature, targets]);
+  }, [enabled, environment, signature]);
 
-  return byId;
+  return { byId, settled };
 }

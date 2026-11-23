@@ -48,6 +48,51 @@ export type TrackerUrlState = {
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Bare Master Tracker opens on Pending (the queue that needs a person).
+ * A link that already narrows by plan, market, or dates keeps All so those
+ * rows are not hidden behind Pending.
+ */
+export function defaultTrackerStatus(params: URLSearchParams): "pending" | "all" {
+  const scoped = Boolean(
+    (params.get("plan") || "").trim() ||
+      (params.get("market") || "").trim() ||
+      (params.get("when") || "").trim(),
+  );
+  return scoped ? "all" : "pending";
+}
+
+/** How many tracker rows the current status chip covers. */
+export function trackerStatusMatchCount(
+  status: string,
+  counts: Record<string, number>,
+  total: number,
+): number {
+  if (status === "all") return total;
+  if (status === "active") {
+    return (
+      (counts.pending ?? 0) +
+      (counts.queue ?? 0) +
+      (counts.approved ?? 0) +
+      (counts.scheduled ?? 0)
+    );
+  }
+  return counts[status] ?? 0;
+}
+
+/**
+ * Export copies the rows loaded for the current status, not the catalog.
+ * "50 of 1,068 loaded" when the page has not fetched the rest.
+ */
+export function trackerExportScope(loaded: number, matching: number): string {
+  if (loaded <= 0) return "";
+  const loadedLabel = loaded.toLocaleString("en-US");
+  if (matching > loaded) {
+    return `${loadedLabel} of ${matching.toLocaleString("en-US")} loaded`;
+  }
+  return `${loadedLabel} loaded`;
+}
+
 export function isTrackerIsoDay(value: string | null | undefined): boolean {
   if (!value || !ISO_DAY_RE.test(value)) return false;
   const d = new Date(`${value}T00:00:00Z`);
@@ -75,7 +120,9 @@ export function parseTrackerUrlParams(
     rawStatus,
   )
     ? rawStatus
-    : "active";
+    : rawStatus
+      ? "pending"
+      : defaultTrackerStatus(params);
 
   const rawWhen = (params.get("when") || "").trim().toLowerCase();
   let dateRange = (VALID_TRACKER_DATE_RANGES as readonly string[]).includes(
@@ -110,7 +157,7 @@ export function buildTrackerUrlParams(
 
   if (patch.status !== undefined) {
     const s = patch.status.trim().toLowerCase();
-    if (s && s !== "active") next.set("status", s);
+    if (s) next.set("status", s);
     else next.delete("status");
   }
 
@@ -151,6 +198,9 @@ export function buildTrackerUrlParams(
     if (patch.planId) next.set("plan", patch.planId);
     else next.delete("plan");
   }
+
+  const implied = defaultTrackerStatus(next);
+  if ((next.get("status") || "").toLowerCase() === implied) next.delete("status");
 
   return next;
 }
