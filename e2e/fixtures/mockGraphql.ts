@@ -855,6 +855,24 @@ function buildGraphqlData(
         stores: WORKSPACE_OVERVIEW.stores,
         products: WORKSPACE_OVERVIEW.products,
       },
+      posAutomationWorkspace: {
+        presets: [
+          {
+            key: "unfi_clearview",
+            label: "UNFI ClearView",
+            columnMapJson: "{}",
+            defaultBanner: "Whole Foods Market",
+          },
+          {
+            key: "kehe_connect",
+            label: "KeHE Connect",
+            columnMapJson: "{}",
+            defaultBanner: "Sprouts Farmers Market",
+          },
+        ],
+        feeds: [],
+        recentDrops: [],
+      },
       retailerPosDashboard: {
         available: true,
         unavailableMessage: null,
@@ -945,6 +963,9 @@ function buildGraphqlData(
         isBrandAdmin: true,
         canEditBrandOps: true,
         canApproveSpend: true,
+        canManagePos: true,
+        buyerWeeklyDigestEnabled: false,
+        buyerDigestRecipientEmails: "",
         viewerProviderUuid: PROVIDER_FIELDPULSE.uuid,
         providers: WORKSPACE_OVERVIEW.providers.map((p) => ({
           uuid: p.uuid,

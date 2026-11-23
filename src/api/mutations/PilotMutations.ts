@@ -415,6 +415,7 @@ export const PilotMutationsImportPosMutation = graphql`
     $filename: String!
     $feedCompleteness: String!
     $columnMapJson: String
+    $presetKey: String
   ) {
     importRetailerPosSales(
       retailerBanner: $retailerBanner
@@ -422,6 +423,51 @@ export const PilotMutationsImportPosMutation = graphql`
       filename: $filename
       feedCompleteness: $feedCompleteness
       columnMapJson: $columnMapJson
+      presetKey: $presetKey
+    ) {
+      ok
+      error
+      targetUuid
+    }
+  }
+`;
+
+export const PilotMutationsUpsertPosFeedMutation = graphql`
+  mutation PilotMutationsUpsertPosFeedMutation(
+    $retailerBanner: String!
+    $presetKey: String!
+    $sourceKind: String!
+    $enabled: Boolean!
+    $defaultFeedCompleteness: String!
+    $notes: String!
+    $remintToken: Boolean!
+    $feedUuid: String
+  ) {
+    upsertPosFeedConfig(
+      retailerBanner: $retailerBanner
+      presetKey: $presetKey
+      sourceKind: $sourceKind
+      enabled: $enabled
+      defaultFeedCompleteness: $defaultFeedCompleteness
+      notes: $notes
+      remintToken: $remintToken
+      feedUuid: $feedUuid
+    ) {
+      ok
+      error
+      targetUuid
+    }
+  }
+`;
+
+export const PilotMutationsSetBuyerDigestMutation = graphql`
+  mutation PilotMutationsSetBuyerDigestMutation(
+    $enabled: Boolean!
+    $recipientEmails: String
+  ) {
+    setBuyerWeeklyDigest(
+      enabled: $enabled
+      recipientEmails: $recipientEmails
     ) {
       ok
       error

@@ -8,12 +8,14 @@ import {
   PilotMutationsLinkCrewPurchaseMutation,
   PilotMutationsResolvePosRowMutation,
   PilotMutationsSetContributionMutation,
+  PilotMutationsUpsertPosFeedMutation,
 } from "@/api/mutations/PilotMutations";
 import type { PilotQueriesRetailerPosPageQuery as PosQueryType } from "@/api/queries/__generated__/PilotQueriesRetailerPosPageQuery.graphql";
 import type { PilotMutationsImportPosMutation as ImportPosType } from "@/api/mutations/__generated__/PilotMutationsImportPosMutation.graphql";
 import type { PilotMutationsResolvePosRowMutation as ResolvePosType } from "@/api/mutations/__generated__/PilotMutationsResolvePosRowMutation.graphql";
 import type { PilotMutationsLinkCrewPurchaseMutation as CrewPurchaseType } from "@/api/mutations/__generated__/PilotMutationsLinkCrewPurchaseMutation.graphql";
 import type { PilotMutationsSetContributionMutation as SetContribType } from "@/api/mutations/__generated__/PilotMutationsSetContributionMutation.graphql";
+import type { PilotMutationsUpsertPosFeedMutation as UpsertFeedType } from "@/api/mutations/__generated__/PilotMutationsUpsertPosFeedMutation.graphql";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -48,6 +50,11 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   );
   const ws = data.workspaceOverview;
   const pos = data.retailerPosDashboard;
+  const automation = data.posAutomationWorkspace ?? {
+    presets: [],
+    feeds: [],
+    recentDrops: [],
+  };
   const visits = data.canonicalVisits;
 
   const [commitImport, importing] = useMutation<ImportPosType>(
@@ -62,12 +69,19 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   const [commitContrib] = useMutation<SetContribType>(
     PilotMutationsSetContributionMutation,
   );
+  const [commitFeed, savingFeed] = useMutation<UpsertFeedType>(
+    PilotMutationsUpsertPosFeedMutation,
+  );
 
   // POS upload state
-  const [bannerName, setBannerName] = useState("FreshMart");
+  // Empty until the user types a banner or picks a portal preset
+  // (preset defaultBanner only applies when the field is still blank).
+  const [bannerName, setBannerName] = useState("");
+  const [presetKey, setPresetKey] = useState("");
   const [feedCompleteness, setFeedCompleteness] = useState("complete");
   const [filename, setFilename] = useState("pos_weekly.csv");
   const [csvText, setCsvText] = useState("");
+  const [feedNotes, setFeedNotes] = useState("");
   const [contribInput, setContribInput] = useState(
     ws.defaultContributionPerUnit ?? "",
   );
@@ -236,6 +250,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                   filename,
                   feedCompleteness,
                   columnMapJson: null,
+                  presetKey: presetKey || null,
                 },
                 onCompleted: (r) => {
                   if (r.importRetailerPosSales.ok) {
@@ -273,8 +288,31 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               >
                 <option value="complete">Complete weekly feed</option>
                 <option value="partial">Partial feed</option>
-                <option value="delayed_feed">Delayed feed</option>
+                <option value="delayed">Delayed feed</option>
               </select>
+              <label className="col-span-2 text-xs space-y-1">
+                <span style={META}>Portal preset (optional)</span>
+                <select
+                  value={presetKey}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setPresetKey(next);
+                    const preset = automation.presets.find((p) => p.key === next);
+                    if (preset?.defaultBanner && !bannerName.trim()) {
+                      setBannerName(preset.defaultBanner);
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl"
+                  style={FIELD_STYLE}
+                >
+                  <option value="">Auto-detect headers</option>
+                  {automation.presets.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             <input
               type="file"
@@ -419,6 +457,182 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {ws.canManagePos && (
+        <section className="spark-card p-5 space-y-4">
+          <div>
+            <h2 className="display text-base font-bold">
+              Automated POS feed (email / webhook drop)
+            </h2>
+            <p className="text-xs mt-1" style={META}>
+              Mint a token, POST weekly portal CSVs to the drop URL (or forward
+              them via sync), and Spark imports through the same versioned
+              matcher as manual upload. Hourly cron drains pending drops.
+            </p>
+          </div>
+          <form
+            className="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs items-end"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!bannerName.trim()) return;
+              commitFeed({
+                variables: {
+                  retailerBanner: bannerName.trim(),
+                  presetKey: presetKey || "",
+                  sourceKind: "email_drop",
+                  enabled: true,
+                  defaultFeedCompleteness: feedCompleteness,
+                  notes: feedNotes.trim(),
+                  remintToken: false,
+                  feedUuid: null,
+                },
+                onCompleted: (r) => {
+                  if (r.upsertPosFeedConfig.ok) {
+                    setFeedback(
+                      "Saved automated POS feed. Copy the drop URL below.",
+                    );
+                    bump();
+                  } else {
+                    setFeedback(
+                      r.upsertPosFeedConfig.error ?? "Could not save feed.",
+                    );
+                  }
+                },
+              });
+            }}
+          >
+            <label className="md:col-span-2 space-y-1">
+              <span style={META}>Notes (optional)</span>
+              <input
+                value={feedNotes}
+                onChange={(e) => setFeedNotes(e.target.value)}
+                placeholder="e.g. UNFI Clearview Monday export"
+                className="w-full px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={savingFeed || !bannerName.trim()}
+              className="px-4 py-2 rounded-xl text-xs font-bold"
+              style={PRIMARY_BTN_STYLE}
+            >
+              {savingFeed ? "Saving…" : "Enable automated feed"}
+            </button>
+          </form>
+
+          {automation.feeds.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr style={META}>
+                    <th className="text-left py-2 pr-3 font-semibold">Banner</th>
+                    <th className="text-left py-2 pr-3 font-semibold">Preset</th>
+                    <th className="text-left py-2 pr-3 font-semibold">Drop URL</th>
+                    <th className="text-left py-2 pr-3 font-semibold">Last ingest</th>
+                    <th className="text-left py-2 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {automation.feeds.map((f) => (
+                    <tr key={f.uuid} style={BORDER}>
+                      <td className="py-2 pr-3 font-medium">{f.retailerBanner}</td>
+                      <td className="py-2 pr-3 mono">{f.presetKey || "auto"}</td>
+                      <td className="py-2 pr-3 mono break-all">
+                        {f.dropUrlPath || "—"}
+                      </td>
+                      <td className="py-2 pr-3 mono">
+                        {f.lastIngestedAt?.slice(0, 16) ?? "—"}
+                      </td>
+                      <td className="py-2">
+                        {f.enabled ? "Enabled" : "Paused"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {automation.recentDrops.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider" style={META}>
+                Recent automated drops
+              </h3>
+              <ul className="mt-2 space-y-1.5 text-xs">
+                {automation.recentDrops.slice(0, 8).map((d) => (
+                  <li key={d.uuid} className="flex flex-wrap gap-x-3 gap-y-1">
+                    <span className="mono">{d.receivedAt.slice(0, 16)}</span>
+                    <span className="font-medium">{d.retailerBanner}</span>
+                    <span>{d.filename}</span>
+                    <span
+                      style={{
+                        color:
+                          d.status === "processed"
+                            ? "var(--spark-ok-ink)"
+                            : d.status === "failed"
+                              ? "var(--spark-warn-badge-ink)"
+                              : "var(--spark-text-meta)",
+                      }}
+                    >
+                      {d.status}
+                      {d.matchedRows != null
+                        ? ` · ${d.matchedRows} matched / ${d.unmatchedRows ?? 0} unmatched`
+                        : ""}
+                    </span>
+                    {d.errorMessage ? (
+                      <span style={META}>{d.errorMessage}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {pos.imports.length > 0 && (
+        <section className="spark-card p-5 space-y-3">
+          <h2 className="display text-base font-bold">Import history</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr style={META}>
+                  <th className="text-left py-2 pr-3 font-semibold">When</th>
+                  <th className="text-left py-2 pr-3 font-semibold">Banner</th>
+                  <th className="text-left py-2 pr-3 font-semibold">Period</th>
+                  <th className="text-left py-2 pr-3 font-semibold">File</th>
+                  <th className="text-right py-2 pr-3 font-semibold">Matched</th>
+                  <th className="text-right py-2 font-semibold">Unmatched</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pos.imports.map((imp) => (
+                  <tr key={imp.uuid} style={BORDER}>
+                    <td className="py-2 pr-3 mono">
+                      {imp.createdAt.slice(0, 16)}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {imp.retailerBanner}
+                      {imp.isActiveVersion ? "" : " (superseded)"}
+                    </td>
+                    <td className="py-2 pr-3 mono">
+                      {imp.periodStart} → {imp.periodEnd}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {imp.filename} · v{imp.version} · {imp.feedCompleteness}
+                    </td>
+                    <td className="py-2 pr-3 text-right mono">
+                      {imp.matchedRows}/{imp.totalRows}
+                    </td>
+                    <td className="py-2 text-right mono">{imp.unmatchedRows}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {/* Unmatched POS Rows */}

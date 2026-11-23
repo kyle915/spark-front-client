@@ -17,6 +17,7 @@ import {
 import {
   PilotMutationsReassignStoreActionMutation,
   PilotMutationsRespondStoreActionMutation,
+  PilotMutationsSetBuyerDigestMutation,
   PilotMutationsVerifyRestockMutation,
 } from "@/api/mutations/PilotMutations";
 import type { PilotQueriesBuyerReportPageQuery as BuyerQueryType } from "@/api/queries/__generated__/PilotQueriesBuyerReportPageQuery.graphql";
@@ -24,6 +25,7 @@ import type { PilotQueriesExportBuyerReportQuery as ExportQueryType } from "@/ap
 import type { PilotMutationsRespondStoreActionMutation as RespondActionType } from "@/api/mutations/__generated__/PilotMutationsRespondStoreActionMutation.graphql";
 import type { PilotMutationsReassignStoreActionMutation as ReassignActionType } from "@/api/mutations/__generated__/PilotMutationsReassignStoreActionMutation.graphql";
 import type { PilotMutationsVerifyRestockMutation as VerifyRestockType } from "@/api/mutations/__generated__/PilotMutationsVerifyRestockMutation.graphql";
+import type { PilotMutationsSetBuyerDigestMutation as SetBuyerDigestType } from "@/api/mutations/__generated__/PilotMutationsSetBuyerDigestMutation.graphql";
 import { BuyerPitchDeckShareCard } from "./BuyerPitchDeckShareCard";
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -87,6 +89,9 @@ const BuyerReportBody: React.FC<{
   const [commitVerify] = useMutation<VerifyRestockType>(
     PilotMutationsVerifyRestockMutation,
   );
+  const [commitDigest, savingDigest] = useMutation<SetBuyerDigestType>(
+    PilotMutationsSetBuyerDigestMutation,
+  );
 
   const [exportingFormat, setExportingFormat] = useState<string | null>(null);
   const [restockNoteByUuid, setRestockNoteByUuid] = useState<
@@ -96,6 +101,12 @@ const BuyerReportBody: React.FC<{
     Record<string, string>
   >({});
   const [banner, setBanner] = useState<string | null>(null);
+  const [digestEnabled, setDigestEnabled] = useState(
+    ws.buyerWeeklyDigestEnabled,
+  );
+  const [digestEmails, setDigestEmails] = useState(
+    ws.buyerDigestRecipientEmails || "",
+  );
 
   const handleExport = async (format: "csv" | "xlsx") => {
     setExportingFormat(format);
@@ -216,6 +227,110 @@ const BuyerReportBody: React.FC<{
         marketFilter={marketFilter}
         providerUuid={providerUuid}
       />
+
+      {(ws.canManagePos || ws.isBrandAdmin) && (
+        <section className="spark-card p-5 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="display text-base font-bold">
+                Monday weekly buyer digest
+              </h2>
+              <p className="text-xs mt-1" style={META}>
+                Opt-in email with this store table attached as CSV. Separate from
+                the field-marketing client weekly digest.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={digestEnabled}
+              disabled={savingDigest}
+              onClick={() => {
+                const next = !digestEnabled;
+                commitDigest({
+                  variables: {
+                    enabled: next,
+                    recipientEmails: digestEmails.trim() || null,
+                  },
+                  onCompleted: (r) => {
+                    if (r.setBuyerWeeklyDigest.ok) {
+                      setDigestEnabled(next);
+                      setBanner(
+                        next
+                          ? "Weekly buyer digest enabled for Monday mornings."
+                          : "Weekly buyer digest turned off.",
+                      );
+                      bump();
+                    } else {
+                      setBanner(
+                        r.setBuyerWeeklyDigest.error ??
+                          "Could not update buyer digest.",
+                      );
+                    }
+                  },
+                });
+              }}
+              className="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors"
+              style={{
+                background: digestEnabled
+                  ? "var(--spark-ok-ink)"
+                  : "var(--spark-border)",
+              }}
+            >
+              <span
+                className="inline-block h-5 w-5 rounded-full bg-white transition-transform"
+                style={{
+                  transform: digestEnabled
+                    ? "translateX(1.4rem)"
+                    : "translateX(0.2rem)",
+                }}
+              />
+            </button>
+          </div>
+          <label className="block text-xs space-y-1">
+            <span style={META}>
+              Recipients (optional override — blank uses brand admins + finance
+              reviewers)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={digestEmails}
+                onChange={(e) => setDigestEmails(e.target.value)}
+                placeholder="buyer@brand.com, finance@brand.com"
+                className="flex-1 min-w-[16rem] px-3 py-2 rounded-xl"
+                style={FIELD_STYLE}
+              />
+              <button
+                type="button"
+                disabled={savingDigest}
+                onClick={() => {
+                  commitDigest({
+                    variables: {
+                      enabled: digestEnabled,
+                      recipientEmails: digestEmails.trim(),
+                    },
+                    onCompleted: (r) => {
+                      if (r.setBuyerWeeklyDigest.ok) {
+                        setBanner("Saved buyer digest recipients.");
+                        bump();
+                      } else {
+                        setBanner(
+                          r.setBuyerWeeklyDigest.error ??
+                            "Could not save recipients.",
+                        );
+                      }
+                    },
+                  });
+                }}
+                className="px-3 py-2 rounded-xl text-xs font-semibold"
+                style={FIELD_STYLE}
+              >
+                Save recipients
+              </button>
+            </div>
+          </label>
+        </section>
+      )}
 
       {/* Store Table */}
       <section className="spark-card p-5 space-y-3">
