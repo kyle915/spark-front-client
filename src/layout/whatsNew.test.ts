@@ -75,7 +75,8 @@ describe("whatsNewFor", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Landed on main: email ?t=, recap KPI strip, Ask AI tools, Photo Wall / pitch decks, POS + digests, Shifts Board
+    // Landed on main: email ?t=, recap KPI strip, Ask AI tools, Photo Wall /
+    // pitch decks, POS + digests, Shifts Board
     for (const id of [
       "2026-11-23t",
       "2026-11-23k",
@@ -93,9 +94,11 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only landed: denser attention, route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
+    // Staff-only: Send, walk-up attach, nudge-all-overdue, denser attention, route lock,
+    // finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
       "2026-11-23w",
+      "2026-11-23o",
       "2026-11-23n",
       "2026-11-23d",
       "2026-11-23g",
@@ -111,7 +114,7 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest tip is email ?t= + prep polish (client-visible); staff feed starts there too
+    // Staff tip is newest staff note; clients skip staffOnly → email deep links
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23t");
     expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23w");
   });
@@ -155,6 +158,10 @@ describe("whatsNewFor", () => {
 
     expect(hasUnseenWhatsNew(true)).toBe(false);
     // Staff tip is 2026-11-23w — legacy client tip must not clear the staff unread dot
+    expect(hasUnseenWhatsNew(false)).toBe(true);
+
+    store.set("@spark.whatsNew.seen", "2026-11-23p");
+    expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
   });
 });

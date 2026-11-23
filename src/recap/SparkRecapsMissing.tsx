@@ -20,6 +20,10 @@ import { DismissMissingRecapsMutation } from "@/api/mutations/DismissMissingReca
 import type { DismissMissingRecapsMutation as DismissMissingRecapsMutationType } from "@api/mutations/__generated__/DismissMissingRecapsMutation.graphql";
 import { RestoreMissingRecapsMutation } from "@/api/mutations/RestoreMissingRecapsMutation";
 import type { RestoreMissingRecapsMutation as RestoreMissingRecapsMutationType } from "@api/mutations/__generated__/RestoreMissingRecapsMutation.graphql";
+import { AttachWalkupOrphanMutation } from "@/api/mutations/AttachWalkupOrphanMutation";
+import type { AttachWalkupOrphanMutation as AttachWalkupOrphanMutationType } from "@api/mutations/__generated__/AttachWalkupOrphanMutation.graphql";
+import { AttachSafeWalkupOrphansMutation } from "@/api/mutations/AttachSafeWalkupOrphansMutation";
+import type { AttachSafeWalkupOrphansMutation as AttachSafeWalkupOrphansMutationType } from "@api/mutations/__generated__/AttachSafeWalkupOrphansMutation.graphql";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import useSparkRole from "@/hooks/useSparkRole";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -47,6 +51,9 @@ import {
  *     push notification)
  *   - "File for them" link → /recap/create?event=<uuid>&ambassador=<uuid>
  *   - Deep-link to the parent request if there is one
+ *   - When a filed walk-up uniquely matches the row's Tracker request,
+ *     an "Attach walk-up recap" chip 1-clicks the same link as the
+ *     nightly link_walkin_recaps_to_requests job (clears the DUE ghost)
  *
  * The drill-down complements the sidebar "N RECAPS DUE" badge from
  * PR #215 — that badge surfaces the count; this page is where the
@@ -145,8 +152,17 @@ const Inner: React.FC<{
   const [commitRestore] = useMutation<RestoreMissingRecapsMutationType>(
     RestoreMissingRecapsMutation,
   );
+  const [commitAttachOne, isAttachingOne] =
+    useMutation<AttachWalkupOrphanMutationType>(AttachWalkupOrphanMutation);
+  const [commitAttachAll, isAttachingAll] =
+    useMutation<AttachSafeWalkupOrphansMutationType>(
+      AttachSafeWalkupOrphansMutation,
+    );
   // Which Dismiss control is working: an ambassador row, an event, or "bulk".
   const [dismissingKey, setDismissingKey] = useState<string | null>(null);
+  const [attachingOrphanUuid, setAttachingOrphanUuid] = useState<string | null>(
+    null,
+  );
 
   // Re-pull the list and the sidebar badge after a dismissal or a restore.
   // fetchQuery writes into the store, so the list updates in place without
@@ -379,6 +395,77 @@ const Inner: React.FC<{
     }
   };
 
+  const safeAttachRows = useMemo(
+    () => rows.filter((r) => r.suggestedWalkupAttach != null),
+    [rows],
+  );
+
+  const attachOne = (
+    orphanEventUuid: string,
+    requestUuid: string,
+    orphanLabel: string,
+  ) => {
+    if (isAttachingOne || isAttachingAll) return;
+    setAttachingOrphanUuid(orphanEventUuid);
+    commitAttachOne({
+      variables: {
+        input: {
+          orphanEventUuid,
+          requestUuid,
+          lookbackDays,
+        },
+      },
+      onCompleted: (res) => {
+        setAttachingOrphanUuid(null);
+        const out = res.attachWalkupOrphan;
+        if (out?.success) {
+          refresh();
+          showAlert(
+            `Attached ${orphanLabel} to the Tracker request — DUE cleared.`,
+            "success",
+          );
+        } else {
+          showAlert(out?.message ?? "Could not attach that walk-up.", "warning");
+        }
+      },
+      onError: (err) => {
+        setAttachingOrphanUuid(null);
+        showAlert(err.message || "Could not attach that walk-up.", "error");
+      },
+    });
+  };
+
+  const attachAllSafe = () => {
+    if (isAttachingAll || isAttachingOne || !tenantId || safeAttachRows.length === 0) {
+      return;
+    }
+    commitAttachAll({
+      variables: {
+        input: {
+          tenantId,
+          lookbackDays,
+        },
+      },
+      onCompleted: (res) => {
+        const out = res.attachSafeWalkupOrphans;
+        if (out?.success) {
+          refresh();
+          showAlert(
+            out.message ||
+              `Attached ${out.linkedCount ?? 0} walk-up recap${
+                (out.linkedCount ?? 0) === 1 ? "" : "s"
+              }.`,
+            "success",
+          );
+        } else {
+          showAlert(out?.message ?? "Could not attach walk-ups.", "warning");
+        }
+      },
+      onError: (err) =>
+        showAlert(err.message || "Could not attach walk-ups.", "error"),
+    });
+  };
+
   if (rows.length === 0) {
     return (
       <SparkEmptyState
@@ -525,6 +612,37 @@ const Inner: React.FC<{
           </button>
         </div>
       </div>
+      {canDismiss && safeAttachRows.length > 0 && (
+        <div
+          className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
+          style={{
+            background: "rgba(var(--spark-accent-rgb),0.08)",
+            border: "1px solid rgba(var(--spark-accent-rgb),0.28)",
+          }}
+        >
+          <span
+            className="mono text-[11px] flex-1 min-w-0"
+            style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+          >
+            {safeAttachRows.length} safe walk-up match
+            {safeAttachRows.length === 1 ? "" : "es"} — filed orphan already
+            covers the Tracker row
+          </span>
+          <button
+            type="button"
+            onClick={attachAllSafe}
+            disabled={isAttachingAll || isAttachingOne || !tenantId}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+            style={{
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+            }}
+            title="Link every unique same-day walk-up onto its DUE Tracker request"
+          >
+            {isAttachingAll ? "Attaching…" : "Attach all safe matches"}
+          </button>
+        </div>
+      )}
       {selectedEvents.size > 0 && (
         <div
           className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
@@ -647,6 +765,75 @@ const Inner: React.FC<{
                 )}
               </div>
             </div>
+
+            {canDismiss && row.suggestedWalkupAttach && (
+              <div
+                className="mt-3 flex items-center gap-3 flex-wrap px-3 py-2 rounded-xl"
+                style={{
+                  background: "rgba(var(--spark-accent-rgb),0.06)",
+                  border: "1px solid rgba(var(--spark-accent-rgb),0.22)",
+                }}
+              >
+                <span
+                  className="chip text-[10px] mono"
+                  style={{
+                    letterSpacing: "0.12em",
+                    background: "rgba(var(--spark-accent-rgb),0.12)",
+                    color: "var(--spark-text)",
+                    border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
+                    padding: "3px 8px",
+                    borderRadius: 999,
+                  }}
+                  title="Unique same-day place match — same rules as nightly auto-link"
+                >
+                  Walk-up match
+                </span>
+                <p
+                  className="text-xs flex-1 min-w-0 truncate"
+                  style={{ color: "var(--spark-text-secondary)" }}
+                  title={
+                    row.suggestedWalkupAttach.orphanAddress
+                      ? `${row.suggestedWalkupAttach.orphanEventName} · ${row.suggestedWalkupAttach.orphanAddress}`
+                      : row.suggestedWalkupAttach.orphanEventName
+                  }
+                >
+                  Filed on{" "}
+                  <span style={{ color: "var(--spark-text)" }}>
+                    {row.suggestedWalkupAttach.orphanEventName}
+                  </span>
+                  {row.suggestedWalkupAttach.orphanAddress
+                    ? ` · ${row.suggestedWalkupAttach.orphanAddress}`
+                    : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    attachOne(
+                      row.suggestedWalkupAttach!.orphanEventUuid,
+                      row.suggestedWalkupAttach!.requestUuid,
+                      row.suggestedWalkupAttach!.orphanEventName,
+                    )
+                  }
+                  disabled={
+                    isAttachingOne ||
+                    isAttachingAll ||
+                    attachingOrphanUuid ===
+                      row.suggestedWalkupAttach.orphanEventUuid
+                  }
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 shrink-0"
+                  style={{
+                    background: "var(--spark-lime)",
+                    color: "var(--spark-on-accent)",
+                  }}
+                  title="Attach this filed walk-up to the Tracker request and clear RECAP DUE"
+                >
+                  {attachingOrphanUuid ===
+                  row.suggestedWalkupAttach.orphanEventUuid
+                    ? "Attaching…"
+                    : "Attach walk-up recap"}
+                </button>
+              </div>
+            )}
 
             {row.assignedAmbassadors.length === 0 ? (
               <div
