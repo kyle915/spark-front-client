@@ -1,5 +1,5 @@
 import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   fetchQuery,
   useLazyLoadQuery,
@@ -32,6 +32,10 @@ import {
   type DismissReason,
   type DismissTargets,
 } from "./missingRecapDismiss";
+import {
+  formatLastNudgedAt,
+  overdueNudgeTargets,
+} from "./nudgeAllOverdue";
 
 /**
  * /recaps/missing — admin drill-down for events that already wrapped
@@ -274,6 +278,7 @@ const Inner: React.FC<{
     void nudgeOne(ambassadorEventUuid).then((r) => {
       setNudgingId(null);
       if (r.success) {
+        refresh();
         showAlert(
           `${name} nudged for ${venueLabel}${
             r.devicesNotified != null
@@ -305,6 +310,7 @@ const Inner: React.FC<{
     setNudgingId(null);
     setIsBulkNudging(false);
     setSelectedEvents(new Set());
+    refresh();
     if (failures.length === 0) {
       showAlert(
         `Nudged ${okCount} BA${okCount === 1 ? "" : "s"} across ${selectedRows.length} event${selectedRows.length === 1 ? "" : "s"}.`,
@@ -317,6 +323,59 @@ const Inner: React.FC<{
       );
     } else {
       showAlert(`Nudge failed: ${failures[0] ?? "unknown error"}`, "error");
+    }
+  };
+
+  // Tick so a page left open past the 12h cooldown re-includes BAs
+  // without waiting for a query refetch. 60s is plenty for the chip
+  // labels and bulk count; cooldown is hours-scale.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // One-click weekend clear-out: every BA on shifts overdue ≥24h,
+  // skipping anyone nudged in the last 12 hours. Same mutation as
+  // the per-row Nudge button.
+  const overdueTargets = useMemo(
+    () => overdueNudgeTargets(rows, nowMs),
+    [rows, nowMs],
+  );
+  const nudgeAllOverdue = async () => {
+    if (isBulkNudging || isNudging || overdueTargets.length === 0) return;
+    setIsBulkNudging(true);
+    let okCount = 0;
+    const failures: string[] = [];
+    const eventIds = new Set<string>();
+    for (const t of overdueTargets) {
+      setNudgingId(t.ambassadorEventUuid);
+      const r = await nudgeOne(t.ambassadorEventUuid);
+      if (r.success) {
+        okCount += 1;
+        eventIds.add(t.eventUuid);
+      } else {
+        failures.push(`${t.name}: ${r.message ?? "nudge failed"}`);
+      }
+    }
+    setNudgingId(null);
+    setIsBulkNudging(false);
+    refresh();
+    if (failures.length === 0) {
+      showAlert(
+        `Nudged ${okCount} overdue BA${okCount === 1 ? "" : "s"} across ${eventIds.size} event${eventIds.size === 1 ? "" : "s"}.`,
+        "success",
+      );
+    } else if (okCount > 0) {
+      showAlert(
+        `Nudged ${okCount} overdue, skipped/failed ${failures.length}: ${failures[0]}`,
+        "warning",
+      );
+    } else {
+      showAlert(
+        `Nudge all overdue failed: ${failures[0] ?? "unknown error"}`,
+        "error",
+      );
     }
   };
 
@@ -409,7 +468,7 @@ const Inner: React.FC<{
   return (
     <div className="space-y-3">
       <div
-        className="flex items-center justify-between text-[10px]"
+        className="flex items-center justify-between gap-3 flex-wrap text-[10px]"
         style={{ paddingBottom: 2 }}
       >
         <span
@@ -430,18 +489,41 @@ const Inner: React.FC<{
           </label>
           {rows.length} event{rows.length === 1 ? "" : "s"} owing a recap
         </span>
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="mono"
-          style={{
-            letterSpacing: "0.14em",
-            color: "var(--spark-lime)",
-          }}
-          title="Download the visible list as CSV — one row per (event, BA) pair"
-        >
-          Export CSV
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => void nudgeAllOverdue()}
+            disabled={
+              isBulkNudging || isNudging || overdueTargets.length === 0
+            }
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+            style={{
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+            }}
+            title={
+              overdueTargets.length === 0
+                ? "No shifts overdue 24h+ (or everyone was nudged in the last 12 hours)"
+                : `Push 'Don't forget your recap' to ${overdueTargets.length} BA${overdueTargets.length === 1 ? "" : "s"} on shifts overdue 24h+ (skips nudged in last 12h)`
+            }
+          >
+            {isBulkNudging
+              ? "Nudging…"
+              : `Nudge all overdue${overdueTargets.length > 0 ? ` (${overdueTargets.length})` : ""}`}
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="mono"
+            style={{
+              letterSpacing: "0.14em",
+              color: "var(--spark-lime)",
+            }}
+            title="Download the visible list as CSV — one row per (event, BA) pair"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
       {selectedEvents.size > 0 && (
         <div
@@ -661,6 +743,22 @@ const Inner: React.FC<{
                             {isWalkupPlaceholderEmail(ba.email)
                           ? `Walk-up · ${walkupPhoneFromEmail(ba.email) || "no phone on file"}`
                           : ba.email}
+                          </p>
+                        )}
+                        {ba.lastNudgedAt && (
+                          <p
+                            className="mono text-[10px] mt-0.5"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-text-meta)",
+                            }}
+                            title={ba.lastNudgedAt}
+                          >
+                            Last nudged{" "}
+                            {formatLastNudgedAt(ba.lastNudgedAt, nowMs)}
+                            {ba.lastNudgeChannel
+                              ? ` · ${ba.lastNudgeChannel}`
+                              : ""}
                           </p>
                         )}
                       </div>

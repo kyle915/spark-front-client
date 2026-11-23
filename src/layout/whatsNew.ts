@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23n",
+    date: "November 23, 2026",
+    title: "Nudge all overdue missing recaps in one click",
+    staffOnly: true,
+    items: [
+      "On Missing Recaps, Nudge all overdue (24h+) pushes every BA on shifts overdue a day or more — same push as the per-row Nudge button, skipping anyone nudged in the last 12 hours.",
+      "Each BA row shows when they were last nudged (cron or admin) so weekend clear-outs don't double-ping.",
+    ],
+  },
+  {
     id: "2026-11-23t",
     date: "November 23, 2026",
     title: "Email links open the right brand, plus check-in prep polish",

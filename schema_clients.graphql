@@ -6507,6 +6507,10 @@ type MissingRecapAmbassadorInfo {
   name: String!
   email: String
   isApproved: Boolean!
+  """ISO timestamp of the last recap nudge (cron or admin) for this BA+event."""
+  lastNudgedAt: String
+  """Channel of the last nudge — currently always \"push\" when set."""
+  lastNudgeChannel: String
 }
 
 type MissingRecapEventType {
@@ -7110,6 +7114,8 @@ type NudgeRecapResponse {
   message: String!
   clientMutationId: ID
   devicesNotified: Int
+  lastNudgedAt: String
+  lastNudgeChannel: String
 }
 
 input ObtainJSONWebTokenInput {

@@ -95,6 +95,7 @@ describe("whatsNewFor", () => {
 
     // Staff-only landed: denser attention, route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23n",
       "2026-11-23d",
       "2026-11-23g",
       "2026-11-23f",
@@ -111,7 +112,7 @@ describe("whatsNewFor", () => {
 
     // Newest tip is email ?t= + prep polish (client-visible); staff feed starts there too
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23t");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23t");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23n");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -137,11 +138,11 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23t");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23n");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
-    const store = new Map<string, string>([["@spark.whatsNew.seen", "2026-11-23p"]]);
+    const store = new Map<string, string>([["@spark.whatsNew.seen", "2026-11-23t"]]);
     vi.stubGlobal("window", {
       localStorage: {
         getItem: (k: string) => store.get(k) ?? null,
@@ -151,9 +152,8 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Latest tip is 2026-11-23t for both audiences — legacy Photo Wall id
-    // must not clear either unread dot.
-    expect(hasUnseenWhatsNew(true)).toBe(true);
+    expect(hasUnseenWhatsNew(true)).toBe(false);
+    // Staff tip is 2026-11-23n — legacy client tip must not clear the staff unread dot
     expect(hasUnseenWhatsNew(false)).toBe(true);
   });
 });
