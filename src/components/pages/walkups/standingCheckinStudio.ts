@@ -16,6 +16,8 @@ export type StudioResource = {
   kind: "pdf" | "link" | "image";
   url: string;
   note: string;
+  /** Hide on agency / recap-only twin (e.g. Torch TH-AGENCY). */
+  hideOnRecapOnly: boolean;
 };
 
 export type StudioProgram = {
@@ -31,7 +33,7 @@ export function emptyBucket(): StudioBucket {
 }
 
 export function emptyResource(): StudioResource {
-  return { label: "", kind: "pdf", url: "", note: "" };
+  return { label: "", kind: "pdf", url: "", note: "", hideOnRecapOnly: false };
 }
 
 export function normalizeBucketsFromConfig(
@@ -113,6 +115,7 @@ export function resourcesFromApi(
     kind: string;
     url: string;
     note?: string | null;
+    hideOnRecapOnly?: boolean | null;
   }> | null | undefined,
 ): StudioResource[] {
   if (!rows?.length) return [emptyResource()];
@@ -123,6 +126,7 @@ export function resourcesFromApi(
       kind: kind === "link" || kind === "image" ? kind : "pdf",
       url: r.url,
       note: r.note ?? "",
+      hideOnRecapOnly: r.hideOnRecapOnly === true,
     };
   });
 }
@@ -138,6 +142,9 @@ export function resourcesToInput(rows: StudioResource[]) {
         url,
         kind: r.kind,
         note: r.note.trim() || null,
+        // Always send the flag so a Studio save cannot wipe Torch-style
+        // agency-hidden materials by omission.
+        hideOnRecapOnly: r.hideOnRecapOnly === true,
       };
     })
     .filter(Boolean) as Array<{
@@ -145,6 +152,7 @@ export function resourcesToInput(rows: StudioResource[]) {
     url: string;
     kind: string;
     note: string | null;
+    hideOnRecapOnly: boolean;
   }>;
 }
 

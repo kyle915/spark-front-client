@@ -458,63 +458,80 @@ function StudioEditor({
         <p className="mono" style={labelMeta}>
           BA MATERIALS (PDF / LINK / IMAGE)
         </p>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {resources.map((row, idx) => (
-            <div key={idx} className="grid gap-2 md:grid-cols-[1fr_0.7fr_1.4fr_1fr_auto]">
-              <input
-                value={row.label}
-                placeholder="Label"
-                style={fieldStyle}
-                onChange={(e) => {
-                  const next = resources.slice();
-                  next[idx] = { ...row, label: e.target.value };
-                  setResources(next);
-                }}
-              />
-              <select
-                value={row.kind}
-                style={fieldStyle}
-                onChange={(e) => {
-                  const next = resources.slice();
-                  next[idx] = {
-                    ...row,
-                    kind: e.target.value as StudioResource["kind"],
-                  };
-                  setResources(next);
-                }}
+            <div key={idx} className="space-y-2">
+              <div className="grid gap-2 md:grid-cols-[1fr_0.7fr_1.4fr_1fr_auto]">
+                <input
+                  value={row.label}
+                  placeholder="Label"
+                  style={fieldStyle}
+                  onChange={(e) => {
+                    const next = resources.slice();
+                    next[idx] = { ...row, label: e.target.value };
+                    setResources(next);
+                  }}
+                />
+                <select
+                  value={row.kind}
+                  style={fieldStyle}
+                  onChange={(e) => {
+                    const next = resources.slice();
+                    next[idx] = {
+                      ...row,
+                      kind: e.target.value as StudioResource["kind"],
+                    };
+                    setResources(next);
+                  }}
+                >
+                  <option value="pdf">PDF</option>
+                  <option value="link">Link</option>
+                  <option value="image">Image / QR</option>
+                </select>
+                <input
+                  value={row.url}
+                  placeholder="/training/… or https://…"
+                  style={fieldStyle}
+                  onChange={(e) => {
+                    const next = resources.slice();
+                    next[idx] = { ...row, url: e.target.value };
+                    setResources(next);
+                  }}
+                />
+                <input
+                  value={row.note}
+                  placeholder="Note (optional)"
+                  style={fieldStyle}
+                  onChange={(e) => {
+                    const next = resources.slice();
+                    next[idx] = { ...row, note: e.target.value };
+                    setResources(next);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="text-xs px-2"
+                  style={{ color: "var(--spark-text-meta)", background: "transparent", border: "none" }}
+                  onClick={() => setResources(resources.filter((_, i) => i !== idx))}
+                >
+                  Remove
+                </button>
+              </div>
+              <label
+                className="flex items-center gap-2 text-[11px] cursor-pointer"
+                style={{ color: "var(--spark-text-meta)" }}
               >
-                <option value="pdf">PDF</option>
-                <option value="link">Link</option>
-                <option value="image">Image / QR</option>
-              </select>
-              <input
-                value={row.url}
-                placeholder="/training/… or https://…"
-                style={fieldStyle}
-                onChange={(e) => {
-                  const next = resources.slice();
-                  next[idx] = { ...row, url: e.target.value };
-                  setResources(next);
-                }}
-              />
-              <input
-                value={row.note}
-                placeholder="Note (optional)"
-                style={fieldStyle}
-                onChange={(e) => {
-                  const next = resources.slice();
-                  next[idx] = { ...row, note: e.target.value };
-                  setResources(next);
-                }}
-              />
-              <button
-                type="button"
-                className="text-xs px-2"
-                style={{ color: "var(--spark-text-meta)", background: "transparent", border: "none" }}
-                onClick={() => setResources(resources.filter((_, i) => i !== idx))}
-              >
-                Remove
-              </button>
+                <input
+                  type="checkbox"
+                  checked={row.hideOnRecapOnly}
+                  onChange={(e) => {
+                    const next = resources.slice();
+                    next[idx] = { ...row, hideOnRecapOnly: e.target.checked };
+                    setResources(next);
+                  }}
+                />
+                Hide on agency / recap-only twin (keep on BA clock link)
+              </label>
             </div>
           ))}
           <button

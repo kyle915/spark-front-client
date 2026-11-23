@@ -58,13 +58,54 @@ describe("standingCheckinStudio helpers", () => {
       { label: "Guide", kind: "pdf", url: "/training/g.pdf", note: "23" },
     ]);
     expect(rows[0].kind).toBe("pdf");
+    expect(rows[0].hideOnRecapOnly).toBe(false);
     expect(
       resourcesToInput([
-        { label: "Guide", kind: "pdf", url: "/training/g.pdf", note: "23" },
-        { label: "", kind: "link", url: "https://x", note: "" },
+        {
+          label: "Guide",
+          kind: "pdf",
+          url: "/training/g.pdf",
+          note: "23",
+          hideOnRecapOnly: false,
+        },
+        {
+          label: "",
+          kind: "link",
+          url: "https://x",
+          note: "",
+          hideOnRecapOnly: false,
+        },
       ]),
     ).toEqual([
-      { label: "Guide", url: "/training/g.pdf", kind: "pdf", note: "23" },
+      {
+        label: "Guide",
+        url: "/training/g.pdf",
+        kind: "pdf",
+        note: "23",
+        hideOnRecapOnly: false,
+      },
+    ]);
+  });
+
+  it("preserves hideOnRecapOnly through form state and mutation input", () => {
+    const fromApi = resourcesFromApi([
+      {
+        label: "Sampling Guide",
+        kind: "pdf",
+        url: "/training/torch/guide.pdf",
+        note: null,
+        hideOnRecapOnly: true,
+      },
+    ]);
+    expect(fromApi[0].hideOnRecapOnly).toBe(true);
+    expect(resourcesToInput(fromApi)).toEqual([
+      {
+        label: "Sampling Guide",
+        url: "/training/torch/guide.pdf",
+        kind: "pdf",
+        note: null,
+        hideOnRecapOnly: true,
+      },
     ]);
   });
 
