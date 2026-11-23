@@ -11,8 +11,35 @@ export type EfficiencyRow = {
 const rate = (n: number | null | undefined): string =>
   n == null ? "—" : n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 
-export const samplesPerHourText = (r: EfficiencyRow): string => rate(r.samplesPerHour);
-export const unitsPerHourText = (r: EfficiencyRow): string => rate(r.unitsPerHour);
+/** A person cannot sustain a faster clocked rate than this. */
+export const SAMPLES_PER_HOUR_CEILING = 120;
+export const UNITS_PER_HOUR_CEILING = 60;
+
+/** Null when the clocked time cannot support the rate. Spark already holds
+ *  these on the server; this keeps a stale payload from printing them. */
+export function publishRate(
+  value: number | null | undefined,
+  ceiling: number,
+): number | null {
+  if (value == null || !Number.isFinite(value) || value > ceiling) return null;
+  return value;
+}
+
+export function cleanRates<T extends EfficiencyRow>(row: T): T {
+  return {
+    ...row,
+    samplesPerHour: publishRate(row.samplesPerHour, SAMPLES_PER_HOUR_CEILING),
+    unitsPerHour: publishRate(row.unitsPerHour, UNITS_PER_HOUR_CEILING),
+  };
+}
+
+export const samplesPerHourText = (r: EfficiencyRow): string =>
+  rate(publishRate(r.samplesPerHour, SAMPLES_PER_HOUR_CEILING));
+export const unitsPerHourText = (r: EfficiencyRow): string =>
+  rate(publishRate(r.unitsPerHour, UNITS_PER_HOUR_CEILING));
+
+export const unitsSoldText = (r: EfficiencyRow): string =>
+  r.sold.toLocaleString("en-US");
 
 /**
  * The slice with the best units-per-hour, ignoring slices too thin to trust
@@ -23,7 +50,9 @@ export const bestSlice = (
   rows: readonly EfficiencyRow[],
   minRecaps = 2,
 ): EfficiencyRow | null => {
-  const solid = rows.filter((r) => r.recaps >= minRecaps && r.hours > 0);
+  const solid = rows
+    .map(cleanRates)
+    .filter((r) => r.recaps >= minRecaps && r.hours > 0);
   if (solid.length === 0) return null;
   const bySold = solid.filter((r) => (r.unitsPerHour ?? 0) > 0);
   const pool = bySold.length > 0 ? bySold : solid.filter((r) => (r.samplesPerHour ?? 0) > 0);
@@ -50,11 +79,23 @@ export const efficiencyHeadline = (
     Sun: "Sundays",
   };
   const sold = (r: EfficiencyRow | null) => (r?.unitsPerHour ?? 0) > 0;
-  const verb = sold(day) || sold(part) ? "sell the most per hour" : "sample the most per hour";
+  const daySold = sold(day);
+  const partSold = sold(part);
+  const line = (r: EfficiencyRow, byUnits: boolean) => {
+    const verb = byUnits ? "sell the most per hour" : "sample the most per hour";
+    if (r.label in dayNames) return `${dayNames[r.label]} ${verb}.`;
+    return `${r.label} shifts ${verb}.`;
+  };
+  // A sales day and a samples shift are two sentences. One verb would
+  // call the samples shift a sales leader.
+  if (day && part && daySold !== partSold) {
+    return `${line(day, daySold)} ${line(part, partSold)}`;
+  }
+  const verb = daySold || partSold ? "sell the most per hour" : "sample the most per hour";
   if (day && part) {
     return `${dayNames[day.label] ?? day.label} and ${part.label.toLowerCase()} shifts ${verb}.`;
   }
-  if (day) return `${dayNames[day.label] ?? day.label} ${verb}.`;
-  if (part) return `${part.label} shifts ${verb}.`;
+  if (day) return line(day, daySold);
+  if (part) return line(part, partSold);
   return null;
 };

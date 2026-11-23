@@ -83,7 +83,7 @@ describe("whatsNewFor", () => {
     // Ask AI, Photo Wall / pitch decks, POS + digests, Shifts Board
     for (const id of [
       "2026-11-23v",
-      "2026-11-23w",
+      "2026-11-23ab",
       "2026-11-23t",
       "2026-11-23k",
       "2026-11-23q",
@@ -124,9 +124,9 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Client newest is deck captions. Staff open on the operating-screen tidy.
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23v");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23x");
+    // Newest tip is the program report (client-visible); staff see it first too.
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23ab");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23ab");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -146,13 +146,13 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23v");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23ab");
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23x");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23ab");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -166,7 +166,8 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Client tip is 2026-11-23v and staff tip is 2026-11-23x — legacy email tip clears neither.
+    // Latest tip is 2026-11-23ab for both audiences — an older legacy id
+    // must not clear either unread dot.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
 

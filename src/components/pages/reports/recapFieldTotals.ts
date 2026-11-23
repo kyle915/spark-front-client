@@ -5,7 +5,41 @@ export type FieldTotal = {
   average: number;
   recaps: number;
   isPercent: boolean;
+  sampledQuestion?: boolean;
 };
+
+export type FieldSection<T extends FieldTotal = FieldTotal> = {
+  section: string;
+  fields: readonly T[];
+};
+
+/** Pull consumers-sampled questions out of the metric grid. They are the
+ *  parts of the headline total, not rival KPIs. */
+export function partitionSampledQuestions<T extends FieldTotal>(
+  sections: readonly FieldSection<T>[],
+): { parts: T[]; sections: FieldSection<T>[] } {
+  const parts: T[] = [];
+  const rest = sections
+    .map((section) => ({
+      section: section.section,
+      fields: section.fields.filter((field) => {
+        if (!field.sampledQuestion) return true;
+        parts.push(field);
+        return false;
+      }),
+    }))
+    .filter((section) => section.fields.length > 0);
+  return { parts, sections: rest };
+}
+
+/** Says how the sampled questions relate to the headline total. */
+export function sampledPartsIntro(parts: readonly FieldTotal[], headline: number | null): string {
+  const sum = parts.reduce((total, field) => total + field.total, 0);
+  if (headline != null && Math.round(sum) === Math.round(headline)) {
+    return `These questions add up to the ${headline.toLocaleString("en-US")} consumers sampled above.`;
+  }
+  return "These questions are what the consumers sampled total counts.";
+}
 
 const trim = (n: number, digits: number) =>
   n.toLocaleString("en-US", {

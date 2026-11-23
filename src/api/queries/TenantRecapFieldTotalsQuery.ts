@@ -21,6 +21,7 @@ export const TenantRecapFieldTotalsQuery = graphql`
         average
         recaps
         isPercent
+        sampledQuestion
       }
     }
   }

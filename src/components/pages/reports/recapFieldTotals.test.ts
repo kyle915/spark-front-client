@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { countingBasisLine, fieldTotalNote, fieldTotalValue } from "./recapFieldTotals";
+import {
+  countingBasisLine,
+  fieldTotalNote,
+  fieldTotalValue,
+  partitionSampledQuestions,
+  sampledPartsIntro,
+} from "./recapFieldTotals";
 
 const base = { label: "x", average: 0, recaps: 3, isPercent: false };
 
@@ -31,5 +37,24 @@ describe("recap field totals", () => {
     );
     expect(countingBasisLine(true)).toContain("once per store per day");
     expect(countingBasisLine(false)).not.toContain("store per day");
+  });
+
+  it("lifts sampled questions out of the metric grid", () => {
+    const split = partitionSampledQuestions([
+      {
+        section: "Sampling",
+        fields: [
+          { ...base, label: "Total number of consumers sampled", kind: "count", total: 4034, sampledQuestion: true, recaps: 58 },
+          { ...base, label: "How many TOTAL consumers did you sample?", kind: "count", total: 19276, sampledQuestion: true, recaps: 25 },
+          { ...base, label: "Willing to purchase", kind: "count", total: 7783, sampledQuestion: false },
+        ],
+      },
+    ]);
+    expect(split.parts.map((f) => f.total)).toEqual([4034, 19276]);
+    expect(split.sections[0].fields.map((f) => f.label)).toEqual(["Willing to purchase"]);
+    expect(sampledPartsIntro(split.parts, 23310)).toContain("23,310");
+    expect(sampledPartsIntro(split.parts, 100)).toBe(
+      "These questions are what the consumers sampled total counts.",
+    );
   });
 });

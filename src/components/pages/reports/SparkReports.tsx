@@ -2,13 +2,14 @@ import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import useStickyState from "@/hooks/useStickyState";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
-import RecapFieldTotalsSection from "./RecapFieldTotalsSection";
+import RecapFieldTotalsSection, { SampledQuestionNote } from "./RecapFieldTotalsSection";
 import FieldEfficiencySection from "./FieldEfficiencySection";
 import ProgramShareControl from "./ProgramShareControl";
 import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import { ReportsBestPhotosQuery } from "@/api/queries/ReportsBestPhotosQuery";
 import type { ReportsBestPhotosQuery as ReportsBestPhotosQueryType } from "@api/queries/__generated__/ReportsBestPhotosQuery.graphql";
-import { bestPhotoCaption, type FieldPhotoView } from "./fieldPhotos";
+import { bestPhotoCaption, onePhotoPerStop, type FieldPhotoView } from "./fieldPhotos";
+import { conversionFigure } from "./conversionTile";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
 import FeedbackThemes from "@/components/charts/FeedbackThemes";
@@ -47,6 +48,8 @@ import {
 } from "@/components/charts/ConsumerCharts";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import { ofAsked } from "@/lib/consumerBreakdown";
+import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
+import type { TenantConversionKpisQuery as TenantConversionKpisQueryType } from "@api/queries/__generated__/TenantConversionKpisQuery.graphql";
 
 const everyValue = valueLabels("all");
 
@@ -276,9 +279,9 @@ const fmtNum = (v: number | null | undefined) =>
 
 /**
  * "From the field" — photos from approved recaps in the range, with a
- * lightbox. Opens on the best photos (up to 24) when any have been picked;
- * "All photos" (one per recap, as before) is one click away. Renders
- * nothing when there are no photos at all.
+ * lightbox. Best photos are one frame per store and date. Further frames
+ * from that stop are on All photos. Renders nothing when there are no
+ * photos at all.
  */
 const FieldPhotos: React.FC = () => {
   const { tenantId } = useAuthStore();
@@ -290,18 +293,25 @@ const FieldPhotos: React.FC = () => {
       tenantId: String(tenantId ?? ""),
       startDate: ymdLocal(range.start),
       endDate: ymdLocal(range.end),
-      first: 24,
+      first: 80,
     },
     { fetchPolicy: "store-or-network" },
   );
-  const bestPhotos = useMemo(
-    () =>
-      (best?.tenantPhotoGallery?.photos ?? []).map((p) => ({
-        url: thumbUrl(p.url, 800) || p.url,
-        caption: bestPhotoCaption(p),
-      })),
-    [best],
-  );
+  const picked = useMemo(() => {
+    const frames = (best?.tenantPhotoGallery?.photos ?? []).map((p) => ({
+      url: thumbUrl(p.url, 800) || p.url,
+      store: p.store,
+      state: p.state,
+      eventDate: p.eventDate,
+      caption: p.caption,
+    }));
+    const split = onePhotoPerStop(frames);
+    const toView = (p: (typeof frames)[number]) => ({
+      url: p.url,
+      caption: bestPhotoCaption(p),
+    });
+    return { best: split.best.map(toView), rest: split.rest.map(toView) };
+  }, [best]);
   const data = useLazyLoadQuery<ReportsFieldPhotosQueryType>(
     ReportsFieldPhotosQuery,
     {
@@ -339,10 +349,12 @@ const FieldPhotos: React.FC = () => {
         }),
     [data],
   );
-  if (photos.length === 0 && bestPhotos.length === 0) return null;
+  const extra = picked.rest.filter((frame) => !photos.some((photo) => photo.url === frame.url));
+  const allPhotos = [...photos, ...extra];
+  if (allPhotos.length === 0 && picked.best.length === 0) return null;
   // No picks in this range yet: show what the section always showed.
-  const hasBest = bestPhotos.length > 0;
-  const shown = hasBest && view === "best" ? bestPhotos : photos;
+  const hasBest = picked.best.length > 0;
+  const shown = hasBest && view === "best" ? picked.best : allPhotos;
   return (
     <div className="spark-card p-5">
       {hasBest ? (
@@ -504,6 +516,35 @@ const ConsumersSummary: React.FC<{
 const ConsumersUnavailable: React.FC = () => (
   <SummaryItem label="Consumers sampled" figure="—" note="This figure could not load." />
 );
+
+/** Sold ÷ sampled for retail and on-premise only. Spark computes the rate. */
+const PeriodConversion: React.FC<{
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+}> = ({ tenantId, startDate, endDate }) => {
+  const data = useLazyLoadQuery<TenantConversionKpisQueryType>(
+    TenantConversionKpisQuery,
+    { tenantId, startDate, endDate },
+    { fetchPolicy: "store-and-network" },
+  );
+  const kpis = data.tenantConversionKpis;
+  const sold = kpis?.sold ?? 0;
+  const sampled = kpis?.engagements ?? 0;
+  const pct = kpis?.pct;
+  const figure = conversionFigure(sold, sampled, pct);
+  const counts =
+    sold > 0 || sampled > 0
+      ? `${sold.toLocaleString()} sold ÷ ${sampled.toLocaleString()} sampled · `
+      : "";
+  return (
+    <SummaryItem
+      label="Conversion"
+      figure={figure}
+      note={`${counts}retail and on-premise only`}
+    />
+  );
+};
 
 export default function SparkReports() {
   const { tenantId } = useAuthStore();
@@ -678,7 +719,7 @@ export default function SparkReports() {
 
         {/* Summary first: the headline numbers, before any chart. */}
         <section className="spark-card p-5 sm:p-6" aria-label={`Summary, ${range.label}`}>
-          <dl className="m-0 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+          <dl className="m-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-x-6 gap-y-5">
             {tenantId ? (
               <ErrorBoundary
                 key={`${tenantId}|${startYmd}|${endYmd}`}
@@ -696,6 +737,24 @@ export default function SparkReports() {
             ) : (
               <SummaryItem label="Consumers sampled" figure={fmtNum(m.consumersSampled)} />
             )}
+            {tenantId ? (
+              <ErrorBoundary
+                key={`conv|${tenantId}|${startYmd}|${endYmd}`}
+                fallback={
+                  <SummaryItem label="Conversion" figure="—" note="retail and on-premise only" />
+                }
+              >
+                <Suspense
+                  fallback={
+                    <SummaryItem label="Conversion" figure="…" note="retail and on-premise only" />
+                  }
+                >
+                  <PeriodConversion tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+                </Suspense>
+              </ErrorBoundary>
+            ) : (
+              <SummaryItem label="Conversion" figure="—" note="retail and on-premise only" />
+            )}
             <SummaryItem
               label="Events run"
               figure={fmtNum(m.totalEvents)}
@@ -712,6 +771,17 @@ export default function SparkReports() {
               note={awareness ? (awareness.asked ?? undefined) : "not asked on these recaps"}
             />
           </dl>
+          {tenantId ? (
+            <ErrorBoundary fallback={null}>
+              <Suspense fallback={null}>
+                <SampledQuestionNote
+                  tenantId={tenantId}
+                  startDate={startYmd}
+                  endDate={endYmd}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          ) : null}
         </section>
 
         <div className="print:hidden">
@@ -782,15 +852,15 @@ export default function SparkReports() {
           </div>
         ) : null}
 
-        {/* Program recap: what it looked like and what people said. */}
-        <Suspense fallback={<PanelSkeleton label="Loading photos" />}>
-          <FieldPhotos />
-        </Suspense>
+        {/* Voice before the photo grid: one sentence per theme, then one frame per stop. */}
         {tenantId ? (
           <section className="spark-card p-5 sm:p-6">
             <FeedbackThemes tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
           </section>
         ) : null}
+        <Suspense fallback={<PanelSkeleton label="Loading photos" />}>
+          <FieldPhotos />
+        </Suspense>
         {tenantId ? (
           <section className="spark-card p-5 sm:p-6">
             <CompetitorMentions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />

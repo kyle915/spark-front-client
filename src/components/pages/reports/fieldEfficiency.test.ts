@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bestSlice, efficiencyHeadline, samplesPerHourText, type EfficiencyRow } from "./fieldEfficiency";
+import {
+  bestSlice,
+  cleanRates,
+  efficiencyHeadline,
+  samplesPerHourText,
+  type EfficiencyRow,
+} from "./fieldEfficiency";
 
 const row = (label: string, over: Partial<EfficiencyRow> = {}): EfficiencyRow => ({
   label,
@@ -15,7 +21,18 @@ const row = (label: string, over: Partial<EfficiencyRow> = {}): EfficiencyRow =>
 describe("field efficiency", () => {
   it("shows a dash when there is no rate", () => {
     expect(samplesPerHourText(row("x", { samplesPerHour: null }))).toBe("—");
-    expect(samplesPerHourText(row("x", { samplesPerHour: 1234.56 }))).toBe("1,234.6");
+    expect(samplesPerHourText(row("x", { samplesPerHour: 12.34 }))).toBe("12.3");
+  });
+
+  it("holds a rate the clock cannot support", () => {
+    const held = cleanRates(row("Chevron", { samplesPerHour: 5500, unitsPerHour: 2400, sold: 2400 }));
+    expect(held.samplesPerHour).toBeNull();
+    expect(held.unitsPerHour).toBeNull();
+    expect(held.sold).toBe(2400);
+    expect(samplesPerHourText(row("Albertsons", { samplesPerHour: 294.1 }))).toBe("—");
+    expect(bestSlice([row("Fri", { unitsPerHour: 5500 }), row("Sat", { unitsPerHour: 3.1 })])?.label).toBe(
+      "Sat",
+    );
   });
 
   it("picks the best slice by units per hour, ignoring thin slices", () => {
@@ -47,5 +64,14 @@ describe("field efficiency", () => {
         [row("Afternoon", { unitsPerHour: 5 }), row("Morning", { unitsPerHour: 2 })],
       ),
     ).toBe("Saturdays and afternoon shifts sell the most per hour.");
+  });
+
+  it("does not call a samples shift a sales leader", () => {
+    expect(
+      efficiencyHeadline(
+        [row("Fri", { unitsPerHour: 3 })],
+        [row("Midday", { unitsPerHour: null, samplesPerHour: 20 })],
+      ),
+    ).toBe("Fridays sell the most per hour. Midday shifts sample the most per hour.");
   });
 });
