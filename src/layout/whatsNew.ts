@@ -14,6 +14,35 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23g",
+    date: "November 23, 2026",
+    title: "Staff tools stay behind Admin view (including billing)",
+    staffOnly: true,
+    items: [
+      "Brand clients can no longer open Ignite-only pages by typing the URL — Billing, Missing Recaps, Users, Chat, catalogs and the rest of the internal queue now show an admin-view notice instead of the screen.",
+      "The Admin / Client toggle stays limited to Ignite staff and exact Spark Admin roles; Brand Admin accounts remain in client chrome and cannot flip the toggle by editing storage.",
+    ],
+  },
+  {
+    id: "2026-11-23h",
+    date: "November 23, 2026",
+    title: "Upcoming activations no longer count as recaps due",
+    items: [
+      "The sidebar recaps-due badge, Missing Recaps, Master Tracker and the client Needs-you tile only flag past activations — scheduled demos still in the future never show as due.",
+      "Status uses the activation date after a reschedule, so a moved-forward event does not look overdue while it is still upcoming.",
+    ],
+  },
+  {
+    id: "2026-11-23f",
+    date: "November 23, 2026",
+    title: "Finance queue: Unmatched cost / receipt filter",
+    staffOnly: true,
+    items: [
+      "On Finance queue, pick Unmatched cost / receipt in the exception filter — it matches API type unmatched_transaction and still includes legacy unmatched_cost rows.",
+      "Link visit on those rows works the same as before once the filter finds them.",
+    ],
+  },
+  {
     id: "2026-11-23m",
     date: "November 23, 2026",
     title: "Map this store: suggested match without the typing jank",
