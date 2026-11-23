@@ -10,6 +10,7 @@ import {
   clientOrigin,
   invoicePublicUrl,
   isPublicFieldPath,
+  pitchPublicUrl,
   receiptCampaignPublicUrl,
   recapPublicUrl,
   recapShareOrigin,
@@ -43,6 +44,7 @@ describe("isPublicFieldPath", () => {
     expect(isPublicFieldPath("/c/campaign-slug")).toBe(true);
     expect(isPublicFieldPath("/invoice/tok")).toBe(true);
     expect(isPublicFieldPath("/live/tok")).toBe(true);
+    expect(isPublicFieldPath("/pitch/pd_tok")).toBe(true);
     expect(isPublicFieldPath("/jobs/AbC_123-x")).toBe(true);
     expect(isPublicFieldPath("/clock/AbC_123-x")).toBe(true);
   });
@@ -158,6 +160,7 @@ describe("receipt / invoice / live / admin request URLs", () => {
     expect(clientLivePublicUrl("live.tok")).toBe(
       `${CLIENT_ORIGIN}/live/live.tok`,
     );
+    expect(pitchPublicUrl("pd_tok")).toBe(`${CLIENT_ORIGIN}/pitch/pd_tok`);
   });
 
   it("mints admin. for staff request mention links", () => {
@@ -176,6 +179,7 @@ describe("receipt / invoice / live / admin request URLs", () => {
     expect(clientLivePublicUrl("live.tok")).toBe(
       `${CLIENT_ORIGIN}/live/live.tok`,
     );
+    expect(pitchPublicUrl("pd_tok")).toBe(`${CLIENT_ORIGIN}/pitch/pd_tok`);
     expect(adminRequestUrl("req-uuid")).toBe(
       `${ADMIN_ORIGIN}/request/view/req-uuid`,
     );

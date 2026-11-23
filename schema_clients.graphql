@@ -1637,6 +1637,38 @@ input BulkWalkupShiftsInput {
   clientMutationId: ID = null
 }
 
+type BuyerPitchDeckCreateResult {
+  ok: Boolean!
+  error: String
+  deck: BuyerPitchDeckSummary
+}
+
+type BuyerPitchDeckRevokeResult {
+  ok: Boolean!
+  error: String
+  deck: BuyerPitchDeckSummary
+}
+
+type BuyerPitchDeckSummary {
+  uuid: String!
+  token: String!
+  title: String!
+  subtitle: String!
+  buyerName: String!
+  periodStart: String!
+  periodEnd: String!
+  retailerFilter: String!
+  marketFilter: String!
+  includeCosts: Boolean!
+  hasPasscode: Boolean!
+  expiresAt: String
+  revokedAt: String
+  photoCount: Int!
+  viewCount: Int!
+  createdAt: String!
+  createdByEmail: String
+}
+
 type CalloutLink {
   store: String
   state: String
@@ -6681,6 +6713,9 @@ type Mutation {
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
   upsertDemoBudgetTarget(targetAmount: String!, month: String = null, scopeType: String! = "workspace", scopeKey: String! = "", scopeLabel: String! = "", notes: String! = "", tenantId: ID = null): DemoBudgetTargetResult!
   deleteDemoBudgetTarget(uuid: String!, tenantId: ID = null): DemoBudgetTargetResult!
+  togglePhotoWallPin(photoId: String!, pinned: Boolean = null, note: String = null): PhotoWallPinResult!
+  createBuyerPitchDeck(title: String!, subtitle: String = null, buyerName: String = null, introNote: String = null, periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null, includeCosts: Boolean! = false, passcode: String = null, expiresInDays: Int = null, pinnedPhotoIds: [String!] = null): BuyerPitchDeckCreateResult!
+  revokeBuyerPitchDeck(deckUuid: String!): BuyerPitchDeckRevokeResult!
   askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
   clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
@@ -7422,6 +7457,43 @@ type PhotoSearchInterpretation {
   chips: [String!]!
 }
 
+type PhotoWallPhoto {
+  id: String!
+  url: String!
+  category: String!
+  caption: String!
+  store: String!
+  retailer: String!
+  market: String!
+  state: String!
+  eventDate: String!
+  skus: [String!]!
+  recapUuid: String!
+  isPinned: Boolean!
+  pinnedAt: String
+  pinNote: String!
+}
+
+type PhotoWallPinResult {
+  ok: Boolean!
+  error: String
+  photoId: String
+  isPinned: Boolean
+  pinnedAt: String
+  pinNote: String
+  pinnedCount: Int
+}
+
+type PhotoWallResult {
+  total: Int!
+  pinnedCount: Int!
+  photos: [PhotoWallPhoto!]!
+  retailers: [String!]!
+  markets: [String!]!
+  skus: [String!]!
+  categories: [String!]!
+}
+
 type PilotMutationOutcome {
   ok: Boolean!
   error: String
@@ -8071,6 +8143,8 @@ type Query {
   brandInsightReview: [BrandInsightReviewBrand!]
   demoBudgetPacingAndLeaderboard(month: String = null, groupBy: String! = "retailer", sortBy: String! = "units_per_dollar", tenantId: ID = null): DemoBudgetPacingAndLeaderboard
   todayAttentionQueue(tenantId: ID = null): TodayAttentionQueue
+  photoWall(startDate: String = null, endDate: String = null, retailer: String = null, market: String = null, sku: String = null, category: String = null, search: String = null, pinnedOnly: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoWallResult!
+  buyerPitchDecks: [BuyerPitchDeckSummary!]!
   brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
   recapReceiptAudit(recapId: ID!): RecapReceiptAudit

@@ -24,6 +24,7 @@ import type { PilotQueriesExportBuyerReportQuery as ExportQueryType } from "@/ap
 import type { PilotMutationsRespondStoreActionMutation as RespondActionType } from "@/api/mutations/__generated__/PilotMutationsRespondStoreActionMutation.graphql";
 import type { PilotMutationsReassignStoreActionMutation as ReassignActionType } from "@/api/mutations/__generated__/PilotMutationsReassignStoreActionMutation.graphql";
 import type { PilotMutationsVerifyRestockMutation as VerifyRestockType } from "@/api/mutations/__generated__/PilotMutationsVerifyRestockMutation.graphql";
+import { BuyerPitchDeckShareCard } from "./BuyerPitchDeckShareCard";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -209,6 +210,12 @@ const BuyerReportBody: React.FC<{
           ))}
         </select>
       </div>
+
+      <BuyerPitchDeckShareCard
+        retailerFilter={retailerFilter}
+        marketFilter={marketFilter}
+        providerUuid={providerUuid}
+      />
 
       {/* Store Table */}
       <section className="spark-card p-5 space-y-3">

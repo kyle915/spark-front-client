@@ -55,6 +55,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/plans-billing": { parent: "Workspace", title: "Plans & Billing" },
   "/onboarding": { parent: "Workspace", title: "Team Onboarding" },
   "/buyer-report": { parent: "Outputs", title: "Buyer Store Report" },
+  "/photo-wall": { parent: "Outputs", title: "Live Photo Wall" },
   "/catalogs/store-names": { parent: "Catalogs", title: "Store names" },
   "/reports": { parent: "Spark", title: "Program report" },
   "/reports/client-recap": { parent: "Program report", title: "Client recap deck" },
