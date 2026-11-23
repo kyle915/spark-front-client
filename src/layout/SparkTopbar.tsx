@@ -191,6 +191,10 @@ export const SparkTopbar: React.FC = () => {
   const clientName = tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug);
   const [panel, setPanel] = useState<null | "whatsNew" | "shortcuts">(null);
   const [unseenNews, setUnseenNews] = useState(() => hasUnseenWhatsNew(isClient));
+  // Staff vs client feeds can tip on different ids; recompute when Admin/Client toggles.
+  useEffect(() => {
+    setUnseenNews(hasUnseenWhatsNew(isClient));
+  }, [isClient]);
   const openPanel = (which: "whatsNew" | "shortcuts") => {
     setMenuOpen(false);
     setPanel(which);
