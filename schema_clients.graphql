@@ -6362,6 +6362,11 @@ input MapCustomRecapStoreInput {
   retailerId: ID!
 }
 
+input SuggestCustomRecapStoreInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
 input MarkChatThreadReadInput {
   clientMutationId: ID = null
   threadUuid: String!
@@ -6682,6 +6687,7 @@ type Mutation {
   unarchiveCustomRecap(input: UnarchiveCustomRecapInput!): CustomRecapDetailResponse!
   decideRetailerProposal(input: DecideRetailerProposalInput!): RetailerProposalResponse!
   mapCustomRecapStore(input: MapCustomRecapStoreInput!): CustomRecapDetailResponse!
+  suggestCustomRecapStore(input: SuggestCustomRecapStoreInput!): CustomRecapDetailResponse!
   bulkApproveRecaps(input: BulkApproveRecapsInput!): BulkRecapsResponse!
   markRecapsShared(input: MarkRecapsSharedInput!): BulkRecapsResponse!
   shareRecapByEmail(input: ShareRecapByEmailInput!): ShareRecapByEmailResponse!
