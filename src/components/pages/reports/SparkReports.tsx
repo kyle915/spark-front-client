@@ -725,8 +725,9 @@ export default function SparkReports() {
                 tenantId={tenantId}
                 startDate={startYmd}
                 endDate={endYmd}
-                preset={rangeKey}
+                preset={customIncomplete ? "90" : rangeKey}
                 staff={isStaffView}
+                canWrite={!customIncomplete}
               />
             </Suspense>
           </ErrorBoundary>

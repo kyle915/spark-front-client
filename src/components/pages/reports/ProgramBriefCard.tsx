@@ -36,7 +36,9 @@ const ProgramBriefCard: React.FC<{
   endDate: string;
   preset: RangePreset;
   staff: boolean;
-}> = ({ tenantId, startDate, endDate, preset, staff }) => {
+  /** False while a custom range is missing a date and the page is showing a fallback. */
+  canWrite?: boolean;
+}> = ({ tenantId, startDate, endDate, preset, staff, canWrite = true }) => {
   const data = useLazyLoadQuery<ProgramBriefQueryType>(
     ProgramBriefQuery,
     { tenantId, startDate, endDate },
@@ -92,7 +94,7 @@ const ProgramBriefCard: React.FC<{
   };
 
   const write = () => {
-    if (busy) return;
+    if (busy || !canWrite) return;
     if (
       brief &&
       !window.confirm(
@@ -156,17 +158,20 @@ const ProgramBriefCard: React.FC<{
           No brief for these dates yet.
         </p>
         <p className="text-xs mt-1" style={META}>
-          A 30- or 90-day range is shown to the brand once every number checks out. A longer or
-          custom range stays a draft until you mark it reviewed.
+          {canWrite
+            ? "A 30- or 90-day range is shown to the brand once every number checks out. A longer or custom range stays a draft until you mark it reviewed."
+            : "Pick both dates before writing a brief. Until then this page is showing the last 90 days."}
         </p>
-        <button
-          type="button"
-          className="spark-btn-ghost mt-3 print:hidden"
-          onClick={write}
-          disabled={busy}
-        >
-          {writing ? "Writing" : "Write brief"}
-        </button>
+        {canWrite ? (
+          <button
+            type="button"
+            className="spark-btn-ghost mt-3 print:hidden"
+            onClick={write}
+            disabled={busy}
+          >
+            {writing ? "Writing" : "Write brief"}
+          </button>
+        ) : null}
         {problem ? (
           <p className="text-sm mt-2" role="status" style={{ color: "var(--spark-orange)" }}>
             {problem}
@@ -177,6 +182,28 @@ const ProgramBriefCard: React.FC<{
   }
 
   if (!brief) return null;
+
+  const savedBody = (className: string) => (
+    <div className={className}>
+      <p className="text-sm leading-relaxed m-0" style={TEXT}>
+        {brief.paragraph}
+      </p>
+      {brief.bullets.length > 0 ? (
+        <ul className="m-0 pl-5 list-disc flex flex-col gap-1">
+          {brief.bullets.map((line, index) => (
+            <li key={`${index}-${line}`} className="text-sm" style={TEXT}>
+              {line}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {brief.quote ? (
+        <blockquote className="m-0 text-sm" style={SECONDARY}>
+          “{brief.quote}”
+        </blockquote>
+      ) : null}
+    </div>
+  );
 
   return (
     <section className="spark-card p-5 sm:p-6" aria-label={TITLE} id="program-brief">
@@ -204,30 +231,15 @@ const ProgramBriefCard: React.FC<{
             value={quote}
             onChange={(event) => setQuote(event.target.value)}
             aria-label="Brief quote"
-            placeholder="A comment from these recaps, or leave blank"
+            placeholder="A comment from these recaps, copied in full, or leave blank"
             className="spark-input w-full rounded-xl px-3 py-2.5 text-sm"
           />
         </div>
-      ) : (
-        <div className="mt-3 max-w-3xl flex flex-col gap-3">
-          <p className="text-sm leading-relaxed m-0" style={TEXT}>
-            {brief.paragraph}
-          </p>
-          {brief.bullets.length > 0 ? (
-            <ul className="m-0 pl-5 list-disc flex flex-col gap-1">
-              {brief.bullets.map((line, index) => (
-                <li key={`${index}-${line}`} className="text-sm" style={TEXT}>
-                  {line}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {brief.quote ? (
-            <blockquote className="m-0 text-sm" style={SECONDARY}>
-              “{brief.quote}”
-            </blockquote>
-          ) : null}
-        </div>
+      ) : null}
+      {savedBody(
+        editing
+          ? "mt-3 max-w-3xl hidden print:block"
+          : "mt-3 max-w-3xl flex flex-col gap-3",
       )}
       <p className="text-xs mt-3" style={META}>
         {briefFooter(brief)}
@@ -273,9 +285,11 @@ const ProgramBriefCard: React.FC<{
               {brief.status === "reviewed" ? "Back to draft" : "Mark reviewed"}
             </button>
           ) : null}
-          <button type="button" className="spark-btn-ghost" onClick={write} disabled={busy}>
-            {writing ? "Writing" : "Write again"}
-          </button>
+          {canWrite ? (
+            <button type="button" className="spark-btn-ghost" onClick={write} disabled={busy}>
+              {writing ? "Writing" : "Write again"}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {problem ? (
