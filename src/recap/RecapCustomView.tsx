@@ -3393,7 +3393,8 @@ const RecapCustomViewInner = ({
 
     const clientInner = (
       <>
-        <div className="space-y-6 w-full max-w-7xl">
+        {/* Full main-pane width (no max-w-5xl/7xl) — kills the empty right rail. */}
+        <div className="space-y-6 w-full">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               to={backToListUrl}
@@ -3470,10 +3471,10 @@ const RecapCustomViewInner = ({
 
           {/* Desktop: meta + photos side-by-side (matches RecapDetailSkeleton).
               Mobile: photos first, then fields — same stack, less empty right rail. */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div
               ref={evidenceRef}
-              className="spark-card p-5 sm:p-6 xl:col-span-7 xl:order-2"
+              className="spark-card p-5 sm:p-6 lg:col-span-7 lg:order-2"
             >
               <p
                 className="mono text-[10px] mb-4"
@@ -3484,7 +3485,7 @@ const RecapCustomViewInner = ({
               {clientPhotoTiles}
             </div>
 
-            <div className="space-y-6 xl:col-span-5 xl:order-1">
+            <div className="space-y-6 lg:col-span-5 lg:order-1">
               <RecapShareFieldSections
                 sections={customFieldsBySection.map((section) => ({
                   name: section.name,
