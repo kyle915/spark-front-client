@@ -6513,6 +6513,14 @@ type MissingRecapAmbassadorInfo {
   lastNudgeChannel: String
 }
 
+type SuggestedWalkupAttachType {
+  orphanEventUuid: ID!
+  orphanEventName: String!
+  orphanAddress: String
+  requestUuid: ID!
+  confidence: String!
+}
+
 type MissingRecapEventType {
   eventUuid: ID!
   eventName: String!
@@ -6525,6 +6533,7 @@ type MissingRecapEventType {
   hoursOverdue: Int
   requestUuid: ID
   assignedAmbassadors: [MissingRecapAmbassadorInfo!]!
+  suggestedWalkupAttach: SuggestedWalkupAttachType
 }
 
 type MonthHighlight {
@@ -6705,6 +6714,8 @@ type Mutation {
   reassignRecapEvent(input: ReassignRecapEventInput!): RecapDetailResponse!
   dismissMissingRecaps(input: DismissMissingRecapsInput!): DismissMissingRecapsResponse!
   restoreMissingRecaps(input: RestoreMissingRecapsInput!): RestoreMissingRecapsResponse!
+  attachWalkupOrphan(input: AttachWalkupOrphanInput!): AttachWalkupOrphanResponse!
+  attachSafeWalkupOrphans(input: AttachSafeWalkupOrphansInput!): AttachWalkupOrphanResponse!
   nudgeAmbassadorForRecap(input: NudgeAmbassadorForRecapInput!): NudgeRecapResponse!
   exportRecapsXlsx(input: ExportRecapsXlsxInput!): RecapExportResponse!
   exportRecapXlsx(input: ExportRecapXlsxInput!): RecapExportResponse!
@@ -7116,6 +7127,28 @@ type NudgeRecapResponse {
   devicesNotified: Int
   lastNudgedAt: String
   lastNudgeChannel: String
+}
+
+input AttachWalkupOrphanInput {
+  clientMutationId: String
+  orphanEventUuid: ID!
+  requestUuid: ID!
+  lookbackDays: Int! = 45
+}
+
+input AttachSafeWalkupOrphansInput {
+  clientMutationId: String
+  tenantId: ID = null
+  lookbackDays: Int! = 45
+}
+
+type AttachWalkupOrphanResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  linkedCount: Int!
+  orphanEventUuid: ID
+  requestUuid: ID
 }
 
 input ObtainJSONWebTokenInput {

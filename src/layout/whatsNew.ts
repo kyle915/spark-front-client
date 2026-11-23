@@ -14,6 +14,17 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23o",
+    date: "November 23, 2026",
+    title: "1-click attach walk-up recaps on Missing Recaps",
+    staffOnly: true,
+    items: [
+      "On Missing Recaps, when a BA already filed a walk-up that uniquely matches a Tracker RECAP DUE row (same day and place), Spark shows a Walk-up match chip with Attach walk-up recap.",
+      "Attach all safe matches links every high-confidence orphan in one tap — the same rules as the nightly link job, so ghost DUE rows clear without CLI.",
+      "Walk-up filings still auto-link on submit when the match is unique; the Missing Recaps chips cover historical orphans that stayed unlinked.",
+    ],
+  },
+  {
     id: "2026-11-23n",
     date: "November 23, 2026",
     title: "Nudge all overdue missing recaps in one click",
@@ -86,7 +97,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Finance queue: Unmatched cost / receipt filter",
     staffOnly: true,
     items: [
-      "On Finance queue, pick Unmatched cost / receipt in the exception filter — it matches API type unmatched_transaction and still includes legacy unmatched_cost rows.",
+      "On Finance Queue, pick Unmatched cost / receipt in the exception filter — it matches API type unmatched_transaction and still includes legacy unmatched_cost rows.",
       "Link visit on those rows works the same as before once the filter finds them.",
     ],
   },
