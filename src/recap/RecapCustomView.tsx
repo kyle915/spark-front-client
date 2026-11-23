@@ -3331,9 +3331,68 @@ const RecapCustomViewInner = ({
   );
 
   if (isClient) {
+    const clientPhotoTiles =
+      flatImages.length + flatVideos.length > 0 ? (
+        <div
+          // Phone: keep 2 cols (auto-fill@140px collapses to 1 under layout padding).
+          // sm+: densify with auto-fill as the pane widens.
+          className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:[grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]"
+        >
+          {categories
+            .flatMap((category) => category.files)
+            .filter((file) => isImageFile(file) || isVideoFile(file))
+            .map((file) => {
+              if (isVideoFile(file)) {
+                const src = videoSrc(file);
+                return (
+                  <button
+                    key={file.id}
+                    type="button"
+                    onClick={() => openVideo(file)}
+                    className="relative block h-36 sm:h-40 overflow-hidden rounded-xl text-left"
+                    style={{ border: "1px solid var(--spark-border)" }}
+                  >
+                    <RecapVideoThumb src={src} />
+                  </button>
+                );
+              }
+              const src = displaySrc(file);
+              const idx = flatImages.findIndex((img) => img.id === file.id);
+              return (
+                <button
+                  key={file.id}
+                  type="button"
+                  onClick={() => {
+                    if (idx >= 0) setPreviewIndex(idx);
+                  }}
+                  className="block overflow-hidden rounded-xl text-left"
+                  style={{ border: "1px solid var(--spark-border)" }}
+                >
+                  <img
+                    src={thumbUrl(src, 400) || src}
+                    alt={file.name || "Recap photo"}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-36 sm:h-40 object-cover"
+                    onError={(event) => {
+                      const img = event.currentTarget;
+                      if (src && img.src !== src) img.src = src;
+                    }}
+                  />
+                </button>
+              );
+            })}
+        </div>
+      ) : (
+        <p className="text-sm" style={muted}>
+          No photos on this recap yet.
+        </p>
+      );
+
     const clientInner = (
       <>
-        <div className="space-y-6 max-w-5xl">
+        {/* Full main-pane width (no max-w-5xl/7xl) — kills the empty right rail. */}
+        <div className="space-y-6 w-full">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               to={backToListUrl}
@@ -3408,139 +3467,97 @@ const RecapCustomViewInner = ({
             </p>
           </div>
 
-          <div ref={evidenceRef} className="spark-card p-6">
-            <p
-              className="mono text-[10px] mb-4"
-              style={{ letterSpacing: "0.18em", color: "var(--recap-muted, #5c6154)" }}
+          {/* Desktop: meta + photos side-by-side (matches RecapDetailSkeleton).
+              Mobile: photos first, then fields — same stack, less empty right rail. */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div
+              ref={evidenceRef}
+              className="spark-card p-5 sm:p-6 lg:col-span-7 lg:order-2"
             >
-              PHOTOS · {flatImages.length + flatVideos.length}
-            </p>
-            {flatImages.length + flatVideos.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {categories
-                  .flatMap((category) => category.files)
-                  .filter((file) => isImageFile(file) || isVideoFile(file))
-                  .map((file) => {
-                    if (isVideoFile(file)) {
-                      const src = videoSrc(file);
-                      return (
-                        <button
-                          key={file.id}
-                          type="button"
-                          onClick={() => openVideo(file)}
-                          className="relative block h-40 overflow-hidden rounded-xl text-left"
-                          style={{ border: "1px solid var(--spark-border)" }}
-                        >
-                          <RecapVideoThumb src={src} />
-                        </button>
-                      );
-                    }
-                    const src = displaySrc(file);
-                    const idx = flatImages.findIndex((img) => img.id === file.id);
-                    return (
-                      <button
-                        key={file.id}
-                        type="button"
-                        onClick={() => {
-                          if (idx >= 0) setPreviewIndex(idx);
-                        }}
-                        className="block overflow-hidden rounded-xl text-left"
-                        style={{ border: "1px solid var(--spark-border)" }}
-                      >
-                        <img
-                          src={thumbUrl(src, 400) || src}
-                          alt={file.name || "Recap photo"}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-40 object-cover"
-                          onError={(event) => {
-                            const img = event.currentTarget;
-                            if (src && img.src !== src) img.src = src;
-                          }}
-                        />
-                      </button>
-                    );
-                  })}
-              </div>
-            ) : (
-              <p className="text-sm" style={muted}>
-                No photos on this recap yet.
+              <p
+                className="mono text-[10px] mb-4"
+                style={{ letterSpacing: "0.18em", color: "var(--recap-muted, #5c6154)" }}
+              >
+                PHOTOS · {flatImages.length + flatVideos.length}
               </p>
-            )}
-          </div>
-
-          <RecapShareFieldSections
-            sections={customFieldsBySection.map((section) => ({
-              name: section.name,
-              fields: section.fields
-                .filter(customFieldHasDisplayValue)
-                .map((field) => ({
-                  name: field.name,
-                  value: field.value,
-                })),
-            }))}
-          />
-
-          {reviewKpis.length > 0 && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {reviewKpis.map((k, i) => (
-                <div
-                  key={k.label}
-                  className="kpi"
-                  style={
-                    i === 0
-                      ? {
-                          boxShadow:
-                            "0 0 28px color-mix(in srgb, var(--recap-brand, #f2f3ee) 25%, transparent)",
-                        }
-                      : undefined
-                  }
-                >
-                  <p
-                    className="kpi-value"
-                    style={{ color: "var(--recap-brand, var(--spark-lime))" }}
-                  >
-                    {k.value}
-                  </p>
-                  <p className="kpi-label">{k.label}</p>
-                </div>
-              ))}
+              {clientPhotoTiles}
             </div>
-          )}
 
-          <RecapClientSignoff
-            existingStatus={recap.clientSignoffStatus}
-            existingComment={recap.clientSignoffComment}
-            existingAt={recap.clientSignoffAt}
-            busy={isSigningOff}
-            approved={recap.approved}
-            onApprove={handleApprove}
-            approving={isApproving || approvePhase !== "idle"}
-            onSubmit={(status, comment) => {
-              commitSignoff({
-                variables: {
-                  input: {
-                    customRecapId: recap.id,
-                    status,
-                    comment,
-                  },
-                },
-                onCompleted: (res) => {
-                  if (res.submitRecapClientSignoff?.success) {
-                    showAlert("Sign-off saved.", "success");
-                    onRefresh();
-                  } else {
-                    showAlert(
-                      res.submitRecapClientSignoff?.message ??
-                        "Couldn't save sign-off.",
-                      "error",
-                    );
-                  }
-                },
-                onError: (err) => showAlert(err.message, "error"),
-              });
-            }}
-          />
+            <div className="space-y-6 lg:col-span-5 lg:order-1">
+              <RecapShareFieldSections
+                sections={customFieldsBySection.map((section) => ({
+                  name: section.name,
+                  fields: section.fields
+                    .filter(customFieldHasDisplayValue)
+                    .map((field) => ({
+                      name: field.name,
+                      value: field.value,
+                    })),
+                }))}
+              />
+
+              {reviewKpis.length > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {reviewKpis.map((k, i) => (
+                    <div
+                      key={k.label}
+                      className="kpi"
+                      style={
+                        i === 0
+                          ? {
+                              boxShadow:
+                                "0 0 28px color-mix(in srgb, var(--recap-brand, #f2f3ee) 25%, transparent)",
+                            }
+                          : undefined
+                      }
+                    >
+                      <p
+                        className="kpi-value"
+                        style={{ color: "var(--recap-brand, var(--spark-lime))" }}
+                      >
+                        {k.value}
+                      </p>
+                      <p className="kpi-label">{k.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <RecapClientSignoff
+                existingStatus={recap.clientSignoffStatus}
+                existingComment={recap.clientSignoffComment}
+                existingAt={recap.clientSignoffAt}
+                busy={isSigningOff}
+                approved={recap.approved}
+                onApprove={handleApprove}
+                approving={isApproving || approvePhase !== "idle"}
+                onSubmit={(status, comment) => {
+                  commitSignoff({
+                    variables: {
+                      input: {
+                        customRecapId: recap.id,
+                        status,
+                        comment,
+                      },
+                    },
+                    onCompleted: (res) => {
+                      if (res.submitRecapClientSignoff?.success) {
+                        showAlert("Sign-off saved.", "success");
+                        onRefresh();
+                      } else {
+                        showAlert(
+                          res.submitRecapClientSignoff?.message ??
+                            "Couldn't save sign-off.",
+                          "error",
+                        );
+                      }
+                    },
+                    onError: (err) => showAlert(err.message, "error"),
+                  });
+                }}
+              />
+            </div>
+          </div>
           </div>
           </RecapDocument>
         </div>

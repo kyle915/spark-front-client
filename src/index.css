@@ -2104,7 +2104,8 @@ body { background: var(--spark-bg); }
 }
 .recap-doc-page > main,
 .recap-doc-page > .recap-doc-body {
-  max-width: 64rem;
+  /* Match logged-in client detail (max-w-7xl) — avoid narrow left column. */
+  max-width: 80rem;
   margin: 0 auto;
   padding: 2rem 1.25rem 2.5rem;
 }
