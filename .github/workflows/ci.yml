@@ -5,20 +5,23 @@ name: CI
 # TypeScript breaks after merging back-to-back PRs, ESLint violations,
 # and broken pure helpers (favorites / recap URL / theme).
 #
-# Deploy-hosting still runs on its own — this workflow is the gate
-# *before* you decide to merge, not the gate at deploy time.
+# Production Hosting deploy is deploy-prod.yml on push to main. This
+# workflow is the gate before you merge, not the deploy.
 
 on:
+  # Feature-branch commits run once, via pull_request. push is only main
+  # (the merge result), so a push to the PR branch does not build that
+  # same SHA a second time.
   pull_request:
+    types: [opened, synchronize, reopened]
     branches: [main, develop]
   push:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  # One run per branch — newer pushes cancel older ones to save Actions
-  # minutes when a contributor pushes in quick succession.
-  group: ci-${{ github.ref }}
+  # Newer commits on the same PR or branch cancel the in-progress build.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

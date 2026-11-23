@@ -170,27 +170,10 @@ const Login = () => {
   );
 
   const shiftNote = (
-    <div className="space-y-2.5">
-      <div
-        className="signin-shift"
-        style={{
-          borderTop: "1px solid rgba(0,0,0,0.08)",
-          paddingTop: "12px",
-        }}
-      >
-        <strong>New brand or field team?</strong>{" "}
-        <Link to="/onboarding" className="signin-link">
-          Use Spark with my team →
-        </Link>{" "}
-        <span style={{ opacity: 0.8 }}>
-          (Free · 5 visits/mo · no credit card required)
-        </span>
-      </div>
-      <p className="signin-shift">
-        <strong>Working a shift?</strong> You do not need to sign in. Use the check-in
-        link from your text or email.
-      </p>
-    </div>
+    <p className="signin-shift">
+      <strong>Working a shift?</strong> You do not need to sign in. Use the check-in
+      link from your text or email.
+    </p>
   );
 
   return (

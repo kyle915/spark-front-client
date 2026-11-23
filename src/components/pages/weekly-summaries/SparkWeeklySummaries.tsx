@@ -19,7 +19,6 @@ import {
   isEdited,
   isLatestMonth,
   isLatestWeek,
-  mailtoHref,
   monthLabel,
   recapBasis,
   shiftMonth,
@@ -30,6 +29,7 @@ import {
   type SummaryPeriod,
 } from "@/lib/weeklySummary";
 import StoreInsightsReview from "@/components/pages/weekly-summaries/StoreInsightsReview";
+import SendWeeklySummaryModal from "@/components/pages/weekly-summaries/SendWeeklySummaryModal";
 
 /**
  * Client summaries: Ignite staff only (route is wrapped in AdminOnly, and
@@ -37,9 +37,8 @@ import StoreInsightsReview from "@/components/pages/weekly-summaries/StoreInsigh
  *
  * One short written summary per brand for a finished week, and a client
  * email draft per brand for a finished month. Scheduled jobs draft them;
- * here staff read a draft, fix the wording, copy it, and mark it reviewed.
- * Nothing on this page sends anything to a brand: "Open in email" hands the
- * text to the person's own mail program with no recipient filled in.
+ * here staff read a draft, fix the wording, mark it reviewed, and Send
+ * branded HTML to brand recipients (stamps sentAt / sentBy).
  */
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -52,13 +51,15 @@ type Summary = NonNullable<Row["summary"]>;
 const BrandSummary: React.FC<{
   row: Row;
   weekStart: string;
+  weekEnd: string;
   period: SummaryPeriod;
   first: boolean;
-}> = ({ row, weekStart, period, first }) => {
+}> = ({ row, weekStart, weekEnd, period, first }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const [summary, setSummary] = useState<Summary | null>(row.summary ?? null);
   const [text, setText] = useState(row.summary?.text ?? "");
   const [problem, setProblem] = useState<string | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
 
   const [generate, writing] = useMutation<WeeklyClientSummaryMutationsGenerateMutation>(
     GenerateWeeklyClientSummaryMutation,
@@ -150,8 +151,23 @@ const BrandSummary: React.FC<{
     }
   };
 
+  const openSend = () => {
+    if (!summary || busy || !text.trim()) return;
+    if (dirty) {
+      saveEdits((saved) => {
+        setSummary(saved);
+        setSendOpen(true);
+      });
+      return;
+    }
+    setSendOpen(true);
+  };
+
   const boxId = `client-summary-${period}-${row.tenantId}`;
   const monthly = period === "month";
+  const periodLabel = monthly
+    ? monthLabel(weekStart)
+    : weekLabel(weekStart, weekEnd);
 
   return (
     <li
@@ -163,7 +179,7 @@ const BrandSummary: React.FC<{
           <label htmlFor={boxId}>{row.tenantName}</label>
         </h2>
         {summary ? (
-          <p className="text-xs" style={reviewed ? SECONDARY : META}>
+          <p className="text-xs" style={summary.sentAt || reviewed ? SECONDARY : META}>
             {statusLine(summary)}
           </p>
         ) : null}
@@ -200,14 +216,15 @@ const BrandSummary: React.FC<{
             <button type="button" className="spark-btn-ghost" onClick={copy} disabled={!text.trim()}>
               Copy
             </button>
-            {monthly && text.trim() ? (
-              <a
-                className="spark-btn-ghost"
-                href={mailtoHref(`${row.tenantName}: ${monthLabel(weekStart)}`, text)}
-              >
-                Open in email
-              </a>
-            ) : null}
+            <button
+              type="button"
+              className="spark-btn-primary"
+              onClick={openSend}
+              disabled={busy || !text.trim()}
+              style={{ opacity: busy || !text.trim() ? 0.5 : 1 }}
+            >
+              {summary.sentAt ? "Send again" : "Send"}
+            </button>
             <button
               type="button"
               className="spark-btn-ghost"
@@ -238,6 +255,21 @@ const BrandSummary: React.FC<{
         <p className="text-sm mt-2" role="status" style={{ color: "var(--spark-orange)" }}>
           {problem}
         </p>
+      ) : null}
+
+      {sendOpen && summary ? (
+        <SendWeeklySummaryModal
+          summaryId={summary.id}
+          tenantName={row.tenantName}
+          periodLabel={periodLabel}
+          suggestedRecipients={row.suggestedRecipients ?? []}
+          onClose={() => setSendOpen(false)}
+          onSent={(next) => {
+            setSummary(next);
+            setText(next.text);
+            setProblem(null);
+          }}
+        />
       ) : null}
     </li>
   );
@@ -307,6 +339,7 @@ const WeekBody: React.FC<{
                 key={`${period}|${week.weekStart}|${row.tenantId}`}
                 row={row}
                 weekStart={week.weekStart}
+                weekEnd={week.weekEnd}
                 period={period}
                 first={i === 0}
               />
@@ -345,10 +378,10 @@ export default function SparkWeeklySummaries() {
       <div className="spark-scale max-w-3xl flex flex-col gap-5">
         <SparkPageHeader
           title="Client summaries"
-          support="A short summary of each brand's week, an email draft for each month, and store recommendations and alerts for each brand's dashboard. Written from approved recaps. Nothing is sent from this page."
+          support="A short summary of each brand's week, an email draft for each month, and store recommendations and alerts for each brand's dashboard. Written from approved recaps. Use Send to email the branded HTML to brand recipients."
         />
         <p className="text-xs sm:hidden" style={META}>
-          Written from approved recaps. Nothing is sent from this page.
+          Written from approved recaps. Use Send to email the branded summary to the brand.
         </p>
         <div className="pill-group self-start" role="group" aria-label="View">
           {(["week", "month", "insights"] as const).map((key) => (

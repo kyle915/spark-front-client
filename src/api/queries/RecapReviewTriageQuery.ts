@@ -10,6 +10,8 @@ export const RecapReviewTriageQuery = graphql`
     recapReviewTriage(recapIds: $recapIds, isCustom: $isCustom) {
       recapId
       label
+      why
+      whySource
       reasons {
         code
         label
