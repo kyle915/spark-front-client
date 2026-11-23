@@ -127,7 +127,9 @@ const DecksList: React.FC<{
           <h2 className="text-sm font-bold">1-Click Buyer Pitch Deck</h2>
           <p className="text-xs mt-0.5" style={META}>
             Snapshot this buyer-report window into a shareable{" "}
-            <code className="mono">/pitch</code> link. Pin photos on the{" "}
+            <code className="mono">/pitch</code> link with sell-story photo
+            captions (from scored photos, mentions, and shelf facts — no new
+            vision). Pin photos on the{" "}
             <Link to="/photo-wall" className="underline underline-offset-2">
               Live Photo Wall
             </Link>{" "}

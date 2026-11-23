@@ -4953,6 +4953,13 @@ type FinanceExceptionAuditItem {
   createdAt: String!
 }
 
+type FinanceDisputePack {
+  summary: String!
+  source: String!
+  facts: [String!]!
+  suggestedNextStep: String!
+}
+
 type FinanceExceptionItem {
   uuid: String!
   exceptionType: String!
@@ -4972,6 +4979,7 @@ type FinanceExceptionItem {
   resolutionReason: String!
   createdAt: String!
   audits: [FinanceExceptionAuditItem!]!
+  disputePack: FinanceDisputePack
 }
 
 type FinanceQueueView {

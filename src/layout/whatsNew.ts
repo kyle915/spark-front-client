@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23v",
+    date: "November 23, 2026",
+    title: "Buyer deck sell-story captions + finance dispute notes",
+    items: [
+      "Buyer Pitch Decks now draft leave-behind photo captions and a short sell-story from scored photos, consumer mentions, and shelf facts — no new vision models; dollars and lift stay from the deck snapshot.",
+      "On Finance Queue, each exception includes a copy-ready dispute pack (grounded one-liner, OCR/ledger facts, and suggested next step) so reviewers can paste into clarifications without rewriting “why unmatched.”",
+    ],
+  },
+  {
     id: "2026-11-23o",
     date: "November 23, 2026",
     title: "1-click attach walk-up recaps on Missing Recaps",
