@@ -81,8 +81,9 @@ describe("whatsNewFor", () => {
       expect(staffIds.has(id)).toBe(true);
     }
 
-    // Staff-only landed: Clean/Needs Eyes, shelf coach, attention hide, UTMs
+    // Staff-only landed: map-this-store, Clean/Needs Eyes, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23m",
       "2026-11-23e",
       "2026-11-23s",
       "2026-11-23a",
@@ -93,12 +94,9 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Still deferred: map-this-store
-    expect(WHATS_NEW.some((e) => e.id === "2026-11-23m")).toBe(false);
-
     // Staff tip is newest staff note; clients skip staffOnly → Photo Wall
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23p");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23e");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23m");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -124,7 +122,7 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23e");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23m");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -139,7 +137,7 @@ describe("whatsNewFor", () => {
     });
 
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    // Staff tip is 2026-11-23e — legacy client tip must not clear the staff unread dot
+    // Staff tip is 2026-11-23m — legacy client tip must not clear the staff unread dot
     expect(hasUnseenWhatsNew(false)).toBe(true);
   });
 });

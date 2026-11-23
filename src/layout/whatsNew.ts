@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23m",
+    date: "November 23, 2026",
+    title: "Map this store: suggested match without the typing jank",
+    staffOnly: true,
+    items: [
+      "Opening Map this store on an unmatched recap now suggests a store from the typed address (Places + OpenAI) with Confirm when confidence is high — you still confirm before it sticks.",
+      "Searching while mapping no longer remounts the card on every keystroke, so focus and typing stay stable.",
+    ],
+  },
+  {
     id: "2026-11-23e",
     date: "November 23, 2026",
     title: "Clean vs Needs Eyes photo triage on Needs review",
