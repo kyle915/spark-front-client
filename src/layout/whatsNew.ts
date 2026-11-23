@@ -14,6 +14,26 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23e",
+    date: "November 23, 2026",
+    title: "Clean vs Needs Eyes photo triage on Needs review",
+    staffOnly: true,
+    items: [
+      "On Needs review, staff can filter All / Clean / Needs Eyes so photo-ready recaps sort first and exceptions get eyes.",
+      "Approve all Clean only lights up after triage finishes — pending or missing labels never count as Clean. Brand clients never see the pill or counts.",
+    ],
+  },
+  {
+    id: "2026-11-23s",
+    date: "November 23, 2026",
+    title: "AI aisle coach and Store Prep Kit on BA shift cards",
+    staffOnly: true,
+    items: [
+      "When a BA uploads a shelf-bucket photo on check-in, Spark can nudge clearer aisle framing before they submit (non-blocking; works offline without blocking the shift).",
+      "A Store Prep Kit card on check-in and booked job-board shifts pulls logistics, last shelf notes, SKUs, BA materials and stock-risk so ambassadors walk in prepared.",
+    ],
+  },
+  {
     id: "2026-11-23a",
     date: "November 23, 2026",
     title: "Today's attention is staff-only (cleaner admin strip)",
@@ -536,16 +556,31 @@ export const WHATS_NEW: WhatsNewEntry[] = [
   },
 ];
 
-const KEY = "@spark.whatsNew.seen";
+/** Legacy shared key — migrated once per audience when the tip id still matches. */
+const LEGACY_KEY = "@spark.whatsNew.seen";
+
+export function whatsNewSeenKey(isClient: boolean): string {
+  return isClient ? "@spark.whatsNew.seen.client" : "@spark.whatsNew.seen.staff";
+}
 
 /** The entries this viewer may see: staff-only notes stay out of client view. */
 export function whatsNewFor(isClient: boolean): WhatsNewEntry[] {
   return isClient ? WHATS_NEW.filter((e) => !e.staffOnly) : WHATS_NEW;
 }
 
+function readSeenId(isClient: boolean): string | null {
+  const keyed = window.localStorage.getItem(whatsNewSeenKey(isClient));
+  if (keyed != null) return keyed;
+  // Pre-split key: only honor it for this feed when it matches this feed's tip,
+  // so a client-mode mark does not clear a newer staff-only tip (and vice versa).
+  const legacy = window.localStorage.getItem(LEGACY_KEY);
+  const tip = whatsNewFor(isClient)[0]?.id;
+  return legacy != null && tip != null && legacy === tip ? legacy : null;
+}
+
 export function hasUnseenWhatsNew(isClient = false): boolean {
   try {
-    return window.localStorage.getItem(KEY) !== whatsNewFor(isClient)[0]?.id;
+    return readSeenId(isClient) !== whatsNewFor(isClient)[0]?.id;
   } catch {
     return false;
   }
@@ -554,7 +589,8 @@ export function hasUnseenWhatsNew(isClient = false): boolean {
 export function markWhatsNewSeen(isClient = false): void {
   try {
     const latest = whatsNewFor(isClient)[0];
-    if (latest) window.localStorage.setItem(KEY, latest.id);
+    if (!latest) return;
+    window.localStorage.setItem(whatsNewSeenKey(isClient), latest.id);
   } catch {
     /* storage unavailable */
   }
