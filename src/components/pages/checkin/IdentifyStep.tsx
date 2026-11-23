@@ -43,6 +43,7 @@ import {
   errText,
   h2,
   input,
+  label,
   primaryBtn,
   secondaryBtn,
 } from "./checkinStyles";
@@ -916,10 +917,19 @@ export default function IdentifyStep({
         </div>
       ) : null}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <input style={{ ...input, flex: "1 1 140px" }} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-        <input style={{ ...input, flex: "1 1 140px" }} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+        <div style={{ flex: "1 1 140px", minWidth: 0 }}>
+          <label htmlFor="checkin-first-name" style={label}>First name</label>
+          <input id="checkin-first-name" style={{ ...input, marginTop: 0 }} autoComplete="given-name" placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+        </div>
+        <div style={{ flex: "1 1 140px", minWidth: 0 }}>
+          <label htmlFor="checkin-last-name" style={label}>Last name</label>
+          <input id="checkin-last-name" style={{ ...input, marginTop: 0 }} autoComplete="family-name" placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+        </div>
       </div>
-      <input ref={phoneRef} style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone (10 digits)"} inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => { setPhone(e.target.value); setIdentityAsk(null); }} />
+      <label htmlFor="checkin-phone" style={{ ...label, marginTop: 12 }}>
+        {recapOnly ? "Mobile phone (optional)" : "Mobile phone (10 digits)"}
+      </label>
+      <input id="checkin-phone" ref={phoneRef} style={{ ...input, marginTop: 0 }} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone (10 digits)"} inputMode="tel" autoComplete="tel-national" value={phone} onChange={(e) => { setPhone(e.target.value); setIdentityAsk(null); }} />
       {recapOnly ? null : (
         <p style={{ fontSize: 12, lineHeight: 1.4, margin: "-2px 0 0", color: "#57534e" }}>
           Ignite may text this number about your shift and recap. Msg frequency varies; msg &amp; data rates may
@@ -934,7 +944,8 @@ export default function IdentifyStep({
           .
         </p>
       )}
-      <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <label htmlFor="checkin-email" style={{ ...label, marginTop: 12 }}>Email (optional)</label>
+      <input id="checkin-email" style={{ ...input, marginTop: 0 }} placeholder="Email (optional)" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
       {openShift ? (
         <div
@@ -1077,8 +1088,11 @@ export default function IdentifyStep({
               })}
             </div>
           ) : (
+            <>
+            <label htmlFor="checkin-program" style={label}>{pickerAriaLabel}</label>
             <select
-              style={{ ...input, appearance: "none" }}
+              id="checkin-program"
+              style={{ ...input, appearance: "none", marginTop: 0 }}
               value={eventTypeId}
               aria-label={pickerAriaLabel}
               onChange={(e) => pickProgram(e.target.value)}
@@ -1090,6 +1104,7 @@ export default function IdentifyStep({
                 </option>
               ))}
             </select>
+            </>
           )}
           </div>
           {onPreviewRecap && eventTypeId ? (
@@ -1129,8 +1144,10 @@ export default function IdentifyStep({
               <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
                 Pick your market. You'll log each spot you sample as you go.
               </p>
+              <label htmlFor="checkin-market" style={label}>Market</label>
               <select
-                style={{ ...input, appearance: "none" }}
+                id="checkin-market"
+                style={{ ...input, appearance: "none", marginTop: 0 }}
                 value={market}
                 onChange={(e) => setMarket(e.target.value)}
               >
@@ -1147,15 +1164,19 @@ export default function IdentifyStep({
           <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
             Type the store name and address. Required.
           </p>
+          <label htmlFor="checkin-store-name" style={label}>Store name</label>
           <input
-            style={input}
+            id="checkin-store-name"
+            style={{ ...input, marginTop: 0 }}
             placeholder="Store name"
             autoComplete="off"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
           />
+          <label htmlFor="checkin-store-address" style={{ ...label, marginTop: 12 }}>Store address</label>
           <input
-            style={input}
+            id="checkin-store-address"
+            style={{ ...input, marginTop: 0 }}
             placeholder="Store address"
             autoComplete="off"
             value={address}
@@ -1171,8 +1192,12 @@ export default function IdentifyStep({
                 ? "Type the store's name or address. If it shows in the list, tap it. If it doesn't, type the full address, then the store name below: new locations are fine."
                 : "Type the store's name or address. If it shows in the list, tap it. If it doesn't, type the full address and continue: new locations are fine."}
           </p>
+          <label htmlFor="checkin-place" style={label}>
+            {atVenue ? "Event / venue name or address" : "Store name or address"}
+          </label>
           <input
-            style={input}
+            id="checkin-place"
+            style={{ ...input, marginTop: 0 }}
             placeholder={atVenue ? "Event / venue name or address" : "Store name or address"}
             autoComplete="off"
             value={address}
@@ -1217,8 +1242,16 @@ export default function IdentifyStep({
           >
             {locating ? "Finding you…" : "📍 Use my current location"}
           </button>
+          <label htmlFor="checkin-place-name" style={{ ...label, marginTop: 12 }}>
+            {atVenue
+              ? "Event or venue name (optional)"
+              : needStoreName
+                ? "Store name"
+                : "Store name (optional)"}
+          </label>
           <input
-            style={input}
+            id="checkin-place-name"
+            style={{ ...input, marginTop: 0 }}
             placeholder={
               atVenue
                 ? "Event or venue name (optional)"
@@ -1343,7 +1376,7 @@ export default function IdentifyStep({
             </div>
           ) : null}
 
-          <label style={{ color: "#44403c", fontSize: 12, opacity: 1, display: "block", margin: "10px 0 4px" }}>
+          <label htmlFor="checkin-work-date" style={{ ...label, marginTop: 12 }}>
             {pastRecap || recapOnly ? "Date of this recap" : "Date you're working"}
           </label>
           <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "0 0 6px" }}>
@@ -1354,9 +1387,11 @@ export default function IdentifyStep({
                 : `Working a past shift? Change this to the day you actually worked. You can pick any day in the last ${CHECKIN_MAX_PAST_DAYS} days.`}
           </p>
           <input
+            id="checkin-work-date"
             ref={dateInputRef}
             style={{
               ...input,
+              marginTop: 0,
               ...(pastRecap
                 ? { border: "2px solid #1c1917", boxShadow: "0 0 0 3px rgba(28,25,23,0.08)" }
                 : {}),

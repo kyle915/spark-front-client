@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from "react";
-import { card, helperText, input } from "./checkinStyles";
+import { card, helperText, input, label } from "./checkinStyles";
 import type { ProductQaState } from "./checkinTypes";
 import {
   AI_UNAVAILABLE,
@@ -58,12 +58,12 @@ export function ProductQuestionsView({
               if (canAsk) onAsk();
             }}
           >
-            <label htmlFor="product-question" style={{ position: "absolute", left: -9999 }}>
+            <label htmlFor="product-question" style={{ ...label, marginTop: 12 }}>
               Your product question
             </label>
             <input
               id="product-question"
-              style={input}
+              style={{ ...input, marginTop: 0 }}
               value={question}
               maxLength={QUESTION_MAX}
               enterKeyHint="send"

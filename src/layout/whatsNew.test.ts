@@ -119,15 +119,19 @@ describe("whatsNewFor", () => {
       "2026-11-23s",
       "2026-11-23a",
       "2026-11-23u",
+      "2026-11-23ad",
     ] as const) {
       expect(clientIds.has(id)).toBe(false);
       expect(staffIds.has(id)).toBe(true);
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest tip is Ask AI on the current program year (client-visible, so staff see it first too)
+    // Newest overall tip is the staff check-in label note. Clients still see
+    // Ask AI (2026-11-23ac) first, because staff-only notes stay out of that feed.
+    expect(WHATS_NEW[0]?.id).toBe("2026-11-23ad");
+    expect(WHATS_NEW[0]?.staffOnly).toBe(true);
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23ad");
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23ac");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23ac");
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ac")?.staffOnly).toBeFalsy();
   });
 
@@ -154,7 +158,8 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23ac");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23ad");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23ac");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -168,7 +173,8 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Newest client and staff tip is 2026-11-23ac — an older shared key clears neither.
+    // Client newest is 2026-11-23ac and staff newest is 2026-11-23ad.
+    // An older shared key matches neither, so it clears neither feed.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
 

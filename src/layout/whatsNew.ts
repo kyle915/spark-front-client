@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23ad",
+    date: "November 23, 2026",
+    title: "Check-in boxes say what to type",
+    staffOnly: true,
+    items: [
+      "On a walk-up check-in link, every box under Who's working and Where are you working now has a label you can read before you tap it: first name, last name, mobile phone, email, and the store, venue, or market. The hint inside the box is dark text on white, so an empty box no longer hides what it's asking for.",
+    ],
+  },
+  {
     id: "2026-11-23ac",
     date: "November 23, 2026",
     title: "Ask AI uses this year's program",

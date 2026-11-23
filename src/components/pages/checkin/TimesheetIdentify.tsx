@@ -149,23 +149,33 @@ export default function TimesheetIdentify({
         number to pick up your shift.
       </p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <input
-          style={{ ...input, flex: "1 1 140px" }}
-          placeholder="First name"
-          autoComplete="given-name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-        />
-        <input
-          style={{ ...input, flex: "1 1 140px" }}
-          placeholder="Last name"
-          autoComplete="family-name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-        />
+        <div style={{ flex: "1 1 140px", minWidth: 0 }}>
+          <label htmlFor="timesheet-first-name" style={label}>First name</label>
+          <input
+            id="timesheet-first-name"
+            style={{ ...input, marginTop: 0 }}
+            placeholder="First name"
+            autoComplete="given-name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+          />
+        </div>
+        <div style={{ flex: "1 1 140px", minWidth: 0 }}>
+          <label htmlFor="timesheet-last-name" style={label}>Last name</label>
+          <input
+            id="timesheet-last-name"
+            style={{ ...input, marginTop: 0 }}
+            placeholder="Last name"
+            autoComplete="family-name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+          />
+        </div>
       </div>
+      <label htmlFor="timesheet-phone" style={{ ...label, marginTop: 12 }}>Mobile phone</label>
       <input
-        style={input}
+        id="timesheet-phone"
+        style={{ ...input, marginTop: 0 }}
         placeholder="Mobile phone"
         inputMode="tel"
         autoComplete="tel"
@@ -217,7 +227,7 @@ export default function TimesheetIdentify({
         ) : null}
         <input
           id="timesheet-location"
-          style={input}
+          style={{ ...input, marginTop: 0 }}
           placeholder="Address where you're working"
           autoComplete="street-address"
           value={location}
