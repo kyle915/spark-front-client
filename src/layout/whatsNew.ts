@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23w",
+    date: "November 23, 2026",
+    title: "One-click Send on Client summaries",
+    staffOnly: true,
+    items: [
+      "On Client summaries, Send emails a branded weekly or monthly write-up to brand recipients (prefills recap contacts + client users) instead of a blank mailto.",
+      "Spark records who sent it and when, so you can see Sent on the row and Send again if needed.",
+    ],
+  },
+  {
     id: "2026-11-23n",
     date: "November 23, 2026",
     title: "Nudge all overdue missing recaps in one click",

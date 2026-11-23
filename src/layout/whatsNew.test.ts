@@ -95,6 +95,7 @@ describe("whatsNewFor", () => {
 
     // Staff-only landed: denser attention, route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23w",
       "2026-11-23n",
       "2026-11-23d",
       "2026-11-23g",
@@ -112,7 +113,7 @@ describe("whatsNewFor", () => {
 
     // Newest tip is email ?t= + prep polish (client-visible); staff feed starts there too
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23t");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23n");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23w");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -138,7 +139,7 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23n");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23w");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -153,7 +154,7 @@ describe("whatsNewFor", () => {
     });
 
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    // Staff tip is 2026-11-23n — legacy client tip must not clear the staff unread dot
+    // Staff tip is 2026-11-23w — legacy client tip must not clear the staff unread dot
     expect(hasUnseenWhatsNew(false)).toBe(true);
   });
 });

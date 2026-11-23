@@ -6718,6 +6718,7 @@ type Mutation {
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  sendWeeklyClientSummary(id: ID!, recipients: [String!]!, message: String = null): WeeklyClientSummaryResult!
   setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
   publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
@@ -12714,12 +12715,16 @@ type WeeklyClientSummary {
   generatedAt: String!
   reviewedByName: String
   reviewedAt: String
+  sentAt: String
+  sentByName: String
+  sentTo: [String!]!
 }
 
 type WeeklyClientSummaryResult {
   ok: Boolean!
   reason: String
   summary: WeeklyClientSummary
+  sentCount: Int
 }
 
 type WeeklyClientSummaryRow {
@@ -12727,6 +12732,7 @@ type WeeklyClientSummaryRow {
   tenantName: String!
   approvedRecaps: Int!
   pendingRecaps: Int!
+  suggestedRecipients: [String!]!
   summary: WeeklyClientSummary
 }
 

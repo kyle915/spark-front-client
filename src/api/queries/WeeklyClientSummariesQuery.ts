@@ -19,6 +19,7 @@ export const WeeklyClientSummariesQuery = graphql`
         tenantName
         approvedRecaps
         pendingRecaps
+        suggestedRecipients
         summary {
           id
           period
@@ -31,6 +32,9 @@ export const WeeklyClientSummariesQuery = graphql`
           generatedAt
           reviewedByName
           reviewedAt
+          sentAt
+          sentByName
+          sentTo
         }
       }
     }
