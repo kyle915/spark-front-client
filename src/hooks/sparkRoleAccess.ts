@@ -13,14 +13,18 @@ export function emailGrantsIgniteAdmin(
 }
 
 /**
- * True only for the platform Spark Admin role. Do not use substring
- * "admin" — that would let a hypothetical Brand Admin / brand_admin
- * name unlock the Admin/Client dongle. RoleType on the clients schema
- * exposes `name` (not slug); name is "Spark Admin".
+ * True for platform staff roles that may use the Admin/Client dongle.
+ * Accepts exact "Spark Admin" / "spark-admin" and the legacy People /
+ * SparkTeam invite label "admin". Do not use substring "admin" — that
+ * would unlock Brand Admin / brand_admin. RoleType exposes `name`.
  */
 export function roleGrantsSparkAdminToggle(
   roleName: string | null | undefined,
 ): boolean {
   const name = (roleName ?? "").toString().trim().toLowerCase();
-  return name === "spark admin" || name === "spark-admin";
+  return (
+    name === "spark admin" ||
+    name === "spark-admin" ||
+    name === "admin"
+  );
 }

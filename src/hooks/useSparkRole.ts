@@ -18,9 +18,9 @@ import {
  *    clients; "+ Submit a request" is the only admin-y action they see.
  *
  * Auth-bound: non-Ignite users are forced into Client mode and cannot
- * toggle Admin. Ignite staff (@igniteproductions.co / spark-admin)
- * keep the preview toggle. Brand Client role names never grant the
- * toggle — match the Spark Admin role exactly (not substring "admin").
+ * toggle Admin. Ignite staff (@igniteproductions.co / Spark Admin /
+ * legacy exact "admin") keep the preview toggle. Brand Client and
+ * Brand Admin / brand_admin never grant the toggle.
  */
 
 export type SparkRole = "admin" | "client";

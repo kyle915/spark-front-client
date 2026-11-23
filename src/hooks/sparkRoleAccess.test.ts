@@ -19,10 +19,12 @@ describe("emailGrantsIgniteAdmin", () => {
 });
 
 describe("roleGrantsSparkAdminToggle", () => {
-  it("grants only the Spark Admin platform role", () => {
+  it("grants Spark Admin and legacy People/SparkTeam admin label", () => {
     expect(roleGrantsSparkAdminToggle("Spark Admin")).toBe(true);
     expect(roleGrantsSparkAdminToggle("spark admin")).toBe(true);
     expect(roleGrantsSparkAdminToggle("spark-admin")).toBe(true);
+    expect(roleGrantsSparkAdminToggle("admin")).toBe(true);
+    expect(roleGrantsSparkAdminToggle("Admin")).toBe(true);
   });
 
   it("never grants brand Client or substring-admin names", () => {
@@ -30,7 +32,6 @@ describe("roleGrantsSparkAdminToggle", () => {
     expect(roleGrantsSparkAdminToggle("Ambassador")).toBe(false);
     expect(roleGrantsSparkAdminToggle("Brand Admin")).toBe(false);
     expect(roleGrantsSparkAdminToggle("brand_admin")).toBe(false);
-    expect(roleGrantsSparkAdminToggle("admin")).toBe(false);
     expect(roleGrantsSparkAdminToggle(null)).toBe(false);
   });
 });
