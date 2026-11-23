@@ -80,25 +80,23 @@ describe("whatsNewFor", () => {
       expect(staffIds.has(id)).toBe(true);
     }
 
-    // Landed staff-only: onboarding UTMs → Close
-    expect(clientIds.has("2026-11-23u")).toBe(false);
-    expect(staffIds.has("2026-11-23u")).toBe(true);
-    expect(WHATS_NEW.find((e) => e.id === "2026-11-23u")?.staffOnly).toBe(true);
+    // Staff-only: Today's attention hide (#984) + onboarding UTMs → Close
+    for (const id of ["2026-11-23a", "2026-11-23u"] as const) {
+      expect(clientIds.has(id)).toBe(false);
+      expect(staffIds.has(id)).toBe(true);
+      expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
+    }
 
-    // In-flight features stay out of this batch until their PRs merge
-    for (const id of [
-      "2026-11-23a",
-      "2026-11-23s",
-      "2026-11-23e",
-      "2026-11-23m",
-    ] as const) {
+    // Still deferred: shelf coach, Clean/Needs Eyes, map-this-store
+    for (const id of ["2026-11-23s", "2026-11-23e", "2026-11-23m"] as const) {
       expect(clientIds.has(id)).toBe(false);
       expect(staffIds.has(id)).toBe(false);
       expect(WHATS_NEW.some((e) => e.id === id)).toBe(false);
     }
 
+    // Staff see attention first; clients skip staffOnly → Photo Wall
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23p");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23p");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23a");
   });
 
   it("tracks unseen state against the latest visible entry id", () => {

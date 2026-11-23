@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23a",
+    date: "November 23, 2026",
+    title: "Today's attention is staff-only (cleaner admin strip)",
+    staffOnly: true,
+    items: [
+      "Brand clients no longer see Today's attention on the dashboard — ops queues stay Ignite-side.",
+      "For staff, the strip groups by bucket with counts, a View all link, and compact action buttons.",
+    ],
+  },
+  {
     id: "2026-11-23p",
     date: "November 23, 2026",
     title: "Live Photo Wall and shareable Buyer Pitch Decks",
