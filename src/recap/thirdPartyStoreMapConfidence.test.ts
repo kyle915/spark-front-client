@@ -1,22 +1,8 @@
 import { describe, expect, it } from "vitest";
-
-/**
- * Mirrors the confidence mapping in ThirdPartyStoreMap / store_automap so a
- * refactor of either side fails loudly if high/medium/low thresholds drift.
- */
-function confidenceOf(hit: { confidence?: string; score?: number }): "high" | "medium" | "low" {
-  const c = (hit.confidence || "").toLowerCase();
-  if (c === "high" || c === "medium" || c === "low") return c;
-  const score = Number(hit.score || 0);
-  if (score >= 80) return "high";
-  if (score >= 55) return "medium";
-  return "low";
-}
-
-function needsAiRefresh(hits: { confidence?: string; score?: number }[]): boolean {
-  if (hits.length === 0) return true;
-  return confidenceOf(hits[0]) !== "high";
-}
+import {
+  confidenceOf,
+  needsAiRefresh,
+} from "./thirdPartyStoreMapConfidence";
 
 describe("third-party store map confidence", () => {
   it("treats score >= 80 as high", () => {

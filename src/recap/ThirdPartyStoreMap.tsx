@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { MapCustomRecapStoreMutation } from "@/api/mutations/MapCustomRecapStoreMutation";
 import type { MapCustomRecapStoreMutation as MapCustomRecapStoreMutationType } from "@/api/mutations/__generated__/MapCustomRecapStoreMutation.graphql";
 import { SuggestCustomRecapStoreMutation } from "@/api/mutations/SuggestCustomRecapStoreMutation";
@@ -8,45 +8,32 @@ import { RetailersSearchQuery } from "@/api/queries/RetailersSearchQuery";
 import type { RetailersSearchQuery as RetailersSearchQueryType } from "@/api/queries/__generated__/RetailersSearchQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import {
+  asSuggestions,
+  confidenceLabel,
+  confidenceOf,
+  needsAiRefresh,
+  type StoreMapSuggestion,
+} from "./thirdPartyStoreMapConfidence";
 
-type Suggestion = {
-  uuid?: string;
-  name?: string;
-  address?: string;
-  kind?: string;
-  isNational?: boolean;
-  score?: number;
-  confidence?: string;
-  reason?: string;
-  source?: string;
+type RetailerHit = {
+  id: string;
+  uuid: string;
+  name: string | null;
+  address: string | null;
+  isNational: boolean | null;
 };
 
-function asSuggestions(raw: unknown): Suggestion[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((row): row is Suggestion => Boolean(row && typeof row === "object"));
-}
+const SEARCH_DEBOUNCE_MS = 200;
 
-function confidenceOf(hit: Suggestion): "high" | "medium" | "low" {
-  const c = (hit.confidence || "").toLowerCase();
-  if (c === "high" || c === "medium" || c === "low") return c;
-  const score = Number(hit.score || 0);
-  if (score >= 80) return "high";
-  if (score >= 55) return "medium";
-  return "low";
-}
-
-function confidenceLabel(level: "high" | "medium" | "low"): string {
-  if (level === "high") return "High confidence";
-  if (level === "medium") return "Medium confidence";
-  return "Low confidence";
-}
-
-function needsAiRefresh(hits: Suggestion[]): boolean {
-  if (hits.length === 0) return true;
-  const top = hits[0];
-  return confidenceOf(top) !== "high";
-}
-
+/**
+ * Admin Map-this-store for 3rd-party typed addresses.
+ *
+ * Search uses imperative `fetchQuery` (debounced) — never `useLazyLoadQuery`
+ * keyed on the input. This component sits under Suspense; a suspending
+ * search query remounts the whole card on every keystroke (focus loss /
+ * "page reload" feel).
+ */
 export function ThirdPartyStoreMap({
   recapId,
   typedName,
@@ -64,25 +51,23 @@ export function ThirdPartyStoreMap({
 }) {
   const tenantId = useAuthStore((s) => s.tenantId);
   const showAlert = useAlertStore((s) => s.showAlert);
+  const environment = useRelayEnvironment();
   const [q, setQ] = useState("");
-  const [liveSuggestions, setLiveSuggestions] = useState(() => asSuggestions(suggestions));
+  const [retailers, setRetailers] = useState<RetailerHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [liveSuggestions, setLiveSuggestions] = useState<StoreMapSuggestion[]>(
+    () => asSuggestions(suggestions),
+  );
   const [suggesting, setSuggesting] = useState(false);
-  const askedRef = useRef(false);
+  // Which recap we already asked Places/OAI for — reset only when recapId changes.
+  const askedForRecapIdRef = useRef<string | null>(null);
+  const activeRecapIdRef = useRef(recapId);
+  const searchRequestIdRef = useRef(0);
   const [commit, busy] = useMutation<MapCustomRecapStoreMutationType>(
     MapCustomRecapStoreMutation,
   );
   const [commitSuggest] = useMutation<SuggestCustomRecapStoreMutationType>(
     SuggestCustomRecapStoreMutation,
-  );
-  const search = q.trim();
-  const data = useLazyLoadQuery<RetailersSearchQueryType>(
-    RetailersSearchQuery,
-    {
-      q: search || null,
-      first: 12,
-      filters: tenantId ? { tenantId } : null,
-    },
-    { fetchPolicy: search.length >= 2 ? "store-or-network" : "store-or-network" },
   );
 
   const hits = liveSuggestions;
@@ -95,48 +80,119 @@ export function ThirdPartyStoreMap({
     ? hits.filter((h) => h.uuid !== highConfidence.uuid)
     : hits;
 
+  // Reset local UI state when staff opens a different recap — not when the
+  // parent re-renders with a new suggestions array reference.
   useEffect(() => {
+    activeRecapIdRef.current = recapId;
+    askedForRecapIdRef.current = null;
+    setQ("");
+    setRetailers([]);
+    setSearching(false);
+    setSuggesting(false);
     setLiveSuggestions(asSuggestions(suggestions));
-  }, [suggestions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only remount state on recap change
+  }, [recapId]);
 
+  // Seed / refresh from props until we've run (or skipped) network suggest
+  // for this recap. After that, liveSuggestions owns the list so a parent
+  // re-render cannot wipe AI results or clear the search box.
   useEffect(() => {
-    if (mapped || askedRef.current) return;
-    if (!needsAiRefresh(asSuggestions(suggestions))) return;
-    askedRef.current = true;
+    if (askedForRecapIdRef.current === recapId) return;
+    setLiveSuggestions(asSuggestions(suggestions));
+  }, [suggestions, recapId]);
+
+  // Auto-trigger Places + OpenAI from the typed address already on the card.
+  useEffect(() => {
+    if (mapped) return;
+    if (askedForRecapIdRef.current === recapId) return;
+    if (!needsAiRefresh(asSuggestions(suggestions))) {
+      askedForRecapIdRef.current = recapId;
+      return;
+    }
+    const requestRecapId = recapId;
+    askedForRecapIdRef.current = requestRecapId;
     setSuggesting(true);
     commitSuggest({
-      variables: { input: { id: recapId } },
+      variables: { input: { id: requestRecapId } },
       onCompleted: (res) => {
+        if (activeRecapIdRef.current !== requestRecapId) return;
         setSuggesting(false);
         const payload = res.suggestCustomRecapStore;
-        if (!payload?.success) {
-          // Soft fail — staff can still search manually.
-          return;
-        }
+        if (!payload?.success) return;
         const next = asSuggestions(payload.customRecap?.storeSuggestions);
         if (next.length) setLiveSuggestions(next);
       },
-      onError: () => setSuggesting(false),
+      onError: () => {
+        if (activeRecapIdRef.current !== requestRecapId) return;
+        setSuggesting(false);
+      },
     });
   }, [mapped, suggestions, recapId, commitSuggest]);
 
+  // Debounced retailer search — never suspends.
+  useEffect(() => {
+    const needle = q.trim();
+    if (needle.length < 2) {
+      setRetailers([]);
+      setSearching(false);
+      return;
+    }
+    const requestId = ++searchRequestIdRef.current;
+    setSearching(true);
+    const timer = window.setTimeout(() => {
+      fetchQuery<RetailersSearchQueryType>(
+        environment,
+        RetailersSearchQuery,
+        {
+          q: needle,
+          first: 12,
+          filters: tenantId ? { tenantId } : null,
+        },
+      )
+        .toPromise()
+        .then((data) => {
+          if (searchRequestIdRef.current !== requestId) return;
+          if (activeRecapIdRef.current !== recapId) return;
+          const rows = (data?.retailers?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map((n) => ({
+              id: n.id,
+              uuid: n.uuid,
+              name: n.name ?? null,
+              address: n.address ?? null,
+              isNational: n.isNational ?? null,
+            }));
+          setRetailers(rows);
+          setSearching(false);
+        })
+        .catch(() => {
+          if (searchRequestIdRef.current !== requestId) return;
+          setRetailers([]);
+          setSearching(false);
+        });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [q, tenantId, environment, recapId]);
+
   const mapTo = (retailerId: string) => {
+    const mapRecapId = recapId;
     commit({
-      variables: { input: { id: recapId, retailerId } },
+      variables: { input: { id: mapRecapId, retailerId } },
       onCompleted: (res) => {
+        if (activeRecapIdRef.current !== mapRecapId) return;
         if (res.mapCustomRecapStore?.success) {
           showAlert("Store mapped.", "success");
           return;
         }
         showAlert(res.mapCustomRecapStore?.message || "Couldn't map that store.", "error");
       },
-      onError: () => showAlert("Couldn't map that store.", "error"),
+      onError: () => {
+        if (activeRecapIdRef.current !== mapRecapId) return;
+        showAlert("Couldn't map that store.", "error");
+      },
     });
   };
-
-  const retailers = (data.retailers?.edges ?? [])
-    .map((e) => e?.node)
-    .filter((n): n is NonNullable<typeof n> => Boolean(n));
 
   return (
     <div className="spark-card p-5">
@@ -164,7 +220,7 @@ export function ThirdPartyStoreMap({
 
       {!mapped && suggesting ? (
         <p className="text-sm mb-3" style={{ color: "var(--spark-text-meta)" }}>
-          Looking up a suggested chain…
+          Looking up a suggested chain from this address…
         </p>
       ) : null}
 
@@ -275,8 +331,14 @@ export function ThirdPartyStoreMap({
             placeholder="Search Total Wine, regional account…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            autoComplete="off"
           />
-          {search.length >= 2
+          {searching && q.trim().length >= 2 ? (
+            <p className="text-xs mb-2" style={{ color: "var(--spark-text-meta)" }}>
+              Searching…
+            </p>
+          ) : null}
+          {q.trim().length >= 2
             ? retailers.map((r) => (
                 <button
                   key={r.id}
