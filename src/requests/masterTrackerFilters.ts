@@ -239,3 +239,29 @@ export function trackerSortToServer(
 }
 
 export { ACTIVE_STATUS_SLUGS };
+
+/** Chip count for a tracker status, including the rolled-up Active bucket. */
+export function trackerStatusCount(
+  key: string,
+  counts: Record<string, number>,
+  total: number,
+): number {
+  if (key === "all") return total;
+  if (key === "active") {
+    return ACTIVE_STATUS_SLUGS.reduce((sum, slug) => sum + (counts[slug] ?? 0), 0);
+  }
+  return counts[key] ?? 0;
+}
+
+/**
+ * What an export of the loaded rows actually contains.
+ * A bare "50" reads as the tracker; name the loaded slice when more match.
+ */
+export function trackerExportScope(loaded: number, matching: number): string {
+  if (loaded <= 0) return "";
+  const loadedLabel = loaded.toLocaleString("en-US");
+  if (matching > loaded) {
+    return `${loadedLabel} loaded of ${matching.toLocaleString("en-US")}`;
+  }
+  return loadedLabel;
+}

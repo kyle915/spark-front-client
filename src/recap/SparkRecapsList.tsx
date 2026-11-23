@@ -109,7 +109,6 @@ import {
 } from "@/lib/activationBucket";
 import { BaNameFilter } from "./BaNameFilter";
 import { RecapTypeChips } from "./RecapTypeChips";
-import ListSearch from "@/components/search/ListSearch";
 import { NeedsEyesWhy } from "./NeedsEyesWhy";
 import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
 import { useRecapReviewFlags } from "./useRecapReviewFlags";
@@ -279,7 +278,7 @@ const conversionStr = (
   empty: string,
 ): string => recapConversionPercent({ ...r, requestType: null }, empty);
 
-/** When both Eng and Conv are on screen, Conv keeps lime and Eng goes neutral. */
+/** When Conv is the lime figure, Engagements stays neutral. */
 function demoteEngWhenConvIsLime<
   T extends { label: string; tone?: "default" | "lime" | "orange" },
 >(items: T[]): T[] {
@@ -288,7 +287,7 @@ function demoteEngWhenConvIsLime<
   );
   if (!convIsPrimary) return items;
   return items.map((k) =>
-    k.label === "Eng" ? { ...k, tone: "default" } : k,
+    k.label === "Engagements" ? { ...k, tone: "default" } : k,
   );
 }
 
@@ -830,13 +829,12 @@ const RecapCard: React.FC<{
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
         <SparkStat
-          tone={convLive ? undefined : "lime"}
           value={
             recap.engagements != null
               ? recap.engagements.toLocaleString()
               : "—"
           }
-          label="Eng"
+          label="Engagements"
         />
         <SparkStat
           value={
@@ -1050,13 +1048,12 @@ const RecapCompactRow: React.FC<{
       <div className="relative z-10 hidden sm:flex items-center gap-2 shrink-0">
         <SparkStat
           size="sm"
-          tone="lime"
           value={
             recap.engagements != null
               ? recap.engagements.toLocaleString()
               : "—"
           }
-          label="Eng"
+          label="Engagements"
         />
         <SparkStat
           size="sm"
@@ -3502,11 +3499,8 @@ export default function SparkRecapsList() {
             ) : null
           }
         />
-        {tenantId ? (
-          <ListSearch list="recaps" tenantId={String(tenantId)} isClient={isClient} />
-        ) : null}
         <div
-          className="sticky top-0 z-20 spark-sticky-filters flex flex-col"
+          className="sticky top-0 z-20 relative spark-sticky-filters flex flex-col"
           style={{
             background: "rgba(var(--spark-bg-rgb),0.94)",
             border: "1px solid rgba(var(--spark-ink-rgb),0.07)",
@@ -3590,6 +3584,23 @@ export default function SparkRecapsList() {
                   : `Review next${visibleReviewCount ? ` · ${visibleReviewCount}` : ""}`}
               </button>
             )}
+            <span
+              className="rounded-xl px-3 py-2 text-xs font-semibold shrink-0"
+              style={{
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+                background: "transparent",
+              }}
+              title="Date window. Change it under More."
+            >
+              {datePreset === "30d"
+                ? "30 days"
+                : datePreset === "90d"
+                  ? "90 days"
+                  : datePreset === "all"
+                    ? "All dates"
+                    : "Custom dates"}
+            </span>
             {!isClient && flagsEnabled && (
               <div
                 className="flex rounded-xl overflow-hidden shrink-0"
@@ -3664,9 +3675,8 @@ export default function SparkRecapsList() {
               active={activationFilter}
               onChange={setActivationFilter}
             />
-            {/* Phone: collapse density / Jump / Map / Select / Pin / dates / export */}
-            {/* Menu anchors to the sticky card, not the button, so it never runs off a phone screen. */}
-            <div className="md:hidden">
+            {/* Cards, scan, dates, export, map, select, pin, and jump live in one menu. */}
+            <div>
               <button
                 type="button"
                 onClick={() => {
@@ -3674,7 +3684,11 @@ export default function SparkRecapsList() {
                   setToolsOpen((v) => !v);
                 }}
                 className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={toolsOpen ? limeBtn : ghostBtn}
+                style={
+                  toolsOpen
+                    ? { ...ghostBtn, borderColor: "var(--spark-text)" }
+                    : ghostBtn
+                }
                 aria-expanded={toolsOpen}
                 aria-haspopup="menu"
               >
@@ -3855,230 +3869,10 @@ export default function SparkRecapsList() {
             />
           </div>
 
-          {/* Desktop: full control strip (unchanged tools, minus status / New which sit above) */}
-          <div className="hidden md:flex flex-wrap gap-2 items-center">
-            <div
-              className="flex overflow-hidden"
-              style={{ border: "1px solid var(--spark-border)", borderRadius: 12 }}
-            >
-              {(
-                [
-                  ["cards", "Cards"],
-                  ["compact", "Scan"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setDensity(key)}
-                  className="px-2.5 py-2 text-xs font-semibold"
-                  style={{
-                    background:
-                      density === key ? "rgba(var(--spark-ok-rgb),0.16)" : "transparent",
-                    color:
-                      density === key
-                        ? "var(--spark-lime)"
-                        : "rgba(var(--spark-ink-rgb),0.65)",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={(e) => dispatchOpenJump(e.currentTarget)}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={ghostBtn}
-              title="Jump to a recap"
-            >
-              Jump to a recap
-              <span
-                className="mono ml-2 text-[10px]"
-                style={{ letterSpacing: "0.12em", opacity: 0.65 }}
-              >
-                ⌘K
-              </span>
-            </button>
-            {!isClient && (
-              <button
-                type="button"
-                onClick={() => setNeedsStoreMap((v) => !v)}
-                className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={needsStoreMap ? limeBtn : ghostBtn}
-              >
-                Map store
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setSelectMode((v) => !v)}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={selectMode ? limeBtn : ghostBtn}
-              title="Select multiple recaps for bulk actions"
-            >
-              {selectMode ? "Selecting" : "Select"}
-            </button>
-            {!isClient && (
-              <button
-                type="button"
-                onClick={pinCurrentView}
-                className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={ghostBtn}
-                title="Save the current filters as a named view"
-              >
-                Pin view
-              </button>
-            )}
-            {savedViews.length > 0 && (
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  const v = savedViews.find((x) => x.name === e.target.value);
-                  if (v) applyView(v);
-                  e.currentTarget.value = "";
-                }}
-                className="rounded-xl text-sm"
-                style={{ ...filterStyle, maxWidth: 180 }}
-              >
-                <option value="">Saved views…</option>
-                {savedViews.map((v) => (
-                  <option key={v.name} value={v.name}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {!isClient && missingRecapsOn && (
-              <button
-                type="button"
-                onClick={() => navigate("/recaps/missing")}
-                className="rounded-xl text-xs px-3 py-2 font-semibold"
-                style={ghostBtn}
-                title="Events in the last 30 days with no recap filed"
-              >
-                Missing
-              </button>
-            )}
-            <div
-              className="flex rounded-xl overflow-hidden"
-              style={{ border: "1px solid var(--spark-border)" }}
-            >
-              {(["30d", "90d", "all"] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => applyDatePreset(p)}
-                  className="px-2.5 py-2 text-xs font-semibold"
-                  style={{
-                    background:
-                      datePreset === p ? "rgba(var(--spark-ok-rgb),0.16)" : "transparent",
-                    color:
-                      datePreset === p
-                        ? "var(--spark-lime)"
-                        : "rgba(var(--spark-ink-rgb),0.65)",
-                  }}
-                >
-                  {p === "all" ? "All dates" : `${parseInt(p, 10)} days`}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={showAllPublished}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={ghostBtn}
-              title="Show every published recap, all dates"
-            >
-              All published
-            </button>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setToolsOpen(false);
-                  setOpsOpen((v) => !v);
-                }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={ghostBtn}
-              >
-                Export / Import ▾
-              </button>
-              {opsOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
-                  style={{
-                    background: "rgba(var(--spark-bg-rgb),0.98)",
-                    border: "1px solid var(--spark-border)",
-                    boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
-                  }}
-                >
-                  <LinkedSheetChip />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      exportCsv();
-                      setOpsOpen(false);
-                    }}
-                    disabled={visibleRecaps.length === 0}
-                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                    style={{
-                      ...ghostBtn,
-                      opacity: visibleRecaps.length === 0 ? 0.5 : 1,
-                    }}
-                  >
-                    ↓ Export CSV
-                    {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void copyForSheets();
-                      setOpsOpen(false);
-                    }}
-                    disabled={
-                      visibleRecaps.length === 0 || recapCopyState === "copying"
-                    }
-                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                    style={ghostBtn}
-                  >
-                    {recapCopyState === "copied"
-                      ? `✓ Copied (${visibleRecaps.length})`
-                      : "Copy for Sheets"}
-                  </button>
-                  <ExportReceiptsButton variant="ghost" />
-                  <ImportConnecteamButton variant="ghost" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.location.href = "/imports";
-                    }}
-                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                    style={ghostBtn}
-                  >
-                    ↑ Import Provider CSV
-                  </button>
-                  {!isClient && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.location.href = "/recaps/templates";
-                      }}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                      style={ghostBtn}
-                    >
-                      + Build template
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile: Export menu when opened from More */}
+          {/* Export menu when opened from More */}
           {opsOpen && (
             <div
-              className="md:hidden flex flex-col gap-1 p-2 rounded-2xl"
+              className="flex flex-col gap-1 p-2 rounded-2xl"
               style={{
                 background: "rgba(var(--spark-bg-rgb),0.98)",
                 border: "1px solid var(--spark-border)",
@@ -4390,7 +4184,7 @@ export default function SparkRecapsList() {
           >
             <option value="date-desc">Newest first</option>
             <option value="date-asc">Oldest first</option>
-            <option value="eng-desc">Most consumers</option>
+            <option value="eng-desc">Most engagements</option>
             <option value="sold-desc">Most products sold</option>
           </select>
         </div>

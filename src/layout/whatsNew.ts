@@ -14,6 +14,19 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23x",
+    date: "November 23, 2026",
+    title: "The work sits above the controls",
+    staffOnly: true,
+    items: [
+      "Recaps has one search. The number is labeled Engagements. Cards, dates, export, map, select, pin, and jump are under More.",
+      "Master Tracker keeps the request count. All-time consumers, first-time, and products purchased stay on Insights. Export says how many rows are actually in the file.",
+      "Account map opens on the map, coverage, and store list. Each suggestion is one line. Select all stays off until the stores are filtered.",
+      "Walk-ups pins this brand's standing code and adds a brand or code search. Photo buckets stay closed until you open the row. Codes are not reminted.",
+      "An empty Today links the recap, missing-recap, and approval queues. The Master Tracker count is quiet text, not a queue badge.",
+    ],
+  },
+  {
     id: "2026-11-23aa",
     date: "November 23, 2026",
     title: "Standing Check-In Studio on Walk-ups",

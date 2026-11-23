@@ -3,6 +3,8 @@ import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
   trackerDateRangeToServer,
+  trackerExportScope,
+  trackerStatusCount,
   trackerStatusToServer,
   trackerSortToServer,
 } from "./masterTrackerFilters";
@@ -147,5 +149,18 @@ describe("masterTrackerFilters", () => {
       planId: null,
     });
     expect(cleared.toString()).toBe("foo=bar");
+  });
+
+  it("rolls Active up and leaves All as the tracker total", () => {
+    const counts = { pending: 1, queue: 0, approved: 1, scheduled: 0, done: 4 };
+    expect(trackerStatusCount("all", counts, 1068)).toBe(1068);
+    expect(trackerStatusCount("active", counts, 1068)).toBe(2);
+    expect(trackerStatusCount("pending", counts, 1068)).toBe(1);
+  });
+
+  it("names a partial export instead of a bare page size", () => {
+    expect(trackerExportScope(0, 1068)).toBe("");
+    expect(trackerExportScope(50, 1068)).toBe("50 loaded of 1,068");
+    expect(trackerExportScope(12, 12)).toBe("12");
   });
 });

@@ -3,7 +3,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { TenantSampleNextQuery } from "@/api/queries/TenantSampleNextQuery";
 import type { TenantSampleNextQuery as TenantSampleNextQueryType } from "@api/queries/__generated__/TenantSampleNextQuery.graphql";
-import { sampleNextKindLabel } from "@/lib/dashboardExplain";
+import { sampleNextKindLabel, sampleNextStatLine } from "@/lib/dashboardExplain";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import type { WaveTargetStore } from "@/components/pages/map/waveSchedule";
 
@@ -84,11 +84,14 @@ const Inner: React.FC<{
         <ol className="m-0 mt-4 p-0 list-none">
           {items.map((item, i) => {
             const checked = Boolean(selectedKeys?.has(item.key));
+            const stat = sampleNextStatLine(item.reason);
+            const detail = stat || sampleNextKindLabel(item.kind);
             return (
               <li
                 key={item.key}
-                className="py-3 flex gap-3 items-start"
+                className="py-2 flex gap-3 items-center"
                 style={i > 0 ? { borderTop: "1px solid var(--spark-border)" } : undefined}
+                title={item.reason}
               >
                 {onToggleStore ? (
                   <input
@@ -96,44 +99,31 @@ const Inner: React.FC<{
                     checked={checked}
                     onChange={() => onToggleStore(toWaveTarget(item))}
                     aria-label={`Select ${item.name} for wave`}
-                    className="mt-1 cursor-pointer shrink-0"
+                    className="cursor-pointer shrink-0"
                   />
                 ) : null}
                 <span className="text-sm tab-num w-5 shrink-0" style={META}>
                   {i + 1}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium break-words" style={{ color: "var(--spark-text)" }}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openStoreSheet({
-                          storeKey: item.key,
-                          storeName: item.name,
-                          address: item.address,
-                          fallbackTitle: item.name,
-                        })
-                      }
-                      className="font-medium text-left hover:underline underline-offset-2 cursor-pointer"
-                      style={{ color: "var(--spark-text)", background: "none", border: 0, padding: 0 }}
-                    >
-                      {item.name}
-                    </button>
-                    {item.market ? (
-                      <span className="font-normal" style={META}>
-                        {" "}
-                        · {item.market}
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-sm mt-0.5" style={{ color: "var(--spark-text-secondary)" }}>
-                    {item.reason}
-                  </p>
-                  <p className="text-xs mt-0.5 break-words" style={META}>
-                    {sampleNextKindLabel(item.kind)}
-                    {item.address ? ` · ${item.address}` : ""}
-                  </p>
-                </div>
+                <p className="text-sm min-w-0 truncate" style={{ color: "var(--spark-text)" }}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openStoreSheet({
+                        storeKey: item.key,
+                        storeName: item.name,
+                        address: item.address,
+                        fallbackTitle: item.name,
+                      })
+                    }
+                    className="font-medium text-left hover:underline underline-offset-2 cursor-pointer"
+                    style={{ color: "var(--spark-text)", background: "none", border: 0, padding: 0 }}
+                  >
+                    {item.name}
+                  </button>
+                  {item.market ? <span style={META}> · {item.market}</span> : null}
+                  {detail ? <span style={META}> · {detail}</span> : null}
+                </p>
               </li>
             );
           })}
