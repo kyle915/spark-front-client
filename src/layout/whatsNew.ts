@@ -14,7 +14,7 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-23y",
+    id: "2026-11-23z",
     date: "November 23, 2026",
     title: "Why a recap Needs Eyes, and confirm CSV guesses",
     staffOnly: true,
@@ -22,6 +22,16 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "On Needs review, each Needs Eyes recap now has one short line saying why. Clean rows stay quiet, and the Clean / Needs Eyes rules are unchanged. The line never approves or rejects a recap.",
       "Provider CSV import shows its column guesses and why. A header Spark only suggests stays off until you check it. Commit still waits for you.",
       "When a row matches more than one store, Spark lists those stores and why it will not pick one. Nothing is linked until you choose.",
+    ],
+  },
+  {
+    id: "2026-11-23y",
+    date: "November 23, 2026",
+    title: "One-click Send on Client summaries",
+    staffOnly: true,
+    items: [
+      "On Client summaries, use Send to email a branded weekly or monthly write-up to brand recipients (prefills recap contacts + client users) instead of a blank mailto.",
+      "Spark records who sent it and when, so you can see Sent on the row and Send again if needed.",
     ],
   },
   {
