@@ -17,9 +17,10 @@ type FlagTarget = {
 const MAX_BATCH = 50;
 
 /**
- * Staff-only batched Clean / Needs Eyes labels for the visible Needs-review
- * page. Quiet-fails to empty (treat as clean) so a schema lag never blocks
- * the list. Never call with isClient — the resolver refuses brand users.
+ * Staff-only batched Clean / Needs Eyes labels for the Needs-review page.
+ * Pass the unfiltered review set (not the Clean/Needs Eyes-filtered list).
+ * Quiet-fails to an empty map — callers must treat missing ids as unresolved,
+ * never as Clean. Never call with isClient — the resolver refuses brand users.
  */
 export function useRecapReviewTriage(
   targets: readonly FlagTarget[],
@@ -99,7 +100,7 @@ export function useRecapReviewTriage(
             .toPromise()
             .then((data) => ingest(data?.recapReviewTriage))
             .catch(() => {
-              /* staff advisory — quiet fail leaves clean defaults */
+              /* quiet fail — leave unresolved; never invent Clean */
             }),
         );
       }
@@ -113,7 +114,7 @@ export function useRecapReviewTriage(
             .toPromise()
             .then((data) => ingest(data?.recapReviewTriage))
             .catch(() => {
-              /* quiet fail */
+              /* quiet fail — leave unresolved */
             }),
         );
       }

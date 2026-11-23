@@ -118,8 +118,9 @@ import { inputColorScheme } from "@/theme/inputColorScheme";
 import {
   compareRecapTriage,
   countRecapTriage,
+  isRecapExplicitlyClean,
   recapMatchesTriageFilter,
-  recapTriageLabelForId,
+  resolvedRecapTriageLabel,
   type RecapTriageFilter,
   type RecapTriageSummary,
 } from "./recapTriage";
@@ -1225,6 +1226,8 @@ const RecapsListInner: React.FC<{
   sortKey: SortKey;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
+  /** Pre-triage Needs-review set — triage queries must not depend on the filtered list. */
+  onTriageBaseRecapsChange?: (recaps: Recap[]) => void;
   // Campaign Report multi-select. The Set lives in the parent so
   // selections survive filter changes; the content view just renders
   // checkboxes against it and reports toggles back up.
@@ -1246,7 +1249,7 @@ const RecapsListInner: React.FC<{
   reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
   triageFilter?: RecapTriageFilter;
   triageById?: Map<string, RecapTriageSummary>;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap, targetPage, onPageChange, returnFilters, onOpenRecap, reviewFlagsById, triageFilter = "all", triageById }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, onTriageBaseRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap, targetPage, onPageChange, returnFilters, onOpenRecap, reviewFlagsById, triageFilter = "all", triageById }) => {
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
   // client login) must NOT see unapproved drafts — only approved recaps.
@@ -1350,6 +1353,7 @@ const RecapsListInner: React.FC<{
     sortKey,
     onMeta,
     onVisibleRecapsChange,
+    onTriageBaseRecapsChange,
     selectedIds,
     onToggleSelected,
     selectMode,
@@ -1461,6 +1465,7 @@ const RecapsBothLive: React.FC<{
   sortKey: SortKey;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
+  onTriageBaseRecapsChange?: (recaps: Recap[]) => void;
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
   selectMode: boolean;
@@ -1489,7 +1494,7 @@ const RecapsBothLive: React.FC<{
   triageFilter?: RecapTriageFilter;
   triageById?: Map<string, RecapTriageSummary>;
 }> = ({ legacyVariables, customVariables, fetchPolicy, fetchKey, ...rest }) => {
-  // triageFilter / triageById ride through ...rest into RecapsListFetched.
+  // triageFilter / triageById / onTriageBaseRecapsChange ride through ...rest.
   const data = useLazyLoadQuery<RecapsListQueryType>(
     RecapsListQuery,
     legacyVariables,
@@ -1529,6 +1534,7 @@ const RecapsListFetched: React.FC<{
   sortKey: SortKey;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
+  onTriageBaseRecapsChange?: (recaps: Recap[]) => void;
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
   selectMode: boolean;
@@ -1574,6 +1580,7 @@ const RecapsListFetched: React.FC<{
   sortKey,
   onMeta,
   onVisibleRecapsChange,
+  onTriageBaseRecapsChange,
   selectedIds,
   onToggleSelected,
   selectMode,
@@ -1783,9 +1790,11 @@ const RecapsListFetched: React.FC<{
     [recaps],
   );
 
-  const filtered = useMemo(() => {
+  // Pre-triage match (search/status/dates/…). Triage queries must use this
+  // set — not the Clean/Needs Eyes-filtered display — or the filter oscillates.
+  const triageBase = useMemo(() => {
     const q = search.toLowerCase().trim();
-    const matched = recaps.filter((r) => {
+    return recaps.filter((r) => {
       const matchQ =
         !q ||
         r.name.toLowerCase().includes(q) ||
@@ -1824,17 +1833,6 @@ const RecapsListFetched: React.FC<{
       const matchMap =
         !needsStoreMap ||
         (r.isThirdParty && r.storeMappingStatus === "unmatched");
-      // Admin-only Clean / Needs Eyes. Until the staff triage map lands,
-      // keep every row (empty map = still loading, not "all clean").
-      const matchTriage =
-        isClient ||
-        triageFilter === "all" ||
-        !triageById ||
-        triageById.size === 0 ||
-        recapMatchesTriageFilter(
-          triageFilter,
-          recapTriageLabelForId(triageById, r.id),
-        );
       return (
         matchQ &&
         matchR &&
@@ -1843,10 +1841,25 @@ const RecapsListFetched: React.FC<{
         matchStatus &&
         matchActivation &&
         matchDate &&
-        matchMap &&
-        matchTriage
+        matchMap
       );
     });
+  }, [recaps, search, retailerFilter, stateFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, justApprovedIds, isClient, pipeline, needsStoreMap]);
+
+  const filtered = useMemo(() => {
+    // Admin-only Clean / Needs Eyes. Until any triage rows land, keep the
+    // full base set (loading). Once the map has data, only explicit labels
+    // match — missing/pending never default to Clean.
+    const triageReady = Boolean(triageById && triageById.size > 0);
+    const matched =
+      isClient || triageFilter === "all" || !triageReady
+        ? triageBase
+        : triageBase.filter((r) =>
+            recapMatchesTriageFilter(
+              triageFilter,
+              resolvedRecapTriageLabel(triageById, r.id),
+            ),
+          );
 
     // Sort in-place on the copy. On Needs review, Needs Eyes rows float
     // first so humans spend time on exceptions; other sorts still apply
@@ -1872,12 +1885,10 @@ const RecapsListFetched: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap, triageFilter, triageById]);
+  }, [triageBase, sortKey, isClient, pipeline, triageFilter, triageById]);
 
-  // `filtered` is the full loaded + filter-matching set: it feeds the
-  // review queue (via onVisibleRecapsChange), selection, counts and
-  // exports. Only the DOM is windowed — `windowed` is what paints, so
-  // queue/selection semantics are unchanged when rows are off-window.
+  // `filtered` is the display set (may be triage-narrowed). `triageBase`
+  // feeds staff triage queries so Clean filter never shrinks the fetch set.
   const displayed = filtered;
   const windowed = filtered.slice(0, visibleCount);
   const canExpandWindow = windowed.length < filtered.length;
@@ -1978,6 +1989,10 @@ const RecapsListFetched: React.FC<{
   useEffect(() => {
     if (onVisibleRecapsChange) onVisibleRecapsChange(displayed);
   }, [displayed, onVisibleRecapsChange]);
+
+  useEffect(() => {
+    if (onTriageBaseRecapsChange) onTriageBaseRecapsChange(triageBase);
+  }, [triageBase, onTriageBaseRecapsChange]);
 
   const listFooter = (
     <div className="flex flex-col items-center gap-2 py-4">
@@ -2420,6 +2435,8 @@ export default function SparkRecapsList() {
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
   const [visibleRecaps, setVisibleRecaps] = useState<Recap[]>([]);
+  /** Pre-triage Needs-review rows — independent of Clean/Needs Eyes filter. */
+  const [triageBaseRecaps, setTriageBaseRecaps] = useState<Recap[]>([]);
   const [justApprovedIds, setJustApprovedIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -2516,9 +2533,11 @@ export default function SparkRecapsList() {
     (item) => !item.approved && !item.archived,
   ).length;
 
+  // Flag + triage targets come from the unfiltered triage base so switching
+  // Clean/Needs Eyes never shrinks the query set (Codex P2).
   const flagTargets = useMemo(
     () =>
-      visibleRecaps
+      triageBaseRecaps
         .filter(
           (r) =>
             !r.approved &&
@@ -2526,7 +2545,7 @@ export default function SparkRecapsList() {
             !recapIsEmptyShell(r),
         )
         .map((r) => ({ id: r.id, kind: r.kind })),
-    [visibleRecaps, justApprovedIds],
+    [triageBaseRecaps, justApprovedIds],
   );
   const flagsEnabled =
     !isClient &&
@@ -2543,6 +2562,8 @@ export default function SparkRecapsList() {
       ),
     [flagTargets, triageById],
   );
+  const triageReady =
+    flagsEnabled && flagTargets.length > 0 && triageCounts.complete;
   useEffect(() => {
     if (!flagsEnabled && triageFilter !== "all") setTriageFilter("all");
   }, [flagsEnabled, triageFilter]);
@@ -2996,15 +3017,18 @@ export default function SparkRecapsList() {
     commitApproveTargets(selectedRecaps);
   };
 
-  /** Admin-only: approve every Clean row currently waiting on this page. */
+  /**
+   * Admin-only: approve every explicitly Clean row on the loaded Needs-review
+   * set. Missing / pending / failed triage never counts as Clean (Codex P1).
+   */
   const approveAllClean = () => {
-    if (isClient || !flagsEnabled) return;
-    const cleanTargets = visibleRecaps.filter(
+    if (isClient || !flagsEnabled || !triageReady) return;
+    const cleanTargets = triageBaseRecaps.filter(
       (r) =>
         !r.approved &&
         !justApprovedIds.has(r.id) &&
         !recapIsEmptyShell(r) &&
-        recapTriageLabelForId(triageById, r.id) === "clean",
+        isRecapExplicitlyClean(triageById, r.id),
     );
     if (cleanTargets.length === 0) {
       showAlert("No clean recaps to approve on this page.", "info");
@@ -3598,18 +3622,29 @@ export default function SparkRecapsList() {
                 ))}
               </div>
             )}
-            {!isClient && flagsEnabled && triageCounts.clean > 0 && (
+            {!isClient && flagsEnabled && (
               <button
                 type="button"
-                disabled={isBulkApproving || approvePhase !== "idle"}
+                disabled={
+                  !triageReady ||
+                  triageCounts.clean === 0 ||
+                  isBulkApproving ||
+                  approvePhase !== "idle"
+                }
                 onClick={approveAllClean}
                 className="rounded-xl px-3 py-2 text-xs font-bold shrink-0 disabled:opacity-40"
                 style={ghostBtn}
-                title="Approve every Clean recap on this page — Needs Eyes stays for review"
+                title={
+                  !triageReady
+                    ? "Waiting for Clean / Needs Eyes labels…"
+                    : "Approve every Clean recap on this page — Needs Eyes stays for review"
+                }
               >
                 {isBulkApproving && approvePhase !== "idle"
                   ? "Approving…"
-                  : `Approve all Clean · ${triageCounts.clean}`}
+                  : !triageReady
+                    ? "Scoring Clean…"
+                    : `Approve all Clean · ${triageCounts.clean}`}
               </button>
             )}
             <RecapTypeChips
@@ -4363,6 +4398,7 @@ export default function SparkRecapsList() {
             sortKey={sortKey}
             onMeta={onMeta}
             onVisibleRecapsChange={setVisibleRecaps}
+            onTriageBaseRecapsChange={setTriageBaseRecaps}
             selectedIds={selectedIds}
             onToggleSelected={toggleSelected}
             selectMode={selectMode}
