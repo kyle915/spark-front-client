@@ -8105,6 +8105,8 @@ type Query {
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   recapReviewFlags(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewFlagsForRecap!]!
+  """Staff-only Clean vs Needs Eyes triage for the Needs-review list."""
+  recapReviewTriage(recapIds: [ID!]!, isCustom: Boolean! = false): [RecapReviewTriageForRecap!]!
   programShareLink(tenantId: ID = null): ProgramShareLink!
   tenantRecapFieldTotals(tenantId: ID!, startDate: String = null, endDate: String = null): [RecapFieldTotalSection!]!
   tenantFieldEfficiency(tenantId: ID!, startDate: String = null, endDate: String = null): FieldEfficiency
@@ -9004,6 +9006,21 @@ type RecapReviewFlagSummary {
 type RecapReviewFlagsForRecap {
   recapId: ID!
   flags: [RecapReviewFlagSummary!]!
+}
+
+type RecapTriageReason {
+  code: String!
+  label: String!
+  source: String!
+}
+
+"""
+Staff-only Clean vs Needs Eyes label for one recap. Never auto-approves.
+"""
+type RecapReviewTriageForRecap {
+  recapId: ID!
+  label: String!
+  reasons: [RecapTriageReason!]!
 }
 
 type RecapReviewerSummary {
