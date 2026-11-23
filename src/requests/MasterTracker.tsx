@@ -41,6 +41,7 @@ import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
   trackerDateRangeToServer,
+  trackerExportMatching,
   trackerExportScope,
   trackerSortToServer,
   trackerStatusCount,
@@ -1960,7 +1961,11 @@ export default function MasterTracker() {
     [],
   );
 
-  const exportMatching = trackerStatusCount(activeStatus, counts, total);
+  const exportMatching = trackerExportMatching(
+    search,
+    visibleRows.length,
+    trackerStatusCount(activeStatus, counts, total),
+  );
   const exportScope = trackerExportScope(visibleRows.length, exportMatching);
   const exportTitle =
     visibleRows.length === 0

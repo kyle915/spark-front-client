@@ -254,6 +254,28 @@ export function trackerStatusCount(
 }
 
 /**
+ * REQ-#### is matched on the loaded rows (id suffix), not by the status
+ * totals. Those totals stay the whole tracker and must not be the export
+ * denominator.
+ */
+export function isTrackerReqLookup(search: string): boolean {
+  return /^req[-\s]*[a-z0-9]{1,4}$/i.test(search.trim());
+}
+
+/**
+ * How many requests the export is being compared with.
+ * A REQ lookup's match set is the loaded rows; every other search uses
+ * the status-chip total.
+ */
+export function trackerExportMatching(
+  search: string,
+  loaded: number,
+  statusCount: number,
+): number {
+  return isTrackerReqLookup(search) ? loaded : statusCount;
+}
+
+/**
  * What an export of the loaded rows actually contains.
  * A bare "50" reads as the tracker; name the loaded slice when more match.
  */

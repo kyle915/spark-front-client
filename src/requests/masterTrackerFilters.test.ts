@@ -3,6 +3,7 @@ import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
   trackerDateRangeToServer,
+  trackerExportMatching,
   trackerExportScope,
   trackerStatusCount,
   trackerStatusToServer,
@@ -162,5 +163,14 @@ describe("masterTrackerFilters", () => {
     expect(trackerExportScope(0, 1068)).toBe("");
     expect(trackerExportScope(50, 1068)).toBe("50 loaded of 1,068");
     expect(trackerExportScope(12, 12)).toBe("12");
+  });
+
+  it("keeps a REQ lookup off the tracker total", () => {
+    expect(trackerExportMatching("REQ-1A2B", 1, 1068)).toBe(1);
+    expect(trackerExportMatching("req ab", 1, 1068)).toBe(1);
+    expect(trackerExportMatching("kroger", 50, 1068)).toBe(1068);
+    expect(
+      trackerExportScope(1, trackerExportMatching("REQ-1A2B", 1, 1068)),
+    ).toBe("1");
   });
 });
