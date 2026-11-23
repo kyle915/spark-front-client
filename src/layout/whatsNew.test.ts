@@ -86,8 +86,15 @@ describe("whatsNewFor", () => {
       expect(staffIds.has(id)).toBe(true);
     }
 
-    // Staff-only landed: map-this-store, Clean/Needs Eyes, shelf coach, attention, UTMs
+    // Client + staff: upcoming activations excluded from recaps due
+    expect(clientIds.has("2026-11-23h")).toBe(true);
+    expect(staffIds.has("2026-11-23h")).toBe(true);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
+
+    // Staff-only landed: route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23g",
+      "2026-11-23f",
       "2026-11-23m",
       "2026-11-23e",
       "2026-11-23s",
