@@ -3,6 +3,8 @@ import { card, helperText } from "./checkinStyles";
 import {
   shelfStatusLabel,
   storePrepKitHasContent,
+  storePrepKitShouldStartOpen,
+  storePrepKitShowsPinnedRisk,
   type StorePrepKit,
 } from "./storePrepKit";
 
@@ -35,9 +37,32 @@ function riskStyles(level: "none" | "watch" | "high"): CSSProperties {
   }
 }
 
+function RiskBanner({
+  risk,
+}: {
+  risk: NonNullable<StorePrepKit["stockRisk"]>;
+}) {
+  return (
+    <div
+      role="status"
+      style={{
+        ...riskStyles(risk.level),
+        borderRadius: 12,
+        padding: "10px 12px",
+        fontSize: 13,
+        lineHeight: 1.4,
+        fontWeight: 600,
+      }}
+    >
+      {risk.reason}
+    </div>
+  );
+}
+
 /**
  * Pre-shift Store Prep Kit on walk-up check-in: logistics, last shelf, SKUs,
- * training links, and a light stock-risk badge. Collapsed by default.
+ * training links, and a stock-risk badge. Stock risk stays above the fold;
+ * the kit opens by default when risk is watch/high so BAs don't miss it.
  */
 export function StorePrepKitCard({
   kit,
@@ -46,11 +71,16 @@ export function StorePrepKitCard({
   kit: StorePrepKit | null | undefined;
   accent: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => storePrepKitShouldStartOpen(kit));
   if (!storePrepKitHasContent(kit) || !kit) return null;
 
   const risk = kit.stockRisk;
-  const showRisk = risk && (risk.level === "high" || risk.level === "watch" || risk.level === "none");
+  const showPinnedRisk = storePrepKitShowsPinnedRisk(kit);
+  const detailCount =
+    (kit.logisticsNotes.trim() ? 1 : 0) +
+    (kit.lastShelfVisit ? 1 : 0) +
+    (kit.skus.length ? 1 : 0) +
+    (kit.resources.length ? 1 : 0);
 
   return (
     <section style={{ ...card, marginBottom: 12 }} aria-label="Store prep kit">
@@ -74,29 +104,38 @@ export function StorePrepKitCard({
           minHeight: 44,
         }}
       >
-        <p style={title}>Store Prep Kit</p>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#44403c" }}>
-          {open ? "Hide" : "Show"}
+        <div style={{ minWidth: 0 }}>
+          <p style={title}>Store Prep Kit</p>
+          {!open && detailCount > 0 ? (
+            <p style={{ ...helperText, margin: "2px 0 0", color: "#57534e" }}>
+              Logistics, shelf notes, SKUs &amp; BA materials
+            </p>
+          ) : null}
+        </div>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#1c1917",
+            flexShrink: 0,
+            textDecoration: open ? "none" : "underline",
+            textUnderlineOffset: 2,
+          }}
+        >
+          {open ? "Hide" : "Open prep"}
         </span>
       </button>
 
+      {/* Stock risk stays visible even when the kit is collapsed. */}
+      {showPinnedRisk && risk && !open ? (
+        <div style={{ marginTop: 10 }}>
+          <RiskBanner risk={risk} />
+        </div>
+      ) : null}
+
       {open ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 10 }}>
-          {showRisk && risk ? (
-            <div
-              role="status"
-              style={{
-                ...riskStyles(risk.level),
-                borderRadius: 12,
-                padding: "10px 12px",
-                fontSize: 13,
-                lineHeight: 1.4,
-                fontWeight: 600,
-              }}
-            >
-              {risk.reason}
-            </div>
-          ) : null}
+          {showPinnedRisk && risk ? <RiskBanner risk={risk} /> : null}
 
           {kit.logisticsNotes.trim() ? (
             <div>

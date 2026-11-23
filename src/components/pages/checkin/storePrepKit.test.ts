@@ -3,6 +3,8 @@ import {
   parseStorePrepKit,
   shelfStatusLabel,
   storePrepKitHasContent,
+  storePrepKitShouldStartOpen,
+  storePrepKitShowsPinnedRisk,
 } from "./storePrepKit";
 
 describe("store prep kit", () => {
@@ -33,5 +35,22 @@ describe("store prep kit", () => {
   it("treats empty kits as hidden", () => {
     expect(storePrepKitHasContent(parseStorePrepKit({}))).toBe(false);
     expect(storePrepKitHasContent(null)).toBe(false);
+  });
+
+  it("starts open on watch/high stock risk and pins the risk line", () => {
+    const high = parseStorePrepKit({
+      stockRisk: { level: "high", reason: "Last visit OOS" },
+    });
+    const quiet = parseStorePrepKit({
+      logisticsNotes: "Park in back",
+      stockRisk: { level: "none", reason: "Shelf looked fine" },
+    });
+    expect(storePrepKitShouldStartOpen(high)).toBe(true);
+    expect(storePrepKitShowsPinnedRisk(high)).toBe(true);
+    expect(storePrepKitShouldStartOpen(quiet)).toBe(false);
+    expect(storePrepKitShowsPinnedRisk(quiet)).toBe(true);
+    expect(storePrepKitShouldStartOpen(parseStorePrepKit({ logisticsNotes: "x" }))).toBe(
+      false,
+    );
   });
 });

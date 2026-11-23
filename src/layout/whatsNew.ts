@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23t",
+    date: "November 23, 2026",
+    title: "Email links open the right brand, plus check-in prep polish",
+    items: [
+      "Portal and digest emails now deep-link with ?t= so multi-workspace users land on the brand the email is about instead of whichever client was last selected.",
+      "Store Prep Kit on walk-up check-in keeps stock-risk above the fold and opens automatically when risk is watch or high, with a clearer Open prep control.",
+      "Clean triage and Ask AI kickers use high-contrast deep forest / dark ink on light surfaces — no neon lime as text on paper.",
+    ],
+  },
+  {
     id: "2026-11-23k",
     date: "November 23, 2026",
     title: "Recap stats sit under the title",

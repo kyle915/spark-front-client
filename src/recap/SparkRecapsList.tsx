@@ -3608,7 +3608,7 @@ export default function SparkRecapsList() {
                         triageFilter === key
                           ? key === "needs_eyes"
                             ? "var(--spark-orange)"
-                            : "var(--spark-lime)"
+                            : "var(--spark-ok-ink)"
                           : "rgba(var(--spark-ink-rgb),0.65)",
                     }}
                   >
