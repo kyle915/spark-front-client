@@ -19,7 +19,19 @@ export type RecapTriageReason = {
 export type RecapTriageSummary = {
   label: RecapTriageLabel;
   reasons: RecapTriageReason[];
+  /** Short sentence for Needs Eyes. Empty for Clean. */
+  why?: string | null;
+  whySource?: string | null;
 };
+
+/** Prose for a Needs Eyes row. Clean and unresolved rows return null. */
+export function needsEyesWhyText(
+  row: RecapTriageSummary | null | undefined,
+): string | null {
+  if (!row || row.label !== "needs_eyes") return null;
+  const text = (row.why ?? "").replace(/\s+/g, " ").trim();
+  return text || null;
+}
 
 export function parseRecapTriageLabel(
   raw: string | null | undefined,

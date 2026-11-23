@@ -67,6 +67,8 @@ export function useRecapReviewTriage(
           | ReadonlyArray<{
               readonly recapId: string;
               readonly label: string;
+              readonly why?: string | null;
+              readonly whySource?: string | null;
               readonly reasons: ReadonlyArray<{
                 readonly code: string;
                 readonly label: string;
@@ -86,6 +88,8 @@ export function useRecapReviewTriage(
           next.set(String(row.recapId), {
             label: parseRecapTriageLabel(row.label),
             reasons,
+            why: row.why ?? null,
+            whySource: row.whySource ?? "",
           });
         }
       };

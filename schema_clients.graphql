@@ -5313,6 +5313,7 @@ type ImportPresetItem {
 type ImportPreviewResult {
   headers: [String!]!
   resolvedMapJson: String!
+  columnGuessesJson: String!
   totalRows: Int!
   createdCount: Int!
   updatedCount: Int!
@@ -6971,8 +6972,8 @@ type Mutation {
   respondProviderAssignment(assignmentUuid: String!, decision: String!, responseNote: String! = ""): PilotMutationOutcome!
   revokeProviderAssignment(assignmentUuid: String!): PilotMutationOutcome!
   setProviderSourceInclusion(providerUuid: String!, includeInCombinedReporting: Boolean!, notes: String! = ""): PilotMutationOutcome!
-  previewProviderCsvImport(providerUuid: String!, csvText: String!, mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null): ImportPreviewResult!
-  commitProviderCsvImport(providerUuid: String!, csvText: String!, filename: String! = "upload.csv", mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, saveMappingName: String = null, idempotencyKey: String = null, isHistorical: Boolean! = false): PilotMutationOutcome!
+  previewProviderCsvImport(providerUuid: String!, csvText: String!, mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, confirmColumnMap: Boolean! = false): ImportPreviewResult!
+  commitProviderCsvImport(providerUuid: String!, csvText: String!, filename: String! = "upload.csv", mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, confirmColumnMap: Boolean! = false, saveMappingName: String = null, idempotencyKey: String = null, isHistorical: Boolean! = false): PilotMutationOutcome!
   resolveProviderImportRow(rowUuid: String!, retailerId: Int = null, confirmedStoreNumber: String = null, confirmedAddress: String = null, confirmedCity: String = null, confirmedState: String = null, saveStoreAlias: Boolean! = false, productId: Int = null, saveProductAlias: Boolean! = true): PilotMutationOutcome!
   upsertProviderAgreement(providerUuid: String!, name: String!, contractedDemoFee: String = null, includedHours: String! = "4.00", extraHourRate: String = null, mileageRate: String = null, adminFeePercent: String! = "0.00", adminFeeBases: [String!] = null, taxPercent: String! = "0.00"): PilotMutationOutcome!
   upsertBrandCostLine(visitUuid: String!, category: String!, sourceType: String! = "invoice_line", amount: String = null, isConfirmedZero: Boolean! = false, quantity: String = null, unitRate: String = null, description: String! = "", settlementStatus: String! = "invoiced", evidenceStatus: String = null, providerUuid: String = null, agreementUuid: String = null, lineUuid: String = null): PilotMutationOutcome!
@@ -9028,6 +9029,8 @@ type RecapReviewTriageForRecap {
   recapId: ID!
   label: String!
   reasons: [RecapTriageReason!]!
+  why: String
+  whySource: String!
 }
 
 type RecapReviewerSummary {

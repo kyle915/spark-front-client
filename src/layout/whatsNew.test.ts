@@ -93,6 +93,7 @@ describe("whatsNewFor", () => {
 
     // Staff-only landed: denser attention, route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23y",
       "2026-11-23d",
       "2026-11-23g",
       "2026-11-23f",
@@ -107,9 +108,9 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest tip is Ask AI tools (client-visible); staff feed starts there too
+    // Newest client tip is Ask AI tools. Staff also see the Needs Eyes / CSV confirm note first.
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23q");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23q");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23y");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -135,7 +136,7 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23q");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23y");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -150,8 +151,8 @@ describe("whatsNewFor", () => {
     });
 
     expect(hasUnseenWhatsNew(true)).toBe(false);
-// Same tip id for staff+client right now; legacy key matching tip clears both
-    expect(hasUnseenWhatsNew(false)).toBe(false);
+    // Legacy key matches the client tip only. Staff's newer note stays unseen.
+    expect(hasUnseenWhatsNew(false)).toBe(true);
 
     store.set("@spark.whatsNew.seen", "2026-11-23p");
     expect(hasUnseenWhatsNew(true)).toBe(true);
