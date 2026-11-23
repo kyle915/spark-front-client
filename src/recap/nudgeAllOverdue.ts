@@ -17,7 +17,8 @@ export type OverdueNudgeBa = {
 
 export type OverdueNudgeEvent = {
   eventUuid: string;
-  hoursOverdue: number | null;
+  /** Relay GraphQL Int fields are `number | null | undefined`. */
+  hoursOverdue: number | null | undefined;
   assignedAmbassadors: ReadonlyArray<OverdueNudgeBa>;
 };
 
