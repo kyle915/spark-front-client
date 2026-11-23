@@ -75,8 +75,9 @@ describe("whatsNewFor", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Landed on main: recap KPI strip, Ask AI tools, Photo Wall / pitch decks, POS + digests, Shifts Board
+    // Landed on main: email ?t=, recap KPI strip, Ask AI tools, Photo Wall / pitch decks, POS + digests, Shifts Board
     for (const id of [
+      "2026-11-23t",
       "2026-11-23k",
       "2026-11-23q",
       "2026-11-23p",
@@ -108,7 +109,7 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest tip is recap KPI strip (client-visible); staff feed starts there too
+    // Newest tip is email ?t= + prep polish (client-visible); staff feed starts there too
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23t");
     expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23t");
   });
@@ -130,13 +131,13 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23k");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23t");
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23k");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23t");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
