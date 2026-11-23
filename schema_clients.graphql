@@ -6952,7 +6952,7 @@ type Mutation {
   completeRebookStoreAction(actionUuid: String!, samplesDistributed: Int = null, consumersSampled: Int = null, repObservedUnits: Int = null, customRecapId: Int = null, notes: String! = ""): PilotMutationOutcome!
   createWorkspaceSharedLink(resourceType: String! = "visit", visitUuid: String = null): PilotMutationOutcome!
   revokeWorkspaceSharedLink(token: String!): PilotMutationOutcome!
-  startSelfServeOnboarding(email: String! = "", password: String! = "", firstName: String! = "", lastName: String! = "", brandName: String! = "", businessTimezone: String! = "America/Chicago", acceptTerms: Boolean! = true, forceNewWorkspace: Boolean! = false, invitationToken: String! = ""): OnboardingSessionPayload!
+  startSelfServeOnboarding(email: String! = "", password: String! = "", firstName: String! = "", lastName: String! = "", brandName: String! = "", businessTimezone: String! = "America/Chicago", acceptTerms: Boolean! = true, forceNewWorkspace: Boolean! = false, invitationToken: String! = "", utmSource: String! = "", utmMedium: String! = "", utmCampaign: String! = "", utmId: String! = "", utmContent: String! = "", utmTerm: String! = "", landingPath: String! = "/onboarding"): OnboardingSessionPayload!
   selectOnboardingStarterProgram(starterKey: String!, customProgramName: String! = "", starterSkuName: String! = ""): PilotMutationOutcome!
   onboardingInviteContributor(email: String!, workspaceRole: String! = "field_contributor", providerName: String! = ""): PilotMutationOutcome!
   scheduleStandaloneVisit(storeName: String!, visitDate: String!, address: String! = "", city: String! = "", stateCode: String! = "", providerUuid: String = null, eventTypeId: Int = null, notes: String! = ""): PilotMutationOutcome!
