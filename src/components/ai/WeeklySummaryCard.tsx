@@ -5,6 +5,7 @@ import { TenantWeeklySummaryQuery } from "@/api/queries/TenantWeeklySummaryQuery
 import type { TenantWeeklySummaryQuery as TenantWeeklySummaryQueryType } from "@api/queries/__generated__/TenantWeeklySummaryQuery.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { summaryIsStale, summaryParagraphs, weekLabel } from "@/lib/weeklySummary";
+import { cn } from "@/lib/utils";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 
@@ -20,7 +21,11 @@ const META = { color: "var(--spark-text-meta)" } as const;
  * The query stays off the page document, so if it fails the boundary
  * renders nothing and the rest of the dashboard still loads.
  */
-const Body: React.FC<{ tenantId: string; forClient: boolean }> = ({ tenantId, forClient }) => {
+const Body: React.FC<{
+  tenantId: string;
+  forClient: boolean;
+  className?: string;
+}> = ({ tenantId, forClient, className }) => {
   const data = useLazyLoadQuery<TenantWeeklySummaryQueryType>(
     TenantWeeklySummaryQuery,
     { tenantId },
@@ -35,7 +40,10 @@ const Body: React.FC<{ tenantId: string; forClient: boolean }> = ({ tenantId, fo
   }
 
   return (
-    <section className="spark-card p-6 lg:p-8" style={{ borderRadius: 22 }}>
+    <section
+      className={cn("spark-card p-6 lg:p-8", className)}
+      style={{ borderRadius: 22 }}
+    >
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-x-4 gap-y-1">
         <h2 className="display text-lg lg:text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
           Weekly summary
@@ -44,7 +52,7 @@ const Body: React.FC<{ tenantId: string; forClient: boolean }> = ({ tenantId, fo
           {weekLabel(summary.weekStart, summary.weekEnd)}
         </p>
       </div>
-      <div className="flex flex-col gap-3 max-w-3xl">
+      <div className="flex flex-col gap-3">
         {summaryParagraphs(summary.text).map((paragraph, i) => (
           <p key={i} className="text-sm leading-relaxed" style={{ color: "var(--spark-text)" }}>
             {paragraph}
@@ -67,15 +75,16 @@ const Body: React.FC<{ tenantId: string; forClient: boolean }> = ({ tenantId, fo
   );
 };
 
-const WeeklySummaryCard: React.FC<{ tenantId: string; forClient?: boolean }> = ({
-  tenantId,
-  forClient = false,
-}) => {
+const WeeklySummaryCard: React.FC<{
+  tenantId: string;
+  forClient?: boolean;
+  className?: string;
+}> = ({ tenantId, forClient = false, className }) => {
   if (!tenantId) return null;
   return (
     <ErrorBoundary key={tenantId} fallback={null}>
       <Suspense fallback={null}>
-        <Body tenantId={tenantId} forClient={forClient} />
+        <Body tenantId={tenantId} forClient={forClient} className={className} />
       </Suspense>
     </ErrorBoundary>
   );
