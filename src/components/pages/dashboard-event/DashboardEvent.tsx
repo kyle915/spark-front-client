@@ -163,7 +163,7 @@ function DashboardInner() {
             <TodaysSnapshot />
           </Suspense>
 
-          <TodayAttentionStrip />
+          {!isClient ? <TodayAttentionStrip /> : null}
 
           <Suspense fallback={null}>
             <TodayAttentionPanels staff={!isClient} />
