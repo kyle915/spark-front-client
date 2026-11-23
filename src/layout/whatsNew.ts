@@ -14,7 +14,7 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-23k",
+    id: "2026-11-23b",
     date: "November 23, 2026",
     title: "Ask AI uses this year's program",
     items: [
