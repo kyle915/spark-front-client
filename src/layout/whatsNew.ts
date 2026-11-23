@@ -14,6 +14,41 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23p",
+    date: "November 23, 2026",
+    title: "Live Photo Wall and shareable Buyer Pitch Decks",
+    items: [
+      "Open Photo Wall to browse in-store recap photos by retailer, market and SKU, then pin keepers straight into a Buyer Pitch Deck.",
+      "From Buyer Report, mint a passcode-protected share link (with optional expiry and cost line) so a buyer can open a branded pitch leave-behind on client.igniteproductions.co — no Spark login required.",
+    ],
+  },
+  {
+    id: "2026-11-23r",
+    date: "November 23, 2026",
+    title: "POS feed inbox, portal presets and Monday buyer digests",
+    items: [
+      "On Retailer POS, pick a portal preset, turn on an automated feed, and review recent drops in the inbox alongside import history — less manual CSV chasing.",
+      "On Buyer Report, opt into a Monday weekly buyer digest and set recipient overrides separately from field-marketing client digests.",
+    ],
+  },
+  {
+    id: "2026-11-23c",
+    date: "November 23, 2026",
+    title: "Shifts Board: overlapping shifts stay readable",
+    items: [
+      "When several shifts land in the same hour on the week view, chips now sit side by side instead of stacking through each other, so time, venue and market stay clear.",
+    ],
+  },
+  {
+    id: "2026-11-23u",
+    date: "November 23, 2026",
+    title: "Onboarding marketing UTMs land in Close",
+    staffOnly: true,
+    items: [
+      "Self-serve onboarding now captures utm_source, campaign and content from the signup link (held for 30 minutes) and sends them with the lead into Close, so Ignite can see which pricing/marketing path converted.",
+    ],
+  },
+  {
     id: "2026-11-22w",
     date: "November 22, 2026",
     title: "Multi-store wave booking and slide-over store drawer",
