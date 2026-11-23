@@ -5,11 +5,15 @@ import Layout from "./Layout";
 /**
  * Wraps a page so clients hitting the URL get a friendly "admin-only"
  * notice instead of the screen contents. Use at the route component level.
+ *
+ * Brand clients (`canToggleRole=false`) are always forced into client
+ * chrome by useSparkRole, so this gate cannot be bypassed by flipping
+ * localStorage `@spark.role` to admin.
  */
 export const AdminOnly: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { isClient } = useSparkRole();
+  const { isClient, canToggleRole } = useSparkRole();
   if (!isClient) return <>{children}</>;
   return (
     <Layout>
@@ -36,8 +40,17 @@ export const AdminOnly: React.FC<{ children: ReactNode }> = ({
           className="mt-3 text-sm"
           style={{ color: "var(--spark-text-secondary)" }}
         >
-          Toggle <span className="mono">Admin</span> in the topbar to access
-          internal tools.
+          {canToggleRole ? (
+            <>
+              Toggle <span className="mono">Admin</span> in the topbar to
+              access internal tools.
+            </>
+          ) : (
+            <>
+              Your account is signed in as a brand client, so Ignite staff
+              tools stay hidden.
+            </>
+          )}
         </p>
       </div>
     </Layout>

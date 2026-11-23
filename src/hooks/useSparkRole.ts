@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
+import {
+  emailGrantsIgniteAdmin,
+  roleGrantsSparkAdminToggle,
+} from "@/hooks/sparkRoleAccess";
 
 /**
  * Spark v2 role mode — admin (Ignite team) vs client (brand stakeholder).
@@ -14,19 +18,14 @@ import { useAuthStore } from "@/store/authStore";
  *    clients; "+ Submit a request" is the only admin-y action they see.
  *
  * Auth-bound: non-Ignite users are forced into Client mode and cannot
- * toggle Admin. Ignite staff (@igniteproductions.co / spark-admin /
- * is_staff) keep the preview toggle.
+ * toggle Admin. Ignite staff (@igniteproductions.co / Spark Admin /
+ * legacy exact "admin") keep the preview toggle. Brand Client and
+ * Brand Admin / brand_admin never grant the toggle.
  */
 
 export type SparkRole = "admin" | "client";
 
 const KEY = "@spark.role";
-
-const IGNITE_EMAIL_RE = /@igniteproductions\.co$/i;
-
-function emailGrantsIgniteAdmin(email: string | null | undefined): boolean {
-  return Boolean(email && IGNITE_EMAIL_RE.test(email.trim()));
-}
 
 const readRole = (): SparkRole =>
   (localStorage.getItem(KEY) as SparkRole | null) ?? "admin";
@@ -42,9 +41,9 @@ export function useSparkRole(): {
   const user = useAuthStore((s) => s.user);
   const canToggleRole = useMemo(() => {
     const email = user?.email ?? "";
-    const roleName = (user?.role?.name ?? "").toString().toLowerCase();
+    const roleName = user?.role?.name ?? "";
     if (emailGrantsIgniteAdmin(email)) return true;
-    if (roleName.includes("spark") || roleName.includes("admin")) return true;
+    if (roleGrantsSparkAdminToggle(roleName)) return true;
     return false;
   }, [user]);
 
@@ -54,8 +53,8 @@ export function useSparkRole(): {
     const u = useAuthStore.getState().user;
     const email = u?.email;
     if (email && !emailGrantsIgniteAdmin(email)) {
-      const roleName = (u?.role?.name ?? "").toString().toLowerCase();
-      if (!roleName.includes("spark") && !roleName.includes("admin")) {
+      const roleName = u?.role?.name ?? "";
+      if (!roleGrantsSparkAdminToggle(roleName)) {
         return "client";
       }
     }
