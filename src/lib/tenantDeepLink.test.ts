@@ -4,6 +4,7 @@ import {
   decideTenantSwitch,
   findSwitchableTenant,
   isSelectedTenant,
+  readTenantLinkParam,
   resolveTenantParam,
   stripTenantParam,
   type SwitchableTenant,
@@ -135,7 +136,15 @@ describe("isSelectedTenant / findSwitchableTenant", () => {
   });
 });
 
-describe("?tenant= links", () => {
+describe("?t= / ?tenant= links", () => {
+  it("reads ?t= first, then legacy ?tenant=", () => {
+    expect(readTenantLinkParam("?t=abc")).toBe("abc");
+    expect(readTenantLinkParam("?tenant=legacy")).toBe("legacy");
+    expect(readTenantLinkParam("?t=short&tenant=legacy")).toBe("short");
+    expect(readTenantLinkParam("?activation=retail")).toBeNull();
+    expect(readTenantLinkParam("")).toBeNull();
+  });
+
   it("resolves a uuid or a slug, from the user's list only", () => {
     expect(resolveTenantParam(BRK.uuid.toLowerCase(), [LD, BRK])).toBe(BRK);
     expect(resolveTenantParam("Breakaway", [LD, BRK])).toBe(BRK);
@@ -169,9 +178,13 @@ describe("?tenant= links", () => {
     ).toBeNull();
   });
 
-  it("strips only the tenant param", () => {
+  it("strips ?t= and legacy ?tenant=", () => {
+    expect(stripTenantParam("?t=abc")).toBe("");
     expect(stripTenantParam("?tenant=abc")).toBe("");
-    expect(stripTenantParam("?activation=retail&tenant=abc")).toBe(
+    expect(stripTenantParam("?activation=retail&t=abc")).toBe(
+      "?activation=retail",
+    );
+    expect(stripTenantParam("?t=a&tenant=b&activation=retail")).toBe(
       "?activation=retail",
     );
     expect(stripTenantParam("?request=12")).toBe("?request=12");

@@ -214,7 +214,7 @@ const AskAiModal: React.FC<{
     >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="spark-overlay-kicker" style={{ color: "var(--spark-lime)" }}>
+            <p className="spark-overlay-kicker" style={{ color: "var(--spark-ok-ink)" }}>
               {copy.kicker}
             </p>
             <h2 className="spark-overlay-title">{copy.title}</h2>

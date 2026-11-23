@@ -98,13 +98,35 @@ export function decideTenantSwitch(args: {
   return target;
 }
 
-/** Query-string key list links carry: `/recaps/list?tenant=<uuid>`. */
-export const TENANT_LINK_PARAM = "tenant";
+/**
+ * Query-string key portal mailers mint: `/recaps/list?t=<uuid>`.
+ * Legacy emails may still use `tenant=` — both are accepted on read.
+ */
+export const TENANT_LINK_PARAM = "t";
+export const LEGACY_TENANT_LINK_PARAM = "tenant";
+
+const TENANT_LINK_KEYS = [TENANT_LINK_PARAM, LEGACY_TENANT_LINK_PARAM] as const;
+
+/** Read `?t=` (preferred) or legacy `?tenant=` from a search string / params. */
+export function readTenantLinkParam(
+  search: string | URLSearchParams | null | undefined,
+): string | null {
+  if (!search) return null;
+  const params =
+    typeof search === "string"
+      ? new URLSearchParams(search.startsWith("?") ? search : `?${search}`)
+      : search;
+  for (const key of TENANT_LINK_KEYS) {
+    const value = params.get(key);
+    if (value && value.trim()) return value.trim();
+  }
+  return null;
+}
 
 /**
- * Resolve a `?tenant=` value (tenant uuid, or its slug) against the user's
- * switcher list. Anything that is not in the list resolves to null — the
- * param is then dropped and the current tenant stays.
+ * Resolve a `?t=` / `?tenant=` value (tenant uuid, or its slug) against the
+ * user's switcher list. Anything that is not in the list resolves to null —
+ * the param is then dropped and the current tenant stays.
  */
 export function resolveTenantParam(
   param: string | null | undefined,
@@ -119,7 +141,7 @@ export function resolveTenantParam(
   );
 }
 
-/** Tenant to switch to for a `?tenant=` link, or null to stay put. */
+/** Tenant to switch to for a `?t=` link, or null to stay put. */
 export function decideTenantParamSwitch(args: {
   selected: SelectedTenant;
   param: string | null | undefined;
@@ -133,11 +155,17 @@ export function decideTenantParamSwitch(args: {
   return target;
 }
 
-/** `search` with the tenant param removed (other params untouched). */
+/** `search` with tenant deep-link params removed (other params untouched). */
 export function stripTenantParam(search: string): string {
   const params = new URLSearchParams(search);
-  if (!params.has(TENANT_LINK_PARAM)) return search;
-  params.delete(TENANT_LINK_PARAM);
+  let touched = false;
+  for (const key of TENANT_LINK_KEYS) {
+    if (params.has(key)) {
+      params.delete(key);
+      touched = true;
+    }
+  }
+  if (!touched) return search;
   const rest = params.toString();
   return rest ? `?${rest}` : "";
 }

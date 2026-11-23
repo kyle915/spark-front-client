@@ -1552,7 +1552,7 @@ const ApprovalsInner: React.FC = () => {
           size="md"
           label={`Approve ${approving.reqId}?`}
         >
-            <p className="spark-overlay-kicker" style={{ color: "var(--spark-lime)" }}>
+            <p className="spark-overlay-kicker" style={{ color: "var(--spark-ok-ink)" }}>
               Approve request
             </p>
             <h2 className="spark-overlay-title">
@@ -1572,7 +1572,7 @@ const ApprovalsInner: React.FC = () => {
                 lineHeight: 1.6,
               }}
             >
-              <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>
+              <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.16em", color: "var(--spark-ok-ink)" }}>
                 WHAT HAPPENS
               </p>
               1. Event row is created and queued for staffing.

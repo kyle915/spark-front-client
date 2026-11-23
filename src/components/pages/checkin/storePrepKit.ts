@@ -94,6 +94,28 @@ export function storePrepKitHasContent(kit: StorePrepKit | null | undefined): bo
   return false;
 }
 
+/**
+ * Open the kit by default when stock risk needs eyes before the BA walks in.
+ * Quiet "none" / empty risk stays collapsed so the card doesn't dominate.
+ */
+export function storePrepKitShouldStartOpen(
+  kit: StorePrepKit | null | undefined,
+): boolean {
+  if (!kit?.stockRisk) return false;
+  return kit.stockRisk.level === "high" || kit.stockRisk.level === "watch";
+}
+
+/** True when the stock-risk line should stay visible above the fold. */
+export function storePrepKitShowsPinnedRisk(
+  kit: StorePrepKit | null | undefined,
+): boolean {
+  const risk = kit?.stockRisk;
+  if (!risk?.reason.trim()) return false;
+  return (
+    risk.level === "high" || risk.level === "watch" || risk.level === "none"
+  );
+}
+
 export function shelfStatusLabel(productOnShelf: string): string {
   switch (productOnShelf) {
     case "yes":
