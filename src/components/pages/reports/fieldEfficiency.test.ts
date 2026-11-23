@@ -65,4 +65,13 @@ describe("field efficiency", () => {
       ),
     ).toBe("Saturdays and afternoon shifts sell the most per hour.");
   });
+
+  it("does not call a samples shift a sales leader", () => {
+    expect(
+      efficiencyHeadline(
+        [row("Fri", { unitsPerHour: 3 })],
+        [row("Midday", { unitsPerHour: null, samplesPerHour: 20 })],
+      ),
+    ).toBe("Fridays sell the most per hour. Midday shifts sample the most per hour.");
+  });
 });

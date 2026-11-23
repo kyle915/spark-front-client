@@ -79,11 +79,23 @@ export const efficiencyHeadline = (
     Sun: "Sundays",
   };
   const sold = (r: EfficiencyRow | null) => (r?.unitsPerHour ?? 0) > 0;
-  const verb = sold(day) || sold(part) ? "sell the most per hour" : "sample the most per hour";
+  const daySold = sold(day);
+  const partSold = sold(part);
+  const line = (r: EfficiencyRow, byUnits: boolean) => {
+    const verb = byUnits ? "sell the most per hour" : "sample the most per hour";
+    if (r.label in dayNames) return `${dayNames[r.label]} ${verb}.`;
+    return `${r.label} shifts ${verb}.`;
+  };
+  // A sales day and a samples shift are two sentences. One verb would
+  // call the samples shift a sales leader.
+  if (day && part && daySold !== partSold) {
+    return `${line(day, daySold)} ${line(part, partSold)}`;
+  }
+  const verb = daySold || partSold ? "sell the most per hour" : "sample the most per hour";
   if (day && part) {
     return `${dayNames[day.label] ?? day.label} and ${part.label.toLowerCase()} shifts ${verb}.`;
   }
-  if (day) return `${dayNames[day.label] ?? day.label} ${verb}.`;
-  if (part) return `${part.label} shifts ${verb}.`;
+  if (day) return line(day, daySold);
+  if (part) return line(part, partSold);
   return null;
 };

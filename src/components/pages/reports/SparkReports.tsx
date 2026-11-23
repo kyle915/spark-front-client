@@ -9,6 +9,7 @@ import { ReportsFieldPhotosQuery } from "@/api/queries/ReportsFieldPhotosQuery";
 import { ReportsBestPhotosQuery } from "@/api/queries/ReportsBestPhotosQuery";
 import type { ReportsBestPhotosQuery as ReportsBestPhotosQueryType } from "@api/queries/__generated__/ReportsBestPhotosQuery.graphql";
 import { bestPhotoCaption, onePhotoPerStop, type FieldPhotoView } from "./fieldPhotos";
+import { conversionFigure } from "./conversionTile";
 import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@api/queries/__generated__/ReportsFieldPhotosQuery.graphql";
 import CampaignPhotoHighlights from "@/reports/CampaignPhotoHighlights";
 import FeedbackThemes from "@/components/charts/FeedbackThemes";
@@ -531,10 +532,7 @@ const PeriodConversion: React.FC<{
   const sold = kpis?.sold ?? 0;
   const sampled = kpis?.engagements ?? 0;
   const pct = kpis?.pct;
-  const figure =
-    typeof pct === "number" && Number.isFinite(pct) && sold > 0 && sampled > 0
-      ? `${Math.round(pct)}%`
-      : "—";
+  const figure = conversionFigure(sold, sampled, pct);
   const counts =
     sold > 0 || sampled > 0
       ? `${sold.toLocaleString()} sold ÷ ${sampled.toLocaleString()} sampled · `

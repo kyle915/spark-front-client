@@ -204,6 +204,7 @@ export const SampledQuestionNote: React.FC<Props> = (props) => {
     { fetchPolicy: "store-and-network" },
   );
   const { parts } = partitionSampledQuestions(data.tenantRecapFieldTotals);
+  const perStoreDay = Boolean(data.tenantBoothDayCounting);
   if (parts.length === 0) return null;
   return (
     <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--spark-hairline)" }}>
@@ -216,7 +217,7 @@ export const SampledQuestionNote: React.FC<Props> = (props) => {
             <span>{field.label}</span>
             <span className="tabular-nums font-medium">{fieldTotalValue(field)}</span>
             <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
-              {fieldTotalNote(field)}
+              {fieldTotalNote(field, perStoreDay)}
             </span>
           </li>
         ))}
