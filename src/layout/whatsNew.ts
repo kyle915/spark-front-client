@@ -19,7 +19,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "One-click Send on Client summaries",
     staffOnly: true,
     items: [
-      "On Client summaries, Send emails a branded weekly or monthly write-up to brand recipients (prefills recap contacts + client users) instead of a blank mailto.",
+      "On Client summaries, use Send to email a branded weekly or monthly write-up to brand recipients (prefills recap contacts + client users) instead of a blank mailto.",
       "Spark records who sent it and when, so you can see Sent on the row and Send again if needed.",
     ],
   },
