@@ -346,6 +346,12 @@ export const PilotQueriesFinanceQueuePageQuery = graphql`
         clarificationNote
         resolutionReason
         createdAt
+        disputePack {
+          summary
+          source
+          facts
+          suggestedNextStep
+        }
         audits {
           uuid
           actorEmail

@@ -75,8 +75,13 @@ describe("whatsNewFor", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Landed on main: Ask AI tools, Photo Wall / pitch decks, POS + digests, Shifts Board
+    // Landed: deck captions + dispute notes, field-fill, email ?t=, KPI strip,
+    // Ask AI, Photo Wall / pitch decks, POS + digests, Shifts Board
     for (const id of [
+      "2026-11-23v",
+      "2026-11-23w",
+      "2026-11-23t",
+      "2026-11-23k",
       "2026-11-23q",
       "2026-11-23p",
       "2026-11-23r",
@@ -91,9 +96,12 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only landed: denser attention, route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
+    // Staff-only: walk-up attach, nudge-all-overdue, denser attention, route lock,
+    // finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
       "2026-11-23y",
+      "2026-11-23o",
+      "2026-11-23n",
       "2026-11-23d",
       "2026-11-23g",
       "2026-11-23f",
@@ -108,8 +116,8 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest client tip is Ask AI tools. Staff also see the Needs Eyes / CSV confirm note first.
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23q");
+    // Newest client note is deck captions. Staff see the Needs Eyes / CSV note first.
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23v");
     expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23y");
   });
 
@@ -130,7 +138,7 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23q");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23v");
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
@@ -140,7 +148,7 @@ describe("whatsNewFor", () => {
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
-    const store = new Map<string, string>([["@spark.whatsNew.seen", "2026-11-23q"]]);
+    const store = new Map<string, string>([["@spark.whatsNew.seen", "2026-11-23t"]]);
     vi.stubGlobal("window", {
       localStorage: {
         getItem: (k: string) => store.get(k) ?? null,
@@ -150,8 +158,8 @@ describe("whatsNewFor", () => {
       },
     });
 
-    expect(hasUnseenWhatsNew(true)).toBe(false);
-    // Legacy key matches the client tip only. Staff's newer note stays unseen.
+    // Legacy email tip matches neither the client deck note nor the staff Needs Eyes note.
+    expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
 
     store.set("@spark.whatsNew.seen", "2026-11-23p");

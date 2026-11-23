@@ -25,6 +25,64 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-23v",
+    date: "November 23, 2026",
+    title: "Buyer deck sell-story captions + finance dispute notes",
+    items: [
+      "Buyer Pitch Decks now draft leave-behind photo captions and a short sell-story from scored photos, consumer mentions, and shelf facts — no new vision models; dollars and lift stay from the deck snapshot.",
+      "On Finance Queue, each exception includes a copy-ready dispute pack (grounded one-liner, OCR/ledger facts, and suggested next step) so reviewers can paste into clarifications without rewriting “why unmatched.”",
+    ],
+  },
+  {
+    id: "2026-11-23o",
+    date: "November 23, 2026",
+    title: "1-click attach walk-up recaps on Missing Recaps",
+    staffOnly: true,
+    items: [
+      "On Missing Recaps, when a BA already filed a walk-up that uniquely matches a Tracker RECAP DUE row (same day and place), Spark shows a Walk-up match chip with Attach walk-up recap.",
+      "Attach all safe matches links every high-confidence orphan in one tap — the same rules as the nightly link job, so ghost DUE rows clear without CLI.",
+      "Walk-up filings still auto-link on submit when the match is unique; the Missing Recaps chips cover historical orphans that stayed unlinked.",
+    ],
+  },
+  {
+    id: "2026-11-23n",
+    date: "November 23, 2026",
+    title: "Nudge all overdue missing recaps in one click",
+    staffOnly: true,
+    items: [
+      "On Missing Recaps, Nudge all overdue (24h+) pushes every BA on shifts overdue a day or more — same push as the per-row Nudge button, skipping anyone nudged in the last 12 hours.",
+      "Each BA row shows when they were last nudged (cron or admin) so weekend clear-outs don't double-ping.",
+    ],
+  },
+  {
+    id: "2026-11-23w",
+    date: "November 23, 2026",
+    title: "Recap fields fill the page (photos stay right)",
+    items: [
+      "On recap detail and shared /r links, Shift Overview, Brand Results, Brand Feedback and Follow-up sit in a two-column grid that uses the full width — no more skinny left stack with empty space.",
+      "Photos stay on the right on wide screens; stats still sit under the title.",
+    ],
+  },
+  {
+    id: "2026-11-23t",
+    date: "November 23, 2026",
+    title: "Email links open the right brand, plus check-in prep polish",
+    items: [
+      "Portal and digest emails now deep-link with ?t= so multi-workspace users land on the brand the email is about instead of whichever client was last selected.",
+      "Store Prep Kit on walk-up check-in keeps stock-risk above the fold and opens automatically when risk is watch or high, with a clearer Open prep control.",
+      "Clean triage and Ask AI kickers use high-contrast deep forest / dark ink on light surfaces — no neon lime as text on paper.",
+    ],
+  },
+  {
+    id: "2026-11-23k",
+    date: "November 23, 2026",
+    title: "Recap stats sit under the title",
+    items: [
+      "On a recap detail (and shared /r links), Engagements, Sold, Conv and Photos now sit directly under the title — before the photo wall and long field list — so the numbers are first.",
+      "The wider desktop layout stays; on phones the four tiles stay a readable 2×2.",
+    ],
+  },
+  {
     id: "2026-11-23q",
     date: "November 23, 2026",
     title: "Ask AI answers shelf, cost, POS and competitors",
@@ -68,7 +126,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Finance queue: Unmatched cost / receipt filter",
     staffOnly: true,
     items: [
-      "On Finance queue, pick Unmatched cost / receipt in the exception filter — it matches API type unmatched_transaction and still includes legacy unmatched_cost rows.",
+      "On Finance Queue, pick Unmatched cost / receipt in the exception filter — it matches API type unmatched_transaction and still includes legacy unmatched_cost rows.",
       "Link visit on those rows works the same as before once the filter finds them.",
     ],
   },
