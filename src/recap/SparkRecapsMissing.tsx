@@ -1,5 +1,5 @@
 import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   fetchQuery,
   useLazyLoadQuery,
@@ -20,6 +20,10 @@ import { DismissMissingRecapsMutation } from "@/api/mutations/DismissMissingReca
 import type { DismissMissingRecapsMutation as DismissMissingRecapsMutationType } from "@api/mutations/__generated__/DismissMissingRecapsMutation.graphql";
 import { RestoreMissingRecapsMutation } from "@/api/mutations/RestoreMissingRecapsMutation";
 import type { RestoreMissingRecapsMutation as RestoreMissingRecapsMutationType } from "@api/mutations/__generated__/RestoreMissingRecapsMutation.graphql";
+import { AttachWalkupOrphanMutation } from "@/api/mutations/AttachWalkupOrphanMutation";
+import type { AttachWalkupOrphanMutation as AttachWalkupOrphanMutationType } from "@api/mutations/__generated__/AttachWalkupOrphanMutation.graphql";
+import { AttachSafeWalkupOrphansMutation } from "@/api/mutations/AttachSafeWalkupOrphansMutation";
+import type { AttachSafeWalkupOrphansMutation as AttachSafeWalkupOrphansMutationType } from "@api/mutations/__generated__/AttachSafeWalkupOrphansMutation.graphql";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import useSparkRole from "@/hooks/useSparkRole";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -32,6 +36,10 @@ import {
   type DismissReason,
   type DismissTargets,
 } from "./missingRecapDismiss";
+import {
+  formatLastNudgedAt,
+  overdueNudgeTargets,
+} from "./nudgeAllOverdue";
 
 /**
  * /recaps/missing — admin drill-down for events that already wrapped
@@ -43,6 +51,9 @@ import {
  *     push notification)
  *   - "File for them" link → /recap/create?event=<uuid>&ambassador=<uuid>
  *   - Deep-link to the parent request if there is one
+ *   - When a filed walk-up uniquely matches the row's Tracker request,
+ *     an "Attach walk-up recap" chip 1-clicks the same link as the
+ *     nightly link_walkin_recaps_to_requests job (clears the DUE ghost)
  *
  * The drill-down complements the sidebar "N RECAPS DUE" badge from
  * PR #215 — that badge surfaces the count; this page is where the
@@ -141,8 +152,17 @@ const Inner: React.FC<{
   const [commitRestore] = useMutation<RestoreMissingRecapsMutationType>(
     RestoreMissingRecapsMutation,
   );
+  const [commitAttachOne, isAttachingOne] =
+    useMutation<AttachWalkupOrphanMutationType>(AttachWalkupOrphanMutation);
+  const [commitAttachAll, isAttachingAll] =
+    useMutation<AttachSafeWalkupOrphansMutationType>(
+      AttachSafeWalkupOrphansMutation,
+    );
   // Which Dismiss control is working: an ambassador row, an event, or "bulk".
   const [dismissingKey, setDismissingKey] = useState<string | null>(null);
+  const [attachingOrphanUuid, setAttachingOrphanUuid] = useState<string | null>(
+    null,
+  );
 
   // Re-pull the list and the sidebar badge after a dismissal or a restore.
   // fetchQuery writes into the store, so the list updates in place without
@@ -274,6 +294,7 @@ const Inner: React.FC<{
     void nudgeOne(ambassadorEventUuid).then((r) => {
       setNudgingId(null);
       if (r.success) {
+        refresh();
         showAlert(
           `${name} nudged for ${venueLabel}${
             r.devicesNotified != null
@@ -305,6 +326,7 @@ const Inner: React.FC<{
     setNudgingId(null);
     setIsBulkNudging(false);
     setSelectedEvents(new Set());
+    refresh();
     if (failures.length === 0) {
       showAlert(
         `Nudged ${okCount} BA${okCount === 1 ? "" : "s"} across ${selectedRows.length} event${selectedRows.length === 1 ? "" : "s"}.`,
@@ -318,6 +340,130 @@ const Inner: React.FC<{
     } else {
       showAlert(`Nudge failed: ${failures[0] ?? "unknown error"}`, "error");
     }
+  };
+
+  // Tick so a page left open past the 12h cooldown re-includes BAs
+  // without waiting for a query refetch. 60s is plenty for the chip
+  // labels and bulk count; cooldown is hours-scale.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // One-click weekend clear-out: every BA on shifts overdue ≥24h,
+  // skipping anyone nudged in the last 12 hours. Same mutation as
+  // the per-row Nudge button.
+  const overdueTargets = useMemo(
+    () => overdueNudgeTargets(rows, nowMs),
+    [rows, nowMs],
+  );
+  const nudgeAllOverdue = async () => {
+    if (isBulkNudging || isNudging || overdueTargets.length === 0) return;
+    setIsBulkNudging(true);
+    let okCount = 0;
+    const failures: string[] = [];
+    const eventIds = new Set<string>();
+    for (const t of overdueTargets) {
+      setNudgingId(t.ambassadorEventUuid);
+      const r = await nudgeOne(t.ambassadorEventUuid);
+      if (r.success) {
+        okCount += 1;
+        eventIds.add(t.eventUuid);
+      } else {
+        failures.push(`${t.name}: ${r.message ?? "nudge failed"}`);
+      }
+    }
+    setNudgingId(null);
+    setIsBulkNudging(false);
+    refresh();
+    if (failures.length === 0) {
+      showAlert(
+        `Nudged ${okCount} overdue BA${okCount === 1 ? "" : "s"} across ${eventIds.size} event${eventIds.size === 1 ? "" : "s"}.`,
+        "success",
+      );
+    } else if (okCount > 0) {
+      showAlert(
+        `Nudged ${okCount} overdue, skipped/failed ${failures.length}: ${failures[0]}`,
+        "warning",
+      );
+    } else {
+      showAlert(
+        `Nudge all overdue failed: ${failures[0] ?? "unknown error"}`,
+        "error",
+      );
+    }
+  };
+
+  const safeAttachRows = useMemo(
+    () => rows.filter((r) => r.suggestedWalkupAttach != null),
+    [rows],
+  );
+
+  const attachOne = (
+    orphanEventUuid: string,
+    requestUuid: string,
+    orphanLabel: string,
+  ) => {
+    if (isAttachingOne || isAttachingAll) return;
+    setAttachingOrphanUuid(orphanEventUuid);
+    commitAttachOne({
+      variables: {
+        input: {
+          orphanEventUuid,
+          requestUuid,
+          lookbackDays,
+        },
+      },
+      onCompleted: (res) => {
+        setAttachingOrphanUuid(null);
+        const out = res.attachWalkupOrphan;
+        if (out?.success) {
+          refresh();
+          showAlert(
+            `Attached ${orphanLabel} to the Tracker request — DUE cleared.`,
+            "success",
+          );
+        } else {
+          showAlert(out?.message ?? "Could not attach that walk-up.", "warning");
+        }
+      },
+      onError: (err) => {
+        setAttachingOrphanUuid(null);
+        showAlert(err.message || "Could not attach that walk-up.", "error");
+      },
+    });
+  };
+
+  const attachAllSafe = () => {
+    if (isAttachingAll || isAttachingOne || !tenantId || safeAttachRows.length === 0) {
+      return;
+    }
+    commitAttachAll({
+      variables: {
+        input: {
+          tenantId,
+          lookbackDays,
+        },
+      },
+      onCompleted: (res) => {
+        const out = res.attachSafeWalkupOrphans;
+        if (out?.success) {
+          refresh();
+          showAlert(
+            out.message ||
+              `Attached ${out.linkedCount ?? 0} walk-up recap${
+                (out.linkedCount ?? 0) === 1 ? "" : "s"
+              }.`,
+            "success",
+          );
+        } else {
+          showAlert(out?.message ?? "Could not attach walk-ups.", "warning");
+        }
+      },
+      onError: (err) =>
+        showAlert(err.message || "Could not attach walk-ups.", "error"),
+    });
   };
 
   if (rows.length === 0) {
@@ -409,7 +555,7 @@ const Inner: React.FC<{
   return (
     <div className="space-y-3">
       <div
-        className="flex items-center justify-between text-[10px]"
+        className="flex items-center justify-between gap-3 flex-wrap text-[10px]"
         style={{ paddingBottom: 2 }}
       >
         <span
@@ -430,19 +576,73 @@ const Inner: React.FC<{
           </label>
           {rows.length} event{rows.length === 1 ? "" : "s"} owing a recap
         </span>
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="mono"
-          style={{
-            letterSpacing: "0.14em",
-            color: "var(--spark-lime)",
-          }}
-          title="Download the visible list as CSV — one row per (event, BA) pair"
-        >
-          Export CSV
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => void nudgeAllOverdue()}
+            disabled={
+              isBulkNudging || isNudging || overdueTargets.length === 0
+            }
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+            style={{
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+            }}
+            title={
+              overdueTargets.length === 0
+                ? "No shifts overdue 24h+ (or everyone was nudged in the last 12 hours)"
+                : `Push 'Don't forget your recap' to ${overdueTargets.length} BA${overdueTargets.length === 1 ? "" : "s"} on shifts overdue 24h+ (skips nudged in last 12h)`
+            }
+          >
+            {isBulkNudging
+              ? "Nudging…"
+              : `Nudge all overdue${overdueTargets.length > 0 ? ` (${overdueTargets.length})` : ""}`}
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="mono"
+            style={{
+              letterSpacing: "0.14em",
+              color: "var(--spark-lime)",
+            }}
+            title="Download the visible list as CSV — one row per (event, BA) pair"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
+      {canDismiss && safeAttachRows.length > 0 && (
+        <div
+          className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
+          style={{
+            background: "rgba(var(--spark-accent-rgb),0.08)",
+            border: "1px solid rgba(var(--spark-accent-rgb),0.28)",
+          }}
+        >
+          <span
+            className="mono text-[11px] flex-1 min-w-0"
+            style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+          >
+            {safeAttachRows.length} safe walk-up match
+            {safeAttachRows.length === 1 ? "" : "es"} — filed orphan already
+            covers the Tracker row
+          </span>
+          <button
+            type="button"
+            onClick={attachAllSafe}
+            disabled={isAttachingAll || isAttachingOne || !tenantId}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+            style={{
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+            }}
+            title="Link every unique same-day walk-up onto its DUE Tracker request"
+          >
+            {isAttachingAll ? "Attaching…" : "Attach all safe matches"}
+          </button>
+        </div>
+      )}
       {selectedEvents.size > 0 && (
         <div
           className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
@@ -566,6 +766,75 @@ const Inner: React.FC<{
               </div>
             </div>
 
+            {canDismiss && row.suggestedWalkupAttach && (
+              <div
+                className="mt-3 flex items-center gap-3 flex-wrap px-3 py-2 rounded-xl"
+                style={{
+                  background: "rgba(var(--spark-accent-rgb),0.06)",
+                  border: "1px solid rgba(var(--spark-accent-rgb),0.22)",
+                }}
+              >
+                <span
+                  className="chip text-[10px] mono"
+                  style={{
+                    letterSpacing: "0.12em",
+                    background: "rgba(var(--spark-accent-rgb),0.12)",
+                    color: "var(--spark-text)",
+                    border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
+                    padding: "3px 8px",
+                    borderRadius: 999,
+                  }}
+                  title="Unique same-day place match — same rules as nightly auto-link"
+                >
+                  Walk-up match
+                </span>
+                <p
+                  className="text-xs flex-1 min-w-0 truncate"
+                  style={{ color: "var(--spark-text-secondary)" }}
+                  title={
+                    row.suggestedWalkupAttach.orphanAddress
+                      ? `${row.suggestedWalkupAttach.orphanEventName} · ${row.suggestedWalkupAttach.orphanAddress}`
+                      : row.suggestedWalkupAttach.orphanEventName
+                  }
+                >
+                  Filed on{" "}
+                  <span style={{ color: "var(--spark-text)" }}>
+                    {row.suggestedWalkupAttach.orphanEventName}
+                  </span>
+                  {row.suggestedWalkupAttach.orphanAddress
+                    ? ` · ${row.suggestedWalkupAttach.orphanAddress}`
+                    : ""}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    attachOne(
+                      row.suggestedWalkupAttach!.orphanEventUuid,
+                      row.suggestedWalkupAttach!.requestUuid,
+                      row.suggestedWalkupAttach!.orphanEventName,
+                    )
+                  }
+                  disabled={
+                    isAttachingOne ||
+                    isAttachingAll ||
+                    attachingOrphanUuid ===
+                      row.suggestedWalkupAttach.orphanEventUuid
+                  }
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 shrink-0"
+                  style={{
+                    background: "var(--spark-lime)",
+                    color: "var(--spark-on-accent)",
+                  }}
+                  title="Attach this filed walk-up to the Tracker request and clear RECAP DUE"
+                >
+                  {attachingOrphanUuid ===
+                  row.suggestedWalkupAttach.orphanEventUuid
+                    ? "Attaching…"
+                    : "Attach walk-up recap"}
+                </button>
+              </div>
+            )}
+
             {row.assignedAmbassadors.length === 0 ? (
               <div
                 className="mt-3 px-3 py-2 rounded-xl text-xs"
@@ -661,6 +930,22 @@ const Inner: React.FC<{
                             {isWalkupPlaceholderEmail(ba.email)
                           ? `Walk-up · ${walkupPhoneFromEmail(ba.email) || "no phone on file"}`
                           : ba.email}
+                          </p>
+                        )}
+                        {ba.lastNudgedAt && (
+                          <p
+                            className="mono text-[10px] mt-0.5"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-text-meta)",
+                            }}
+                            title={ba.lastNudgedAt}
+                          >
+                            Last nudged{" "}
+                            {formatLastNudgedAt(ba.lastNudgedAt, nowMs)}
+                            {ba.lastNudgeChannel
+                              ? ` · ${ba.lastNudgeChannel}`
+                              : ""}
                           </p>
                         )}
                       </div>

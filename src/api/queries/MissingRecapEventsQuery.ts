@@ -21,12 +21,21 @@ export const MissingRecapEventsQuery = graphql`
       endTime
       hoursOverdue
       requestUuid
+      suggestedWalkupAttach {
+        orphanEventUuid
+        orphanEventName
+        orphanAddress
+        requestUuid
+        confidence
+      }
       assignedAmbassadors {
         ambassadorEventUuid
         ambassadorUuid
         name
         email
         isApproved
+        lastNudgedAt
+        lastNudgeChannel
       }
     }
   }

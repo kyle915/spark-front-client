@@ -13,6 +13,20 @@ import type {
 } from "@/api/mutations/__generated__/PilotMutationsPreviewCsvImportMutation.graphql";
 import type { PilotMutationsCommitCsvImportMutation as CommitMutationType } from "@/api/mutations/__generated__/PilotMutationsCommitCsvImportMutation.graphql";
 import type { PilotMutationsResolveImportRowMutation as ResolveRowType } from "@/api/mutations/__generated__/PilotMutationsResolveImportRowMutation.graphql";
+import {
+  ColumnConfirmPanel,
+  StoreMatchNote,
+} from "./ImportConfirmPanel";
+import {
+  confirmedColumnMap,
+  duplicateColumnFields,
+  parseColumnGuessPayload,
+  setGuessField,
+  setGuessIncluded,
+  storeMatchFromNormalized,
+  type ColumnGuess,
+  type FieldChoice,
+} from "./importConfirm";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -66,6 +80,14 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   const [filename, setFilename] = useState("agency_recaps.csv");
   const [csvText, setCsvText] = useState("");
   const [preview, setPreview] = useState<PreviewPayload | null>(null);
+  const [guesses, setGuesses] = useState<ColumnGuess[]>([]);
+  const [fieldChoices, setFieldChoices] = useState<FieldChoice[]>([]);
+  const fieldClash = duplicateColumnFields(guesses).length > 0;
+  const dropPreview = () => {
+    setPreview(null);
+    setGuesses([]);
+    setFieldChoices([]);
+  };
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
 
   // Row resolution selections
@@ -81,7 +103,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     setFilename(file.name);
     const text = await file.text();
     setCsvText(text);
-    setPreview(null);
+    dropPreview();
   };
 
   return (
@@ -118,7 +140,10 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <select
               value={providerUuid}
               disabled={Boolean(ws.viewerProviderUuid)}
-              onChange={(e) => setProviderUuid(e.target.value)}
+              onChange={(e) => {
+                setProviderUuid(e.target.value);
+                dropPreview();
+              }}
               className="w-full px-3 py-2 rounded-xl text-xs"
               style={FIELD_STYLE}
             >
@@ -138,6 +163,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               onChange={(e) => {
                 setPresetKey(e.target.value);
                 setSavedMappingUuid("");
+                dropPreview();
               }}
               className="w-full px-3 py-2 rounded-xl text-xs"
               style={FIELD_STYLE}
@@ -154,7 +180,10 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <span style={META}>Or Saved Agency Mapping</span>
             <select
               value={savedMappingUuid}
-              onChange={(e) => setSavedMappingUuid(e.target.value)}
+              onChange={(e) => {
+                setSavedMappingUuid(e.target.value);
+                dropPreview();
+              }}
               className="w-full px-3 py-2 rounded-xl text-xs"
               style={FIELD_STYLE}
             >
@@ -199,7 +228,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             value={csvText}
             onChange={(e) => {
               setCsvText(e.target.value);
-              setPreview(null);
+              dropPreview();
             }}
             placeholder="Event_Ref,Demo_Date,Retail_Chain,Store_Num,Street,City,State,SKU_Code,Cans_Sampled,Units_Sold"
             className="w-full p-3 rounded-xl text-xs mono"
@@ -219,8 +248,15 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                   mappingUuid: savedMappingUuid || null,
                   presetKey: savedMappingUuid ? null : presetKey,
                   columnMapJson: null,
+                  confirmColumnMap: false,
                 },
-                onCompleted: (r) => setPreview(r.previewProviderCsvImport),
+                onCompleted: (r) => {
+                  const next = r.previewProviderCsvImport;
+                  const parsed = parseColumnGuessPayload(next?.columnGuessesJson);
+                  setGuesses(parsed.guesses);
+                  setFieldChoices(parsed.fields);
+                  setPreview(next);
+                },
               });
             }}
             className="px-4 py-2 rounded-xl text-xs font-bold"
@@ -240,16 +276,19 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               />
               <button
                 type="button"
-                disabled={committing}
+                disabled={committing || fieldClash}
                 onClick={() => {
+                  const confirmed = confirmedColumnMap(guesses);
+                  const useConfirm = guesses.length > 0;
                   commitImport({
                     variables: {
                       providerUuid,
                       csvText,
                       filename,
-                      mappingUuid: savedMappingUuid || null,
-                      presetKey: savedMappingUuid ? null : presetKey,
-                      columnMapJson: null,
+                      mappingUuid: useConfirm ? null : savedMappingUuid || null,
+                      presetKey: useConfirm || savedMappingUuid ? null : presetKey,
+                      columnMapJson: useConfirm ? JSON.stringify(confirmed) : null,
+                      confirmColumnMap: useConfirm,
                       saveMappingName: saveMappingName.trim() || null,
                       isHistorical,
                     },
@@ -259,6 +298,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                           `Committed import job ${r.commitProviderCsvImport.targetUuid ?? ""}.`,
                         );
                         setPreview(null);
+                        setGuesses([]);
                         bump();
                       } else {
                         setStatusBanner(
@@ -295,6 +335,41 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 Errors: {preview.errorCount}
               </span>
             </div>
+            <ColumnConfirmPanel
+              guesses={guesses}
+              fields={fieldChoices}
+              onToggle={(header, included) =>
+                setGuesses((current) => setGuessIncluded(current, header, included))
+              }
+              onField={(header, field) =>
+                setGuesses((current) =>
+                  setGuessField(current, header, field, fieldChoices),
+                )
+              }
+            />
+            {guesses.length > 0 ? (
+              <button
+                type="button"
+                disabled={previewing || fieldClash}
+                onClick={() => {
+                  commitPreview({
+                    variables: {
+                      providerUuid,
+                      csvText,
+                      mappingUuid: null,
+                      presetKey: null,
+                      columnMapJson: JSON.stringify(confirmedColumnMap(guesses)),
+                      confirmColumnMap: true,
+                    },
+                    onCompleted: (r) => setPreview(r.previewProviderCsvImport),
+                  });
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={FIELD_STYLE}
+              >
+                {previewing ? "Updating preview…" : "Update preview with these columns"}
+              </button>
+            ) : null}
             <div className="overflow-x-auto max-h-72">
               <table className="w-full text-left text-xs">
                 <thead>
@@ -316,7 +391,12 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                       <td className="py-1.5 pr-3 mono" style={META}>
                         {r.errorCode || "ok"}
                       </td>
-                      <td className="py-1.5">{r.message || "Ready to import"}</td>
+                      <td className="py-1.5">
+                        {r.message || "Ready to import"}
+                        <StoreMatchNote
+                          match={storeMatchFromNormalized(r.normalizedRowJson)}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -352,6 +432,15 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                       Row #{row.rowNumber} · {row.errorCode}
                     </div>
                     <div style={META}>{row.message}</div>
+                    <StoreMatchNote
+                      match={storeMatchFromNormalized(row.normalizedRowJson)}
+                      onPick={(retailerId) =>
+                        setSelectedRetailerByRow((prev) => ({
+                          ...prev,
+                          [rowKey]: retailerId,
+                        }))
+                      }
+                    />
                   </div>
                   {row.rowUuid && ws.canEditBrandOps && (
                     <div className="flex flex-wrap items-center gap-2">

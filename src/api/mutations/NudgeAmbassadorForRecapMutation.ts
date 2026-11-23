@@ -17,6 +17,8 @@ export const NudgeAmbassadorForRecapMutation = graphql`
       success
       message
       devicesNotified
+      lastNudgedAt
+      lastNudgeChannel
     }
   }
 `;

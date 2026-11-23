@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   compareRecapTriage,
   countRecapTriage,
+  needsEyesWhyText,
   isRecapExplicitlyClean,
   parseRecapTriageLabel,
   recapMatchesTriageFilter,
@@ -55,5 +56,19 @@ describe("recapTriage", () => {
     expect(compareRecapTriage("b", "a", byId)).toBeLessThan(0);
     expect(compareRecapTriage("missing", "a", byId)).toBeLessThan(0);
     expect(compareRecapTriage("b", "missing", byId)).toBeLessThan(0);
+  });
+
+  it("shows a why line only for Needs Eyes", () => {
+    expect(
+      needsEyesWhyText({
+        label: "needs_eyes",
+        reasons: [],
+        why: "  The shelf has a gap.  ",
+      }),
+    ).toBe("The shelf has a gap.");
+    expect(
+      needsEyesWhyText({ label: "clean", reasons: [], why: "Should stay hidden." }),
+    ).toBeNull();
+    expect(needsEyesWhyText(null)).toBeNull();
   });
 });

@@ -30,3 +30,17 @@ export const UpsertDemoBudgetTargetMutation = graphql`
     }
   }
 `;
+
+/** Shared discard — clears the notice for every Ignite admin, not localStorage. */
+export const DiscardTodayAttentionItemsMutation = graphql`
+  mutation RoiPacingMutationsDiscardTodayAttentionItemsMutation(
+    $items: [TodayAttentionDiscardItemInput!]!
+  ) {
+    discardTodayAttentionItems(items: $items) {
+      ok
+      reason
+      discardedCount
+      fingerprints
+    }
+  }
+`;

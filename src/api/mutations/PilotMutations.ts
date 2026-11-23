@@ -145,6 +145,7 @@ export const PilotMutationsPreviewCsvImportMutation = graphql`
     $mappingUuid: String
     $presetKey: String
     $columnMapJson: String
+    $confirmColumnMap: Boolean!
   ) {
     previewProviderCsvImport(
       providerUuid: $providerUuid
@@ -152,9 +153,11 @@ export const PilotMutationsPreviewCsvImportMutation = graphql`
       mappingUuid: $mappingUuid
       presetKey: $presetKey
       columnMapJson: $columnMapJson
+      confirmColumnMap: $confirmColumnMap
     ) {
       headers
       resolvedMapJson
+      columnGuessesJson
       totalRows
       createdCount
       updatedCount
@@ -182,6 +185,7 @@ export const PilotMutationsCommitCsvImportMutation = graphql`
     $mappingUuid: String
     $presetKey: String
     $columnMapJson: String
+    $confirmColumnMap: Boolean!
     $saveMappingName: String
     $isHistorical: Boolean!
   ) {
@@ -192,6 +196,7 @@ export const PilotMutationsCommitCsvImportMutation = graphql`
       mappingUuid: $mappingUuid
       presetKey: $presetKey
       columnMapJson: $columnMapJson
+      confirmColumnMap: $confirmColumnMap
       saveMappingName: $saveMappingName
       isHistorical: $isHistorical
     ) {

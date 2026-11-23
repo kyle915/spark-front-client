@@ -779,6 +779,18 @@ function buildGraphqlData(
             sourceLabel: "Product receipt",
             explanation:
               "Product purchase line lacks an itemized store receipt photo.",
+            disputePack: {
+              summary:
+                "$64.20 Product Spend charge has no supporting receipt or proof attached.",
+              source: "rules",
+              facts: [
+                "Affected amount: $64.20",
+                "Source: Product receipt",
+                "Store: Sprouts #218 — Denver, CO",
+              ],
+              suggestedNextStep:
+                "Attach an itemized receipt to the cost line before resolving.",
+            },
             visitUuid: "vis-2",
             storeLabel: "Sprouts #218 — Denver, CO",
             visitDate: "2026-11-18",
@@ -807,6 +819,13 @@ function buildGraphqlData(
             affectedAmount: "42.00",
             sourceLabel: "Supplies",
             explanation: "Ice and cups slip verified against store total.",
+            disputePack: {
+              summary: "Ice and cups slip verified against store total.",
+              source: "rules",
+              facts: ["Affected amount: $42.00", "Source: Supplies"],
+              suggestedNextStep:
+                "Replace the summary slip with an itemized receipt, or grant a documented exception.",
+            },
             visitUuid: "vis-1",
             storeLabel: "Whole Foods #104 — Austin, TX",
             visitDate: "2026-11-16",
@@ -1212,6 +1231,19 @@ function buildGraphqlData(
         sortBy: "units_per_dollar",
         targets: [],
         leaderboard: [],
+      },
+    };
+  }
+  if (
+    queryText.includes("discardTodayAttentionItems") ||
+    op.includes("DiscardTodayAttentionItems")
+  ) {
+    return {
+      discardTodayAttentionItems: {
+        ok: true,
+        reason: null,
+        discardedCount: 0,
+        fingerprints: [],
       },
     };
   }

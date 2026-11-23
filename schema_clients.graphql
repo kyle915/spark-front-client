@@ -4953,6 +4953,13 @@ type FinanceExceptionAuditItem {
   createdAt: String!
 }
 
+type FinanceDisputePack {
+  summary: String!
+  source: String!
+  facts: [String!]!
+  suggestedNextStep: String!
+}
+
 type FinanceExceptionItem {
   uuid: String!
   exceptionType: String!
@@ -4972,6 +4979,7 @@ type FinanceExceptionItem {
   resolutionReason: String!
   createdAt: String!
   audits: [FinanceExceptionAuditItem!]!
+  disputePack: FinanceDisputePack
 }
 
 type FinanceQueueView {
@@ -5313,6 +5321,7 @@ type ImportPresetItem {
 type ImportPreviewResult {
   headers: [String!]!
   resolvedMapJson: String!
+  columnGuessesJson: String!
   totalRows: Int!
   createdCount: Int!
   updatedCount: Int!
@@ -6507,6 +6516,18 @@ type MissingRecapAmbassadorInfo {
   name: String!
   email: String
   isApproved: Boolean!
+  """ISO timestamp of the last recap nudge (cron or admin) for this BA+event."""
+  lastNudgedAt: String
+  """Channel of the last nudge — currently always \"push\" when set."""
+  lastNudgeChannel: String
+}
+
+type SuggestedWalkupAttachType {
+  orphanEventUuid: ID!
+  orphanEventName: String!
+  orphanAddress: String
+  requestUuid: ID!
+  confidence: String!
 }
 
 type MissingRecapEventType {
@@ -6521,6 +6542,7 @@ type MissingRecapEventType {
   hoursOverdue: Int
   requestUuid: ID
   assignedAmbassadors: [MissingRecapAmbassadorInfo!]!
+  suggestedWalkupAttach: SuggestedWalkupAttachType
 }
 
 type MonthHighlight {
@@ -6701,6 +6723,8 @@ type Mutation {
   reassignRecapEvent(input: ReassignRecapEventInput!): RecapDetailResponse!
   dismissMissingRecaps(input: DismissMissingRecapsInput!): DismissMissingRecapsResponse!
   restoreMissingRecaps(input: RestoreMissingRecapsInput!): RestoreMissingRecapsResponse!
+  attachWalkupOrphan(input: AttachWalkupOrphanInput!): AttachWalkupOrphanResponse!
+  attachSafeWalkupOrphans(input: AttachSafeWalkupOrphansInput!): AttachWalkupOrphanResponse!
   nudgeAmbassadorForRecap(input: NudgeAmbassadorForRecapInput!): NudgeRecapResponse!
   exportRecapsXlsx(input: ExportRecapsXlsxInput!): RecapExportResponse!
   exportRecapXlsx(input: ExportRecapXlsxInput!): RecapExportResponse!
@@ -6714,11 +6738,13 @@ type Mutation {
   generateWeeklyClientSummary(tenantId: ID!, weekStart: String!, period: String! = "week"): WeeklyClientSummaryResult!
   saveWeeklyClientSummary(id: ID!, editedBody: String!): WeeklyClientSummaryResult!
   setWeeklyClientSummaryReviewed(id: ID!, reviewed: Boolean!): WeeklyClientSummaryResult!
+  sendWeeklyClientSummary(id: ID!, recipients: [String!]!, message: String = null): WeeklyClientSummaryResult!
   setBrandInsightStatus(id: ID!, status: String!): BrandInsightResult!
   publishBrandInsights(tenantId: ID!, ids: [ID!] = null): BrandInsightBatchResult!
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
   upsertDemoBudgetTarget(targetAmount: String!, month: String = null, scopeType: String! = "workspace", scopeKey: String! = "", scopeLabel: String! = "", notes: String! = "", tenantId: ID = null): DemoBudgetTargetResult!
   deleteDemoBudgetTarget(uuid: String!, tenantId: ID = null): DemoBudgetTargetResult!
+  discardTodayAttentionItems(items: [TodayAttentionDiscardItemInput!]!, tenantId: ID = null): TodayAttentionDiscardResult!
   togglePhotoWallPin(photoId: String!, pinned: Boolean = null, note: String = null): PhotoWallPinResult!
   createBuyerPitchDeck(title: String!, subtitle: String = null, buyerName: String = null, introNote: String = null, periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null, includeCosts: Boolean! = false, passcode: String = null, expiresInDays: Int = null, pinnedPhotoIds: [String!] = null): BuyerPitchDeckCreateResult!
   revokeBuyerPitchDeck(deckUuid: String!): BuyerPitchDeckRevokeResult!
@@ -6970,8 +6996,8 @@ type Mutation {
   respondProviderAssignment(assignmentUuid: String!, decision: String!, responseNote: String! = ""): PilotMutationOutcome!
   revokeProviderAssignment(assignmentUuid: String!): PilotMutationOutcome!
   setProviderSourceInclusion(providerUuid: String!, includeInCombinedReporting: Boolean!, notes: String! = ""): PilotMutationOutcome!
-  previewProviderCsvImport(providerUuid: String!, csvText: String!, mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null): ImportPreviewResult!
-  commitProviderCsvImport(providerUuid: String!, csvText: String!, filename: String! = "upload.csv", mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, saveMappingName: String = null, idempotencyKey: String = null, isHistorical: Boolean! = false): PilotMutationOutcome!
+  previewProviderCsvImport(providerUuid: String!, csvText: String!, mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, confirmColumnMap: Boolean! = false): ImportPreviewResult!
+  commitProviderCsvImport(providerUuid: String!, csvText: String!, filename: String! = "upload.csv", mappingUuid: String = null, presetKey: String = null, columnMapJson: String = null, confirmColumnMap: Boolean! = false, saveMappingName: String = null, idempotencyKey: String = null, isHistorical: Boolean! = false): PilotMutationOutcome!
   resolveProviderImportRow(rowUuid: String!, retailerId: Int = null, confirmedStoreNumber: String = null, confirmedAddress: String = null, confirmedCity: String = null, confirmedState: String = null, saveStoreAlias: Boolean! = false, productId: Int = null, saveProductAlias: Boolean! = true): PilotMutationOutcome!
   upsertProviderAgreement(providerUuid: String!, name: String!, contractedDemoFee: String = null, includedHours: String! = "4.00", extraHourRate: String = null, mileageRate: String = null, adminFeePercent: String! = "0.00", adminFeeBases: [String!] = null, taxPercent: String! = "0.00"): PilotMutationOutcome!
   upsertBrandCostLine(visitUuid: String!, category: String!, sourceType: String! = "invoice_line", amount: String = null, isConfirmedZero: Boolean! = false, quantity: String = null, unitRate: String = null, description: String! = "", settlementStatus: String! = "invoiced", evidenceStatus: String = null, providerUuid: String = null, agreementUuid: String = null, lineUuid: String = null): PilotMutationOutcome!
@@ -7109,6 +7135,30 @@ type NudgeRecapResponse {
   message: String!
   clientMutationId: ID
   devicesNotified: Int
+  lastNudgedAt: String
+  lastNudgeChannel: String
+}
+
+input AttachWalkupOrphanInput {
+  clientMutationId: String
+  orphanEventUuid: ID!
+  requestUuid: ID!
+  lookbackDays: Int! = 45
+}
+
+input AttachSafeWalkupOrphansInput {
+  clientMutationId: String
+  tenantId: ID = null
+  lookbackDays: Int! = 45
+}
+
+type AttachWalkupOrphanResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  linkedCount: Int!
+  orphanEventUuid: ID
+  requestUuid: ID
 }
 
 input ObtainJSONWebTokenInput {
@@ -8336,6 +8386,7 @@ type Query {
   canonicalVisits(periodStart: String = null, periodEnd: String = null, storeKey: String = null, providerUuid: String = null): [CanonicalVisitItem!]!
   brandCostDashboard(groupBy: String! = "store", periodStart: String = null, periodEnd: String = null, providerUuid: String = null): BrandCostDashboard!
   financeExceptionQueue(exceptionType: String = null, status: String = null, providerUuid: String = null, storeKey: String = null, periodStart: String = null, periodEnd: String = null): FinanceQueueView!
+  financeExceptionDisputePack(exceptionUuid: String!, polish: Boolean! = false): FinanceDisputePack
   retailerPosDashboard(periodStart: String = null, periodEnd: String = null, storeKey: String = null, contributionPerUnit: String = null): RetailerPosDashboard!
   posAutomationWorkspace: PosAutomationWorkspace!
   storeRecommendationActions(storeKey: String = null): [StoreActionItem!]!
@@ -9027,6 +9078,8 @@ type RecapReviewTriageForRecap {
   recapId: ID!
   label: String!
   reasons: [RecapTriageReason!]!
+  why: String
+  whySource: String!
 }
 
 type RecapReviewerSummary {
@@ -11562,6 +11615,18 @@ type TodayAttentionBucket {
   items: [TodayAttentionItem!]!
 }
 
+input TodayAttentionDiscardItemInput {
+  bucket: String!
+  refId: String!
+}
+
+type TodayAttentionDiscardResult {
+  ok: Boolean!
+  reason: String
+  discardedCount: Int!
+  fingerprints: [String!]!
+}
+
 type TodayAttentionItem {
   bucket: String!
   title: String!
@@ -12695,12 +12760,16 @@ type WeeklyClientSummary {
   generatedAt: String!
   reviewedByName: String
   reviewedAt: String
+  sentAt: String
+  sentByName: String
+  sentTo: [String!]!
 }
 
 type WeeklyClientSummaryResult {
   ok: Boolean!
   reason: String
   summary: WeeklyClientSummary
+  sentCount: Int
 }
 
 type WeeklyClientSummaryRow {
@@ -12708,6 +12777,7 @@ type WeeklyClientSummaryRow {
   tenantName: String!
   approvedRecaps: Int!
   pendingRecaps: Int!
+  suggestedRecipients: [String!]!
   summary: WeeklyClientSummary
 }
 
