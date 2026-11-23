@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23k",
+    date: "November 23, 2026",
+    title: "Ask AI uses this year's program",
+    items: [
+      "Ask AI now answers “last month”, “this month”, and “which stores should we hit in December” from the current year and the same Home numbers (events run, consumers sampled, and who said they'd buy), instead of empty results from 2022 or 2023.",
+      "Suggested questions name the month and year they mean. Each answer still shows the Spark source it came from, and it still only uses this brand's data.",
+    ],
+  },
+  {
     id: "2026-11-23q",
     date: "November 23, 2026",
     title: "Ask AI answers shelf, cost, POS and competitors",
