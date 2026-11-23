@@ -14,8 +14,8 @@ import {
   fetchSwitchableTenants,
 } from "@/hooks/useAdoptRecordTenant";
 import {
-  TENANT_LINK_PARAM,
   decideTenantParamSwitch,
+  readTenantLinkParam,
   stripTenantParam,
 } from "@/lib/tenantDeepLink";
 
@@ -36,11 +36,12 @@ interface TenantRouteProps {
  *     used the same posture)
  *   - 0 tenants → land on the "no companies" state with a Logout button
  *
- * Links that carry `?tenant=<uuid>` (emailed list links: "Open Walk-ups",
- * digest "Open recaps →") are resolved HERE, before the shell renders, so
- * the list never loads under the previously selected client. The value is
- * matched against the user's own switcher list only — an unknown or
- * not-permitted tenant is ignored — and the param is then stripped.
+ * Links that carry `?t=<uuid>` (emailed portal / list links: "Open Walk-ups",
+ * digest "Open recaps →"; legacy `?tenant=` still accepted) are resolved
+ * HERE, before the shell renders, so the list never loads under the
+ * previously selected client. The value is matched against the user's own
+ * switcher list only — an unknown or not-permitted tenant is ignored —
+ * and the param is then stripped.
  */
 export default function TenantRoute({ component }: TenantRouteProps) {
   const navigate = useNavigate();
@@ -49,9 +50,7 @@ export default function TenantRoute({ component }: TenantRouteProps) {
   const [resolving, setResolving] = useState(!tenantUuid);
   const [noTenants, setNoTenants] = useState(false);
   const location = useLocation();
-  const tenantParam = new URLSearchParams(location.search).get(
-    TENANT_LINK_PARAM,
-  );
+  const tenantParam = readTenantLinkParam(location.search);
   const { pathname, search, hash, state: locationState } = location;
 
   useEffect(() => {
@@ -85,7 +84,7 @@ export default function TenantRoute({ component }: TenantRouteProps) {
   }, [tenantParam, pathname, search, hash, locationState, user?.uuid, navigate]);
 
   useEffect(() => {
-    // A ?tenant= link picks the client above; don't race it with the
+    // A ?t= / ?tenant= link picks the client above; don't race it with the
     // last-used default. This effect re-runs once the param is stripped.
     if (tenantParam) return;
     if (tenantUuid) {

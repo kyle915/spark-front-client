@@ -14,14 +14,18 @@ afterEach(() => {
 });
 
 describe("feedbackMailto", () => {
-  it("addresses both product owners and carries the page", () => {
+  it("addresses events@igniteproductions.co and carries the page", () => {
     const href = feedbackMailto({
       pageTitle: "Staffing Board",
       pageUrl: "https://client.igniteproductions.co/schedule",
       clientName: "Pivot Energy Drink",
     });
-    expect(href.startsWith(`mailto:${FEEDBACK_RECIPIENTS.join(",")}?`)).toBe(true);
+    expect(FEEDBACK_RECIPIENTS).toEqual(["events@igniteproductions.co"]);
+    expect(href.startsWith("mailto:events@igniteproductions.co?")).toBe(true);
     const decoded = decodeURIComponent(href);
+    expect(decoded.match(/[\w.+-]+@[\w.-]+\.\w+/g)).toEqual([
+      "events@igniteproductions.co",
+    ]);
     expect(decoded).toContain("Spark feedback — Staffing Board");
     expect(decoded).toContain("Link: https://client.igniteproductions.co/schedule");
     expect(decoded).toContain("Client: Pivot Energy Drink");
@@ -75,16 +79,39 @@ describe("whatsNewFor", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Landed on main: Photo Wall / pitch decks, POS + digests, Shifts Board
-    for (const id of ["2026-11-23p", "2026-11-23r", "2026-11-23c"] as const) {
+    // Landed: deck captions + dispute notes, field-fill, email ?t=, KPI strip,
+    // Ask AI, Photo Wall / pitch decks, POS + digests, Shifts Board
+    for (const id of [
+      "2026-11-23v",
+      "2026-11-23w",
+      "2026-11-23t",
+      "2026-11-23k",
+      "2026-11-23q",
+      "2026-11-23p",
+      "2026-11-23r",
+      "2026-11-23c",
+    ] as const) {
       expect(clientIds.has(id)).toBe(true);
       expect(staffIds.has(id)).toBe(true);
     }
 
-    // Staff-only landed: Check-In Studio, map-this-store, Clean/Needs Eyes,
-    // shelf coach, attention, UTMs
+    // Client + staff: upcoming activations excluded from recaps due
+    expect(clientIds.has("2026-11-23h")).toBe(true);
+    expect(staffIds.has("2026-11-23h")).toBe(true);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
+
+    // Staff-only: Check-In Studio, Needs Eyes/CSV, Send, walk-up attach,
+    // nudge-all-overdue, denser attention, route lock, finance queue,
+    // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
-      "2026-11-23k",
+      "2026-11-23aa",
+      "2026-11-23z",
+      "2026-11-23y",
+      "2026-11-23o",
+      "2026-11-23n",
+      "2026-11-23d",
+      "2026-11-23g",
+      "2026-11-23f",
       "2026-11-23m",
       "2026-11-23e",
       "2026-11-23s",
@@ -96,9 +123,9 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Staff tip is newest staff note; clients skip staffOnly → Photo Wall
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23p");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23k");
+    // Client newest is deck captions. Staff see Check-In Studio first.
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23v");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23aa");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -118,17 +145,17 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23p");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23v");
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23k");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23aa");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
-    const store = new Map<string, string>([["@spark.whatsNew.seen", "2026-11-23p"]]);
+    const store = new Map<string, string>([["@spark.whatsNew.seen", "2026-11-23t"]]);
     vi.stubGlobal("window", {
       localStorage: {
         getItem: (k: string) => store.get(k) ?? null,
@@ -138,8 +165,12 @@ describe("whatsNewFor", () => {
       },
     });
 
-    expect(hasUnseenWhatsNew(true)).toBe(false);
-    // Staff tip is 2026-11-23k — legacy client tip must not clear the staff unread dot
+    // Client tip is 2026-11-23v and staff tip is 2026-11-23aa — legacy email tip clears neither.
+    expect(hasUnseenWhatsNew(true)).toBe(true);
+    expect(hasUnseenWhatsNew(false)).toBe(true);
+
+    store.set("@spark.whatsNew.seen", "2026-11-23p");
+    expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
   });
 });

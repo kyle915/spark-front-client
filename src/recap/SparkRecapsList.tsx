@@ -110,6 +110,7 @@ import {
 import { BaNameFilter } from "./BaNameFilter";
 import { RecapTypeChips } from "./RecapTypeChips";
 import ListSearch from "@/components/search/ListSearch";
+import { NeedsEyesWhy } from "./NeedsEyesWhy";
 import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
 import { useRecapReviewFlags } from "./useRecapReviewFlags";
 import type { ReviewFlagSummary } from "./reviewCheckDisplay";
@@ -118,6 +119,7 @@ import { inputColorScheme } from "@/theme/inputColorScheme";
 import {
   compareRecapTriage,
   countRecapTriage,
+  needsEyesWhyText,
   isRecapExplicitlyClean,
   recapMatchesTriageFilter,
   resolvedRecapTriageLabel,
@@ -490,7 +492,8 @@ const RecapCard: React.FC<{
   onPushToPlan?: ((recap: Recap) => void) | null;
   onOpenRecap?: ((recap: Recap) => void) | null;
   reviewFlags?: readonly ReviewFlagSummary[] | null;
-}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap, reviewFlags }) => {
+  needsEyesWhy?: string | null;
+}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap, reviewFlags, needsEyesWhy }) => {
   const baLabel = useBaLabel();
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
@@ -755,6 +758,7 @@ const RecapCard: React.FC<{
       {!emptyShell && !approved ? (
         <div className="mt-2">
           <RecapReviewFlagBadges flags={reviewFlags} />
+          <NeedsEyesWhy text={needsEyesWhy} />
         </div>
       ) : null}
 
@@ -889,7 +893,8 @@ const RecapCompactRow: React.FC<{
   forceApproved?: boolean;
   onOpenRecap?: ((recap: Recap) => void) | null;
   reviewFlags?: readonly ReviewFlagSummary[] | null;
-}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap, reviewFlags }) => {
+  needsEyesWhy?: string | null;
+}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap, reviewFlags, needsEyesWhy }) => {
   const baLabel = useBaLabel();
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
@@ -985,6 +990,7 @@ const RecapCompactRow: React.FC<{
         {!emptyShell && !approved ? (
           <div className="mt-1">
             <RecapReviewFlagBadges flags={reviewFlags} compact />
+            <NeedsEyesWhy text={needsEyesWhy} />
           </div>
         ) : null}
         <p
@@ -2144,6 +2150,9 @@ const RecapsListFetched: React.FC<{
               forceApproved={justApprovedIds.has(r.id)}
               onOpenRecap={onOpenRecap}
               reviewFlags={reviewFlagsById?.get(r.id)}
+              needsEyesWhy={needsEyesWhyText(
+                isClient ? null : triageById?.get(r.id),
+              )}
             />
           ))}
         </div>
@@ -2170,6 +2179,9 @@ const RecapsListFetched: React.FC<{
           onPushToPlan={plansOn ? setPlanTarget : null}
           onOpenRecap={onOpenRecap}
           reviewFlags={reviewFlagsById?.get(r.id)}
+          needsEyesWhy={needsEyesWhyText(
+            isClient ? null : triageById?.get(r.id),
+          )}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
@@ -3608,7 +3620,7 @@ export default function SparkRecapsList() {
                         triageFilter === key
                           ? key === "needs_eyes"
                             ? "var(--spark-orange)"
-                            : "var(--spark-lime)"
+                            : "var(--spark-ok-ink)"
                           : "rgba(var(--spark-ink-rgb),0.65)",
                     }}
                   >

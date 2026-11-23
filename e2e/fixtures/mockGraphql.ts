@@ -42,7 +42,7 @@ const PROVIDER_IGNITE = {
   uuid: "aaaa1111-1111-4111-8111-111111111111",
   name: "Ignite Productions",
   slug: "ignite-productions",
-  contactEmail: "ops@igniteproductions.co",
+  contactEmail: "ops@sparkdemo.example",
   isIgniteManaged: true,
   includeInCombinedReporting: true,
   inclusionNotes: "Primary field agency",
@@ -79,7 +79,7 @@ const WORKSPACE_OVERVIEW = {
     {
       uuid: "mem-1",
       userId: 10,
-      email: "kyle@igniteproductions.co",
+      email: "admin@sparkdemo.example",
       fullName: "Kyle Admin",
       workspaceRole: "brand_admin",
       providerUuid: null,
@@ -125,7 +125,7 @@ const WORKSPACE_OVERVIEW = {
   auditLogs: [
     {
       uuid: "aud-1",
-      actorEmail: "kyle@igniteproductions.co",
+      actorEmail: "admin@sparkdemo.example",
       category: "permissions",
       action: "provider_registered",
       summary: "Registered FieldPulse Demos for Midwest retail coverage",
@@ -171,7 +171,7 @@ function buildGraphqlData(
           : "99999999-9999-4999-8999-999999999991",
         email: isClient
           ? "brand@sparkdemo.example"
-          : "kyle@igniteproductions.co",
+          : "admin@sparkdemo.example",
         firstName: isClient ? "Maya" : "Kyle",
         lastName: isClient ? "Brand" : "Ops",
         username: isClient ? "maya-brand" : "kyle-ops",
@@ -779,6 +779,18 @@ function buildGraphqlData(
             sourceLabel: "Product receipt",
             explanation:
               "Product purchase line lacks an itemized store receipt photo.",
+            disputePack: {
+              summary:
+                "$64.20 Product Spend charge has no supporting receipt or proof attached.",
+              source: "rules",
+              facts: [
+                "Affected amount: $64.20",
+                "Source: Product receipt",
+                "Store: Sprouts #218 — Denver, CO",
+              ],
+              suggestedNextStep:
+                "Attach an itemized receipt to the cost line before resolving.",
+            },
             visitUuid: "vis-2",
             storeLabel: "Sprouts #218 — Denver, CO",
             visitDate: "2026-11-18",
@@ -807,13 +819,20 @@ function buildGraphqlData(
             affectedAmount: "42.00",
             sourceLabel: "Supplies",
             explanation: "Ice and cups slip verified against store total.",
+            disputePack: {
+              summary: "Ice and cups slip verified against store total.",
+              source: "rules",
+              facts: ["Affected amount: $42.00", "Source: Supplies"],
+              suggestedNextStep:
+                "Replace the summary slip with an itemized receipt, or grant a documented exception.",
+            },
             visitUuid: "vis-1",
             storeLabel: "Whole Foods #104 — Austin, TX",
             visitDate: "2026-11-16",
             costLineUuid: "cl-8",
             providerName: "Ignite Productions",
             ownerUserId: 10,
-            ownerEmail: "kyle@igniteproductions.co",
+            ownerEmail: "admin@sparkdemo.example",
             clarificationNote: null,
             resolutionReason: "Verified itemized receipt attached.",
             createdAt: "2026-11-17T09:15:00Z",
@@ -1008,7 +1027,7 @@ function buildGraphqlData(
             currentActionUuid: "act-1",
             currentActionType: "rebook",
             currentActionStatus: "scheduled",
-            currentActionOwner: "kyle@igniteproductions.co",
+            currentActionOwner: "admin@sparkdemo.example",
             currentActionProvider: "Ignite Productions",
           },
         ],
@@ -1026,7 +1045,7 @@ function buildGraphqlData(
           providerUuid: PROVIDER_FIELDPULSE.uuid,
           providerName: PROVIDER_FIELDPULSE.name,
           previousProviderName: null,
-          ownerEmail: "kyle@igniteproductions.co",
+          ownerEmail: "admin@sparkdemo.example",
           targetDate: "2026-12-05",
           dueDate: null,
           holdReason: null,
@@ -1055,7 +1074,7 @@ function buildGraphqlData(
           providerUuid: PROVIDER_IGNITE.uuid,
           providerName: PROVIDER_IGNITE.name,
           previousProviderName: null,
-          ownerEmail: "kyle@igniteproductions.co",
+          ownerEmail: "admin@sparkdemo.example",
           targetDate: null,
           dueDate: "2026-11-28",
           holdReason: null,
@@ -1101,7 +1120,7 @@ function buildGraphqlData(
           photoCount: 2,
           viewCount: 0,
           createdAt: "2026-11-20T18:00:00Z",
-          createdByEmail: "kyle@igniteproductions.co",
+          createdByEmail: "admin@sparkdemo.example",
         },
       ],
     };
@@ -1212,6 +1231,19 @@ function buildGraphqlData(
         sortBy: "units_per_dollar",
         targets: [],
         leaderboard: [],
+      },
+    };
+  }
+  if (
+    queryText.includes("discardTodayAttentionItems") ||
+    op.includes("DiscardTodayAttentionItems")
+  ) {
+    return {
+      discardTodayAttentionItems: {
+        ok: true,
+        reason: null,
+        discardedCount: 0,
+        fingerprints: [],
       },
     };
   }

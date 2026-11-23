@@ -156,7 +156,7 @@ const FinanceBody: React.FC<{
           <option value="missing_proof">Missing proof</option>
           <option value="unitemized_proof">Unitemized proof</option>
           <option value="suspected_duplicate">Suspected duplicate charge</option>
-          <option value="unmatched_cost">Unmatched cost / receipt</option>
+          <option value="unmatched_transaction">Unmatched cost / receipt</option>
           <option value="allocation_discrepancy">Allocation discrepancy</option>
         </select>
 
@@ -213,6 +213,15 @@ const FinanceBody: React.FC<{
                       )}
                     </div>
                     <p className="text-sm font-medium">{exc.explanation}</p>
+                    {exc.disputePack?.summary &&
+                    exc.disputePack.summary !== exc.explanation ? (
+                      <p className="text-xs mt-1" style={META}>
+                        Dispute note ({exc.disputePack.source}):{" "}
+                        <span style={{ color: "var(--spark-text)" }}>
+                          {exc.disputePack.summary}
+                        </span>
+                      </p>
+                    ) : null}
                     <p className="text-xs" style={META}>
                       Affected:{" "}
                       <strong className="mono">
@@ -242,6 +251,56 @@ const FinanceBody: React.FC<{
                     className="pt-3 space-y-3 text-xs"
                     style={{ borderTop: "1px solid var(--spark-border)" }}
                   >
+                    {exc.disputePack ? (
+                      <div
+                        className="rounded-xl p-3 space-y-2"
+                        style={{
+                          background: "var(--spark-surface-2, var(--spark-surface))",
+                          border: "1px solid var(--spark-border)",
+                        }}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-semibold">Dispute pack</p>
+                          <button
+                            type="button"
+                            className="px-2.5 py-1 rounded-lg font-semibold"
+                            style={FIELD_STYLE}
+                            onClick={async () => {
+                              const pack = exc.disputePack;
+                              if (!pack) return;
+                              const blob = [
+                                pack.summary,
+                                "",
+                                ...(pack.facts || []),
+                                "",
+                                `Next: ${pack.suggestedNextStep}`,
+                              ].join("\n");
+                              try {
+                                await navigator.clipboard.writeText(blob);
+                                setBanner("Dispute note copied.");
+                              } catch {
+                                setBanner("Could not copy — select the note manually.");
+                              }
+                            }}
+                          >
+                            Copy dispute note
+                          </button>
+                        </div>
+                        <p style={{ color: "var(--spark-text)" }}>
+                          {exc.disputePack.summary}
+                        </p>
+                        {exc.disputePack.facts?.length ? (
+                          <ul className="space-y-0.5 mono" style={META}>
+                            {exc.disputePack.facts.map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        <p style={META}>
+                          Next: {exc.disputePack.suggestedNextStep}
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                       <select
                         value={exc.ownerUserId ?? ""}
@@ -313,7 +372,8 @@ const FinanceBody: React.FC<{
                         </button>
                       </div>
 
-                      {exc.exceptionType === "unmatched_cost" && (
+                      {(exc.exceptionType === "unmatched_transaction" ||
+                        exc.exceptionType === "unmatched_cost") && (
                         <div className="flex gap-1.5">
                           <select
                             value={visitMatchByUuid[exc.uuid] ?? ""}
@@ -345,7 +405,9 @@ const FinanceBody: React.FC<{
                                   category: "product",
                                 },
                                 onCompleted: () => {
-                                  setBanner("Linked unmatched cost to visit.");
+                                  setBanner(
+                                    "Linked unmatched transaction to visit.",
+                                  );
                                   bump();
                                 },
                               });

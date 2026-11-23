@@ -10,6 +10,11 @@ function localDateString(d: Date): string {
  * be flagged as due (otherwise every future booking lights up the tracker +
  * the sidebar "N RECAPS DUE" badge).
  *
+ * Prefer the activation / event date over a stale Request.date after a
+ * reschedule. The API `missing_recap_events_queryset` (sidebar `recapsDue`,
+ * /recaps/missing, client Needs-you) likewise drops rows whose start/date is
+ * still upcoming even when `end_time` is a leftover past stamp.
+ *
  * `lookbackDays` (default 30) bounds how far back a past event still counts as
  * due. This matches the backend `missing_recap_events` window (events in the
  * last 30 days with no recap) so the sidebar badge doesn't ratchet up forever

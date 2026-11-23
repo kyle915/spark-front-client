@@ -6,6 +6,7 @@ import {
 } from "@/recap/RecapClientSignoff";
 import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { RecapKpiStrip } from "@/recap/RecapDetailShell";
 import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { RecapComments } from "./RecapComments";
@@ -364,173 +365,169 @@ const PublicRecap: React.FC = () => {
             </p>
           </header>
 
-          {/* Photos lead — hero + mosaic, then KPIs / fields */}
-          {photos.length > 0 ? (
-            <section aria-label="Recap photos">
-              {hero && (
-                <button
-                  type="button"
-                  onClick={() => setLightboxIndex(0)}
-                  className="block w-full overflow-hidden rounded-2xl text-left"
-                  style={{
-                    border: "1px solid var(--recap-border, #e2e4d8)",
-                    background: "var(--recap-surface, #fff)",
-                    padding: 0,
-                    cursor: "zoom-in",
-                  }}
-                >
-                  <img
-                    src={thumbUrl(hero.url, 800) || hero.url}
-                    alt={hero.name ?? "Recap photo"}
-                    className="w-full object-cover"
-                    style={{
-                      maxHeight: "min(70vh, 560px)",
-                      minHeight: 220,
-                    }}
-                  />
-                </button>
-              )}
-              {restPhotos.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                  {restPhotos.map((p, i) => (
-                    <button
-                      key={p.url}
-                      type="button"
-                      onClick={() => setLightboxIndex(i + 1)}
-                      className="block overflow-hidden rounded-xl text-left"
-                      style={{
-                        border: "1px solid var(--recap-border, #e2e4d8)",
-                        padding: 0,
-                        cursor: "zoom-in",
-                        background: "transparent",
-                      }}
-                    >
-                      <img
-                        src={thumbUrl(p.url, 400) || p.url}
-                        alt={p.name ?? "Recap photo"}
-                        className="w-full h-36 md:h-40 object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-              <p
-                className="mono text-[10px] mt-2"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "var(--recap-muted, #5c6154)",
-                }}
-              >
-                {photos.length} PHOTO{photos.length === 1 ? "" : "S"} · TAP TO ENLARGE
-              </p>
-            </section>
-          ) : null}
-
-          {videos.length > 0 ? (
-            <section aria-label="Recap videos" className="space-y-2">
-              <p
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "var(--recap-muted, #5c6154)",
-                }}
-              >
-                {videos.length} VIDEO{videos.length === 1 ? "" : "S"}
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-                {videos.map((p) => (
-                  <button
-                    key={p.url}
-                    type="button"
-                    onClick={() => setPlayingVideo({ url: p.url, name: p.name })}
-                    className="relative block h-36 w-full overflow-hidden rounded-xl text-left"
-                    style={{
-                      border: "1px solid var(--recap-border, #e2e4d8)",
-                      color: "var(--recap-brand, #3f5c12)",
-                      fontWeight: 800,
-                      letterSpacing: "0.12em",
-                      fontSize: 12,
-                      background: "var(--recap-surface, #fff)",
-                      padding: 0,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <video
-                      src={p.url}
-                      muted
-                      playsInline
-                      preload="metadata"
-                      className="pointer-events-none h-full w-full object-cover"
-                    />
-                    <span
-                      className="absolute inset-0 flex items-center justify-center"
-                      style={{ background: "rgba(10,13,9,0.28)" }}
-                    >
-                      PLAY
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {kpis.length > 0 && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {kpis.slice(0, 4).map((k, i) => (
-                <div
-                  key={k.label}
-                  className="kpi"
-                  style={
-                    i === 0
-                      ? {
-                          boxShadow:
-                            "0 8px 22px color-mix(in srgb, var(--recap-brand, #f2f3ee) 10%, transparent)",
-                        }
-                      : undefined
-                  }
-                >
-                  <p
-                    className="kpi-value"
-                    style={{ color: "var(--recap-brand, var(--spark-lime))" }}
-                  >
-                    {typeof k.value === "number" && k.label.includes("$")
-                      ? `$${k.value.toFixed(2)}`
-                      : fmtNum(k.value)}
-                  </p>
-                  <p className="kpi-label">{k.label}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <RecapShareFieldSections
-            sections={Array.from(
-              (recap.fields ?? []).reduce((map, field) => {
-                const key = field.section || "Details";
-                const list = map.get(key) ?? [];
-                list.push(field);
-                map.set(key, list);
-                return map;
-              }, new Map<string, PublicField[]>()),
-            ).map(([name, fields]) => ({ name, fields }))}
-          />
-
-          <RecapClientSignoff
-            existingStatus={recap.clientSignoff?.status}
-            existingComment={recap.clientSignoff?.comment}
-            existingAt={recap.clientSignoff?.at}
-            busy={signoffBusy}
-            onSubmit={submitSignoff}
-          />
-
-          {recap.approved ? (
-            <RecapComments
-              comments={recap.comments ?? []}
-              busy={commentBusy}
-              error={commentError}
-              onSubmit={submitComment}
+          {/* Engagements / Sold / Conv / Photos — under title, above photos. */}
+          {kpis.length > 0 ? (
+            <RecapKpiStrip
+              items={kpis.slice(0, 4).map((k, i) => ({
+                label: k.label,
+                value:
+                  typeof k.value === "number" && k.label.includes("$")
+                    ? `$${k.value.toFixed(2)}`
+                    : fmtNum(k.value),
+                glow: i === 0,
+              }))}
             />
           ) : null}
+
+          {/* Match client: fields fill a 2-col grid; media on the right (xl flex). */}
+          <div className="flex flex-col xl:flex-row gap-6 items-start">
+            {(photos.length > 0 || videos.length > 0) && (
+              <div className="order-1 w-full xl:order-2 xl:w-[min(42%,32rem)] xl:shrink-0 xl:sticky xl:top-4 space-y-4">
+                {photos.length > 0 ? (
+                  <section aria-label="Recap photos">
+                    {hero && (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxIndex(0)}
+                        className="block w-full overflow-hidden rounded-2xl text-left"
+                        style={{
+                          border: "1px solid var(--recap-border, #e2e4d8)",
+                          background: "var(--recap-surface, #fff)",
+                          padding: 0,
+                          cursor: "zoom-in",
+                        }}
+                      >
+                        <img
+                          src={thumbUrl(hero.url, 800) || hero.url}
+                          alt={hero.name ?? "Recap photo"}
+                          className="w-full object-cover"
+                          style={{
+                            maxHeight: "min(50vh, 420px)",
+                            minHeight: 180,
+                          }}
+                        />
+                      </button>
+                    )}
+                    {restPhotos.length > 0 && (
+                      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:[grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]">
+                        {restPhotos.map((p, i) => (
+                          <button
+                            key={p.url}
+                            type="button"
+                            onClick={() => setLightboxIndex(i + 1)}
+                            className="block overflow-hidden rounded-xl text-left"
+                            style={{
+                              border: "1px solid var(--recap-border, #e2e4d8)",
+                              padding: 0,
+                              cursor: "zoom-in",
+                              background: "transparent",
+                            }}
+                          >
+                            <img
+                              src={thumbUrl(p.url, 400) || p.url}
+                              alt={p.name ?? "Recap photo"}
+                              className="w-full h-32 md:h-36 object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p
+                      className="mono text-[10px] mt-2"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "var(--recap-muted, #5c6154)",
+                      }}
+                    >
+                      {photos.length} PHOTO{photos.length === 1 ? "" : "S"} · TAP TO ENLARGE
+                    </p>
+                  </section>
+                ) : null}
+
+                {videos.length > 0 ? (
+                  <section aria-label="Recap videos" className="space-y-2">
+                    <p
+                      className="mono text-[10px]"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "var(--recap-muted, #5c6154)",
+                      }}
+                    >
+                      {videos.length} VIDEO{videos.length === 1 ? "" : "S"}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2.5 sm:[grid-template-columns:repeat(auto-fill,minmax(120px,1fr))]">
+                      {videos.map((p) => (
+                        <button
+                          key={p.url}
+                          type="button"
+                          onClick={() => setPlayingVideo({ url: p.url, name: p.name })}
+                          className="relative block h-32 w-full overflow-hidden rounded-xl text-left"
+                          style={{
+                            border: "1px solid var(--recap-border, #e2e4d8)",
+                            color: "var(--recap-heading, #3f5c12)",
+                            fontWeight: 800,
+                            letterSpacing: "0.12em",
+                            fontSize: 12,
+                            background: "var(--recap-surface, #fff)",
+                            padding: 0,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <video
+                            src={p.url}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            className="pointer-events-none h-full w-full object-cover"
+                          />
+                          <span
+                            className="absolute inset-0 flex items-center justify-center"
+                            style={{ background: "rgba(10,13,9,0.28)" }}
+                          >
+                            PLAY
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+              </div>
+            )}
+
+            <div className="order-2 xl:order-1 flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <RecapShareFieldSections
+                className="contents"
+                sections={Array.from(
+                  (recap.fields ?? []).reduce((map, field) => {
+                    const key = field.section || "Details";
+                    const list = map.get(key) ?? [];
+                    list.push(field);
+                    map.set(key, list);
+                    return map;
+                  }, new Map<string, PublicField[]>()),
+                ).map(([name, fields]) => ({ name, fields }))}
+              />
+
+              <div className="md:col-span-2 space-y-6">
+                <RecapClientSignoff
+                  existingStatus={recap.clientSignoff?.status}
+                  existingComment={recap.clientSignoff?.comment}
+                  existingAt={recap.clientSignoff?.at}
+                  busy={signoffBusy}
+                  onSubmit={submitSignoff}
+                />
+
+                {recap.approved ? (
+                  <RecapComments
+                    comments={recap.comments ?? []}
+                    busy={commentBusy}
+                    error={commentError}
+                    onSubmit={submitComment}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>,
         <div className="flex items-center gap-2">
           <button

@@ -29,6 +29,9 @@ export const GenerateWeeklyClientSummaryMutation = graphql`
         generatedAt
         reviewedByName
         reviewedAt
+        sentAt
+        sentByName
+        sentTo
       }
     }
   }
@@ -55,6 +58,9 @@ export const SaveWeeklyClientSummaryMutation = graphql`
         generatedAt
         reviewedByName
         reviewedAt
+        sentAt
+        sentByName
+        sentTo
       }
     }
   }
@@ -81,6 +87,43 @@ export const SetWeeklyClientSummaryReviewedMutation = graphql`
         generatedAt
         reviewedByName
         reviewedAt
+        sentAt
+        sentByName
+        sentTo
+      }
+    }
+  }
+`;
+
+/**
+ * Email the branded weekly / monthly summary HTML to brand recipients.
+ * Stamps sentAt / sentBy / sentTo on the stored row.
+ */
+export const SendWeeklyClientSummaryMutation = graphql`
+  mutation WeeklyClientSummaryMutationsSendMutation(
+    $id: ID!
+    $recipients: [String!]!
+    $message: String
+  ) {
+    sendWeeklyClientSummary(id: $id, recipients: $recipients, message: $message) {
+      ok
+      reason
+      sentCount
+      summary {
+        id
+        period
+        weekStart
+        weekEnd
+        body
+        editedBody
+        text
+        status
+        generatedAt
+        reviewedByName
+        reviewedAt
+        sentAt
+        sentByName
+        sentTo
       }
     }
   }

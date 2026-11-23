@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import {
   formatRecapFieldLabel,
   formatRecapProductName,
@@ -70,14 +71,19 @@ export type RecapShareField = {
   imageUrl?: string | null;
 };
 
-/** Public / client recap: lime section + grouped metric rows. */
+/** Public / client recap: section cards with grouped metric rows. */
 export function RecapShareFieldSections({
   sections,
+  className,
+  cardClassName,
 }: {
   sections: { name: string; fields: RecapShareField[] }[];
+  /** Wrapper — use `contents` so cards participate in a parent CSS grid. */
+  className?: string;
+  cardClassName?: string;
 }) {
   return (
-    <>
+    <div className={cn(className)}>
       {sections.map((section) => {
         const withValue = section.fields.filter(
           (f) => f.imageUrl || Boolean((f.value ?? "").trim()),
@@ -105,7 +111,7 @@ export function RecapShareFieldSections({
           return null;
         }
         return (
-          <div key={section.name} className="spark-card p-6">
+          <div key={section.name} className={cn("spark-card p-6", cardClassName)}>
             <p
               className="text-sm font-semibold mb-4"
               style={{ color: "var(--recap-heading, #3f5c12)" }}
@@ -181,7 +187,7 @@ export function RecapShareFieldSections({
           </div>
         );
       })}
-    </>
+    </div>
   );
 }
 

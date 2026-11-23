@@ -23,6 +23,8 @@ type PitchPayload = {
   brandName?: string;
   requiresPasscode?: boolean;
   introNote?: string;
+  sellStory?: string;
+  sellStorySource?: string;
   periodStart?: string;
   periodEnd?: string;
   retailerFilter?: string;
@@ -257,11 +259,29 @@ const PublicPitch: React.FC = () => {
 
   const kpis = data.kpis || {};
   const photos = data.photos || [];
-  const lightbox: PhotoLightboxItem[] = photos.map((p) => ({
-    url: p.url,
-    caption: [p.store, p.category, p.caption].filter(Boolean).join(" · "),
-    name: p.store || p.retailer,
-  }));
+  const sellStory = (data.sellStory || data.introNote || "").trim();
+  const lightbox: PhotoLightboxItem[] = photos.map((p) => {
+    const store = (p.store || p.retailer || "").trim();
+    const secondary = [store, p.category].filter(Boolean).join(" · ");
+    const sellCaption = (p.caption || "").trim();
+    // Keep store/category even when a sell-story caption exists — PhotoLightbox
+    // used to drop `name` whenever `caption` was set.
+    let caption = sellCaption;
+    if (sellCaption && secondary) {
+      const alreadyNamesStore =
+        !!store && sellCaption.toLowerCase().includes(store.toLowerCase());
+      caption = alreadyNamesStore
+        ? sellCaption
+        : `${sellCaption} · ${secondary}`;
+    } else if (!sellCaption) {
+      caption = secondary;
+    }
+    return {
+      url: p.url,
+      caption,
+      name: store || p.category || undefined,
+    };
+  });
 
   return (
     <RecapDocument page>
@@ -287,9 +307,9 @@ const PublicPitch: React.FC = () => {
             {data.retailerFilter ? ` · ${data.retailerFilter}` : ""}
             {data.marketFilter ? ` · ${data.marketFilter}` : ""}
           </p>
-          {data.introNote ? (
+          {sellStory ? (
             <p className="text-sm leading-relaxed" style={{ color: ink }}>
-              {data.introNote}
+              {sellStory}
             </p>
           ) : null}
         </header>
@@ -407,10 +427,15 @@ const PublicPitch: React.FC = () => {
                     className="w-full aspect-[4/3] object-cover"
                     loading="lazy"
                   />
-                  <div className="p-2">
+                  <div className="p-2 space-y-0.5">
                     <p className="text-xs font-semibold" style={{ color: ink }}>
                       {p.store || p.retailer || "Store"}
                     </p>
+                    {p.caption ? (
+                      <p className="text-[11px] leading-snug" style={{ color: ink }}>
+                        {p.caption}
+                      </p>
+                    ) : null}
                     <p className="text-[11px]" style={{ color: muted }}>
                       {[p.market, p.eventDate].filter(Boolean).join(" · ")}
                     </p>

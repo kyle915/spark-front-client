@@ -14,7 +14,7 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-23k",
+    id: "2026-11-23aa",
     date: "November 23, 2026",
     title: "Standing Check-In Studio on Walk-ups",
     staffOnly: true,
@@ -22,6 +22,133 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "On Walk-ups → Standing codes, staff can edit programs, photo buckets, BA PDF/link materials, and location mode (store address vs market picker) without a setup workflow ticket.",
       "The live standing check-in code stays immutable once issued — Studio never remints or rotates it. Issue a code only when the brand has none yet.",
       "All standing codes across brands still list under the studio for copy/QR, including client-team twin links.",
+    ],
+  },
+  {
+    id: "2026-11-23z",
+    date: "November 23, 2026",
+    title: "Why a recap Needs Eyes, and confirm CSV guesses",
+    staffOnly: true,
+    items: [
+      "On Needs review, each Needs Eyes recap now has one short line saying why. Clean rows stay quiet, and the Clean / Needs Eyes rules are unchanged. The line never approves or rejects a recap.",
+      "Provider CSV import shows its column guesses and why. A header Spark only suggests stays off until you check it. Commit still waits for you.",
+      "When a row matches more than one store, Spark lists those stores and why it will not pick one. Nothing is linked until you choose.",
+    ],
+  },
+  {
+    id: "2026-11-23y",
+    date: "November 23, 2026",
+    title: "One-click Send on Client summaries",
+    staffOnly: true,
+    items: [
+      "On Client summaries, use Send to email a branded weekly or monthly write-up to brand recipients (prefills recap contacts + client users) instead of a blank mailto.",
+      "Spark records who sent it and when, so you can see Sent on the row and Send again if needed.",
+    ],
+  },
+  {
+    id: "2026-11-23v",
+    date: "November 23, 2026",
+    title: "Buyer deck sell-story captions + finance dispute notes",
+    items: [
+      "Buyer Pitch Decks now draft leave-behind photo captions and a short sell-story from scored photos, consumer mentions, and shelf facts — no new vision models; dollars and lift stay from the deck snapshot.",
+      "On Finance Queue, each exception includes a copy-ready dispute pack (grounded one-liner, OCR/ledger facts, and suggested next step) so reviewers can paste into clarifications without rewriting “why unmatched.”",
+    ],
+  },
+  {
+    id: "2026-11-23o",
+    date: "November 23, 2026",
+    title: "1-click attach walk-up recaps on Missing Recaps",
+    staffOnly: true,
+    items: [
+      "On Missing Recaps, when a BA already filed a walk-up that uniquely matches a Tracker RECAP DUE row (same day and place), Spark shows a Walk-up match chip with Attach walk-up recap.",
+      "Attach all safe matches links every high-confidence orphan in one tap — the same rules as the nightly link job, so ghost DUE rows clear without CLI.",
+      "Walk-up filings still auto-link on submit when the match is unique; the Missing Recaps chips cover historical orphans that stayed unlinked.",
+    ],
+  },
+  {
+    id: "2026-11-23n",
+    date: "November 23, 2026",
+    title: "Nudge all overdue missing recaps in one click",
+    staffOnly: true,
+    items: [
+      "On Missing Recaps, Nudge all overdue (24h+) pushes every BA on shifts overdue a day or more — same push as the per-row Nudge button, skipping anyone nudged in the last 12 hours.",
+      "Each BA row shows when they were last nudged (cron or admin) so weekend clear-outs don't double-ping.",
+    ],
+  },
+  {
+    id: "2026-11-23w",
+    date: "November 23, 2026",
+    title: "Recap fields fill the page (photos stay right)",
+    items: [
+      "On recap detail and shared /r links, Shift Overview, Brand Results, Brand Feedback and Follow-up sit in a two-column grid that uses the full width — no more skinny left stack with empty space.",
+      "Photos stay on the right on wide screens; stats still sit under the title.",
+    ],
+  },
+  {
+    id: "2026-11-23t",
+    date: "November 23, 2026",
+    title: "Email links open the right brand, plus check-in prep polish",
+    items: [
+      "Portal and digest emails now deep-link with ?t= so multi-workspace users land on the brand the email is about instead of whichever client was last selected.",
+      "Store Prep Kit on walk-up check-in keeps stock-risk above the fold and opens automatically when risk is watch or high, with a clearer Open prep control.",
+      "Clean triage and Ask AI kickers use high-contrast deep forest / dark ink on light surfaces — no neon lime as text on paper.",
+    ],
+  },
+  {
+    id: "2026-11-23k",
+    date: "November 23, 2026",
+    title: "Recap stats sit under the title",
+    items: [
+      "On a recap detail (and shared /r links), Engagements, Sold, Conv and Photos now sit directly under the title — before the photo wall and long field list — so the numbers are first.",
+      "The wider desktop layout stays; on phones the four tiles stay a readable 2×2.",
+    ],
+  },
+  {
+    id: "2026-11-23q",
+    date: "November 23, 2026",
+    title: "Ask AI answers shelf, cost, POS and competitors",
+    items: [
+      "Ask AI (BrandChat) and the Claude / ChatGPT AI connector can now pull on-shelf compliance, brand demo cost rollups, retailer POS velocity and ROI, and competitor brands named in recap comments — same Spark figures as Reports, Demo Costs and Retailer POS.",
+      "Numbers still come from Spark readers only; the model plans which tool to call and never invents KPIs. Outside field agencies cannot see consolidated cost or POS through these tools.",
+    ],
+  },
+  {
+    id: "2026-11-23d",
+    date: "November 23, 2026",
+    title: "Today's attention: denser queue + shared Discard",
+    staffOnly: true,
+    items: [
+      "Today's attention on Home is now a compact tabbed queue — one-line rows with priority, primary action, and less vertical scroll so you can clear receipt checks, missing recaps, and unstaffed shifts faster.",
+      "Use arrow keys / j k to move, Enter to open, and d to Discard. Discard (and Discard visible) clears that notice for every Ignite admin — not a private hide — so it stays gone on refresh for the whole team.",
+    ],
+  },
+  {
+    id: "2026-11-23g",
+    date: "November 23, 2026",
+    title: "Staff tools stay behind Admin view (including billing)",
+    staffOnly: true,
+    items: [
+      "Brand clients can no longer open Ignite-only pages by typing the URL — Billing, Missing Recaps, Users, Chat, catalogs and the rest of the internal queue now show an admin-view notice instead of the screen.",
+      "The Admin / Client toggle stays limited to Ignite staff and exact Spark Admin roles; Brand Admin accounts remain in client chrome and cannot flip the toggle by editing storage.",
+    ],
+  },
+  {
+    id: "2026-11-23h",
+    date: "November 23, 2026",
+    title: "Upcoming activations no longer count as recaps due",
+    items: [
+      "The sidebar recaps-due badge, Missing Recaps, Master Tracker and the client Needs-you tile only flag past activations — scheduled demos still in the future never show as due.",
+      "Status uses the activation date after a reschedule, so a moved-forward event does not look overdue while it is still upcoming.",
+    ],
+  },
+  {
+    id: "2026-11-23f",
+    date: "November 23, 2026",
+    title: "Finance queue: Unmatched cost / receipt filter",
+    staffOnly: true,
+    items: [
+      "On Finance Queue, pick Unmatched cost / receipt in the exception filter — it matches API type unmatched_transaction and still includes legacy unmatched_cost rows.",
+      "Link visit on those rows works the same as before once the filter finds them.",
     ],
   },
   {
@@ -638,11 +765,8 @@ export const SHORTCUTS: { scope: string; keys: [string, string][] }[] = [
   },
 ];
 
-/** Where "Send feedback" goes (product owners). */
-export const FEEDBACK_RECIPIENTS = [
-  "kyle@igniteproductions.co",
-  "nevena@igniteproductions.co",
-];
+/** Shared inbox for the account-menu "Send feedback" mailto. */
+export const FEEDBACK_RECIPIENTS = ["events@igniteproductions.co"];
 
 /**
  * mailto: link for product feedback, pre-filled with the page the person was

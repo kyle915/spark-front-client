@@ -56,8 +56,8 @@ export function isLatestMonth(monthStart: string, today: Date = new Date()): boo
 }
 
 /**
- * A mailto: link that opens the draft in the person's own mail program,
- * with no recipient filled in. Nothing is sent by Spark.
+ * Legacy mailto: helper kept for unit coverage of subject/body encoding.
+ * Client summaries now send branded HTML via sendWeeklyClientSummary.
  */
 export function mailtoHref(subject: string, body: string): string {
   return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
@@ -117,12 +117,25 @@ const shortDate = (iso: string | null | undefined): string => {
     : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-/** "Draft", or "Reviewed by Sam Staff on Nov 16". */
+/** "Draft", "Reviewed by Sam…", or "Sent by Sam… on Nov 16". */
 export function statusLine(summary: {
   status: string;
   reviewedByName?: string | null;
   reviewedAt?: string | null;
+  sentAt?: string | null;
+  sentByName?: string | null;
+  sentTo?: readonly string[] | null;
 }): string {
+  if (summary.sentAt) {
+    const who = summary.sentByName ? ` by ${summary.sentByName}` : "";
+    const when = shortDate(summary.sentAt);
+    const n = summary.sentTo?.length ?? 0;
+    const to =
+      n > 0
+        ? ` to ${n.toLocaleString("en-US")} recipient${n === 1 ? "" : "s"}`
+        : "";
+    return `Sent${who}${to}${when ? ` on ${when}` : ""}`;
+  }
   if (summary.status !== "reviewed") return "Draft";
   const who = summary.reviewedByName ? ` by ${summary.reviewedByName}` : "";
   const when = shortDate(summary.reviewedAt);
