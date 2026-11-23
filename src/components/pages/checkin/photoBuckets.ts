@@ -48,3 +48,15 @@ export function isExpenseReceiptBucket(name: string | null | undefined): boolean
   if (!n) return false;
   return n.includes("receipt") || n.includes("expense") || n.includes("product spend");
 }
+
+/** Shelf / stock / cooler buckets that get aisle coaching. */
+export function isShelfPhotoBucket(name: string | null | undefined): boolean {
+  const n = (name ?? "").trim().toLowerCase();
+  if (!n) return false;
+  return (
+    n.includes("shelf") ||
+    n.includes("stock") ||
+    n.includes("on-shelf") ||
+    n.includes("cooler")
+  );
+}

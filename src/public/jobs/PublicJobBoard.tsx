@@ -307,6 +307,72 @@ export function BookedShiftActionsCard({
           ) : null}
         </div>
       ) : null}
+
+      <BookedShiftPrepKitBlock shift={shift} />
+    </div>
+  );
+}
+
+function BookedShiftPrepKitBlock({ shift }: { shift: BookedShiftCalendarData }) {
+  const kit = shift.storePrepKit;
+  const skus = (kit?.skus?.length ? kit.skus : shift.skus) || [];
+  const notes = (kit?.logisticsNotes || "").trim();
+  const risk = kit?.stockRisk;
+  const last = kit?.lastShelfVisit;
+  const hasRisk = risk && (risk.level === "high" || risk.level === "watch") && risk.reason;
+  if (!notes && !skus.length && !hasRisk && !last) return null;
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        paddingTop: 12,
+        borderTop: "1px solid #e7e5e4",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+      aria-label="Store prep kit"
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: "#1c1917" }}>Store Prep Kit</div>
+      {hasRisk ? (
+        <div
+          style={{
+            fontSize: 13,
+            lineHeight: 1.4,
+            color: "#78350f",
+            background: "#fffbeb",
+            border: "1px solid #b45309",
+            borderRadius: 10,
+            padding: "8px 10px",
+            fontWeight: 600,
+          }}
+        >
+          {risk.reason}
+        </div>
+      ) : null}
+      {notes ? (
+        <div style={{ fontSize: 13, color: "#44403c", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>
+          {notes}
+        </div>
+      ) : null}
+      {last?.productOnShelf ? (
+        <div style={{ fontSize: 13, color: "#44403c" }}>
+          Last shelf:{" "}
+          {last.productOnShelf === "yes"
+            ? "on shelf"
+            : last.productOnShelf === "no"
+              ? "not found"
+              : "unclear"}
+          {last.eventDate ? ` · ${last.eventDate}` : ""}
+        </div>
+      ) : null}
+      {skus.length ? (
+        <div style={{ fontSize: 13, color: "#1c1917" }}>
+          <span style={{ fontWeight: 700 }}>SKUs: </span>
+          {skus.join(" · ")}
+        </div>
+      ) : null}
     </div>
   );
 }

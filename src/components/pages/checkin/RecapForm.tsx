@@ -1,8 +1,13 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { reportFieldIssue } from "./fieldIssues";
 import { numberHint, wantsDecimalKeypad } from "./numberSanity";
-import { isExpenseReceiptBucket } from "./photoBuckets";
+import { isExpenseReceiptBucket, isShelfPhotoBucket } from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
+import {
+  advisoryFromShelfCoach,
+  mergePhotoAdvisories,
+  requestShelfCoach,
+} from "./shelfCoach";
 import {
   mergeVoiceDraft,
   notesFallback,
@@ -747,14 +752,83 @@ export default function RecapForm({
       contentType: file.type || "image/jpeg",
       category,
     }).then((result) => {
-      if (!photosRef.current.some((photo) => photo.id === id)) return;
       const advisory = advisoryFromPhotoCheck(result, bucketName);
-      patchPhoto(id, {
-        check: {
-          kind: advisory.kind,
-          message: advisory.message,
-          dismissed: false,
-        },
+      // Merge inside the updater so a concurrent shelf-coach result is not
+      // overwritten by a stale photosRef read outside setState.
+      setPhotos((current) => {
+        const photo = current.find((ph) => ph.id === id);
+        if (!photo) return current;
+        const existing = photo.check;
+        const merged = mergePhotoAdvisories(
+          { kind: advisory.kind, message: advisory.message },
+          existing?.kind === "warn" || existing?.kind === "ok"
+            ? { kind: existing.kind, message: existing.message }
+            : null,
+        );
+        if (!merged) return current;
+        return current.map((ph) =>
+          ph.id === id
+            ? {
+                ...ph,
+                check: {
+                  kind: merged.kind,
+                  message: merged.message,
+                  dismissed: false,
+                },
+              }
+            : ph,
+        );
+      });
+    });
+  };
+
+  // Aisle shelf coach for shelf-bucket photos. Sibling of photo-check; never blocks.
+  const runShelfCoach = (id: string, file: File) => {
+    if (!token || !file.type.startsWith("image/")) return;
+    const photo = photosRef.current.find((ph) => ph.id === id);
+    if (!photo) return;
+    const bucketName =
+      photo.category != null
+        ? (photoBuckets ?? []).find((b) => b.id === photo.category)?.name ?? null
+        : null;
+    // Only coach labelled shelf/stock/cooler buckets — never every photo.
+    if (!isShelfPhotoBucket(bucketName)) return;
+
+    void requestShelfCoach({
+      origin: apiOrigin(),
+      code,
+      session: token,
+      file,
+      contentType: file.type || "image/jpeg",
+    }).then((result) => {
+      const shelf = advisoryFromShelfCoach(result);
+      if (shelf.kind === "unavailable") return;
+      setPhotos((current) => {
+        const existingPhoto = current.find((ph) => ph.id === id);
+        if (!existingPhoto) return current;
+        const existing = existingPhoto.check;
+        const merged = mergePhotoAdvisories(
+          existing
+            ? {
+                kind: existing.kind === "pending" ? "ok" : existing.kind,
+                message: existing.message,
+              }
+            : null,
+          shelf,
+        );
+        if (!merged) return current;
+        return current.map((ph) =>
+          ph.id === id
+            ? {
+                ...ph,
+                check: {
+                  kind: merged.kind,
+                  message: merged.message,
+                  dismissed: false,
+                },
+              }
+            : ph,
+        );
       });
     });
   };
@@ -842,6 +916,7 @@ export default function RecapForm({
       if (!submittedRef.current) void saveDraftPhotoFile(code, token, id, thumb);
     })();
     runPhotoCheck(id, file);
+    runShelfCoach(id, file);
     runReceiptRead(id, file, shaTask);
   };
 
