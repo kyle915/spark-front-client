@@ -17,7 +17,7 @@ import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SidebarTabCount from "@/shared/SidebarTabCount";
-import StandingCheckinLink from "./StandingCheckinLink";
+import StandingCheckinStudio from "./StandingCheckinStudio";
 import CheckinIssuesCard from "./CheckinIssuesCard";
 import BaProductNotesCard from "./BaProductNotesCard";
 import ClockLinks from "./ClockLinks";
@@ -420,7 +420,7 @@ export default function SparkWalkups() {
         title="Walk-ups"
         support={
           tab === "codes"
-            ? "Standing check-in links for each brand. Share the live code."
+            ? "Standing Check-In Studio — programs, photo buckets, BA PDFs. Live codes never remint."
             : tab === "queue"
               ? "Self-serve clock-ins from a check-in link or event code. Confirm to count hours, or reject."
               : "Generic clock in/out pages for any crew. Punches save GPS and land in a Sheet."
@@ -462,7 +462,7 @@ export default function SparkWalkups() {
 
       {tab === "codes" ? (
         <Suspense fallback={null}>
-          <StandingCheckinLink />
+          <StandingCheckinStudio />
           <CheckinIssuesCard />
           <BaProductNotesCard />
         </Suspense>

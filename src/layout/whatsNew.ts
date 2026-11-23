@@ -27,6 +27,17 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-23aa",
+    date: "November 23, 2026",
+    title: "Standing Check-In Studio on Walk-ups",
+    staffOnly: true,
+    items: [
+      "On Walk-ups → Standing codes, staff can edit programs, photo buckets, BA PDF/link materials, and location mode (store address vs market picker) without a setup workflow ticket.",
+      "The live standing check-in code stays immutable once issued — Studio never remints or rotates it. Issue a code only when the brand has none yet.",
+      "All standing codes across brands still list under the studio for copy/QR, including client-team twin links.",
+    ],
+  },
+  {
     id: "2026-11-23z",
     date: "November 23, 2026",
     title: "Why a recap Needs Eyes, and confirm CSV guesses",

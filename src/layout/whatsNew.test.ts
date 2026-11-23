@@ -100,9 +100,11 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only: Send, walk-up attach, nudge-all-overdue, denser attention, route lock,
-    // finance queue, map-this-store, triage, shelf coach, attention, UTMs
+    // Staff-only: Check-In Studio, Needs Eyes/CSV, Send, walk-up attach,
+    // nudge-all-overdue, denser attention, route lock, finance queue,
+    // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23aa",
       "2026-11-23z",
       "2026-11-23y",
       "2026-11-23o",
