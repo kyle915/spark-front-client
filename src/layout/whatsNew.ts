@@ -14,6 +14,81 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23p",
+    date: "November 23, 2026",
+    title: "Live Photo Wall and shareable Buyer Pitch Decks",
+    items: [
+      "Open Photo Wall to browse in-store recap photos by retailer, market and SKU, then pin keepers straight into a Buyer Pitch Deck.",
+      "From Buyer Report, mint a passcode-protected share link (with optional expiry and cost line) so a buyer can open a branded pitch leave-behind on client.igniteproductions.co — no Spark login required.",
+    ],
+  },
+  {
+    id: "2026-11-23r",
+    date: "November 23, 2026",
+    title: "POS feed inbox, portal presets and Monday buyer digests",
+    items: [
+      "On Retailer POS, pick a portal preset, turn on an automated feed, and review recent drops in the inbox alongside import history — less manual CSV chasing.",
+      "On Buyer Report, opt into a Monday weekly buyer digest and set recipient overrides separately from field-marketing client digests.",
+    ],
+  },
+  {
+    id: "2026-11-23c",
+    date: "November 23, 2026",
+    title: "Shifts Board: overlapping shifts stay readable",
+    items: [
+      "When several shifts land in the same hour on the week view, chips now sit side by side instead of stacking through each other, so time, venue and market stay clear.",
+    ],
+  },
+  {
+    id: "2026-11-23a",
+    date: "November 23, 2026",
+    title: "Today's attention is staff-only (cleaner admin strip)",
+    staffOnly: true,
+    items: [
+      "Brand clients no longer see Today's attention on the dashboard — ops queues stay Ignite-side.",
+      "For staff, the strip groups by bucket with counts, a View all link, and compact action buttons.",
+    ],
+  },
+  {
+    id: "2026-11-23s",
+    date: "November 23, 2026",
+    title: "AI aisle coach and Store Prep Kit on BA shift cards",
+    staffOnly: true,
+    items: [
+      "When a BA uploads a shelf-bucket photo on check-in, Spark can nudge clearer aisle framing before they submit (non-blocking; works offline without blocking the shift).",
+      "A Store Prep Kit card on check-in and booked job-board shifts pulls logistics, last shelf notes, SKUs, BA materials and stock-risk so ambassadors walk in prepared.",
+    ],
+  },
+  {
+    id: "2026-11-23e",
+    date: "November 23, 2026",
+    title: "Clean vs Needs Eyes photo triage on Needs review",
+    staffOnly: true,
+    items: [
+      "On Needs review, staff can filter All / Clean / Needs Eyes so photo-ready recaps sort first and exceptions get eyes.",
+      "Approve all Clean only lights up after triage finishes — pending or missing labels never count as Clean. Brand clients never see the pill or counts.",
+    ],
+  },
+  {
+    id: "2026-11-23m",
+    date: "November 23, 2026",
+    title: "Map this store: suggested match without the typing jank",
+    staffOnly: true,
+    items: [
+      "Opening Map this store on an unmatched recap now suggests a store from the typed address (Places + OpenAI) with Confirm when confidence is high — you still confirm before it sticks.",
+      "Searching while mapping no longer remounts the card on every keystroke, so focus and typing stay stable.",
+    ],
+  },
+  {
+    id: "2026-11-23u",
+    date: "November 23, 2026",
+    title: "Onboarding marketing UTMs land in Close",
+    staffOnly: true,
+    items: [
+      "Self-serve onboarding now captures utm_source, campaign and content from the signup link (held for 30 minutes) and sends them with the lead into Close, so Ignite can see which pricing/marketing path converted.",
+    ],
+  },
+  {
     id: "2026-11-22w",
     date: "November 22, 2026",
     title: "Multi-store wave booking and slide-over store drawer",

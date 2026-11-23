@@ -70,6 +70,33 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-22c")).toBe(true);
   });
 
+  it("routes November 23 ship-wave notes to matching client and staff audiences", () => {
+    const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
+    const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
+
+    // Client + staff: Photo Wall / pitch decks, POS + digests, Shifts Board readability
+    for (const id of ["2026-11-23p", "2026-11-23r", "2026-11-23c"] as const) {
+      expect(clientIds.has(id)).toBe(true);
+      expect(staffIds.has(id)).toBe(true);
+    }
+
+    // Ignite staff only: attention strip, shelf coach, Clean/Needs Eyes, map-this-store, UTMs
+    for (const id of [
+      "2026-11-23a",
+      "2026-11-23s",
+      "2026-11-23e",
+      "2026-11-23m",
+      "2026-11-23u",
+    ] as const) {
+      expect(clientIds.has(id)).toBe(false);
+      expect(staffIds.has(id)).toBe(true);
+      expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
+    }
+
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23p");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23p");
+  });
+
   it("tracks unseen state against the latest visible entry id", () => {
     const store = new Map<string, string>();
     vi.stubGlobal("window", {
@@ -86,6 +113,6 @@ describe("whatsNewFor", () => {
 
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get("@spark.whatsNew.seen")).toBe("2026-11-22w");
+    expect(store.get("@spark.whatsNew.seen")).toBe("2026-11-23p");
   });
 });
