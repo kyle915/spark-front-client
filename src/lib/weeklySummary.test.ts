@@ -101,7 +101,7 @@ describe("draft lines", () => {
     );
   });
 
-  it("says who reviewed it", () => {
+  it("says who reviewed it, and who sent it", () => {
     expect(statusLine({ status: "draft" })).toBe("Draft");
     expect(
       statusLine({
@@ -111,6 +111,14 @@ describe("draft lines", () => {
       }),
     ).toBe("Reviewed by Sam Staff on Nov 16");
     expect(statusLine({ status: "reviewed" })).toBe("Reviewed");
+    expect(
+      statusLine({
+        status: "reviewed",
+        sentAt: "2026-11-17T15:00:00+00:00",
+        sentByName: "Sam Staff",
+        sentTo: ["a@brand.test", "b@brand.test"],
+      }),
+    ).toBe("Sent by Sam Staff to 2 recipients on Nov 17");
   });
 
   it("says it was written by AI, and when it has been edited", () => {
