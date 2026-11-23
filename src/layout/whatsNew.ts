@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23b",
+    date: "November 23, 2026",
+    title: "Program report opens with a brief",
+    items: [
+      "The program report starts with a short brief of what worked in the dates you pick, written from approved recaps. A 30- or 90-day range is shown once every number checks out. A longer or custom range stays with Ignite until it is marked reviewed.",
+      "Themes, other brands, shelf, and the best field photos already on the report now sit up top. The full charts are still below.",
+    ],
+  },
+  {
     id: "2026-11-23ab",
     date: "November 23, 2026",
     title: "Program report keeps one set of numbers",

@@ -20,6 +20,8 @@ import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import MonthHighlight from "@/components/explain/MonthHighlight";
+import ProgramBriefCard from "./ProgramBriefCard";
+import ReportEvidenceStrip from "./ReportEvidenceStrip";
 import { monthOfDate } from "@/lib/storeProfile";
 import SparkGhostButton, { SparkGhostLink } from "@/shared/SparkGhostButton";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
@@ -356,7 +358,7 @@ const FieldPhotos: React.FC = () => {
   const hasBest = picked.best.length > 0;
   const shown = hasBest && view === "best" ? picked.best : allPhotos;
   return (
-    <div className="spark-card p-5">
+    <div className="spark-card p-5" id="report-photos">
       {hasBest ? (
         <div
           className="pill-group mb-3 print:hidden"
@@ -710,6 +712,31 @@ export default function SparkReports() {
         </div>
 
         {tenantId ? (
+          <ErrorBoundary
+            key={`brief|${tenantId}|${startYmd}|${endYmd}`}
+            fallback={
+              <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+                The brief could not load.
+              </p>
+            }
+          >
+            <Suspense fallback={null}>
+              <ProgramBriefCard
+                tenantId={tenantId}
+                startDate={startYmd}
+                endDate={endYmd}
+                preset={rangeKey}
+                staff={isStaffView}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        ) : null}
+
+        {tenantId ? (
+          <ReportEvidenceStrip tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+        ) : null}
+
+        {tenantId ? (
           <MonthHighlight
             tenantId={tenantId}
             month={monthOfDate(endYmd)}
@@ -717,7 +744,7 @@ export default function SparkReports() {
           />
         ) : null}
 
-        {/* Summary first: the headline numbers, before any chart. */}
+        {/* Headline numbers, under the brief, before any chart. */}
         <section className="spark-card p-5 sm:p-6" aria-label={`Summary, ${range.label}`}>
           <dl className="m-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-x-6 gap-y-5">
             {tenantId ? (
@@ -854,7 +881,7 @@ export default function SparkReports() {
 
         {/* Voice before the photo grid: one sentence per theme, then one frame per stop. */}
         {tenantId ? (
-          <section className="spark-card p-5 sm:p-6">
+          <section className="spark-card p-5 sm:p-6" id="report-themes">
             <FeedbackThemes tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
           </section>
         ) : null}
@@ -862,7 +889,7 @@ export default function SparkReports() {
           <FieldPhotos />
         </Suspense>
         {tenantId ? (
-          <section className="spark-card p-5 sm:p-6">
+          <section className="spark-card p-5 sm:p-6" id="report-competitors">
             <CompetitorMentions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
           </section>
         ) : null}
@@ -873,7 +900,9 @@ export default function SparkReports() {
         ) : null}
         {/* Renders its own card, and nothing when there are no shelf photos. */}
         {tenantId ? (
-          <OnShelfSummary tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          <div id="report-shelf">
+            <OnShelfSummary tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          </div>
         ) : null}
       </div>
       </ReportsRangeContext.Provider>
