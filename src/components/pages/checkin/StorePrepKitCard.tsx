@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { card, helperText } from "./checkinStyles";
 import {
   shelfStatusLabel,
@@ -71,7 +71,16 @@ export function StorePrepKitCard({
   kit: StorePrepKit | null | undefined;
   accent: string;
 }) {
-  const [open, setOpen] = useState(() => storePrepKitShouldStartOpen(kit));
+  const riskWantsOpen = storePrepKitShouldStartOpen(kit);
+  const [open, setOpen] = useState(riskWantsOpen);
+  // Kit often arrives after identify (store chosen) while this card stays
+  // mounted — open once when watch/high risk first shows up.
+  const autoOpenedForRisk = useRef(riskWantsOpen);
+  useEffect(() => {
+    if (!riskWantsOpen || autoOpenedForRisk.current) return;
+    autoOpenedForRisk.current = true;
+    setOpen(true);
+  }, [riskWantsOpen]);
   if (!storePrepKitHasContent(kit) || !kit) return null;
 
   const risk = kit.stockRisk;

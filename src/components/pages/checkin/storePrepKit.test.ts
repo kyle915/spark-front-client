@@ -52,5 +52,16 @@ describe("store prep kit", () => {
     expect(storePrepKitShouldStartOpen(parseStorePrepKit({ logisticsNotes: "x" }))).toBe(
       false,
     );
+    // After identify, risk often arrives on a later kit payload — helpers
+    // must flip from false → true so the card can sync open.
+    expect(storePrepKitShouldStartOpen(null)).toBe(false);
+    expect(
+      storePrepKitShouldStartOpen(
+        parseStorePrepKit({
+          logisticsNotes: "Park in back",
+          stockRisk: { level: "watch", reason: "Thin facings last visit" },
+        }),
+      ),
+    ).toBe(true);
   });
 });
