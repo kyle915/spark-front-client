@@ -1,14 +1,12 @@
 name: Deploy main to Firebase Hosting
 
-# Fires on every push to main. Builds the app and pushes it to both
+# Fires on push to main (the merge). Builds the app and pushes it to both
 # hosting sites (spark-new-admin → admin.igniteproductions.co,
 # spark-new-client → client.igniteproductions.co).
 #
-# Architecture mirrors deploy-hosting.yml (which runs on develop):
-# both flows deploy to the SAME Firebase project + sites because
-# we currently have one prod environment. Develop and main both
-# push to live. The split exists so the long-running develop branch
-# can keep flowing while main is reserved for release-tag commits.
+# This is the only automatic Hosting deploy. Pull requests build and
+# test in ci.yml; they do not deploy. develop does not auto-deploy
+# (deploy-hosting.yml is workflow_dispatch only).
 #
 # Why the explicit `firebase target:apply` step? — see the verbose
 # comment in deploy-hosting.yml. Short version: service-account auth
@@ -43,6 +41,13 @@ on:
         description: 'Deploy only spark.igniteproductions.co (301 to client). Skip admin and client.'
         type: boolean
         default: false
+
+# A newer push to main cancels a deploy that is still queued. A deploy
+# that has already started uploading is not cancelled; firebase deploy
+# is not safe to kill mid-upload.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   FIREBASE_PROJECT_ID: spark-479222
