@@ -849,12 +849,20 @@ const RequestsLinks = {
     },
     {
       path: "/chat",
-      component: <SparkChatPage />,
+      component: (
+        <AdminOnly>
+          <SparkChatPage />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/announcements",
-      component: <SparkAnnouncements />,
+      component: (
+        <AdminOnly>
+          <SparkAnnouncements />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
@@ -868,7 +876,11 @@ const RequestsLinks = {
     },
     {
       path: "/job/view/:uuid",
-      component: <SparkJobDetail />,
+      component: (
+        <AdminOnly>
+          <SparkJobDetail />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
@@ -1129,27 +1141,47 @@ const RequestsLinks = {
     },
     {
       path: "/academy",
-      component: <SparkAcademy />,
+      component: (
+        <AdminOnly>
+          <SparkAcademy />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/academy/manage",
-      component: <SparkAcademyManage />,
+      component: (
+        <AdminOnly>
+          <SparkAcademyManage />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/academy/:id",
-      component: <SparkAcademyViewer />,
+      component: (
+        <AdminOnly>
+          <SparkAcademyViewer />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/team",
-      component: <SparkTeam />,
+      component: (
+        <AdminOnly>
+          <SparkTeam />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/clients",
-      component: <SparkClients />,
+      component: (
+        <AdminOnly>
+          <SparkClients />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
@@ -1184,22 +1216,38 @@ const RequestsLinks = {
     },
     {
       path: "/favorites",
-      component: <SparkFavorites />,
+      component: (
+        <AdminOnly>
+          <SparkFavorites />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/payroll",
-      component: <SparkPayroll />,
+      component: (
+        <AdminOnly>
+          <SparkPayroll />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/payments",
-      component: <SparkPayments />,
+      component: (
+        <AdminOnly>
+          <SparkPayments />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/billing",
-      component: <SparkBilling />,
+      component: (
+        <AdminOnly>
+          <SparkBilling />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
   ],
@@ -1262,25 +1310,41 @@ const UsersLinks = {
     {
       path: "/users/list",
       name: "List",
-      component: <UsersList />,
+      component: (
+        <AdminOnly>
+          <UsersList />
+        </AdminOnly>
+      ),
       Icon: Bars4Icon,
     },
     {
       path: "/users/create",
       name: "Create",
-      component: <CreateUser />,
+      component: (
+        <AdminOnly>
+          <CreateUser />
+        </AdminOnly>
+      ),
       Icon: PlusCircleIcon,
     },
   ],
   routes: [
     {
       path: "/users/list",
-      component: <UsersList />,
+      component: (
+        <AdminOnly>
+          <UsersList />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/users/create",
-      component: <CreateUser />,
+      component: (
+        <AdminOnly>
+          <CreateUser />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
   ],
@@ -1298,12 +1362,20 @@ const ProductLinks = {
   routes: [
     {
       path: "/products/create-product",
-      component: <CreateProduct />,
+      component: (
+        <AdminOnly>
+          <CreateProduct />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
       path: "/products/products-list",
-      component: <ProductsList />,
+      component: (
+        <AdminOnly>
+          <ProductsList />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
   ],
@@ -1323,7 +1395,15 @@ const RecapLinks = {
     { path: "/recap/create", component: <SparkRecapCreate />, isPublic: false },
     { path: "/recap/list", component: <SparkRecapsList />, isPublic: false },
     { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
-    { path: "/recaps/missing", component: <SparkRecapsMissing />, isPublic: false },
+    {
+      path: "/recaps/missing",
+      component: (
+        <AdminOnly>
+          <SparkRecapsMissing />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
     { path: "/recaps/templates", component: <AdminOnly><SparkRecapTemplates /></AdminOnly>, isPublic: false },
     {
       path: "/recaps/templates/new",
@@ -1395,14 +1475,22 @@ const CatalogsLinks = {
         {
           path: "/catalogs/product-types/list",
           name: "List",
-          component: <ProductTypesList />,
+          component: (
+          <AdminOnly>
+            <ProductTypesList />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: Bars4Icon,
         },
         {
           path: "/catalogs/product-types/create",
           name: "Create",
-          component: <CreateProductType />,
+          component: (
+          <AdminOnly>
+            <CreateProductType />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: PlusCircleIcon,
         },
@@ -1415,14 +1503,22 @@ const CatalogsLinks = {
         {
           path: "/catalogs/event-types/list",
           name: "List",
-          component: <EventTypesList />,
+          component: (
+          <AdminOnly>
+            <EventTypesList />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: Bars4Icon,
         },
         {
           path: "/catalogs/event-types/create",
           name: "Create",
-          component: <CreateEventType />,
+          component: (
+          <AdminOnly>
+            <CreateEventType />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: PlusCircleIcon,
         },
@@ -1435,14 +1531,22 @@ const CatalogsLinks = {
         {
           path: "/catalogs/locations/list",
           name: "List",
-          component: <LocationsList />,
+          component: (
+          <AdminOnly>
+            <LocationsList />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: Bars4Icon,
         },
         {
           path: "/catalogs/locations/create",
           name: "Create",
-          component: <CreateLocation />,
+          component: (
+          <AdminOnly>
+            <CreateLocation />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: PlusCircleIcon,
         },
@@ -1456,14 +1560,22 @@ const CatalogsLinks = {
         {
           path: "/catalogs/request-types/list",
           name: "List",
-          component: <RequestTypesList />,
+          component: (
+          <AdminOnly>
+            <RequestTypesList />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: Bars4Icon,
         },
         {
           path: "/catalogs/request-types/create",
           name: "Create",
-          component: <CreateRequestType />,
+          component: (
+          <AdminOnly>
+            <CreateRequestType />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: PlusCircleIcon,
         },
@@ -1477,14 +1589,22 @@ const CatalogsLinks = {
         {
           path: "/catalogs/distributors/list",
           name: "List",
-          component: <DistributorsList />,
+          component: (
+          <AdminOnly>
+            <DistributorsList />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: Bars4Icon,
         },
         {
           path: "/catalogs/distributors/create",
           name: "Create",
-          component: <CreateDistributor />,
+          component: (
+          <AdminOnly>
+            <CreateDistributor />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: PlusCircleIcon,
         },
@@ -1498,14 +1618,22 @@ const CatalogsLinks = {
         {
           path: "/catalogs/retailers/list",
           name: "List",
-          component: <RetailersList />,
+          component: (
+          <AdminOnly>
+            <RetailersList />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: Bars4Icon,
         },
         {
           path: "/catalogs/retailers/create",
           name: "Create",
-          component: <CreateRetailer />,
+          component: (
+          <AdminOnly>
+            <CreateRetailer />
+          </AdminOnly>
+        ),
           isPublic: false,
           Icon: PlusCircleIcon,
         },
@@ -1517,19 +1645,31 @@ const CatalogsLinks = {
     {
       path: "/catalogs/product-types/edit/:uuid",
       name: "Edit Product Type",
-      component: <EditProductType />,
+      component: (
+      <AdminOnly>
+        <EditProductType />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
     {
       path: "/catalogs/product-types/create",
       name: "Create Product Type",
-      component: <CreateProductType />,
+      component: (
+          <AdminOnly>
+            <CreateProductType />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     {
       path: "/catalogs/product-types/list",
       name: "List Product Types",
-      component: <ProductTypesList />,
+      component: (
+          <AdminOnly>
+            <ProductTypesList />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
 
@@ -1537,19 +1677,31 @@ const CatalogsLinks = {
     {
       path: "/catalogs/event-types/edit/:uuid",
       name: "Edit Event Type",
-      component: <EditEventType />,
+      component: (
+      <AdminOnly>
+        <EditEventType />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
     {
       path: "/catalogs/event-types/create",
       name: "Create Event Type",
-      component: <CreateEventType />,
+      component: (
+          <AdminOnly>
+            <CreateEventType />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     {
       path: "/catalogs/event-types/list",
       name: "List Event Types",
-      component: <EventTypesList />,
+      component: (
+          <AdminOnly>
+            <EventTypesList />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
 
@@ -1557,38 +1709,62 @@ const CatalogsLinks = {
     {
       path: "/catalogs/locations/edit/:uuid",
       name: "Edit Location",
-      component: <EditLocation />,
+      component: (
+      <AdminOnly>
+        <EditLocation />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
     {
       path: "/catalogs/locations/create",
       name: "Create Location",
-      component: <CreateLocation />,
+      component: (
+          <AdminOnly>
+            <CreateLocation />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     {
       path: "/catalogs/locations/list",
       name: "List Locations",
-      component: <LocationsList />,
+      component: (
+          <AdminOnly>
+            <LocationsList />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     // request types
     {
       path: "/catalogs/request-types/edit/:uuid",
       name: "Edit Request Type",
-      component: <EditRequestType />,
+      component: (
+      <AdminOnly>
+        <EditRequestType />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
     {
       path: "/catalogs/request-types/create",
       name: "Create Request Type",
-      component: <CreateRequestType />,
+      component: (
+          <AdminOnly>
+            <CreateRequestType />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     {
       path: "/catalogs/request-types/list",
       name: "List Request Types",
-      component: <RequestTypesList />,
+      component: (
+          <AdminOnly>
+            <RequestTypesList />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
 
@@ -1596,19 +1772,31 @@ const CatalogsLinks = {
     {
       path: "/catalogs/distributors/edit/:uuid",
       name: "Edit Distributor",
-      component: <EditDistributor />,
+      component: (
+      <AdminOnly>
+        <EditDistributor />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
     {
       path: "/catalogs/distributors/create",
       name: "Create Distributor",
-      component: <CreateDistributor />,
+      component: (
+          <AdminOnly>
+            <CreateDistributor />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     {
       path: "/catalogs/distributors/list",
       name: "List Distributors",
-      component: <DistributorsList />,
+      component: (
+          <AdminOnly>
+            <DistributorsList />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
 
@@ -1616,19 +1804,31 @@ const CatalogsLinks = {
     {
       path: "/catalogs/retailers/edit/:uuid",
       name: "Edit Retailer",
-      component: <EditRetailer />,
+      component: (
+      <AdminOnly>
+        <EditRetailer />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
     {
       path: "/catalogs/retailers/create",
       name: "Create Retailer",
-      component: <CreateRetailer />,
+      component: (
+          <AdminOnly>
+            <CreateRetailer />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
     {
       path: "/catalogs/retailers/list",
       name: "List Retailers",
-      component: <RetailersList />,
+      component: (
+          <AdminOnly>
+            <RetailersList />
+          </AdminOnly>
+        ),
       isPublic: false,
     },
   ],
@@ -1663,7 +1863,11 @@ const CalendarLinks = {
     },
     {
       path: "/settings/calendar",
-      component: <CalendarConnection />,
+      component: (
+      <AdminOnly>
+        <CalendarConnection />
+      </AdminOnly>
+    ),
       isPublic: false,
     },
   ],
@@ -1683,7 +1887,11 @@ const SettingsLinks = {
     {
       path: "/customize-theme",
       name: "Customize Theme",
-      component: <ThemePage />,
+      component: (
+        <AdminOnly>
+          <ThemePage />
+        </AdminOnly>
+      ),
       Icon: Palette,
     },
   ],
@@ -1699,7 +1907,11 @@ const SettingsLinks = {
     },
     {
       path: "/customize-theme",
-      component: <ThemePage />,
+      component: (
+        <AdminOnly>
+          <ThemePage />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
   ],
