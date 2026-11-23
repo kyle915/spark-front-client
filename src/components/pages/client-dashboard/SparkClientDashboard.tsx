@@ -6,9 +6,9 @@
  *   2. Approvals + account map
  *   3. Program performance (pace / KPIs) — Performance tab only
  *
- * Overview stays scannable: week-ahead, narration, quick links.
- * Performance embeds InsightsBody. Approvals / map lazy-load.
- * Legacy /insights redirects here (#performance).
+ * Overview stays scannable: program last-30-days beside weekly summary,
+ * then week-ahead and store cards. Performance embeds InsightsBody.
+ * Approvals / map lazy-load. Legacy /insights redirects here (#performance).
  */
 
 import ClientProgramSnapshot from "./ClientProgramSnapshot";
@@ -550,11 +550,29 @@ const ClientInner: React.FC = () => {
       )}
 
       {activeTab === "overview" && (<>
-        {tenantId ? (
-          <Suspense fallback={<PanelSkeleton label="Loading your program" />}>
-            <ClientProgramSnapshot tenantId={tenantId} />
-          </Suspense>
-        ) : null}
+        {/* Wide desktop only (xl+): program snapshot left, weekly summary
+            right — at lg the w-64 sidebar leaves too little content width
+            for three KPI/photo columns beside a 280px summary. Narrower
+            viewports stack. Empty right slot keeps the program card full
+            width. */}
+        <div className="grid grid-cols-1 gap-5 xl:gap-6 items-start xl:has-[.client-weekly-slot:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]">
+          <div className="min-w-0 space-y-5">
+            {tenantId ? (
+              <Suspense fallback={<PanelSkeleton label="Loading your program" />}>
+                <ClientProgramSnapshot tenantId={tenantId} />
+              </Suspense>
+            ) : null}
+          </div>
+          {tenantId ? (
+            <div className="client-weekly-slot min-w-0 xl:sticky xl:top-4 self-start">
+              <WeeklySummaryCard
+                tenantId={tenantId}
+                forClient
+                className="p-5 sm:p-6 xl:p-6"
+              />
+            </div>
+          ) : null}
+        </div>
 
         {tenantId ? (
           <div className="spark-card p-5 sm:p-6">
@@ -642,8 +660,6 @@ const ClientInner: React.FC = () => {
           />
         </Suspense>
       )}
-
-      {tenantId ? <WeeklySummaryCard tenantId={tenantId} forClient /> : null}
 
       {tenantId ? <StoreInsightsCards tenantId={tenantId} forClient /> : null}
 

@@ -19,7 +19,15 @@ describe("client home stays slim", () => {
     expect(dash).not.toContain('title="Today"');
     expect(dash).toContain('title="Home"');
     expect(dash).toContain("<WeekAheadPanel");
-    expect(dash).toContain("<WeeklySummaryCard tenantId={tenantId} forClient />");
+    // Weekly summary sits beside the program card on desktop (right column),
+    // not below photos/recaps on Overview.
+    expect(dash).toContain("client-weekly-slot");
+    expect(dash).toContain(
+      "xl:has-[.client-weekly-slot:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]",
+    );
+    expect(dash).toContain("<WeeklySummaryCard");
+    expect(dash).toContain("forClient");
+    expect(dash).toContain("xl:sticky");
     expect(dash).not.toContain("WeeklyNarrationCard");
     expect(dash).toContain("<ClientApprovalsBody");
     expect(dash).not.toContain("tenantWeeklySummary");
