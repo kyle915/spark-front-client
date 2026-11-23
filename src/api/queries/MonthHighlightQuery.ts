@@ -23,6 +23,8 @@ export const MonthHighlightQuery = graphql`
         recaps
         recapUuid
         recapKind
+        linkedConsumers
+        linkedUnitsSold
       }
       quote {
         text

@@ -213,7 +213,7 @@ const RankedSplitChart: React.FC<{
       <ChartBlock title={title} height={splitHeight(bars.length)}>
         <Bar
           data={{
-            labels: bars.map((b) => barLabel(b)),
+              labels: bars.map((b) => barLabel(b, b.context ? 28 : 18)),
             datasets: [
               barSeries({
                 label: measure,
@@ -232,6 +232,11 @@ const RankedSplitChart: React.FC<{
           {aside.count
             ? `The other ${count(aside.count)} ${noun}${aside.count === 1 ? "" : "s"} add ${count(aside.value)}.`
             : `Other ${noun}s add ${count(aside.value)}.`}
+        </p>
+      ) : null}
+      {split.bars.some((b) => b.context && b.label === "No store on the event") ? (
+        <p className="text-xs" style={META}>
+          No store on the event is approved recaps whose event has no store.
         </p>
       ) : null}
       {split.hasVenue ? (
@@ -253,7 +258,7 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
   const split = useMemo(
     () =>
       rankedSplit(breakdown?.byStore ?? [], {
-        missingLabel: "No store recorded",
+        missingLabel: "No store on the event",
         namedCount: breakdown?.storeCount,
       }),
     [breakdown],

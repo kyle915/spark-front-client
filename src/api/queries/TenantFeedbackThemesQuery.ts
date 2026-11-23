@@ -35,6 +35,10 @@ export const TenantFeedbackThemesQuery = graphql`
         recapCount
         quote
       }
+      sentences {
+        section
+        text
+      }
     }
   }
 `;

@@ -6,6 +6,34 @@ import { MonthHighlightQuery } from "@/api/queries/MonthHighlightQuery";
 import type { MonthHighlightQuery as MonthHighlightQueryType } from "@api/queries/__generated__/MonthHighlightQuery.graphql";
 import { monthKey, previousMonth, recapHref, storeHref } from "@/lib/storeProfile";
 
+const count = (n: number): string => n.toLocaleString("en-US");
+
+const rate = (n: number): string =>
+  Number.isInteger(n) ? String(n) : n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+
+/** Store totals and the linked recap's own counts, from Spark's fields. */
+function highlightSentence(store: {
+  name: string;
+  market: string;
+  recaps: number;
+  consumers: number;
+  unitsSold: number;
+  conversion: number;
+  linkedConsumers: number;
+  linkedUnitsSold: number;
+} | null | undefined, fallback: string): string {
+  if (!store) return fallback;
+  const place = store.market
+    ? `${store.name || "This store"} in ${store.market}`
+    : store.name || "This store";
+  const recaps = `${count(store.recaps)} approved ${store.recaps === 1 ? "recap" : "recaps"}`;
+  return (
+    `${place} had ${recaps}, ${count(store.consumers)} sampled and ${count(store.unitsSold)} sold, ` +
+    `${rate(store.conversion)}% conversion. The recap this opens sampled ${count(store.linkedConsumers)} ` +
+    `and sold ${count(store.linkedUnitsSold)}.`
+  );
+}
+
 const META: CSSProperties = { color: "var(--spark-text-meta)" };
 const SECONDARY: CSSProperties = { color: "var(--spark-text-secondary)" };
 const INK: CSSProperties = { color: "var(--spark-text)" };
@@ -55,7 +83,7 @@ const Inner: React.FC<Props> = ({ tenantId, month, heading, fallbackMonth, class
         ) : null}
         <div className="min-w-0">
           <p className="text-sm leading-relaxed max-w-3xl" style={INK}>
-            {h.caption}
+            {highlightSentence(h.store, h.caption)}
           </p>
           {h.quote ? (
             <blockquote className="m-0 mt-3 text-sm leading-relaxed max-w-3xl" style={INK}>

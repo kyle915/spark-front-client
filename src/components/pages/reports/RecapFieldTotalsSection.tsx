@@ -6,7 +6,14 @@ import { SetBoothDayCountingMutation } from "@/api/mutations/SetBoothDayCounting
 import type { SetBoothDayCountingMutation as MutationType } from "@api/mutations/__generated__/SetBoothDayCountingMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAlertStore } from "@/store/alertStore";
-import { countingBasisLine, fieldTotalNote, fieldTotalValue } from "./recapFieldTotals";
+import {
+  countingBasisLine,
+  fieldTotalNote,
+  fieldTotalValue,
+  partitionSampledQuestions,
+  sampledPartsIntro,
+} from "./recapFieldTotals";
+import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 
 const SHOW_FIRST = 8;
 
@@ -110,7 +117,8 @@ const Body: React.FC<Props> = ({ tenantId, startDate, endDate }) => {
     { tenantId, startDate, endDate },
     { fetchPolicy: "store-and-network", fetchKey },
   );
-  const sections = data.tenantRecapFieldTotals;
+  const split = partitionSampledQuestions(data.tenantRecapFieldTotals);
+  const sections = split.sections;
   const perStoreDay = Boolean(data.tenantBoothDayCounting);
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
@@ -127,9 +135,11 @@ const Body: React.FC<Props> = ({ tenantId, startDate, endDate }) => {
         />
       ) : null}
       {sections.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-          No approved recaps with numbers in this range yet.
-        </p>
+        split.parts.length > 0 ? null : (
+          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+            No approved recaps with numbers in this range yet.
+          </p>
+        )
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {sections.map((sec) => {
@@ -185,6 +195,36 @@ const Body: React.FC<Props> = ({ tenantId, startDate, endDate }) => {
  * are staffed by more than one ambassador can be counted once per store per
  * day instead of once per recap (spark-api #1366).
  */
+/** The sampled questions, in the headline card, not as rival KPI tiles. */
+export const SampledQuestionNote: React.FC<Props> = (props) => {
+  const breakdown = useConsumerBreakdown(props.tenantId, props.startDate, props.endDate);
+  const data = useLazyLoadQuery<QueryType>(
+    TenantRecapFieldTotalsQuery,
+    props,
+    { fetchPolicy: "store-and-network" },
+  );
+  const { parts } = partitionSampledQuestions(data.tenantRecapFieldTotals);
+  if (parts.length === 0) return null;
+  return (
+    <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--spark-hairline)" }}>
+      <p className="text-xs mb-2" style={{ color: "var(--spark-text-meta)" }}>
+        {sampledPartsIntro(parts, breakdown?.total ?? null)}
+      </p>
+      <ul className="m-0 p-0 list-none flex flex-col gap-1">
+        {parts.map((field) => (
+          <li key={field.label} className="text-sm flex flex-wrap gap-x-2">
+            <span>{field.label}</span>
+            <span className="tabular-nums font-medium">{fieldTotalValue(field)}</span>
+            <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+              {fieldTotalNote(field)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 const RecapFieldTotalsSection: React.FC<Props> = (props) => (
   <div>
     <h3 className="display font-bold mb-1" style={{ letterSpacing: "-0.02em" }}>

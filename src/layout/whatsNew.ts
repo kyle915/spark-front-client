@@ -14,6 +14,19 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23w",
+    date: "November 23, 2026",
+    title: "Program report keeps one set of numbers",
+    items: [
+      "The tile row now includes conversion: units sold divided by consumers sampled, with both counts, for retail and on-premise only. Purchase intent stays “of N asked.”",
+      "The month highlight states the store’s approved recaps, sampled, and sold, and the counts on the recap the link opens. A quote is one whole comment.",
+      "The two consumers-sampled questions sit under that headline. The store chart labels the leftover bar “No store on the event.”",
+      "Top stores show units sold. A per-hour figure is held when the clocked time cannot support it, including a rate like 5,500 samples an hour.",
+      "Best photos are one frame per store and date. What consumers said sits above the photos, with one sentence per theme.",
+      "Another brand or a product is named only when a comment spells it. Samples handed out stay labeled as samples handed out.",
+    ],
+  },
+  {
     id: "2026-11-23t",
     date: "November 23, 2026",
     title: "Email links open the right brand, plus check-in prep polish",

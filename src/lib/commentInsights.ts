@@ -143,7 +143,10 @@ export function regionCell(row: RegionRow, key: RegionColumn["key"]): RegionCell
     };
   }
   const units = key === "sold" ? row.soldUnits : row.sampledUnits;
-  const unit = key === "sold" ? plural(units, "unit", "units") : plural(units, "sample", "samples");
+  const unit =
+    key === "sold"
+      ? plural(units, "unit", "units")
+      : plural(units, "sample handed out", "samples handed out");
   return { lead: product, named: true, basis: `${unit} · ${ofRecaps(recaps)}` };
 }
 
