@@ -752,22 +752,32 @@ export default function RecapForm({
       contentType: file.type || "image/jpeg",
       category,
     }).then((result) => {
-      if (!photosRef.current.some((photo) => photo.id === id)) return;
       const advisory = advisoryFromPhotoCheck(result, bucketName);
-      const current = photosRef.current.find((photo) => photo.id === id)?.check;
-      const merged = mergePhotoAdvisories(
-        { kind: advisory.kind, message: advisory.message },
-        current?.kind === "warn" || current?.kind === "ok"
-          ? { kind: current.kind, message: current.message }
-          : null,
-      );
-      if (!merged) return;
-      patchPhoto(id, {
-        check: {
-          kind: merged.kind,
-          message: merged.message,
-          dismissed: false,
-        },
+      // Merge inside the updater so a concurrent shelf-coach result is not
+      // overwritten by a stale photosRef read outside setState.
+      setPhotos((current) => {
+        const photo = current.find((ph) => ph.id === id);
+        if (!photo) return current;
+        const existing = photo.check;
+        const merged = mergePhotoAdvisories(
+          { kind: advisory.kind, message: advisory.message },
+          existing?.kind === "warn" || existing?.kind === "ok"
+            ? { kind: existing.kind, message: existing.message }
+            : null,
+        );
+        if (!merged) return current;
+        return current.map((ph) =>
+          ph.id === id
+            ? {
+                ...ph,
+                check: {
+                  kind: merged.kind,
+                  message: merged.message,
+                  dismissed: false,
+                },
+              }
+            : ph,
+        );
       });
     });
   };
@@ -791,23 +801,34 @@ export default function RecapForm({
       file,
       contentType: file.type || "image/jpeg",
     }).then((result) => {
-      if (!photosRef.current.some((ph) => ph.id === id)) return;
       const shelf = advisoryFromShelfCoach(result);
       if (shelf.kind === "unavailable") return;
-      const current = photosRef.current.find((ph) => ph.id === id)?.check;
-      const merged = mergePhotoAdvisories(
-        current
-          ? { kind: current.kind === "pending" ? "ok" : current.kind, message: current.message }
-          : null,
-        shelf,
-      );
-      if (!merged) return;
-      patchPhoto(id, {
-        check: {
-          kind: merged.kind,
-          message: merged.message,
-          dismissed: false,
-        },
+      setPhotos((current) => {
+        const existingPhoto = current.find((ph) => ph.id === id);
+        if (!existingPhoto) return current;
+        const existing = existingPhoto.check;
+        const merged = mergePhotoAdvisories(
+          existing
+            ? {
+                kind: existing.kind === "pending" ? "ok" : existing.kind,
+                message: existing.message,
+              }
+            : null,
+          shelf,
+        );
+        if (!merged) return current;
+        return current.map((ph) =>
+          ph.id === id
+            ? {
+                ...ph,
+                check: {
+                  kind: merged.kind,
+                  message: merged.message,
+                  dismissed: false,
+                },
+              }
+            : ph,
+        );
       });
     });
   };

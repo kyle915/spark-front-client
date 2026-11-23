@@ -46,7 +46,7 @@ export function StorePrepKitCard({
   kit: StorePrepKit | null | undefined;
   accent: string;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   if (!storePrepKitHasContent(kit) || !kit) return null;
 
   const risk = kit.stockRisk;
