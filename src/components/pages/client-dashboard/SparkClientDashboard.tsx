@@ -591,6 +591,8 @@ const ClientInner: React.FC = () => {
                 </span>
               </button>
             ) : null}
+            {/* recapsDue is server-side (missing_recap_events): past/wrapped
+                only — upcoming scheduled activations are excluded. */}
             {counts.recapsDue > 0 ? (
               <button
                 type="button"

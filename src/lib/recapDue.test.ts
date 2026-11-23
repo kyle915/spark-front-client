@@ -32,10 +32,18 @@ describe("isRecapDue", () => {
     const eventDate = daysFromToday(4);
     expect(isRecapDue(requestDate, 30)).toBe(true);
     expect(isRecapDue(eventDate, 30)).toBe(false);
+    // Master Tracker / Needs-you must key off the activation date so an
+    // upcoming demo never shows as due (matches API missing_recap filter).
     const activationDate = eventDate ?? requestDate;
     const status =
       0 > 0 ? "submitted" : isRecapDue(activationDate, 30) ? "due" : "none";
     expect(status).toBe("none");
+  });
+
+  it("upcoming activation is never due even when request date is past", () => {
+    // Famus-style: tracker row still scheduled ahead; do not flag DUE.
+    const activationDate = daysFromToday(7);
+    expect(isRecapDue(activationDate, 30)).toBe(false);
   });
 
   it("submitted wins over due when filed count > 0", () => {
