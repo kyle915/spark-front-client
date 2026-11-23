@@ -82,14 +82,30 @@ export function parseColumnGuessPayload(json: string | null | undefined): {
   return { guesses, fields };
 }
 
-/** Columns a person turned on. The first header wins if two rows share a field. */
+/** Spark fields checked on more than one header. Those fields are not imported. */
+export function duplicateColumnFields(guesses: readonly ColumnGuess[]): string[] {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const guess of guesses) {
+    if (!guess.applied || !guess.field) continue;
+    if (seen.has(guess.field)) dupes.add(guess.field);
+    else seen.add(guess.field);
+  }
+  return [...dupes];
+}
+
+/**
+ * Columns a person turned on. A field checked on two headers is left out
+ * of the map entirely — the screen blocks commit until one is unchecked.
+ */
 export function confirmedColumnMap(
   guesses: readonly ColumnGuess[],
 ): Record<string, string> {
+  const blocked = new Set(duplicateColumnFields(guesses));
   const out: Record<string, string> = {};
   for (const guess of guesses) {
     if (!guess.applied || !guess.field || !guess.header) continue;
-    if (out[guess.field]) continue;
+    if (blocked.has(guess.field)) continue;
     out[guess.field] = guess.header;
   }
   return out;

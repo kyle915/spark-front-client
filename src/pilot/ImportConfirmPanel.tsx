@@ -1,4 +1,9 @@
-import type { ColumnGuess, FieldChoice, StoreMatch } from "./importConfirm";
+import {
+  duplicateColumnFields,
+  type ColumnGuess,
+  type FieldChoice,
+  type StoreMatch,
+} from "./importConfirm";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const FIELD_STYLE = {
@@ -23,6 +28,7 @@ export function ColumnConfirmPanel({
   onField: (header: string, field: string) => void;
 }) {
   if (guesses.length === 0) return null;
+  const clashes = duplicateColumnFields(guesses);
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold">Confirm columns</h3>
@@ -30,6 +36,12 @@ export function ColumnConfirmPanel({
         Known headers start on. A suggested header stays off until you check it.
         Nothing is imported until you commit.
       </p>
+      {clashes.length > 0 ? (
+        <p className="text-xs" style={{ color: "var(--spark-text)" }}>
+          More than one header is checked for the same Spark field. Uncheck one
+          before you update the preview or commit. Neither header is used until you do.
+        </p>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>

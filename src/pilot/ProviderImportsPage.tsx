@@ -19,6 +19,7 @@ import {
 } from "./ImportConfirmPanel";
 import {
   confirmedColumnMap,
+  duplicateColumnFields,
   parseColumnGuessPayload,
   setGuessField,
   setGuessIncluded,
@@ -81,6 +82,12 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   const [preview, setPreview] = useState<PreviewPayload | null>(null);
   const [guesses, setGuesses] = useState<ColumnGuess[]>([]);
   const [fieldChoices, setFieldChoices] = useState<FieldChoice[]>([]);
+  const fieldClash = duplicateColumnFields(guesses).length > 0;
+  const dropPreview = () => {
+    setPreview(null);
+    setGuesses([]);
+    setFieldChoices([]);
+  };
   const [statusBanner, setStatusBanner] = useState<string | null>(null);
 
   // Row resolution selections
@@ -96,8 +103,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     setFilename(file.name);
     const text = await file.text();
     setCsvText(text);
-    setPreview(null);
-    setGuesses([]);
+    dropPreview();
   };
 
   return (
@@ -134,7 +140,10 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <select
               value={providerUuid}
               disabled={Boolean(ws.viewerProviderUuid)}
-              onChange={(e) => setProviderUuid(e.target.value)}
+              onChange={(e) => {
+                setProviderUuid(e.target.value);
+                dropPreview();
+              }}
               className="w-full px-3 py-2 rounded-xl text-xs"
               style={FIELD_STYLE}
             >
@@ -154,6 +163,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               onChange={(e) => {
                 setPresetKey(e.target.value);
                 setSavedMappingUuid("");
+                dropPreview();
               }}
               className="w-full px-3 py-2 rounded-xl text-xs"
               style={FIELD_STYLE}
@@ -170,7 +180,10 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             <span style={META}>Or Saved Agency Mapping</span>
             <select
               value={savedMappingUuid}
-              onChange={(e) => setSavedMappingUuid(e.target.value)}
+              onChange={(e) => {
+                setSavedMappingUuid(e.target.value);
+                dropPreview();
+              }}
               className="w-full px-3 py-2 rounded-xl text-xs"
               style={FIELD_STYLE}
             >
@@ -215,8 +228,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             value={csvText}
             onChange={(e) => {
               setCsvText(e.target.value);
-              setPreview(null);
-              setGuesses([]);
+              dropPreview();
             }}
             placeholder="Event_Ref,Demo_Date,Retail_Chain,Store_Num,Street,City,State,SKU_Code,Cans_Sampled,Units_Sold"
             className="w-full p-3 rounded-xl text-xs mono"
@@ -264,7 +276,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               />
               <button
                 type="button"
-                disabled={committing}
+                disabled={committing || fieldClash}
                 onClick={() => {
                   const confirmed = confirmedColumnMap(guesses);
                   const useConfirm = guesses.length > 0;
@@ -338,7 +350,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
             {guesses.length > 0 ? (
               <button
                 type="button"
-                disabled={previewing}
+                disabled={previewing || fieldClash}
                 onClick={() => {
                   commitPreview({
                     variables: {

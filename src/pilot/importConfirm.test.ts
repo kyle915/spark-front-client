@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   confirmedColumnMap,
+  duplicateColumnFields,
   parseColumnGuessPayload,
   setGuessField,
   setGuessIncluded,
@@ -49,7 +50,7 @@ describe("column guesses", () => {
     expect(confirmedColumnMap(cleared)).toEqual({});
   });
 
-  it("keeps the first header when two included rows share a field", () => {
+  it("does not pick a winner when two included rows share a field", () => {
     const { guesses, fields } = parseColumnGuessPayload(payload);
     const both = setGuessField(
       setGuessIncluded(guesses, "Mystery Col", true),
@@ -57,7 +58,8 @@ describe("column guesses", () => {
       "visit_date",
       fields,
     );
-    expect(confirmedColumnMap(both)).toEqual({ visit_date: "Date" });
+    expect(duplicateColumnFields(both)).toEqual(["visit_date"]);
+    expect(confirmedColumnMap(both)).toEqual({});
   });
 });
 
