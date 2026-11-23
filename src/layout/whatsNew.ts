@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23q",
+    date: "November 23, 2026",
+    title: "Ask AI answers shelf, cost, POS and competitors",
+    items: [
+      "Ask AI (BrandChat) and the Claude / ChatGPT AI connector can now pull on-shelf compliance, brand demo cost rollups, retailer POS velocity and ROI, and competitor brands named in recap comments — same Spark figures as Reports, Demo Costs and Retailer POS.",
+      "Numbers still come from Spark readers only; the model plans which tool to call and never invents KPIs. Outside field agencies cannot see consolidated cost or POS through these tools.",
+    ],
+  },
+  {
     id: "2026-11-23m",
     date: "November 23, 2026",
     title: "Map this store: suggested match without the typing jank",
