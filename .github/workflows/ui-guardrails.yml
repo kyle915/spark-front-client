@@ -2,17 +2,18 @@ name: UI Guardrails
 
 # Playwright WCAG AA contrast + mobile viewport checks for light/dark
 # Spark surfaces. Runs on PRs targeting main/develop so contrast and
-# horizontal-overflow regressions are caught before merge.
+# horizontal-overflow regressions are caught before merge. It does not
+# run again on the merge push.
 
 on:
   pull_request:
-    branches: [main, develop]
-  push:
+    types: [opened, synchronize, reopened]
     branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
-  group: ui-guardrails-${{ github.ref }}
+  # Newer commits on the same PR cancel the in-progress contrast run.
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
