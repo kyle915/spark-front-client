@@ -14,14 +14,18 @@ afterEach(() => {
 });
 
 describe("feedbackMailto", () => {
-  it("addresses both product owners and carries the page", () => {
+  it("addresses events@igniteproductions.co and carries the page", () => {
     const href = feedbackMailto({
       pageTitle: "Staffing Board",
       pageUrl: "https://client.igniteproductions.co/schedule",
       clientName: "Pivot Energy Drink",
     });
-    expect(href.startsWith(`mailto:${FEEDBACK_RECIPIENTS.join(",")}?`)).toBe(true);
+    expect(FEEDBACK_RECIPIENTS).toEqual(["events@igniteproductions.co"]);
+    expect(href.startsWith("mailto:events@igniteproductions.co?")).toBe(true);
     const decoded = decodeURIComponent(href);
+    expect(decoded.match(/[\w.+-]+@[\w.-]+\.\w+/g)).toEqual([
+      "events@igniteproductions.co",
+    ]);
     expect(decoded).toContain("Spark feedback — Staffing Board");
     expect(decoded).toContain("Link: https://client.igniteproductions.co/schedule");
     expect(decoded).toContain("Client: Pivot Energy Drink");
