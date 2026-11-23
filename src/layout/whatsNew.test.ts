@@ -79,9 +79,10 @@ describe("whatsNewFor", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Landed: deck captions + dispute notes, field-fill, email ?t=, KPI strip,
+    // Program brief plus notes already on main: deck captions, field-fill, email ?t=, KPI strip,
     // Ask AI, Photo Wall / pitch decks, POS + digests, Shifts Board
     for (const id of [
+      "2026-11-23b",
       "2026-11-23v",
       "2026-11-23ab",
       "2026-11-23t",
@@ -124,9 +125,9 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest tip is the program report (client-visible); staff see it first too.
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23ab");
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23ab");
+    // Newest tip is the program brief (client-visible); staff feed starts there too
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23b");
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23b");
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -146,13 +147,13 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23ab");
+    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23b");
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23ab");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23b");
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -166,8 +167,7 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Latest tip is 2026-11-23ab for both audiences — an older legacy id
-    // must not clear either unread dot.
+    // Newest tip for both audiences is the program brief, so an older shared key clears neither.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);
 
