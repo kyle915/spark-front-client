@@ -156,7 +156,7 @@ const FinanceBody: React.FC<{
           <option value="missing_proof">Missing proof</option>
           <option value="unitemized_proof">Unitemized proof</option>
           <option value="suspected_duplicate">Suspected duplicate charge</option>
-          <option value="unmatched_cost">Unmatched cost / receipt</option>
+          <option value="unmatched_transaction">Unmatched cost / receipt</option>
           <option value="allocation_discrepancy">Allocation discrepancy</option>
         </select>
 
@@ -313,7 +313,8 @@ const FinanceBody: React.FC<{
                         </button>
                       </div>
 
-                      {exc.exceptionType === "unmatched_cost" && (
+                      {(exc.exceptionType === "unmatched_transaction" ||
+                        exc.exceptionType === "unmatched_cost") && (
                         <div className="flex gap-1.5">
                           <select
                             value={visitMatchByUuid[exc.uuid] ?? ""}
@@ -345,7 +346,9 @@ const FinanceBody: React.FC<{
                                   category: "product",
                                 },
                                 onCompleted: () => {
-                                  setBanner("Linked unmatched cost to visit.");
+                                  setBanner(
+                                    "Linked unmatched transaction to visit.",
+                                  );
                                   bump();
                                 },
                               });
