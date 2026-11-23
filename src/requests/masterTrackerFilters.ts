@@ -239,3 +239,51 @@ export function trackerSortToServer(
 }
 
 export { ACTIVE_STATUS_SLUGS };
+
+/** Chip count for a tracker status, including the rolled-up Active bucket. */
+export function trackerStatusCount(
+  key: string,
+  counts: Record<string, number>,
+  total: number,
+): number {
+  if (key === "all") return total;
+  if (key === "active") {
+    return ACTIVE_STATUS_SLUGS.reduce((sum, slug) => sum + (counts[slug] ?? 0), 0);
+  }
+  return counts[key] ?? 0;
+}
+
+/**
+ * REQ-#### is matched on the loaded rows (id suffix), not by the status
+ * totals. Those totals stay the whole tracker and must not be the export
+ * denominator.
+ */
+export function isTrackerReqLookup(search: string): boolean {
+  return /^req[-\s]*[a-z0-9]{1,4}$/i.test(search.trim());
+}
+
+/**
+ * How many requests the export is being compared with.
+ * A REQ lookup's match set is the loaded rows; every other search uses
+ * the status-chip total.
+ */
+export function trackerExportMatching(
+  search: string,
+  loaded: number,
+  statusCount: number,
+): number {
+  return isTrackerReqLookup(search) ? loaded : statusCount;
+}
+
+/**
+ * What an export of the loaded rows actually contains.
+ * A bare "50" reads as the tracker; name the loaded slice when more match.
+ */
+export function trackerExportScope(loaded: number, matching: number): string {
+  if (loaded <= 0) return "";
+  const loadedLabel = loaded.toLocaleString("en-US");
+  if (matching > loaded) {
+    return `${loadedLabel} loaded of ${matching.toLocaleString("en-US")}`;
+  }
+  return loadedLabel;
+}

@@ -67,7 +67,14 @@ type NavItem = {
   label: string;
   Icon: React.ComponentType<{ className?: string; size?: number }>;
   to?: string;
-  chip?: { text: string; tone: ChipTone; /** Spoken form, when the number alone is not enough. */ label?: string };
+  chip?: {
+    text: string;
+    tone: ChipTone;
+    /** Spoken form, when the number alone is not enough. */
+    label?: string;
+    /** Plain text. A pill is reserved for a count that needs a person. */
+    quiet?: boolean;
+  };
   stub?: boolean;
   adminOnly?: boolean;
   // Optional alternate label for the client view.
@@ -502,14 +509,18 @@ const NavRow: React.FC<{
         <Icon size={16} />
       </span>
       <span className="truncate spark-sidebar-label">{label}</span>
-      {item.chip && (
+      {item.chip?.quiet ? (
+        <span className="nav-count-quiet" aria-label={item.chip.label ?? item.chip.text}>
+          {item.chip.text}
+        </span>
+      ) : item.chip ? (
         <span
           className={`nav-badge ${badgeClass(item.chip.tone)}`}
           aria-label={item.chip.label}
         >
           {item.chip.text}
         </span>
-      )}
+      ) : null}
     </>
   );
   if (item.stub || !effectiveTo) {
@@ -575,8 +586,14 @@ const SidebarNav: React.FC<{
         };
       }
       if (it.to === "/requests/list" && counts.tracker > 0) {
-        // Inventory count — outline, not the lime Create Request alarm.
-        chip = { text: String(counts.tracker), tone: "muted" };
+        // Catalog size, not a queue. Quiet text so it does not sit next to
+        // the orange pills that need a person.
+        chip = {
+          text: counts.tracker.toLocaleString("en-US"),
+          tone: "muted",
+          quiet: true,
+          label: `${counts.tracker.toLocaleString("en-US")} tracker requests`,
+        };
       }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {

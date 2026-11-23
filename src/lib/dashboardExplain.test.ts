@@ -5,6 +5,7 @@ import {
   cleanChartQuestion,
   MAX_CHART_QUESTION,
   sampleNextKindLabel,
+  sampleNextStatLine,
 } from "./dashboardExplain";
 
 describe("calloutRecapsHref", () => {
@@ -71,5 +72,19 @@ describe("sampleNextKindLabel", () => {
   it("reads in plain words", () => {
     expect(sampleNextKindLabel("revisit")).toBe("Worth going back to");
     expect(sampleNextKindLabel("never_visited")).toBe("Never visited");
+  });
+});
+
+describe("sampleNextStatLine", () => {
+  it("keeps rate versus the brand average and weeks on one line", () => {
+    expect(
+      sampleNextStatLine(
+        "Converted at 55.9%, compared with the brand average of 15.2%. Last visited 44 weeks ago.",
+      ),
+    ).toBe("55.9% vs 15.2% · 44 weeks");
+  });
+
+  it("returns nothing when the reason has no rate or age", () => {
+    expect(sampleNextStatLine("Never visited. No approved recap on file.")).toBe("");
   });
 });

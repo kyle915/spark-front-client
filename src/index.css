@@ -1963,6 +1963,16 @@ a.spark-upcoming-row:focus-visible {
 .nav-badge--new { background: #f2f3ee; color: #14160f; }
 /* A plain count. */
 .nav-badge--count { background: rgba(242, 243, 238, 0.14); color: rgba(242, 243, 238, 0.86); font-weight: 600; }
+/* Catalog size, not a queue. No pill, so it does not compete with alert badges. */
+.nav-count-quiet {
+  margin-left: auto;
+  flex: none;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: rgba(242, 243, 238, 0.42);
+}
 .nav-section {
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.7rem;
