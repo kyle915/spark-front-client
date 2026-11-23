@@ -1,5 +1,5 @@
 import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   fetchQuery,
   useLazyLoadQuery,
@@ -326,12 +326,21 @@ const Inner: React.FC<{
     }
   };
 
+  // Tick so a page left open past the 12h cooldown re-includes BAs
+  // without waiting for a query refetch. 60s is plenty for the chip
+  // labels and bulk count; cooldown is hours-scale.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   // One-click weekend clear-out: every BA on shifts overdue ≥24h,
   // skipping anyone nudged in the last 12 hours. Same mutation as
   // the per-row Nudge button.
   const overdueTargets = useMemo(
-    () => overdueNudgeTargets(rows),
-    [rows],
+    () => overdueNudgeTargets(rows, nowMs),
+    [rows, nowMs],
   );
   const nudgeAllOverdue = async () => {
     if (isBulkNudging || isNudging || overdueTargets.length === 0) return;
@@ -745,7 +754,8 @@ const Inner: React.FC<{
                             }}
                             title={ba.lastNudgedAt}
                           >
-                            Last nudged {formatLastNudgedAt(ba.lastNudgedAt)}
+                            Last nudged{" "}
+                            {formatLastNudgedAt(ba.lastNudgedAt, nowMs)}
                             {ba.lastNudgeChannel
                               ? ` · ${ba.lastNudgeChannel}`
                               : ""}
