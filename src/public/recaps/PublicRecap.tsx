@@ -6,6 +6,7 @@ import {
 } from "@/recap/RecapClientSignoff";
 import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { RecapKpiStrip } from "@/recap/RecapDetailShell";
 import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { RecapComments } from "./RecapComments";
@@ -364,7 +365,21 @@ const PublicRecap: React.FC = () => {
             </p>
           </header>
 
-          {/* Photos lead — hero + mosaic, then KPIs / fields */}
+          {/* Engagements / Sold / Conv / Photos — under title, above photos. */}
+          {kpis.length > 0 ? (
+            <RecapKpiStrip
+              items={kpis.slice(0, 4).map((k, i) => ({
+                label: k.label,
+                value:
+                  typeof k.value === "number" && k.label.includes("$")
+                    ? `$${k.value.toFixed(2)}`
+                    : fmtNum(k.value),
+                glow: i === 0,
+              }))}
+            />
+          ) : null}
+
+          {/* Photos lead — hero + mosaic, then fields */}
           {photos.length > 0 ? (
             <section aria-label="Recap photos">
               {hero && (
@@ -473,35 +488,6 @@ const PublicRecap: React.FC = () => {
               </div>
             </section>
           ) : null}
-
-          {kpis.length > 0 && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {kpis.slice(0, 4).map((k, i) => (
-                <div
-                  key={k.label}
-                  className="kpi"
-                  style={
-                    i === 0
-                      ? {
-                          boxShadow:
-                            "0 8px 22px color-mix(in srgb, var(--recap-brand, #f2f3ee) 10%, transparent)",
-                        }
-                      : undefined
-                  }
-                >
-                  <p
-                    className="kpi-value"
-                    style={{ color: "var(--recap-brand, var(--spark-lime))" }}
-                  >
-                    {typeof k.value === "number" && k.label.includes("$")
-                      ? `$${k.value.toFixed(2)}`
-                      : fmtNum(k.value)}
-                  </p>
-                  <p className="kpi-label">{k.label}</p>
-                </div>
-              ))}
-            </div>
-          )}
 
           <RecapShareFieldSections
             sections={Array.from(

@@ -3467,6 +3467,17 @@ const RecapCustomViewInner = ({
             </p>
           </div>
 
+          {/* Engagements / Sold / Conv / Photos — under title, above photos + fields. */}
+          {reviewKpis.length > 0 ? (
+            <RecapKpiStrip
+              items={reviewKpis.map((k, i) => ({
+                label: k.label,
+                value: k.value,
+                glow: i === 0,
+              }))}
+            />
+          ) : null}
+
           {/* Desktop: meta + photos side-by-side (matches RecapDetailSkeleton).
               Mobile: photos first, then fields — same stack, less empty right rail. */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -3495,33 +3506,6 @@ const RecapCustomViewInner = ({
                     })),
                 }))}
               />
-
-              {reviewKpis.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
-                  {reviewKpis.map((k, i) => (
-                    <div
-                      key={k.label}
-                      className="kpi"
-                      style={
-                        i === 0
-                          ? {
-                              boxShadow:
-                                "0 0 28px color-mix(in srgb, var(--recap-brand, #f2f3ee) 25%, transparent)",
-                            }
-                          : undefined
-                      }
-                    >
-                      <p
-                        className="kpi-value"
-                        style={{ color: "var(--recap-brand, var(--spark-lime))" }}
-                      >
-                        {k.value}
-                      </p>
-                      <p className="kpi-label">{k.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               <RecapClientSignoff
                 existingStatus={recap.clientSignoffStatus}
