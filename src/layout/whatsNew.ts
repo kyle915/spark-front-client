@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23k",
+    date: "November 23, 2026",
+    title: "Recap stats sit under the title",
+    items: [
+      "On a recap detail (and shared /r links), Engagements, Sold, Conv and Photos now sit directly under the title — before the photo wall and long field list — so the numbers are first.",
+      "The wider desktop layout stays; on phones the four tiles stay a readable 2×2.",
+    ],
+  },
+  {
     id: "2026-11-23q",
     date: "November 23, 2026",
     title: "Ask AI answers shelf, cost, POS and competitors",
