@@ -3478,12 +3478,12 @@ const RecapCustomViewInner = ({
             />
           ) : null}
 
-          {/* Full-width body: field cards in a 2-col grid; photos stay on the
-              right (xl). Mobile: photos first, then stacked cards. */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+          {/* Full-width body: field cards in a 2-col grid; photos on the right
+              (xl flex sibling — no fake row-span). Mobile: photos first. */}
+          <div className="flex flex-col xl:flex-row gap-6 items-start">
             <div
               ref={evidenceRef}
-              className="spark-card p-5 sm:p-6 order-1 md:col-span-2 xl:order-none xl:col-span-1 xl:col-start-3 xl:row-start-1 xl:row-span-[100] xl:sticky xl:top-4"
+              className="spark-card p-5 sm:p-6 order-1 w-full xl:order-2 xl:w-[min(42%,32rem)] xl:shrink-0 xl:sticky xl:top-4"
             >
               <p
                 className="mono text-[10px] mb-4"
@@ -3494,54 +3494,55 @@ const RecapCustomViewInner = ({
               {clientPhotoTiles}
             </div>
 
-            <RecapShareFieldSections
-              className="contents"
-              cardClassName="order-2"
-              sections={customFieldsBySection.map((section) => ({
-                name: section.name,
-                fields: section.fields
-                  .filter(customFieldHasDisplayValue)
-                  .map((field) => ({
-                    name: field.name,
-                    value: field.value,
-                  })),
-              }))}
-            />
-
-            <div className="order-3 md:col-span-2 xl:col-span-2">
-              <RecapClientSignoff
-                existingStatus={recap.clientSignoffStatus}
-                existingComment={recap.clientSignoffComment}
-                existingAt={recap.clientSignoffAt}
-                busy={isSigningOff}
-                approved={recap.approved}
-                onApprove={handleApprove}
-                approving={isApproving || approvePhase !== "idle"}
-                onSubmit={(status, comment) => {
-                  commitSignoff({
-                    variables: {
-                      input: {
-                        customRecapId: recap.id,
-                        status,
-                        comment,
-                      },
-                    },
-                    onCompleted: (res) => {
-                      if (res.submitRecapClientSignoff?.success) {
-                        showAlert("Sign-off saved.", "success");
-                        onRefresh();
-                      } else {
-                        showAlert(
-                          res.submitRecapClientSignoff?.message ??
-                            "Couldn't save sign-off.",
-                          "error",
-                        );
-                      }
-                    },
-                    onError: (err) => showAlert(err.message, "error"),
-                  });
-                }}
+            <div className="order-2 xl:order-1 flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <RecapShareFieldSections
+                className="contents"
+                sections={customFieldsBySection.map((section) => ({
+                  name: section.name,
+                  fields: section.fields
+                    .filter(customFieldHasDisplayValue)
+                    .map((field) => ({
+                      name: field.name,
+                      value: field.value,
+                    })),
+                }))}
               />
+
+              <div className="md:col-span-2">
+                <RecapClientSignoff
+                  existingStatus={recap.clientSignoffStatus}
+                  existingComment={recap.clientSignoffComment}
+                  existingAt={recap.clientSignoffAt}
+                  busy={isSigningOff}
+                  approved={recap.approved}
+                  onApprove={handleApprove}
+                  approving={isApproving || approvePhase !== "idle"}
+                  onSubmit={(status, comment) => {
+                    commitSignoff({
+                      variables: {
+                        input: {
+                          customRecapId: recap.id,
+                          status,
+                          comment,
+                        },
+                      },
+                      onCompleted: (res) => {
+                        if (res.submitRecapClientSignoff?.success) {
+                          showAlert("Sign-off saved.", "success");
+                          onRefresh();
+                        } else {
+                          showAlert(
+                            res.submitRecapClientSignoff?.message ??
+                              "Couldn't save sign-off.",
+                            "error",
+                          );
+                        }
+                      },
+                      onError: (err) => showAlert(err.message, "error"),
+                    });
+                  }}
+                />
+              </div>
             </div>
           </div>
           </div>
