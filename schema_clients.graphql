@@ -8384,6 +8384,7 @@ type Query {
   canonicalVisits(periodStart: String = null, periodEnd: String = null, storeKey: String = null, providerUuid: String = null): [CanonicalVisitItem!]!
   brandCostDashboard(groupBy: String! = "store", periodStart: String = null, periodEnd: String = null, providerUuid: String = null): BrandCostDashboard!
   financeExceptionQueue(exceptionType: String = null, status: String = null, providerUuid: String = null, storeKey: String = null, periodStart: String = null, periodEnd: String = null): FinanceQueueView!
+  financeExceptionDisputePack(exceptionUuid: String!, polish: Boolean! = false): FinanceDisputePack
   retailerPosDashboard(periodStart: String = null, periodEnd: String = null, storeKey: String = null, contributionPerUnit: String = null): RetailerPosDashboard!
   posAutomationWorkspace: PosAutomationWorkspace!
   storeRecommendationActions(storeKey: String = null): [StoreActionItem!]!
