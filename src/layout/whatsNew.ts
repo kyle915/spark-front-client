@@ -23,6 +23,16 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-23d",
+    date: "November 23, 2026",
+    title: "Today's attention: denser queue + shared Discard",
+    staffOnly: true,
+    items: [
+      "Today's attention on Home is now a compact tabbed queue — one-line rows with priority, primary action, and less vertical scroll so you can clear receipt checks, missing recaps, and unstaffed shifts faster.",
+      "Use arrow keys / j k to move, Enter to open, and d to Discard. Discard (and Discard visible) clears that notice for every Ignite admin — not a private hide — so it stays gone on refresh for the whole team.",
+    ],
+  },
+  {
     id: "2026-11-23g",
     date: "November 23, 2026",
     title: "Staff tools stay behind Admin view (including billing)",

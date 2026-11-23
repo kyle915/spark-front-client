@@ -1216,6 +1216,19 @@ function buildGraphqlData(
     };
   }
   if (
+    queryText.includes("discardTodayAttentionItems") ||
+    op.includes("DiscardTodayAttentionItems")
+  ) {
+    return {
+      discardTodayAttentionItems: {
+        ok: true,
+        reason: null,
+        discardedCount: 0,
+        fingerprints: [],
+      },
+    };
+  }
+  if (
     queryText.includes("upsertDemoBudgetTarget") ||
     op.includes("RoiPacingMutations")
   ) {

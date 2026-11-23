@@ -6719,6 +6719,7 @@ type Mutation {
   generateBrandInsights(tenantId: ID!): BrandInsightBatchResult!
   upsertDemoBudgetTarget(targetAmount: String!, month: String = null, scopeType: String! = "workspace", scopeKey: String! = "", scopeLabel: String! = "", notes: String! = "", tenantId: ID = null): DemoBudgetTargetResult!
   deleteDemoBudgetTarget(uuid: String!, tenantId: ID = null): DemoBudgetTargetResult!
+  discardTodayAttentionItems(items: [TodayAttentionDiscardItemInput!]!, tenantId: ID = null): TodayAttentionDiscardResult!
   togglePhotoWallPin(photoId: String!, pinned: Boolean = null, note: String = null): PhotoWallPinResult!
   createBuyerPitchDeck(title: String!, subtitle: String = null, buyerName: String = null, introNote: String = null, periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null, includeCosts: Boolean! = false, passcode: String = null, expiresInDays: Int = null, pinnedPhotoIds: [String!] = null): BuyerPitchDeckCreateResult!
   revokeBuyerPitchDeck(deckUuid: String!): BuyerPitchDeckRevokeResult!
@@ -11560,6 +11561,18 @@ type TodayAttentionBucket {
   label: String!
   count: Int!
   items: [TodayAttentionItem!]!
+}
+
+input TodayAttentionDiscardItemInput {
+  bucket: String!
+  refId: String!
+}
+
+type TodayAttentionDiscardResult {
+  ok: Boolean!
+  reason: String
+  discardedCount: Int!
+  fingerprints: [String!]!
 }
 
 type TodayAttentionItem {

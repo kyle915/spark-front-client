@@ -91,8 +91,9 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only landed: route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
+    // Staff-only landed: denser attention, route lock, finance queue, map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23d",
       "2026-11-23g",
       "2026-11-23f",
       "2026-11-23m",
@@ -149,7 +150,7 @@ describe("whatsNewFor", () => {
     });
 
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    // Same tip id for staff+client right now; legacy key matching tip clears both
+// Same tip id for staff+client right now; legacy key matching tip clears both
     expect(hasUnseenWhatsNew(false)).toBe(false);
 
     store.set("@spark.whatsNew.seen", "2026-11-23p");
