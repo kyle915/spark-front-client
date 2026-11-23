@@ -34,6 +34,7 @@ const TOOLS: { name: string; text: string }[] = [
   { name: "Recaps", text: "Approved recaps with date, store, state and consumers sampled, each with a link back to Spark." },
   { name: "Consumer breakdowns", text: "Consumers sampled by store, state or week, and units sold and sampled by product." },
   { name: "Upcoming events", text: "The next 1–30 days of events and requests, with how many brand ambassadors are booked." },
+  { name: "Pending approvals", text: "Requests and recaps waiting on you, with links. Approving still happens in Spark." },
   { name: "Weekly summary", text: "The latest published weekly summary, or one for a given week." },
   { name: "Shelf compliance", text: "On-shelf / OSA from stored shelf readings: visits on shelf, not found, price tag visible and unread visits." },
   { name: "Demo costs", text: "Brand-paid demo cost rollups by store, program, provider or month. Incomplete costs stay blank — never treated as $0." },
