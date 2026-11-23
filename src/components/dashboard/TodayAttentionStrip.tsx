@@ -105,6 +105,8 @@ const StripBody: React.FC = () => {
   const [focusIndex, setFocusIndex] = useState(0);
   const [banner, setBanner] = useState<string | null>(null);
   const rowRefs = useRef<Array<HTMLLIElement | null>>([]);
+  /** When true, next paint after a tab change focuses the first row. */
+  const pendingFocusFirstRow = useRef(false);
 
   useEffect(() => {
     if (buckets.length === 0) return;
@@ -119,9 +121,26 @@ const StripBody: React.FC = () => {
     [activeBucket],
   );
 
+  const focusRow = useCallback((index: number) => {
+    setFocusIndex(index);
+    rowRefs.current[index]?.focus();
+  }, []);
+
+  const selectBucket = useCallback((key: string) => {
+    pendingFocusFirstRow.current = true;
+    setActiveKey(key);
+  }, []);
+
   useEffect(() => {
     setFocusIndex(0);
     rowRefs.current = [];
+    if (!pendingFocusFirstRow.current || visibleItems.length === 0) return;
+    pendingFocusFirstRow.current = false;
+    // Refs attach after this commit — focus on the next frame.
+    const id = requestAnimationFrame(() => {
+      rowRefs.current[0]?.focus();
+    });
+    return () => cancelAnimationFrame(id);
   }, [activeKey, visibleItems.length]);
 
   const bump = useCallback(() => setFetchKey((k) => k + 1), []);
@@ -155,25 +174,30 @@ const StripBody: React.FC = () => {
     [bump, commitDiscard],
   );
 
-  const focusRow = (index: number) => {
-    setFocusIndex(index);
-    const el = rowRefs.current[index];
-    el?.focus();
-  };
-
-  const onListKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
+  const onQueueKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (visibleItems.length === 0) return;
+    const target = e.target as HTMLElement | null;
+    const inRow = Boolean(target?.closest("[data-attention-row]"));
+    // Arrow keys always move the queue cursor (from Discard visible, etc.).
     if (e.key === "ArrowDown" || e.key === "j") {
       e.preventDefault();
-      focusRow(nextFocusIndex(focusIndex, 1, visibleItems.length));
+      focusRow(inRow ? nextFocusIndex(focusIndex, 1, visibleItems.length) : 0);
       return;
     }
     if (e.key === "ArrowUp" || e.key === "k") {
       e.preventDefault();
-      focusRow(nextFocusIndex(focusIndex, -1, visibleItems.length));
+      focusRow(
+        inRow
+          ? nextFocusIndex(focusIndex, -1, visibleItems.length)
+          : visibleItems.length - 1,
+      );
       return;
     }
-    const item = visibleItems[focusIndex];
+    // Enter / open / discard only when a row is focused — never steal from
+    // "Discard visible" or the row's own CTA / Discard controls.
+    if (!inRow) return;
+    if (target?.closest("a, button")) return;
+    const item = visibleItems[Math.max(0, focusIndex)] ?? visibleItems[0];
     if (!item) return;
     if (e.key === "Enter" || e.key === "o") {
       e.preventDefault();
@@ -183,6 +207,37 @@ const StripBody: React.FC = () => {
     if (e.key === "d" || e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
       discardItems([item]);
+    }
+  };
+
+  const onTabListKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (buckets.length === 0) return;
+    const idx = Math.max(
+      0,
+      buckets.findIndex((b) => b.key === activeBucket?.key),
+    );
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      selectBucket(buckets[(idx + 1) % buckets.length].key);
+      return;
+    }
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      selectBucket(buckets[(idx - 1 + buckets.length) % buckets.length].key);
+      return;
+    }
+    // Drop into the list so advertised ↑↓ / Enter / d work immediately.
+    if (
+      e.key === "ArrowDown" ||
+      e.key === "j" ||
+      e.key === "Enter" ||
+      e.key === " "
+    ) {
+      e.preventDefault();
+      setFocusIndex(0);
+      requestAnimationFrame(() => {
+        rowRefs.current[0]?.focus();
+      });
     }
   };
 
@@ -238,6 +293,7 @@ const StripBody: React.FC = () => {
         role="tablist"
         aria-label="Attention categories"
         className="flex flex-wrap gap-1 pt-2 pb-2"
+        onKeyDown={onTabListKeyDown}
       >
         {buckets.map((bucket) => {
           const selected = bucket.key === activeBucket?.key;
@@ -259,7 +315,7 @@ const StripBody: React.FC = () => {
                   ? "1px solid var(--spark-border)"
                   : "1px solid transparent",
               }}
-              onClick={() => setActiveKey(bucket.key)}
+              onClick={() => selectBucket(bucket.key)}
             >
               {bucket.label}
               <span className="ml-1 tabular-nums opacity-80">{bucket.count}</span>
@@ -273,6 +329,8 @@ const StripBody: React.FC = () => {
           role="tabpanel"
           id={`${baseId}-panel-${activeBucket.key}`}
           aria-labelledby={`${baseId}-tab-${activeBucket.key}`}
+          tabIndex={-1}
+          onKeyDown={onQueueKeyDown}
         >
           <div className="flex items-center justify-end gap-2 pb-1">
             <button
@@ -292,13 +350,13 @@ const StripBody: React.FC = () => {
               borderColor: "var(--spark-border)",
               background: "var(--spark-surface)",
             }}
-            onKeyDown={onListKeyDown}
           >
             {visibleItems.map((row, index) => {
               const sev = (row.severity || "low").toUpperCase();
               return (
                 <li
                   key={itemKey(row)}
+                  data-attention-row
                   ref={(el) => {
                     rowRefs.current[index] = el;
                   }}
