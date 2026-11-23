@@ -391,12 +391,7 @@ const PublicRecap: React.FC = () => {
                 </button>
               )}
               {restPhotos.length > 0 && (
-                <div
-                  className="mt-3 grid gap-2.5"
-                  style={{
-                    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                  }}
-                >
+                <div className="mt-3 grid grid-cols-2 gap-2.5 sm:[grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
                   {restPhotos.map((p, i) => (
                     <button
                       key={p.url}
@@ -442,12 +437,7 @@ const PublicRecap: React.FC = () => {
               >
                 {videos.length} VIDEO{videos.length === 1 ? "" : "S"}
               </p>
-              <div
-                className="grid gap-2.5"
-                style={{
-                  gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                }}
-              >
+              <div className="grid grid-cols-2 gap-2.5 sm:[grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
                 {videos.map((p) => (
                   <button
                     key={p.url}

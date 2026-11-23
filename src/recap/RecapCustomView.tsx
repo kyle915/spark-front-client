@@ -3334,11 +3334,9 @@ const RecapCustomViewInner = ({
     const clientPhotoTiles =
       flatImages.length + flatVideos.length > 0 ? (
         <div
-          className="grid gap-2.5 sm:gap-3"
-          style={{
-            // Fill width: ~2 cols phone → ~5–6 on wide desktop photo pane.
-            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-          }}
+          // Phone: keep 2 cols (auto-fill@140px collapses to 1 under layout padding).
+          // sm+: densify with auto-fill as the pane widens.
+          className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:[grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]"
         >
           {categories
             .flatMap((category) => category.files)
