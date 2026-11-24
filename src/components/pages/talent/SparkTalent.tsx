@@ -2,8 +2,16 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
-import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
-import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
+import { TalentRosterQuery } from "@/api/queries/TalentRosterQuery";
+import type { TalentRosterQuery as TalentRosterQueryType } from "@api/queries/__generated__/TalentRosterQuery.graphql";
+import {
+  displayEmail,
+  talentMatches,
+  talentName,
+  talentPhone,
+  talentPlace,
+  type TalentSource,
+} from "./talentDisplay";
 import InviteNewBAModal from "./InviteNewBAModal";
 import BAProfileModal from "./BAProfileModal";
 import { useAuthStore } from "@/store/authStore";
@@ -30,7 +38,11 @@ type Tier = "CAPTAIN" | "TOP" | "RISING" | "NEW";
 type BA = {
   uuid: string;
   name: string;
+  /** Contactable email only — "" for a walk-up placeholder. */
   email: string;
+  phone: string;
+  source: TalentSource;
+  homeCity: string;
   initials: string;
   location: string;
   college: string;
@@ -132,8 +144,8 @@ const TalentInner: React.FC = () => {
     return f;
   }, [tenantId, city, college, inCollegeOnly, activeOnly, minRating]);
 
-  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
-    AmbassadorsListQuery,
+  const data = useLazyLoadQuery<TalentRosterQueryType>(
+    TalentRosterQuery,
     { first: 200, filters },
     { fetchPolicy: "store-and-network" },
   );
@@ -143,20 +155,29 @@ const TalentInner: React.FC = () => {
       .map((e) => e?.node)
       .filter((n): n is NonNullable<typeof n> => Boolean(n))
       .map((n) => {
-        const firstName = n.user?.firstName ?? "";
-        const lastName = n.user?.lastName ?? "";
-        const name =
-          [firstName, lastName].filter(Boolean).join(" ") ||
-          n.user?.email ||
-          "BA";
+        // Walk-up identities carry a synthetic checkin-<phone>@walkup.spark
+        // email; name them by phone and place them by their last shift.
+        const source: TalentSource = {
+          firstName: n.user?.firstName,
+          lastName: n.user?.lastName,
+          email: n.user?.email,
+          phone: n.phone,
+          lastWorkedMarket: n.lastWorkedMarket,
+          lastWorkedTenant: n.lastWorkedTenant,
+        };
+        const name = talentName(source);
+        const homeCity = cityFromAddress(n.address ?? "");
         const rating = typeof n.rating === "number" ? n.rating : null;
         const isActive = Boolean(n.isActive);
         return {
           uuid: String(n.uuid),
           name,
-          email: n.user?.email ?? "",
-          initials: initialsOf(name),
-          location: cityFromAddress(n.address ?? ""),
+          email: displayEmail(n.user?.email),
+          phone: talentPhone(source),
+          source,
+          homeCity,
+          initials: /[A-Za-z]/.test(name) ? initialsOf(name) : "BA",
+          location: talentPlace(source, homeCity),
           college: n.college ?? "",
           inCollege: Boolean(n.inCollege),
           headshotUrl: n.headshotUrl ?? null,
@@ -184,18 +205,9 @@ const TalentInner: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    return all.filter((b) => {
-      if (
-        q &&
-        !b.name.toLowerCase().includes(q) &&
-        !b.location.toLowerCase().includes(q) &&
-        !b.college.toLowerCase().includes(q) &&
-        !b.email.toLowerCase().includes(q)
-      ) {
-        return false;
-      }
-      return true;
-    });
+    return all.filter((b) =>
+      talentMatches({ ...b.source, college: b.college }, b.homeCity, q),
+    );
   }, [all, query]);
 
   return (
@@ -260,7 +272,7 @@ const TalentInner: React.FC = () => {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Name, email…"
+          placeholder="Name, phone, email…"
           style={inputStyle}
         />
         <input
@@ -383,15 +395,12 @@ const TalentInner: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  {(b.location || b.email) && (
+                  {(b.location || b.email || b.phone) && (
                     <p
-                      className="mono text-[10px] uppercase mt-0.5 truncate"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: "var(--spark-text-meta)",
-                      }}
+                      className="text-xs mt-0.5 truncate"
+                      style={{ color: "var(--spark-text-meta)" }}
                     >
-                      {b.location || b.email}
+                      {b.location || b.email || b.phone}
                     </p>
                   )}
                   <div className="flex items-center gap-1.5 mt-2 flex-wrap">

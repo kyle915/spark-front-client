@@ -7,6 +7,8 @@ import type { OpenChatThreadMutation as OpenChatThreadMutationType } from "@api/
 import ChatConversation from "@/chat/ChatConversation";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { displayEmail, formatPhone } from "./talentDisplay";
+import { isWalkupPlaceholderEmail, walkupPhoneFromEmail } from "@/utils/clientSafeBaName";
 
 /**
  * Openable BA TALENT profile pop-up (Search talent page).
@@ -148,7 +150,14 @@ const ProfileInner: React.FC<{
     onTime: p.onTimeRate != null ? `${Math.round(p.onTimeRate)}%` : "—",
   };
 
-  const firstName = p.fullName.split(/\s+/)[0] || "BA";
+  // Walk-up identities are stored under checkin-<phone>@walkup.spark — an
+  // internal key, never shown. Name them by phone; offer no email.
+  const email = displayEmail(p.email);
+  const phone = formatPhone(p.phone) || walkupPhoneFromEmail(p.email);
+  const fullName = isWalkupPlaceholderEmail(p.fullName)
+    ? phone || "BA"
+    : p.fullName;
+  const firstName = fullName.split(/\s+/)[0] || "BA";
 
   return (
     <div style={panel}>
@@ -158,7 +167,7 @@ const ProfileInner: React.FC<{
           {p.headshotUrl ? (
             <img
               src={p.headshotUrl}
-              alt={p.fullName}
+              alt={fullName}
               style={{
                 width: 64,
                 height: 64,
@@ -171,7 +180,7 @@ const ProfileInner: React.FC<{
               className="spark-avatar"
               style={{ width: 64, height: 64, borderRadius: 16, fontSize: "1.2rem" }}
             >
-              {(p.fullName || "?")
+              {(/[A-Za-z]/.test(fullName) ? fullName : "BA")
                 .split(/\s+/)
                 .filter(Boolean)
                 .map((w) => w[0])
@@ -181,7 +190,7 @@ const ProfileInner: React.FC<{
             </span>
           )}
           <div className="min-w-0">
-            <h3 className="font-bold text-lg truncate">{p.fullName}</h3>
+            <h3 className="font-bold text-lg truncate">{fullName}</h3>
             {(p.college || p.inCollege) && (
               <p style={labelMini} className="mt-0.5 truncate">
                 {p.college || "Student"}
@@ -237,17 +246,17 @@ const ProfileInner: React.FC<{
 
       {/* Contact */}
       <div className="mt-5 grid sm:grid-cols-2 gap-2">
-        {p.email && (
+        {email && (
           <div className="flex items-center justify-between gap-2 spark-card p-2.5">
             <a
-              href={`mailto:${p.email}`}
+              href={`mailto:${email}`}
               className="text-sm truncate"
               style={{ color: "var(--spark-sky)", textDecoration: "none" }}
             >
-              {p.email}
+              {email}
             </a>
             <button
-              onClick={() => copy(p.email!, "Email")}
+              onClick={() => copy(email, "Email")}
               style={labelMini}
               title="Copy email"
             >
@@ -255,17 +264,17 @@ const ProfileInner: React.FC<{
             </button>
           </div>
         )}
-        {p.phone && (
+        {phone && (
           <div className="flex items-center justify-between gap-2 spark-card p-2.5">
             <a
-              href={`tel:${p.phone}`}
+              href={`tel:${phone.replace(/[^\d+]/g, "")}`}
               className="text-sm truncate"
               style={{ color: "var(--spark-sky)", textDecoration: "none" }}
             >
-              {p.phone}
+              {phone}
             </a>
             <button
-              onClick={() => copy(p.phone!, "Phone")}
+              onClick={() => copy(phone, "Phone")}
               style={labelMini}
               title="Copy phone"
             >

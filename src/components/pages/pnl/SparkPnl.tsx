@@ -5,6 +5,7 @@ import { EventPnlQuery } from "@/api/queries/EventPnlQuery";
 import type { EventPnlQuery as EventPnlQueryType } from "@api/queries/__generated__/EventPnlQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { inputColorScheme } from "@/theme/inputColorScheme";
+import { cleanEventName, formatEventDate } from "@/utils/eventLabel";
 
 /**
  * P&L — the cost side of every activation, finally in one place.
@@ -206,10 +207,12 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
                     className="px-3 py-2 mono text-xs"
                     style={{ color: "var(--spark-text-secondary)" }}
                   >
-                    {r.date ?? "—"}
+                    {r.date ? formatEventDate(r.date) : "—"}
                   </td>
                   <td className="px-3 py-2">
-                    {r.name}
+                    {/* Walk-in titles start with the date the Date column
+                        already shows; print it once. */}
+                    {cleanEventName(r.name) || r.name}
                     {r.estimated && (
                       <span
                         className="mono text-[9px] ml-2"

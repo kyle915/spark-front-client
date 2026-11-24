@@ -369,6 +369,7 @@ const TenantKpiCharts: React.FC<{
       label: t.label,
       value: fmt(t.value),
       count: t.value,
+      ...(t.note ? { sub: t.note } : {}),
       metric: samplingTileMetric(t.key, kpis),
     }));
     const sold: KpiTile = {

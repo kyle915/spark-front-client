@@ -16,7 +16,20 @@ export type SamplingTile = {
   label: string;
   value: number;
   key: "consumersSampled" | "samplesDistributed" | "totalEngagements";
+  /** One line saying why this figure can sit below another. */
+  note?: string;
 };
+
+/**
+ * "Total engagements" is the number box on the recap form, which only some
+ * forms ask for and BAs sometimes leave blank, while consumers sampled is
+ * read from every recap. When engagements come out BELOW consumers sampled
+ * (Liquid Death: 209,440 vs 213,128) "Total engagements" reads as a
+ * contradiction — you can't sample more people than you engaged. It is
+ * labelled for what it is instead.
+ */
+export const PARTIAL_ENGAGEMENTS_LABEL = "Engagements logged";
+export const PARTIAL_ENGAGEMENTS_NOTE = "Only on recaps whose form asks for it";
 
 export function collapseSamplingKpis(k: SamplingTotals): SamplingTile[] {
   const reached = k.consumersReached ?? 0;
@@ -39,10 +52,12 @@ export function collapseSamplingKpis(k: SamplingTotals): SamplingTile[] {
     });
   }
   if (engagementsDistinct) {
+    const partial = engagements < sampled;
     tiles.push({
       key: "totalEngagements",
-      label: "Total engagements",
+      label: partial ? PARTIAL_ENGAGEMENTS_LABEL : "Total engagements",
       value: engagements,
+      ...(partial ? { note: PARTIAL_ENGAGEMENTS_NOTE } : {}),
     });
   }
   return tiles;
