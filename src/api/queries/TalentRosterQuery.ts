@@ -7,10 +7,18 @@ import { graphql } from "react-relay";
  * `checkin-<phone>@walkup.spark` email that must never be shown. Kept separate
  * from AmbassadorsListQuery so the other BA pickers don't pay for the
  * last-worked lookup.
+ *
+ * Paged 50 at a time (the API's cap) with "Load more"; the search box is
+ * sent as `filters.talentSearch` so it searches every BA, not just the
+ * loaded page.
  */
 export const TalentRosterQuery = graphql`
-  query TalentRosterQuery($filters: AmbassadorFiltersInput, $first: Int) {
-    ambassadors(filters: $filters, first: $first) {
+  query TalentRosterQuery(
+    $filters: AmbassadorFiltersInput
+    $first: Int
+    $after: String
+  ) {
+    ambassadors(filters: $filters, first: $first, after: $after) {
       edges {
         node {
           id
@@ -30,6 +38,10 @@ export const TalentRosterQuery = graphql`
             email
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
       totalCount
     }

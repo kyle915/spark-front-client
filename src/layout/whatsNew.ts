@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24tc",
+    date: "November 24, 2026",
+    title: "Talent search finds every BA",
+    staffOnly: true,
+    items: [
+      "The search box on Talent now searches the whole roster, not just the BAs already on screen. Type a name, an email, or a phone number in any format. The roster loads 50 at a time, with Load more at the bottom.",
+    ],
+  },
+  {
     id: "2026-11-24ui",
     date: "November 24, 2026",
     title: "Tidier pages on phones and small laptops",

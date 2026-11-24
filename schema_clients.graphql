@@ -422,6 +422,7 @@ input AmbassadorFiltersInput {
   inCollege: Boolean = null
   aboutMe: String = null
   search: String = null
+  talentSearch: String = null
 }
 
 """
