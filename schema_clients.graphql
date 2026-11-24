@@ -312,6 +312,8 @@ type Ambassador implements Node {
   user: SparkUserType!
   createdAt: String!
   updatedAt: String!
+  lastWorkedMarket: String
+  lastWorkedTenant: String
   headshotUrl: String
   resumeUrl: String
   isFavorited: Boolean!
@@ -4471,6 +4473,7 @@ input EventDashboardFiltersInput {
   retailerIds: [ID!] = null
   year: Int = null
   sections: [String!] = null
+  clientView: Boolean = null
 }
 
 type EventDashboardMetrics {
@@ -10139,6 +10142,7 @@ type SamplesPerHour {
   hours: Float!
   perHour: Float
   estimated: Boolean!
+  basis: String!
 }
 
 input SaveFormInput {

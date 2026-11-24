@@ -9,6 +9,8 @@ import { PitchDeckMutationsTogglePinMutation } from "@/api/mutations/PitchDeckMu
 import type { PitchDeckMutationsTogglePinMutation as TogglePinType } from "@/api/mutations/__generated__/PitchDeckMutationsTogglePinMutation.graphql";
 import { PhotoLightbox, type PhotoLightboxItem } from "@/shared/PhotoLightbox";
 import { thumbUrl } from "@/utils/thumb";
+import SparkThumb from "@/shared/SparkThumb";
+import { cleanEventName, formatEventDate, joinDistinct } from "@/utils/eventLabel";
 
 const PAGE_SIZE = 60;
 
@@ -30,6 +32,20 @@ const PINNED_BTN_STYLE = {
 } as const;
 
 type PhotoRow = PhotoWallQueryType["response"]["photoWall"]["photos"][number];
+
+const photoTitle = (p: PhotoRow): string =>
+  cleanEventName(p.store) || cleanEventName(p.retailer) || "Store";
+
+/** Retailer and market only where they add to the title, then the date once. */
+const photoSubline = (p: PhotoRow): string => {
+  const title = photoTitle(p);
+  const extra = joinDistinct([title, cleanEventName(p.retailer), p.market])
+    .split(" · ")
+    .slice(1);
+  return [...extra, p.eventDate ? formatEventDate(p.eventDate) : ""]
+    .filter(Boolean)
+    .join(" · ");
+};
 
 const PhotoWallBody: React.FC<{
   retailer: string;
@@ -90,7 +106,7 @@ const PhotoWallBody: React.FC<{
       photos.map((p) => ({
         url: p.url,
         thumb: thumbUrl(p.url, 400) || p.url,
-        caption: [p.store, p.category, p.caption].filter(Boolean).join(" · "),
+        caption: [photoTitle(p), p.category, p.caption].filter(Boolean).join(" · "),
         name: p.store || p.category,
       })),
     [photos],
@@ -192,23 +208,22 @@ const PhotoWallBody: React.FC<{
               className="relative aspect-[4/3] bg-black/20"
               onClick={() => setLightboxIndex(idx)}
             >
-              <img
-                src={thumbUrl(photo.url, 400) || photo.url}
+              <SparkThumb
+                sources={[thumbUrl(photo.url, 400), photo.url]}
                 alt={photo.caption || photo.store || "In-store photo"}
-                className="w-full h-full object-cover"
-                loading="lazy"
               />
             </button>
             <div className="p-2.5 space-y-1.5 flex-1 flex flex-col">
+              {/* Walk-in titles embed the date ("11/23/2026 - 42nd St…"),
+                  and store / retailer / market often repeat each other.
+                  Say each thing once; print the date once. */}
               <p className="text-xs font-semibold leading-snug line-clamp-2">
-                {photo.store || photo.retailer || "Store"}
+                {photoTitle(photo)}
               </p>
-              <p className="text-[11px] line-clamp-1" style={META}>
-                {[photo.retailer, photo.market, photo.eventDate]
-                  .filter(Boolean)
-                  .join(" · ")}
+              <p className="text-xs line-clamp-1" style={META}>
+                {photoSubline(photo)}
               </p>
-              <p className="text-[11px] line-clamp-1" style={META}>
+              <p className="text-xs line-clamp-1" style={META}>
                 {photo.category}
                 {photo.skus.length ? ` · ${photo.skus.slice(0, 2).join(", ")}` : ""}
               </p>

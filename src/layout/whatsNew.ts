@@ -14,6 +14,30 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24ta",
+    date: "November 24, 2026",
+    title: "Talent shows phone and market for walk-ups",
+    staffOnly: true,
+    items: [
+      "BAs who joined through a walk-up check-in link show their phone number and where they last worked (market and brand) instead of the internal checkin address. Search by phone in any format.",
+      "Field sampling report: the samples headline is the sum of the SKU rows below it. When a week has no per-SKU counts it says which number it used instead.",
+      "P&L and the photo wall print each event date once, in one format, and drop the date that walk-in event names repeat.",
+      "Client view on Home counts recaps the way the brand does, approved only, so the preview shows the brand's numbers.",
+    ],
+  },
+  {
+    id: "2026-11-24tb",
+    date: "November 24, 2026",
+    title: "Home numbers agree with each other",
+    items: [
+      "Consumers sampled on Home now matches the weekly chart under it for the same days. Both count approved recaps on the day the event happened.",
+      "Where the recap form only sometimes asks for engagements, that figure is now called Engagements logged, so it no longer looks like it contradicts consumers sampled.",
+      "Photos on Home show a loading shimmer, fall back to the full-size photo if the small one won't load, and say Photo unavailable instead of leaving a blank gray box.",
+      "The Timeline lists the events in the range you picked, newest first, marked Upcoming, Today, Recapped, or Recap pending. It no longer says No data yet when you have events.",
+      "Long quotes from the field stop at a whole word, with Show more to read the rest.",
+    ],
+  },
+  {
     id: "2026-11-23af",
     date: "November 23, 2026",
     title: "The queue is the page",

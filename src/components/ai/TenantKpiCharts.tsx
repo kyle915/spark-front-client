@@ -297,6 +297,7 @@ const TenantKpiCharts: React.FC<{
       label: t.label,
       value: fmt(t.value),
       count: t.value,
+      ...(t.note ? { sub: t.note } : {}),
     }));
     const sold: KpiTile = {
       label: "Products sold",
