@@ -1336,10 +1336,23 @@ a.spark-upcoming-row:focus-visible {
   padding: 1rem 1.25rem;
   border-radius: 18px;
 }
+/* Fixed column counts per breakpoint: auto-fit left a lone tile on its own
+   row on phones and split the band mid-section. Tiles stretch to the row
+   height so labels and numbers line up across a row. */
 .spark-stat-band-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem 1rem;
+  align-items: stretch;
+}
+.spark-stat-band-grid > * {
+  min-width: 0;
+  height: 100%;
+}
+@media (min-width: 1024px) {
+  .spark-stat-band-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
 }
 .spark-stat {
   display: flex;
@@ -1803,6 +1816,34 @@ a.spark-upcoming-row:focus-visible {
     /* Line the first card up with the first card on the left, under the title. */
     padding-top: 4.75rem;
   }
+}
+
+/* A KPI tile that opens "how this is counted": quiet until hovered or focused. */
+.spark-kpi-explain-trigger {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+.spark-kpi-explain-trigger .spark-kpi-label {
+  text-decoration: underline dotted rgba(var(--spark-ink-rgb), 0.28);
+  text-underline-offset: 3px;
+}
+.spark-kpi-explain-trigger:hover .spark-kpi-label,
+.spark-kpi-explain-trigger:focus-visible .spark-kpi-label {
+  color: var(--spark-text);
+}
+.spark-kpi-explain-trigger:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: var(--spark-focus-offset);
+}
+.spark-kpi-untracked {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--spark-text-meta);
+  line-height: 1.3;
 }
 
 /* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
@@ -3412,5 +3453,20 @@ main table th {
   .spark-done-mark path {
     animation: none;
     stroke-dashoffset: 0;
+  }
+}
+
+/* Route fallback inside the signed-in shell: hidden for the first 150ms so a
+   fast chunk load swaps pages without a skeleton flash. */
+.spark-delayed-fallback {
+  animation: spark-delayed-fallback-in 0.12s ease-out 0.15s both;
+}
+@keyframes spark-delayed-fallback-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-delayed-fallback {
+    animation-duration: 0s;
   }
 }

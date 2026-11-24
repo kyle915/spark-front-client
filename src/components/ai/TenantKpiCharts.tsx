@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useEffect, useMemo, useState } from "react";
+import { fetchQuery } from "react-relay";
+import { useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
 import "@/lib/sparkChartRegister";
 import { Bar, Line } from "react-chartjs-2";
 import ChartBlock from "@/components/charts/ChartBlock";
@@ -14,6 +15,17 @@ import {
 import { sparseMonthFlags, splitMonthlyTrend } from "@/lib/chartRows";
 import { TenantKpisQuery } from "@/api/queries/TenantKpisQuery";
 import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__generated__/TenantKpisQuery.graphql";
+import { TenantKpiStatusQuery } from "@/api/queries/TenantKpiStatusQuery";
+import type { TenantKpiStatusQuery as TenantKpiStatusQueryType } from "@api/queries/__generated__/TenantKpiStatusQuery.graphql";
+import { KpiExplainTrigger } from "@/components/ai/KpiExplanation";
+import {
+  NOT_TRACKED_TEXT,
+  isNotTracked,
+  pendingHint,
+  samplingTileMetric,
+  type KpiMetric,
+  type KpiStatus,
+} from "@/lib/kpiExplain";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import { CountReel } from "@/motion/CountReel";
 import { inkRgba } from "@/theme/chartInk";
@@ -137,6 +149,15 @@ type KpiTile = {
   count?: number;
   sub?: string;
   primary?: boolean;
+  /** Server metric this tile shows; set when the tile can explain itself. */
+  metric?: KpiMetric;
+};
+
+type TileState = {
+  /** No form has a field for this number: say so instead of a bare 0. */
+  untracked?: boolean;
+  /** "+3 pending approval" when recaps waiting would add to it. */
+  pending?: string | null;
 };
 
 const PrimaryFigure: React.FC<{
@@ -144,12 +165,16 @@ const PrimaryFigure: React.FC<{
   value: string;
   count?: number;
   sub?: string;
-}> = ({ label, value, count, sub }) => (
+} & TileState> = ({ label, value, count, sub, untracked, pending }) => (
   <div className="spark-kpi-lockup py-1">
     <p className="spark-kpi-label">{label}</p>
-    <p className="spark-kpi-value spark-kpi-value-lg">
-      {typeof count === "number" ? <CountReel value={count} /> : value}
-    </p>
+    {untracked ? (
+      <p className="spark-kpi-untracked">{NOT_TRACKED_TEXT}</p>
+    ) : (
+      <p className="spark-kpi-value spark-kpi-value-lg">
+        {typeof count === "number" ? <CountReel value={count} /> : value}
+      </p>
+    )}
     {sub ? (
       <p
         className="spark-stat-hint"
@@ -158,6 +183,7 @@ const PrimaryFigure: React.FC<{
         {sub}
       </p>
     ) : null}
+    {pending ? <p className="spark-stat-hint">{pending}</p> : null}
   </div>
 );
 
@@ -166,21 +192,57 @@ const QuietStat: React.FC<{
   value: string;
   count?: number;
   sub?: string;
-}> = ({ label, value, count, sub }) => (
+} & TileState> = ({ label, value, count, sub, untracked, pending }) => (
   <div className="spark-kpi-lockup min-w-0 px-3 first:pl-0 last:pr-0">
     <p className="spark-kpi-label" style={{ fontSize: "0.75rem" }}>
       {label}
     </p>
-    <p className="spark-kpi-value spark-kpi-value-sm">
-      {typeof count === "number" ? <CountReel value={count} /> : value}
-    </p>
+    {untracked ? (
+      <p className="spark-kpi-untracked">{NOT_TRACKED_TEXT}</p>
+    ) : (
+      <p className="spark-kpi-value spark-kpi-value-sm">
+        {typeof count === "number" ? <CountReel value={count} /> : value}
+      </p>
+    )}
     {sub ? (
       <p className="spark-stat-hint">
         {sub}
       </p>
     ) : null}
+    {pending ? <p className="spark-stat-hint">{pending}</p> : null}
   </div>
 );
+
+/**
+ * Untracked metrics + pending-approval counts for the tiles. Its own request,
+ * fired after the tiles paint (not a suspense read), so the dashboard never
+ * waits on it; until it answers the tiles read exactly as before.
+ */
+function useKpiStatus(tenantId: string, year: number | null): KpiStatus | null {
+  const environment = useRelayEnvironment();
+  const [status, setStatus] = useState<KpiStatus | null>(null);
+  useEffect(() => {
+    let live = true;
+    setStatus(null);
+    const sub = fetchQuery<TenantKpiStatusQueryType>(
+      environment,
+      TenantKpiStatusQuery,
+      { tenantId, year },
+    ).subscribe({
+      next: (data) => {
+        if (live && data?.tenantKpiStatus) setStatus(data.tenantKpiStatus);
+      },
+      error: () => {
+        /* Optional detail: the tiles stand on their own without it. */
+      },
+    });
+    return () => {
+      live = false;
+      sub.unsubscribe();
+    };
+  }, [environment, tenantId, year]);
+  return status;
+}
 
 /* ───────────────────────── year dropdown ───────────────────────── */
 
@@ -228,6 +290,11 @@ const TenantKpiCharts: React.FC<{
   );
 
   const kpis = data?.tenantKpis;
+  const status = useKpiStatus(tenantId, selectedYear);
+  const tileState = (t: KpiTile): TileState => ({
+    untracked: isNotTracked(t.metric, t.count ?? -1, status),
+    pending: pendingHint(t.metric, status),
+  });
 
   const { primary, supporting } = useMemo((): {
     primary: KpiTile | null;
@@ -241,14 +308,17 @@ const TenantKpiCharts: React.FC<{
         {
           label: "First-time consumers",
           value: program.firstTimeConsumers,
+          metric: "first_time_consumers" as KpiMetric,
         },
         {
           label: "Brand-aware",
           value: program.brandAwareConsumers,
+          metric: "brand_aware_consumers" as KpiMetric,
         },
         {
           label: "Willing to purchase",
           value: program.willingToPurchase,
+          metric: "willing_to_purchase" as KpiMetric,
         },
       ]
         .filter((t) => t.value > 0)
@@ -269,6 +339,7 @@ const TenantKpiCharts: React.FC<{
           label: "Consumers sampled",
           value: fmt(program.consumersSampled),
           count: program.consumersSampled,
+          metric: "consumers_reached",
           sub:
             program.dryDemos > 0
               ? `${fmt(program.demos)} demos · incl. ${fmt(program.dryDemos)} dry (${fmt(program.dryPeopleEngaged)} people engaged)`
@@ -278,6 +349,7 @@ const TenantKpiCharts: React.FC<{
           label: "Units sold",
           value: fmt(program.unitsSold),
           count: program.unitsSold,
+          metric: "products_sold",
           sub: `${fmt(program.cansSold)} cans · ${fmt(program.packsSold)} packs`,
         },
         ...audience,
@@ -297,25 +369,31 @@ const TenantKpiCharts: React.FC<{
       label: t.label,
       value: fmt(t.value),
       count: t.value,
+      ...(t.note ? { sub: t.note } : {}),
+      metric: samplingTileMetric(t.key, kpis),
     }));
     const sold: KpiTile = {
       label: "Products sold",
       value: fmt(kpis.productsSold),
       count: kpis.productsSold,
       primary: true,
+      metric: "products_sold",
     };
     const optional = [
       {
         label: "First-time consumers",
         value: kpis.firstTimeConsumers,
+        metric: "first_time_consumers" as KpiMetric,
       },
       {
         label: "Brand-aware",
         value: kpis.brandAwareConsumers,
+        metric: "brand_aware_consumers" as KpiMetric,
       },
       {
         label: "Willing to purchase",
         value: kpis.willingToPurchase,
+        metric: "willing_to_purchase" as KpiMetric,
       },
     ]
       .filter((t) => t.value > 0)
@@ -323,6 +401,7 @@ const TenantKpiCharts: React.FC<{
         label: t.label,
         value: fmt(t.value),
         count: t.value,
+        metric: t.metric,
       }));
     return { primary: sold, supporting: [...sampling, ...optional] };
   }, [kpis]);
@@ -402,12 +481,20 @@ const TenantKpiCharts: React.FC<{
       ) : (
         <>
           {primary && (
-            <PrimaryFigure
+            <KpiExplainTrigger
+              tenantId={tenantId}
+              metric={primary.metric}
+              year={selectedYear}
               label={primary.label}
-              value={primary.value}
-              count={primary.count}
-              sub={primary.sub}
-            />
+            >
+              <PrimaryFigure
+                label={primary.label}
+                value={primary.value}
+                count={primary.count}
+                sub={primary.sub}
+                {...tileState(primary)}
+              />
+            </KpiExplainTrigger>
           )}
           {supporting.length > 0 && (
             <div
@@ -428,12 +515,20 @@ const TenantKpiCharts: React.FC<{
                     marginLeft: i === 0 ? 0 : 4,
                   }}
                 >
-                  <QuietStat
+                  <KpiExplainTrigger
+                    tenantId={tenantId}
+                    metric={t.metric}
+                    year={selectedYear}
                     label={t.label}
-                    value={t.value}
-                    count={t.count}
-                    sub={t.sub}
-                  />
+                  >
+                    <QuietStat
+                      label={t.label}
+                      value={t.value}
+                      count={t.count}
+                      sub={t.sub}
+                      {...tileState(t)}
+                    />
+                  </KpiExplainTrigger>
                 </div>
               ))}
             </div>

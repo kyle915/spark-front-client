@@ -12,6 +12,8 @@ import type { TenantFieldSamplingReportQuery as TenantFieldSamplingReportQueryTy
 import { GenerateFieldSamplingCalloutSummaryMutation } from "@/api/mutations/GenerateFieldSamplingCalloutSummaryMutation";
 import type { GenerateFieldSamplingCalloutSummaryMutation as GenerateFieldSamplingCalloutSummaryMutationType } from "@api/mutations/__generated__/GenerateFieldSamplingCalloutSummaryMutation.graphql";
 import { inputColorScheme } from "@/theme/inputColorScheme";
+import ExpandableText from "@/shared/ExpandableText";
+import { samplesBasisLabels } from "./samplesBasis";
 
 /**
  * Field Sampling Report — a consolidated rollup for tenants running a
@@ -229,6 +231,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const report = data.tenantFieldSamplingReport;
 
   const ytdTotal = report.ytdSkuBreakdown.items.reduce((s, i) => s + i.total, 0);
+  const basisLabels = samplesBasisLabels(report.samplesPerHour.basis);
 
   const [commitSummary, summaryInFlight] =
     useMutation<GenerateFieldSamplingCalloutSummaryMutationType>(
@@ -332,10 +335,10 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           {
-            label: "Samples / hour",
+            label: basisLabels.perHour,
             value: report.samplesPerHour.perHour != null ? report.samplesPerHour.perHour.toFixed(2) : "—",
           },
-          { label: "Samples (window)", value: fmtNum(report.samplesPerHour.samples) },
+          { label: basisLabels.total, value: fmtNum(report.samplesPerHour.samples) },
           { label: "Hours (window)", value: report.samplesPerHour.hours.toFixed(1) },
           { label: "Samples YTD", value: fmtNum(ytdTotal) },
         ].map((t) => (
@@ -351,6 +354,11 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </div>
         ))}
       </div>
+      {basisLabels.note ? (
+        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+          {basisLabels.note}
+        </p>
+      ) : null}
       {report.samplesPerHour.estimated && (
         <p className="text-xs" style={{ color: "rgba(255,200,80,0.85)" }}>
           ⚠ At least one shift in this window has no real clock-in/out pair —
@@ -524,8 +532,8 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   {[c.market, c.corridor].filter(Boolean).join(" · ") || "UNKNOWN LOCATION"}
                   {c.date ? ` · ${shortDate(c.date).toUpperCase()}` : ""}
                 </p>
-                <p className="text-xs" style={{ color: "var(--spark-text)" }}>
-                  {c.text}
+                <p className="text-sm" style={{ color: "var(--spark-text)" }}>
+                  <ExpandableText text={c.text} />
                 </p>
               </li>
             ))}

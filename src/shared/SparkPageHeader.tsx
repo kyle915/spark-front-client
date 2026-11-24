@@ -32,7 +32,9 @@ export function SparkPageHeader({
         ) : null}
       </div>
       {action ? (
-        <div className="flex flex-wrap items-center gap-2 shrink-0">{action}</div>
+        // max-w-full (not shrink-0) so a long action row wraps inside the
+        // page instead of running off the right edge on narrow screens.
+        <div className="flex flex-wrap items-center gap-2 max-w-full">{action}</div>
       ) : null}
     </div>
   );

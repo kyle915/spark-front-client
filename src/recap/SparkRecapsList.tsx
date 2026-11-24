@@ -3549,7 +3549,20 @@ export default function SparkRecapsList() {
                 ))}
               </div>
             )}
-            {!isClient && flagsEnabled && (
+            {!isClient && flagsEnabled && triage.failed && triage.settled ? (
+              // Scoring errored or timed out: say so and offer a retry
+              // instead of an approve button that can never enable.
+              <button
+                type="button"
+                onClick={triage.retry}
+                className="rounded-xl px-3 py-2 text-xs font-bold shrink-0"
+                style={ghostBtn}
+                title="Clean / Needs Eyes labels didn't load. Recaps still need a manual review."
+              >
+                Scoring unavailable · Retry
+              </button>
+            ) : null}
+            {!isClient && flagsEnabled && !(triage.failed && triage.settled) && (
               <button
                 type="button"
                 disabled={
@@ -3857,22 +3870,190 @@ export default function SparkRecapsList() {
               )}
             </div>
           )}
+          {/* Filters + sort live in the same sticky bar as search and status, so
+              the toolbar reads as one control surface (was a second card
+              under the totals). */}
+          <div className="flex flex-wrap gap-2 items-center pt-2" style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.07)" }}>
+            <button
+              type="button"
+              className="rounded-xl text-sm px-3 py-2 font-semibold"
+              style={
+                moreFiltersOpen ||
+                retailerFilter !== "all" ||
+                stateFilter !== "all" ||
+                rmmFilter !== "all" ||
+                Boolean(baName.trim()) ||
+                dateFrom !== DAYS_30_ISO ||
+                dateTo !== TODAY_ISO
+                  ? limeBtn
+                  : ghostBtn
+              }
+              aria-expanded={moreFiltersOpen}
+              onClick={() => setMoreFiltersOpen((v) => !v)}
+            >
+              {/* One Filters button on every screen size: retailer, state,
+                  dates (and the staff-only filters) stay out of the way until
+                  asked for. The count shows how many are narrowing the list. */}
+              Filters
+              {activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
+              <span aria-hidden> {moreFiltersOpen ? "▴" : "▾"}</span>
+            </button>
+            <div
+              className={`${
+                moreFiltersOpen ? "flex" : "hidden"
+              } flex-wrap gap-2 items-center w-full`}
+            >
+            <select
+              value={retailerFilter}
+              onChange={(e) => setRetailerFilter(e.target.value)}
+              className="rounded-xl text-sm"
+              style={{
+                padding: "0.75rem 0.95rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 200,
+                outline: "none",
+              }}
+            >
+              <option value="all">All retailers</option>
+              {meta.retailers.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <select
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value)}
+              className="rounded-xl text-sm"
+              style={{
+                padding: "0.75rem 0.95rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 180,
+                outline: "none",
+              }}
+            >
+              <option value="all">All states</option>
+              {meta.states.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            {/* Internal filters (regional manager, ambassador name) are for
+                Ignite staff; brand users filter by retailer, state and date. */}
+            {tenantId && !isClient && (
+              <Suspense fallback={null}>
+                <RmmFilterDropdown
+                  tenantId={tenantId}
+                  value={rmmFilter}
+                  onChange={setRmmFilter}
+                />
+              </Suspense>
+            )}
+            {tenantId && !isClient && (
+              <BaNameFilter
+                tenantId={tenantId}
+                value={baName}
+                knownNames={meta.baNames}
+                onChange={setBaName}
+              />
+            )}
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-xl text-sm"
+              style={{
+                padding: "0.75rem 0.95rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 160,
+                outline: "none",
+                colorScheme: inputColorScheme(),
+              }}
+              title="From date (inclusive)"
+              placeholder="From"
+            />
+            <span style={{ color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))", fontSize: 12 }}>
+              →
+            </span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-xl text-sm"
+              style={{
+                padding: "0.75rem 0.95rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 160,
+                outline: "none",
+                colorScheme: inputColorScheme(),
+              }}
+              title="To date (inclusive)"
+              placeholder="To"
+            />
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+                className="rounded-xl text-xs px-3 py-2"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
+                  border: "1px solid var(--spark-border)",
+                }}
+                title="Clear date range"
+              >
+                Clear dates
+              </button>
+            )}
+            </div>
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              className="rounded-xl text-sm"
+              style={{
+                padding: "0.75rem 0.95rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 200,
+                outline: "none",
+              }}
+              title="Sort order"
+            >
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="eng-desc">Most engagements</option>
+              <option value="sold-desc">Most products sold</option>
+            </select>
+          </div>
           <div
             className="flex items-center gap-2 overflow-x-auto pt-1 spark-scroll-fade"
             aria-label="Current recap filter context"
             style={{ borderTop: "1px solid rgba(var(--spark-ink-rgb),0.07)" }}
           >
             <span
-              className="text-[12px] shrink-0"
+              className="text-xs shrink-0"
               style={{ color: "var(--spark-text-meta)" }}
             >
               Showing
             </span>
-            <span className="text-[11px] font-semibold whitespace-nowrap">
+            <span className="text-xs font-semibold whitespace-nowrap">
               {windowLabel}
             </span>
             <span
-              className="mono text-[9px] shrink-0"
+              className="text-xs shrink-0"
               style={{ color: "var(--spark-text-meta)" }}
             >
               {meta.filteredTotal} matching
@@ -3880,7 +4061,7 @@ export default function SparkRecapsList() {
             {filterChips.map((chip) => (
               <span
                 key={chip.key}
-                className="mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap shrink-0"
+                className="text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0"
                 style={{
                   letterSpacing: "0.1em",
                   color: "#ef5a2a",
@@ -3895,7 +4076,7 @@ export default function SparkRecapsList() {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap shrink-0"
+                className="text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0"
                 style={{
                   color: "var(--spark-text-secondary)",
                   background: "transparent",
@@ -3927,171 +4108,6 @@ export default function SparkRecapsList() {
           ))}
         </div>
 
-        <div className="spark-card p-3 flex flex-wrap gap-2 items-center">
-          <button
-            type="button"
-            className="rounded-xl text-sm px-3 py-2 font-semibold"
-            style={
-              moreFiltersOpen ||
-              retailerFilter !== "all" ||
-              stateFilter !== "all" ||
-              rmmFilter !== "all" ||
-              Boolean(baName.trim()) ||
-              dateFrom !== DAYS_30_ISO ||
-              dateTo !== TODAY_ISO
-                ? limeBtn
-                : ghostBtn
-            }
-            aria-expanded={moreFiltersOpen}
-            onClick={() => setMoreFiltersOpen((v) => !v)}
-          >
-            {/* One Filters button on every screen size: retailer, state,
-                dates (and the staff-only filters) stay out of the way until
-                asked for. The count shows how many are narrowing the list. */}
-            Filters
-            {activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
-            <span aria-hidden> {moreFiltersOpen ? "▴" : "▾"}</span>
-          </button>
-          <div
-            className={`${
-              moreFiltersOpen ? "flex" : "hidden"
-            } flex-wrap gap-2 items-center w-full`}
-          >
-          <select
-            value={retailerFilter}
-            onChange={(e) => setRetailerFilter(e.target.value)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 200,
-              outline: "none",
-            }}
-          >
-            <option value="all">All retailers</option>
-            {meta.retailers.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-          <select
-            value={stateFilter}
-            onChange={(e) => setStateFilter(e.target.value)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 180,
-              outline: "none",
-            }}
-          >
-            <option value="all">All states</option>
-            {meta.states.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          {/* Internal filters (regional manager, ambassador name) are for
-              Ignite staff; brand users filter by retailer, state and date. */}
-          {tenantId && !isClient && (
-            <Suspense fallback={null}>
-              <RmmFilterDropdown
-                tenantId={tenantId}
-                value={rmmFilter}
-                onChange={setRmmFilter}
-              />
-            </Suspense>
-          )}
-          {tenantId && !isClient && (
-            <BaNameFilter
-              tenantId={tenantId}
-              value={baName}
-              knownNames={meta.baNames}
-              onChange={setBaName}
-            />
-          )}
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 160,
-              outline: "none",
-              colorScheme: inputColorScheme(),
-            }}
-            title="From date (inclusive)"
-            placeholder="From"
-          />
-          <span style={{ color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))", fontSize: 12 }}>
-            →
-          </span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 160,
-              outline: "none",
-              colorScheme: inputColorScheme(),
-            }}
-            title="To date (inclusive)"
-            placeholder="To"
-          />
-          {(dateFrom || dateTo) && (
-            <button
-              type="button"
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-              }}
-              className="rounded-xl text-xs px-3 py-2"
-              style={{
-                background: "transparent",
-                color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
-                border: "1px solid var(--spark-border)",
-              }}
-              title="Clear date range"
-            >
-              Clear dates
-            </button>
-          )}
-          </div>
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 200,
-              outline: "none",
-            }}
-            title="Sort order"
-          >
-            <option value="date-desc">Newest first</option>
-            <option value="date-asc">Oldest first</option>
-            <option value="eng-desc">Most engagements</option>
-            <option value="sold-desc">Most products sold</option>
-          </select>
-        </div>
 
         <Suspense fallback={<RecapsListSkeleton />}>
           <RecapsListInner

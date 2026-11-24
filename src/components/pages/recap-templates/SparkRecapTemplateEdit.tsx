@@ -30,6 +30,8 @@ import { UpdateCustomRecapTemplateMutation } from "@/api/mutations/UpdateCustomR
 import type { UpdateCustomRecapTemplateMutation as UpdateCustomRecapTemplateMutationType } from "@api/mutations/__generated__/UpdateCustomRecapTemplateMutation.graphql";
 import { CreateRecapSectionMutation } from "@/api/mutations/CreateRecapSectionMutation";
 import RecapMetricMappingCard from "./RecapMetricMappingCard";
+import { TemplateNumbersCheckPanel } from "./TemplateNumbersCheck";
+import { openMappingReview, useTemplateNumbersCheck } from "./useTemplateNumbersCheck";
 import type { CreateRecapSectionMutation as CreateRecapSectionMutationType } from "@api/mutations/__generated__/CreateRecapSectionMutation.graphql";
 
 type DraftField = {
@@ -164,6 +166,10 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
   );
 
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  // The numbers check before saving: when the draft leaves a standard number
+  // without a field, or a count-like field uncounted, saving needs an
+  // explicit "Save anyway". It never blocks an edit.
+  const numbersCheck = useTemplateNumbersCheck();
   const [newSectionName, setNewSectionName] = useState("");
 
   const [commitUpdate, isUpdating] =
@@ -245,6 +251,23 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
       return;
     }
     if (!template) return;
+    numbersCheck.check(
+      {
+        templateId: String(template.id),
+        productSamples,
+        fields: fields.map((f) => ({
+          fieldId: f.id,
+          name: f.name.trim(),
+          fieldType: typeNameById[String(f.fieldTypeId)] ?? null,
+        })),
+      },
+      () => commitSave(),
+    );
+  };
+
+  const commitSave = (reviewMappingAfter = false) => {
+    if (!template) return;
+    numbersCheck.clear();
     commitUpdate({
       variables: {
         input: {
@@ -271,6 +294,12 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         const r = resp.updateCustomRecapTemplate;
         if (r?.success) {
           showAlert("Template saved.", "success");
+          if (reviewMappingAfter) {
+            // A full load, so the saved fields (with their new ids) are what
+            // the editor and the mapping card read.
+            openMappingReview(uuid);
+            return;
+          }
           navigate("/recap-templates");
         } else {
           showAlert(r?.message || "Couldn't save the template.", "error");
@@ -297,7 +326,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
     );
   }
 
-  const saveDisabled = isUpdating || !!validate();
+  const saveDisabled = isUpdating || numbersCheck.checking || !!validate();
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -603,6 +632,17 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         </div>
       </div>
 
+      {numbersCheck.guard && (
+        <TemplateNumbersCheckPanel
+          preview={numbersCheck.guard}
+          busy={isUpdating}
+          saveLabel="Save anyway"
+          onKeepEditing={numbersCheck.clear}
+          onSaveAndReview={() => commitSave(true)}
+          onSaveAnyway={() => commitSave(false)}
+        />
+      )}
+
       {/* Footer / save */}
       <div className="flex items-center justify-end gap-2">
         <button
@@ -627,7 +667,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
             boxShadow: saveDisabled ? "none" : "0 0 16px rgba(var(--spark-accent-rgb),0.30)",
           }}
         >
-          {isUpdating ? "Saving…" : "Save changes"}
+          {isUpdating ? "Saving…" : numbersCheck.checking ? "Checking…" : "Save changes"}
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { Suspense, useState } from "react";
 import { Link, useLocation } from "react-router";
+import { isActive, pickActivePath } from "./navActive";
 import { useAuthStore } from "@/store/authStore";
 import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
@@ -158,6 +159,13 @@ const SECTIONS: NavSection[] = [
         to: "/receipt-checks",
         adminOnly: true,
       },
+    ],
+  },
+  {
+    // Requests and the queues that act on them, kept apart from recap
+    // review so "Recaps" lists only recap work.
+    title: "Requests",
+    items: [
       {
         label: "Master Tracker",
         Icon: ListChecks,
@@ -185,10 +193,16 @@ const SECTIONS: NavSection[] = [
         adminOnly: true,
       },
       {
-        label: "People",
-        Icon: UsersRound,
-        to: "/people",
-        adminOnly: true,
+        label: "Recent submissions",
+        Icon: Inbox,
+        to: "/recent",
+        clientLabel: "Recent Submissions",
+      },
+      {
+        label: "Bulk Upload",
+        Icon: Upload,
+        to: "/requests/bulk-upload",
+        clientLabel: "Bulk Upload",
       },
     ],
   },
@@ -208,20 +222,8 @@ const SECTIONS: NavSection[] = [
         adminOnly: true,
       },
       { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },
-      {
-        label: "Recent submissions",
-        Icon: Inbox,
-        to: "/recent",
-        clientLabel: "Recent Submissions",
-      },
       { label: "Chat", Icon: MessageCircle, to: "/chat", adminOnly: true },
-      {
-        label: "Bulk Upload",
-        Icon: Upload,
-        to: "/requests/bulk-upload",
-        clientLabel: "Bulk Upload",
-      },
-      { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
+      { label: "Calendar", Icon: Calendar, to: "/calendar" },
       {
         label: "Account Map",
         Icon: MapPin,
@@ -275,9 +277,15 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "Talent",
+    title: "People & talent",
     adminOnly: true,
     items: [
+      {
+        label: "People",
+        Icon: UsersRound,
+        to: "/people",
+        adminOnly: true,
+      },
       { label: "Search Talent", Icon: Users, to: "/talent" },
       { label: "Favorites", Icon: Star, to: "/favorites" },
       { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
@@ -403,11 +411,6 @@ const slugToName = (slug: string | null | undefined): string => {
     .join(" ");
 };
 
-const isActive = (path: string | undefined, pathname: string) => {
-  if (!path) return false;
-  if (path === "/") return pathname === "/";
-  return pathname === path || pathname.startsWith(path + "/");
-};
 
 // Sidebar counts are solid pills, in the manner of an app-icon badge: one
 // strong colour for "needs someone", a quiet fill for a plain count. They do
@@ -428,11 +431,11 @@ const badgeClass = (tone: ChipTone): string => {
 
 const CollapsibleNavSection: React.FC<{
   section: NavSection;
-  pathname: string;
+  activePath: string | null;
   defaultOpen: boolean;
   onStub: (label: string) => void;
   isClient?: boolean;
-}> = ({ section, pathname, defaultOpen, onStub, isClient }) => {
+}> = ({ section, activePath, defaultOpen, onStub, isClient }) => {
   // Remember each section's open/closed state across reloads. The section
   // holding the current page still opens by default the first time.
   const storageKey = `@spark.nav.open.${section.title}`;
@@ -476,7 +479,7 @@ const CollapsibleNavSection: React.FC<{
             <NavRow
               key={item.label}
               item={item}
-              pathname={pathname}
+              activePath={activePath}
               onStub={onStub}
               isClient={isClient}
             />
@@ -489,13 +492,13 @@ const CollapsibleNavSection: React.FC<{
 
 const NavRow: React.FC<{
   item: NavItem;
-  pathname: string;
+  activePath: string | null;
   onStub: (label: string) => void;
   isClient?: boolean;
-}> = ({ item, pathname, onStub, isClient }) => {
+}> = ({ item, activePath, onStub, isClient }) => {
   const effectiveTo =
     isClient && item.clientTo ? item.clientTo : item.to;
-  const active = isActive(effectiveTo, pathname);
+  const active = Boolean(effectiveTo) && effectiveTo === activePath;
   const cls = `nav-item ${active ? "active" : ""}`;
   const Icon = item.Icon;
   const label = isClient && item.clientLabel ? item.clientLabel : item.label;
@@ -627,6 +630,8 @@ const SidebarNav: React.FC<{
     }),
   }));
 
+  const activePath = pickActivePath(withChips, pathname, isClient);
+
   return (
     <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
       {withChips.map((section) => {
@@ -637,7 +642,7 @@ const SidebarNav: React.FC<{
           <CollapsibleNavSection
             key={section.title}
             section={section}
-            pathname={pathname}
+            activePath={activePath}
             defaultOpen={
               section.title === "Catalogs" ||
               section.title === "Build" ||
@@ -646,6 +651,7 @@ const SidebarNav: React.FC<{
                 : isClient ||
                   section.title === "Today" ||
                   section.title === "Recaps" ||
+                  section.title === "Requests" ||
                   activeInSection
             }
             onStub={onStub}
@@ -672,11 +678,13 @@ export const SparkSidebar: React.FC = () => {
     (s) => !s.adminOnly || !isClient,
   ).map((s) => {
     let items = s.items.filter((it) => !it.adminOnly || !isClient);
-    if (s.title !== "Recaps") return { ...s, items };
-    if (!missingRecapsOn) {
-      items = items.filter((it) => it.to !== "/recaps/missing");
+    if (s.title === "Recaps") {
+      if (!missingRecapsOn) {
+        items = items.filter((it) => it.to !== "/recaps/missing");
+      }
+      return { ...s, items };
     }
-    if (!torch) return { ...s, items };
+    if (s.title !== "Requests" || !torch) return { ...s, items };
     // Torch: one Plans nav (field marketing). Hide Activation Plans.
     items = items.filter((it) => it.to !== "/plans");
     const trackerAt = items.findIndex((it) => it.to === "/requests/list");
@@ -726,6 +734,7 @@ export const SparkSidebar: React.FC = () => {
   // fallback (while the counts query loads) AND as the ErrorBoundary
   // fallback below — so if the counts query ever throws, the nav stays
   // fully usable (just no badge numbers) instead of blanking the app.
+  const activePath = pickActivePath(visibleSections, pathname, isClient);
   const navFallback = (
     <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
       {visibleSections.map((section) => {
@@ -736,7 +745,7 @@ export const SparkSidebar: React.FC = () => {
           <CollapsibleNavSection
             key={section.title}
             section={section}
-            pathname={pathname}
+            activePath={activePath}
             defaultOpen={
               section.title === "Catalogs" ||
               section.title === "Build" ||
@@ -745,6 +754,7 @@ export const SparkSidebar: React.FC = () => {
                 : isClient ||
                   section.title === "Today" ||
                   section.title === "Recaps" ||
+                  section.title === "Requests" ||
                   activeInSection
             }
             onStub={onStub}

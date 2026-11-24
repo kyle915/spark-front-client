@@ -8,6 +8,8 @@ import type { ReportsFieldPhotosQuery as ReportsFieldPhotosQueryType } from "@ap
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { thumbUrl } from "@/utils/thumb";
+import SparkThumb from "@/shared/SparkThumb";
+import useSparkRole from "@/hooks/useSparkRole";
 import { periodChange } from "./periodChange";
 import { ofAsked } from "@/lib/consumerBreakdown";
 
@@ -48,6 +50,9 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
     };
   }, []);
 
+  // In Client view, staff are counted the way the brand is (approved recaps
+  // only), so this headline matches the weekly chart under it.
+  const { isClient } = useSparkRole();
   const filters: DashboardFilters = useMemo(
     () => ({
       distributorIds: [],
@@ -55,8 +60,9 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
       quarter: null,
       startDate,
       endDate,
+      ...(isClient ? { clientView: true } : {}),
     }),
-    [startDate, endDate],
+    [startDate, endDate, isClient],
   );
   const { dashboard } = useEventDashboardData(tenantId, filters, 0);
   const m = dashboard.metrics;
@@ -68,8 +74,9 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
       quarter: null,
       startDate: priorStart,
       endDate: priorEnd,
+      ...(isClient ? { clientView: true } : {}),
     }),
-    [priorStart, priorEnd],
+    [priorStart, priorEnd, isClient],
   );
   const prior = useEventDashboardData(tenantId, priorFilters, 0).dashboard.metrics;
   const against = (
@@ -104,9 +111,10 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
         .map(({ n, src }) => ({
           uuid: String(n.uuid),
           url: thumbUrl(src, 800) || src,
+          original: src,
           label: [n.eventRetailer, n.eventState].filter(Boolean).join(", "),
         }))
-        .reduce<{ uuid: string; url: string; label: string }[][]>(
+        .reduce<{ uuid: string; url: string; original: string; label: string }[][]>(
           // Two ambassadors at one booth file near-identical photos. Show
           // one photo per place first; repeats only fill leftover slots.
           ([fresh, repeats], photo) => {
@@ -195,11 +203,10 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({ tenantId
                 style={{ aspectRatio: "4 / 3", background: "rgba(var(--spark-ink-rgb),0.04)" }}
                 title={p.label ? `Open the recap from ${p.label}` : "Open this recap"}
               >
-                <img
-                  src={p.url}
+                <SparkThumb
+                  sources={[p.url, p.original]}
                   alt={p.label ? `Photo from ${p.label}` : "Photo from the field"}
-                  loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  className="transition-transform duration-300 group-hover:scale-[1.03]"
                 />
                 {p.label ? (
                   <span
