@@ -15,6 +15,13 @@ import InviteBAModal from "@/requests/InviteBAModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/store/authStore";
 import IgniteStaffingQueuePanel from "@/components/staffing/IgniteStaffingQueuePanel";
+import { tenantDisplayName } from "@/utils/tenantDisplayName";
+import {
+  ALL_CLIENTS,
+  clientOptions,
+  defaultClientScope,
+  tenantKey,
+} from "./staffingBoardScope";
 
 /**
  * Staffing Board — a week grid of shifts × dates so an admin can see who's
@@ -271,23 +278,30 @@ const Inner: React.FC<{
   );
 
   // Board filters — client, unstaffed-only, and a venue search. The board
-  // loads every client's shifts for the week, so the client picker is what
-  // makes the scope visible ("All clients" by default).
-  const [brandFilter, setBrandFilter] = useState("");
+  // loads every client's shifts for the week; the client picker starts on the
+  // workspace you're in, and "All clients" is one click away.
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
+  const currentKey = tenantKey(tenantId);
+  const [brandFilter, setBrandFilter] = useState(() =>
+    defaultClientScope(tenantId),
+  );
   const [unstaffedOnly, setUnstaffedOnly] = useState(false);
   const [view, setView] = useState<"venue" | "person">("venue");
   const [venueQuery, setVenueQuery] = useState("");
   const brands = useMemo(
     () =>
-      [...new Set(allShifts.map((s) => s.brandName).filter(Boolean))].sort(
-        (a, b) => a.localeCompare(b),
-      ),
-    [allShifts],
+      clientOptions(allShifts, {
+        key: currentKey,
+        fallbackName:
+          tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug) ||
+          "This workspace",
+      }),
+    [allShifts, currentKey, tenantMeta?.requestUrlName, tenantSlug],
   );
   const shifts: Shift[] = useMemo(() => {
     const q = venueQuery.trim().toLowerCase();
     return allShifts.filter((s) => {
-      if (brandFilter && s.brandName !== brandFilter) return false;
+      if (brandFilter && tenantKey(s.tenantId) !== brandFilter) return false;
       if (unstaffedOnly && s.isStaffed) return false;
       if (q) {
         const hay = `${s.store ?? ""} ${s.eventName ?? ""} ${s.address ?? ""}`.toLowerCase();
@@ -298,7 +312,7 @@ const Inner: React.FC<{
   }, [allShifts, brandFilter, unstaffedOnly, venueQuery]);
   const filtersActive = Boolean(brandFilter || unstaffedOnly || venueQuery.trim());
   const clearFilters = () => {
-    setBrandFilter("");
+    setBrandFilter(ALL_CLIENTS);
     setUnstaffedOnly(false);
     setVenueQuery("");
   };
@@ -486,10 +500,10 @@ const Inner: React.FC<{
             border: "1px solid var(--spark-border)",
           }}
         >
-          <option value="">All clients ({brands.length})</option>
+          <option value={ALL_CLIENTS}>All clients ({brands.length})</option>
           {brands.map((b) => (
-            <option key={b} value={b}>
-              {b}
+            <option key={b.key} value={b.key}>
+              {b.key === currentKey ? `${b.name} (this workspace)` : b.name}
             </option>
           ))}
         </select>
@@ -922,7 +936,12 @@ export default function SparkStaffingBoard() {
           </p>
         }
       >
-        <Inner weekStart={weekStart} refreshKey={refreshKey} onAssigned={bump} />
+        <Inner
+          key={tenantId ?? "none"}
+          weekStart={weekStart}
+          refreshKey={refreshKey}
+          onAssigned={bump}
+        />
       </Suspense>
     </div>
   );

@@ -19,6 +19,7 @@ export const StaffingBoardQuery = graphql`
       address
       store
       requestUuid
+      tenantId
       isStaffed
       assigned {
         ambassadorUuid
