@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { documentTitleFor, humanizeSegment, routeTitleFor } from "./routeTitles";
+import {
+  crumbHidesRepeatedParent,
+  documentTitleFor,
+  humanizeSegment,
+  routeTitleFor,
+} from "./routeTitles";
 
 describe("routeTitleFor", () => {
   it("names list pages properly", () => {
@@ -13,6 +18,15 @@ describe("routeTitleFor", () => {
   });
   it("returns null for unknown routes", () => {
     expect(routeTitleFor("/nope")).toBeNull();
+  });
+  it("drops the repeated Recaps crumb and leaves Today / Today", () => {
+    expect(crumbHidesRepeatedParent("/recaps/list", "Recaps", "Recaps")).toBe(true);
+    expect(crumbHidesRepeatedParent("/recaps/list/", "Recaps", "Recaps")).toBe(true);
+    expect(crumbHidesRepeatedParent("/recaps/list", "Recaps", "My Recaps")).toBe(false);
+    expect(crumbHidesRepeatedParent("/today", "Today", "Today")).toBe(false);
+    expect(crumbHidesRepeatedParent("/recaps/missing", "Recaps", "Missing Recaps")).toBe(
+      false,
+    );
   });
 });
 

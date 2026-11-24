@@ -10,6 +10,7 @@ import {
   sumConversionBases,
   attentionSnapshotKpis,
   todayGroundKpis,
+  todayShowsGroundTiles,
 } from "./sparkStat";
 
 describe("sumConversionBases", () => {
@@ -389,6 +390,11 @@ describe("todayGroundKpis", () => {
       count: 0,
       tone: "default",
     });
+  });
+
+  it("drops the tiles only when every count is zero", () => {
+    expect(todayShowsGroundTiles({ events: 0, onClock: 0, notClockedIn: 0 })).toBe(false);
+    expect(todayShowsGroundTiles({ events: 4, onClock: 0, notClockedIn: 0 })).toBe(true);
   });
 });
 

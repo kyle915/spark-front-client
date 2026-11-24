@@ -1,6 +1,11 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
-import { documentTitleFor, humanizeSegment, routeTitleFor } from "./routeTitles";
+import {
+  crumbHidesRepeatedParent,
+  documentTitleFor,
+  humanizeSegment,
+  routeTitleFor,
+} from "./routeTitles";
 import { createPortal } from "react-dom";
 import SparkOverlay from "@/shared/SparkOverlay";
 import {
@@ -248,12 +253,16 @@ export const SparkTopbar: React.FC = () => {
           className={`min-w-0 ${isClient || clientName ? "hidden md:block" : ""}`}
         >
         <nav className="spark-crumb min-w-0" aria-label="Breadcrumb">
-          <span className="spark-crumb-root hidden sm:inline">
-            {crumb.parent}
-          </span>
-          <span className="spark-crumb-sep hidden sm:inline" aria-hidden>
-            /
-          </span>
+          {crumbHidesRepeatedParent(pathname, crumb.parent, crumb.current) ? null : (
+            <>
+              <span className="spark-crumb-root hidden sm:inline">
+                {crumb.parent}
+              </span>
+              <span className="spark-crumb-sep hidden sm:inline" aria-hidden>
+                /
+              </span>
+            </>
+          )}
           <span
             className="spark-crumb-current truncate"
             style={{ maxWidth: "min(26vw, 280px)" }}

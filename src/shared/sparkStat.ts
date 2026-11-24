@@ -317,6 +317,15 @@ export function recapListKpis(input: {
   ];
 }
 
+/** An empty day keeps the sentence and drops the three zero tiles. */
+export function todayShowsGroundTiles(input: {
+  events: number;
+  onClock: number;
+  notClockedIn: number;
+}): boolean {
+  return input.events > 0 || input.onClock > 0 || input.notClockedIn > 0;
+}
+
 /** Today map + roster: events, who is on the clock, and who should be. */
 export function todayGroundKpis(input: {
   events: number;

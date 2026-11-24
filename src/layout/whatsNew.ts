@@ -14,6 +14,19 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-23af",
+    date: "November 23, 2026",
+    title: "The queue is the page",
+    staffOnly: true,
+    items: [
+      "Recaps has one search, and the number is labeled Engagements. Scan is one line: who, activation, date, status, and engagements. Cards, dates, export, map, select, pin, and jump are under More. The Recaps breadcrumb no longer repeats, and Scoring Clean clears once triage finishes.",
+      "Master Tracker opens on Pending. Scheduled is the request count and matches All, not the rows in view. Sheet and export sit in one menu, and the file says how many rows it actually holds. All-time consumers, first-time, and products purchased stay on Insights.",
+      "Account map opens on the map, coverage, and the store list. Each suggestion is one line. Retailers that differ only by capital letters are one chain, and a date is not a retailer. Select all stays off until the list is filtered. The account roster sits on one line next to the coverage chips.",
+      "Walk-ups keeps this brand's standing code pinned, with a brand or code search. Photo buckets stay closed until you open the row. Codes are not reminted. Clock links stay the third tab.",
+      "An empty Today keeps the sentence and links the recap, missing-recap, and approval queues, without the zero tiles. The Master Tracker count is quiet text, not an orange badge. A dot on your avatar means What's New is unseen.",
+    ],
+  },
+  {
     id: "2026-11-23ae",
     date: "November 23, 2026",
     title: "Famus recaps end with a store sign-off",

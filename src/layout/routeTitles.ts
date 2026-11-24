@@ -101,6 +101,20 @@ export function humanizeSegment(segment: string): string {
   return titleCase(segment);
 }
 
+/**
+ * Recaps list used to read Recaps / Recaps. Hide that repeated parent.
+ * Today / Today stays; the top bar is otherwise unchanged.
+ */
+export function crumbHidesRepeatedParent(
+  pathname: string,
+  parent: string,
+  current: string,
+): boolean {
+  const path = pathname.split("?")[0].replace(/\/+$/, "") || "/";
+  if (path !== "/recaps/list") return false;
+  return parent.trim().toLowerCase() === current.trim().toLowerCase();
+}
+
 /** Browser tab title for a page name. */
 export function documentTitleFor(pageTitle: string | null | undefined): string {
   const t = (pageTitle ?? "").trim();

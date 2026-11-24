@@ -75,7 +75,7 @@ export function parseTrackerUrlParams(
     rawStatus,
   )
     ? rawStatus
-    : "active";
+    : DEFAULT_TRACKER_STATUS;
 
   const rawWhen = (params.get("when") || "").trim().toLowerCase();
   let dateRange = (VALID_TRACKER_DATE_RANGES as readonly string[]).includes(
@@ -110,7 +110,7 @@ export function buildTrackerUrlParams(
 
   if (patch.status !== undefined) {
     const s = patch.status.trim().toLowerCase();
-    if (s && s !== "active") next.set("status", s);
+    if (s && s !== DEFAULT_TRACKER_STATUS) next.set("status", s);
     else next.delete("status");
   }
 
@@ -154,6 +154,9 @@ export function buildTrackerUrlParams(
 
   return next;
 }
+
+/** The queue that needs a person. All stays one click away. */
+export const DEFAULT_TRACKER_STATUS = "pending";
 
 const ACTIVE_STATUS_SLUGS = ["pending", "queue", "approved", "scheduled"] as const;
 

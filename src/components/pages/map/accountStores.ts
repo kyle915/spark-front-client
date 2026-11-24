@@ -261,7 +261,7 @@ export type StoreFilters = {
   coverage: CoverageFilter;
   /** Two-letter state code, or "all". */
   state: string;
-  /** Exact store / banner name, or "all". */
+  /** Chain key (casing and light punctuation folded), a raw banner name, or "all". */
   retailer: string;
 };
 
@@ -294,7 +294,12 @@ export function filterStores(
       return false;
     }
     if (f.state !== "all" && s.state !== f.state) return false;
-    if (f.retailer !== "all" && s.name !== f.retailer) return false;
+    if (
+      f.retailer !== "all" &&
+      retailerChainKey(s.name) !== retailerChainKey(f.retailer)
+    ) {
+      return false;
+    }
     return matchesSearch(s, f.q);
   });
 }
@@ -331,15 +336,67 @@ export function storeCounts(stores: ReadonlyArray<Store>): StoreCounts {
   return c;
 }
 
-/** Store names with how many stores carry each, biggest banner first. */
+/**
+ * Fold a banner so Kroger and KROGER, and 7-Eleven and 7 ELEVEN, are one chain.
+ * Store numbers stay, so Kroger 123 and Kroger 456 do not merge.
+ */
+export function retailerChainKey(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/['\u2018\u2019.]/g, "")
+    .replace(/[-/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** A date is not a retailer. The menu count is added by the UI, not the name. */
+export function isDateRetailerName(name: string): boolean {
+  const trimmed = name.trim();
+  return /^(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})$/.test(trimmed);
+}
+
+function retailerDisplayName(spellings: ReadonlyArray<[string, number]>): string {
+  const ranked = [...spellings].sort((a, b) => {
+    const mixed = (name: string) => /[a-z]/.test(name) && /[A-Z]/.test(name);
+    const aMixed = mixed(a[0]);
+    const bMixed = mixed(b[0]);
+    if (aMixed !== bMixed) return aMixed ? -1 : 1;
+    const aLower = /[a-z]/.test(a[0]);
+    const bLower = /[a-z]/.test(b[0]);
+    if (aLower !== bLower) return aLower ? -1 : 1;
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return a[0].localeCompare(b[0]);
+  });
+  return ranked[0]?.[0] ?? "";
+}
+
+/** Chains with how many stores carry each, biggest banner first. Dates are omitted. */
 export function retailerOptions(
   stores: ReadonlyArray<Store>,
-): Array<{ name: string; count: number }> {
-  const counts = new Map<string, number>();
-  for (const s of stores) counts.set(s.name, (counts.get(s.name) ?? 0) + 1);
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([name, count]) => ({ name, count }));
+): Array<{ key: string; name: string; count: number }> {
+  const chains = new Map<string, { spellings: Map<string, number>; total: number }>();
+  for (const s of stores) {
+    const name = s.name.trim();
+    if (!name || isDateRetailerName(name)) continue;
+    const key = retailerChainKey(name);
+    if (!key) continue;
+    let chain = chains.get(key);
+    if (!chain) {
+      chain = { spellings: new Map(), total: 0 };
+      chains.set(key, chain);
+    }
+    chain.spellings.set(name, (chain.spellings.get(name) ?? 0) + 1);
+    chain.total += 1;
+  }
+  return Array.from(chains.entries())
+    .map(([key, chain]) => ({
+      key,
+      name: retailerDisplayName(Array.from(chain.spellings.entries())),
+      count: chain.total,
+    }))
+    .filter((row) => row.name.length > 0)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 export function stateOptions(stores: ReadonlyArray<Store>): string[] {
