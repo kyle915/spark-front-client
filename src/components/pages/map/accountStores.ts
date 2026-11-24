@@ -29,6 +29,8 @@ export type PinRow = {
   visitCount: number;
   planned: boolean;
   storeKey: string;
+  /** The store's newest filed visit (ISO); absent from older servers. */
+  lastVisitDate?: string | null;
 };
 
 /** One row of the brand's uploaded account list, as saved on the server. */
@@ -61,6 +63,13 @@ export type Store = {
   position: LatLng | null;
   /** Date of the newest request at this store; null for list-only stores. */
   lastRequestDate: string | null;
+  /** Date of the newest filed visit (a demo with a recap); null when never. */
+  lastVisitDate: string | null;
+  /** City, "" when unknown. With `state` it makes the market. */
+  city: string;
+  /** True when no store name was known and `name` is the street: such a
+   *  store is listed, but is not a retailer in the menu. */
+  unnamed?: boolean;
   /** "requests": has at least one request. "list": only on the uploaded list. */
   source: "requests" | "list";
   /** True when the store is on the brand's uploaded account list. */
@@ -134,6 +143,82 @@ const cellOf = (p: LatLng): [number, number] => [
   Math.round(p.lng * 1000),
 ];
 
+const MONTH = "(?:jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december)\\.?";
+const DATE_PATTERNS = [
+  // 2027-01-11, 2027/1/11
+  "\\b\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}\\b",
+  // 05/16/2026, 5/16/26, 5/16 (a slash is a date; "7-11" is a store)
+  "\\b\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?\\b",
+  // 05-16-2026, 5.16.26 (dash / dot only with all three parts)
+  "\\b\\d{1,2}[-.]\\d{1,2}[-.]\\d{2,4}\\b",
+  // May 17, Jan 9th 2027, Sept. 3, 2026
+  `\\b${MONTH}\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s*\\d{4})?\\b`,
+  // 10am-2pm, 10:00 AM - 2:00 PM, 3pm
+  "\\b\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?\\s*[-\u2013\u2014]\\s*\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)\\b",
+  "\\b\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)\\b",
+];
+// "Sat 11/12", "Saturday, May 17": the weekday goes with its date.
+const WEEKDAY = "(?:\\b(?:mon|monday|tue|tues|tuesday|wed|weds|wednesday|thu|thur|thurs|thursday|fri|friday|sat|saturday|sun|sunday)\\b\\.?,?\\s+)?";
+const DATES = new RegExp(`${WEEKDAY}(?:${DATE_PATTERNS.map((p) => `(?:${p})`).join("|")})`, "gi");
+const DATE_ONLY = new RegExp(`^(?:${WEEKDAY}(?:${DATE_PATTERNS.join("|")})[\\s,]*)+$`, "i");
+const EDGE = /^[\s\u00b7\u2022|,;:\-\u2013\u2014/]+|[\s\u00b7\u2022|,;:\-\u2013\u2014/(]+$/g;
+const EMPTY_PARENS = /\(\s*\)|\[\s*\]/g;
+const SEP_RUN = /\s*([\u00b7\u2022|])\s*(?:[\u00b7\u2022|\-\u2013\u2014]\s*)+/g;
+
+/**
+ * A store name without the visit's date. Requests are usually named
+ * "<store> · <date>" and most have no linked retailer, so the request name
+ * stood in for the store and the retailer menu listed one entry per visit.
+ * Same rules as the server's `events/store_labels.py`; keep them in step.
+ * Returns the trimmed original when nothing would be left.
+ */
+export function cleanStoreLabel(text: string | null | undefined): string {
+  const raw = String(text ?? "").split(/\s+/).filter(Boolean).join(" ");
+  if (!raw) return "";
+  let out = raw
+    .replace(DATES, " ")
+    .replace(EMPTY_PARENS, " ")
+    .replace(SEP_RUN, " $1 ")
+    .replace(/\s+/g, " ");
+  let previous = "";
+  while (previous !== out) {
+    previous = out;
+    out = out.replace(EDGE, "").trim();
+  }
+  return out || raw;
+}
+
+/** True for a label that is nothing but a date ("05/17/2026"). */
+export function isDateOnlyLabel(text: string | null | undefined): boolean {
+  const raw = String(text ?? "").split(/\s+/).filter(Boolean).join(" ");
+  return raw !== "" && DATE_ONLY.test(raw);
+}
+
+/** The name a pin row's store goes by: its retailer, else its request name,
+ *  else its street — never a date. */
+export function storeLabel(row: {
+  retailerName?: string | null;
+  name?: string | null;
+  address?: string | null;
+}): string {
+  return storeName(row).name;
+}
+
+/** `storeLabel`, and whether the name is only the street (no store name to
+ *  go on, so it is no retailer). */
+function storeName(row: {
+  retailerName?: string | null;
+  name?: string | null;
+  address?: string | null;
+}): { name: string; fromStreet: boolean } {
+  for (const candidate of [row.retailerName, row.name]) {
+    const label = cleanStoreLabel(candidate);
+    if (label && !isDateOnlyLabel(label)) return { name: label, fromStreet: false };
+  }
+  const street = String(row.address ?? "").split(",")[0].trim();
+  return { name: street || "Unnamed store", fromStreet: true };
+}
+
 function fallbackKey(row: PinRow): string {
   return `${row.retailerName || row.name}|${row.lat.toFixed(5)}|${row.lng.toFixed(5)}`;
 }
@@ -156,8 +241,12 @@ export function buildStores(
     if (!isPlottable(lat, lng)) continue;
     const key = row.storeKey || fallbackKey(row);
     const visitCount = Math.max(0, Number(row.visitCount ?? 0) || 0);
+    const lastVisit = row.lastVisitDate ?? null;
     const existing = byKey.get(key);
     if (existing) {
+      if (lastVisit && (!existing.lastVisitDate || lastVisit > existing.lastVisitDate)) {
+        existing.lastVisitDate = lastVisit;
+      }
       existing.visitCount = Math.max(existing.visitCount, visitCount);
       existing.coverage = coverageFromVisitCount(existing.visitCount);
       existing.planned = existing.planned || Boolean(row.planned);
@@ -169,10 +258,13 @@ export function buildStores(
     const parsed = marketFromAddress(row.address);
     const state = stateCode(row.stateCode || parsed.state);
     const city = row.locationName || parsed.city;
+    const label = storeName(row);
     byKey.set(key, {
       key,
-      name: row.retailerName || row.name || "Unnamed store",
+      name: label.name,
+      unnamed: label.fromStreet,
       market: [city, state].filter(Boolean).join(", "),
+      city: city.trim(),
       state,
       address: row.address ?? "",
       // Trust the visit count over the label if the two ever disagree.
@@ -184,6 +276,7 @@ export function buildStores(
       planned: Boolean(row.planned),
       position: { lat, lng },
       lastRequestDate: row.date ?? null,
+      lastVisitDate: lastVisit,
       source: "requests",
       onList: false,
       positionStatus: null,
@@ -237,6 +330,7 @@ export function buildStores(
       key: `list:${e.uuid}`,
       name,
       market: [e.city.trim(), state || e.state.trim()].filter(Boolean).join(", "),
+      city: e.city.trim(),
       state,
       address,
       coverage: "never_visited",
@@ -244,6 +338,7 @@ export function buildStores(
       planned: false,
       position,
       lastRequestDate: null,
+      lastVisitDate: null,
       source: "list",
       onList: true,
       positionStatus: position ? null : e.positionStatus,
@@ -263,6 +358,9 @@ export type StoreFilters = {
   state: string;
   /** Chain key (casing and light punctuation folded), a raw banner name, or "all". */
   retailer: string;
+  /** Market key from `marketKey` ("tempe|AZ"), or "all". Optional for callers
+   *  written before markets. */
+  market?: string;
 };
 
 export const NO_FILTERS: StoreFilters = {
@@ -270,6 +368,7 @@ export const NO_FILTERS: StoreFilters = {
   coverage: "all",
   state: "all",
   retailer: "all",
+  market: "all",
 };
 
 /** Search folding: like an address, and an apostrophe joins rather than
@@ -294,6 +393,7 @@ export function filterStores(
       return false;
     }
     if (f.state !== "all" && s.state !== f.state) return false;
+    if (f.market && f.market !== "all" && marketKey(s) !== f.market) return false;
     if (
       f.retailer !== "all" &&
       retailerChainKey(s.name) !== retailerChainKey(f.retailer)
@@ -305,7 +405,37 @@ export function filterStores(
 }
 
 export const hasFilters = (f: StoreFilters): boolean =>
-  f.q.trim() !== "" || f.coverage !== "all" || f.state !== "all" || f.retailer !== "all";
+  f.q.trim() !== "" ||
+  f.coverage !== "all" ||
+  f.state !== "all" ||
+  f.retailer !== "all" ||
+  (f.market ?? "all") !== "all";
+
+/** One market per city + state; casing does not make two. "" when no city. */
+export function marketKey(store: { city: string; state: string }): string {
+  const city = store.city.trim().toLowerCase().replace(/\s+/g, " ");
+  return city ? `${city}|${store.state}` : "";
+}
+
+/** Markets (city, ST) with their store counts, biggest first. Pass a state
+ *  to list only that state's markets. */
+export function marketOptions(
+  stores: ReadonlyArray<Store>,
+  state: string = "all",
+): Array<{ key: string; name: string; count: number }> {
+  const markets = new Map<string, { name: string; count: number }>();
+  for (const s of stores) {
+    if (state !== "all" && s.state !== state) continue;
+    const key = marketKey(s);
+    if (!key) continue;
+    const held = markets.get(key);
+    if (held) held.count += 1;
+    else markets.set(key, { name: [s.city.trim(), s.state].filter(Boolean).join(", "), count: 1 });
+  }
+  return Array.from(markets.entries())
+    .map(([key, m]) => ({ key, ...m }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
 
 export type StoreCounts = {
   all: number;
@@ -377,8 +507,9 @@ export function retailerOptions(
 ): Array<{ key: string; name: string; count: number }> {
   const chains = new Map<string, { spellings: Map<string, number>; total: number }>();
   for (const s of stores) {
-    const name = s.name.trim();
-    if (!name || isDateRetailerName(name)) continue;
+    if (s.unnamed) continue;
+    const name = cleanStoreLabel(s.name);
+    if (!name || isDateRetailerName(name) || isDateOnlyLabel(name)) continue;
     const key = retailerChainKey(name);
     if (!key) continue;
     let chain = chains.get(key);

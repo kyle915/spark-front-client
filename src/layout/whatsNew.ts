@@ -14,6 +14,17 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24a",
+    date: "November 24, 2026",
+    title: "Account map: store names, markets and last demo",
+    items: [
+      "Store names on the Account map no longer carry the visit's date. \"BP · 2027-01-11\" is BP, so the retailer menu lists stores and chains with a count, not one entry per visit. A store known only by a date is shown by its street and left out of the menu.",
+      "A new market menu (city and state) sits next to the state menu, and narrows to the chosen state.",
+      "Each store in the list and on its map card shows its last demo with a filed recap, or says no demo is filed yet.",
+      "If Google refuses the map key for a web address, the map now says so instead of showing a blank grey box. The store list keeps working.",
+    ],
+  },
+  {
     id: "2026-11-23af",
     date: "November 23, 2026",
     title: "The queue is the page",

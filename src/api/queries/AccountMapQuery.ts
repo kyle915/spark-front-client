@@ -11,7 +11,9 @@ import { graphql } from "react-relay";
  * Rows that share a `storeKey` are one physical store: the server groups by
  * street address / spot on the ground, and `visitCount`, `coverageClass` and
  * `planned` are that store's, not its banner's. `locationSource` says where
- * lat/lng came from: the request, its event, or the event's looked-up address.
+ * lat/lng came from: the request, its event, or a looked-up address (the
+ * event's, else the request's own). `lastVisitDate` is the store's newest
+ * filed visit.
  */
 export const AccountMapQuery = graphql`
   query AccountMapQuery($tenantId: ID, $first: Int, $offset: Int) {
@@ -32,6 +34,7 @@ export const AccountMapQuery = graphql`
       planned
       storeKey
       locationSource
+      lastVisitDate
     }
     accountMapCoverage(tenantId: $tenantId) {
       rosterTotal

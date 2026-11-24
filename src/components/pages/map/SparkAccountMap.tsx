@@ -30,6 +30,7 @@ import {
   buildStores,
   filterStores,
   hasFilters,
+  marketOptions,
   noPositionWords,
   retailerChainKey,
   retailerOptions,
@@ -65,6 +66,13 @@ import type { WaveTargetStore } from "./waveSchedule";
 type MapPin = NonNullable<
   NonNullable<AccountMapQueryType["response"]["accountMapPins"]>[number]
 >;
+
+function shortDay(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
 /** The list draws this many rows; past that, searching is the way in. */
 const LIST_ROWS = 200;
@@ -126,6 +134,13 @@ function StoreRow({
         {store.address ? (
           <p className="text-xs mt-1 truncate" style={{ color: "var(--spark-text-meta)" }}>
             {store.address}
+          </p>
+        ) : null}
+        {store.source === "requests" ? (
+          <p className="text-xs mt-1" style={{ color: "var(--spark-text-secondary)" }}>
+            {shortDay(store.lastVisitDate)
+              ? `Last demo ${shortDay(store.lastVisitDate)}`
+              : "No demo filed yet"}
           </p>
         ) : null}
       </div>
@@ -229,6 +244,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [stateFilter, setStateFilter] = useState("all");
   const [retailerFilter, setRetailerFilter] = useState("all");
+  const [marketFilter, setMarketFilter] = useState("all");
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
   const [waveRefreshKey, setWaveRefreshKey] = useState(0);
   const [selectedWaveMap, setSelectedWaveMap] = useState<Map<string, WaveTargetStore>>(
@@ -339,17 +355,19 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       coverage,
       state: stateFilter,
       retailer: retailerFilter,
+      market: marketFilter,
     }),
-    [deferredSearch, coverage, stateFilter, retailerFilter],
+    [deferredSearch, coverage, stateFilter, retailerFilter, marketFilter],
   );
   const filtered = useMemo(() => filterStores(stores, filters), [stores, filters]);
   const counts = useMemo(() => storeCounts(stores), [stores]);
   const shown = useMemo(() => storeCounts(filtered), [filtered]);
   const states = useMemo(() => stateOptions(stores), [stores]);
   const retailers = useMemo(() => retailerOptions(stores), [stores]);
+  const markets = useMemo(() => marketOptions(stores, stateFilter), [stores, stateFilter]);
   const filtering = hasFilters({ ...filters, q: search });
 
-  const scope = `${tenantId ?? "all"}|${coverage}|${stateFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
+  const scope = `${tenantId ?? "all"}|${coverage}|${stateFilter}|${marketFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
   const fitKey = useMemo(() => storesFitKey(scope, filtered), [scope, filtered]);
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -474,6 +492,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const clearFilters = () => {
     setCoverage("all");
     setStateFilter("all");
+    setMarketFilter("all");
     setRetailerFilter("all");
     setSearch("");
     const params = new URLSearchParams(searchParams);
@@ -567,7 +586,10 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         <span className="flex-1" />
         <select
           value={stateFilter}
-          onChange={(e) => setStateFilter(e.target.value)}
+          onChange={(e) => {
+            setStateFilter(e.target.value);
+            setMarketFilter("all");
+          }}
           aria-label="Filter by state"
           style={selectStyle}
         >
@@ -575,6 +597,19 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           {states.map((s) => (
             <option key={s} value={s}>
               {s}
+            </option>
+          ))}
+        </select>
+        <select
+          value={marketFilter}
+          onChange={(e) => setMarketFilter(e.target.value)}
+          aria-label="Filter by market"
+          style={selectStyle}
+        >
+          <option value="all">All markets</option>
+          {markets.map((m) => (
+            <option key={m.key} value={m.key}>
+              {m.name} · {m.count}
             </option>
           ))}
         </select>
