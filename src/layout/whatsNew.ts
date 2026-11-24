@@ -14,6 +14,17 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24a",
+    date: "November 24, 2026",
+    title: "Recaps catch answers that disagree before they go in",
+    staffOnly: true,
+    items: [
+      "When a BA taps Submit on a check-in link, Spark now looks for answers that cannot both be right: a total sold of 0 next to lines that sold, sales with 0 people sampled, more first-time or brand-aware people than were sampled, more swag given out than was on hand, an end count that is not start minus given, spend that does not match the receipts, a clock that runs well past or short of the shift, and a number far above what this program usually reports.",
+      "Each note sits under the field it is about, marked Likely error or Check this, with Fix and This is correct. Nothing blocks the recap: the BA can always confirm and submit.",
+      "Reviewers see what the BA was asked under Review checks, in an Asked at submit block, so they can see at a glance that the BA confirmed 15 upgrades and 0 tins sold. The Needs review queue marks those recaps BA confirmed or BA check.",
+    ],
+  },
+  {
     id: "2026-11-23af",
     date: "November 23, 2026",
     title: "The queue is the page",

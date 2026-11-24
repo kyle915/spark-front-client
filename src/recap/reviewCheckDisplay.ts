@@ -108,6 +108,22 @@ export type ReviewFlagBadge = {
   label: string;
 };
 
+/**
+ * Prefix of the checks the web check-in ran when the ambassador submitted
+ * (contradictions within the recap, and whether the BA confirmed them).
+ * Mirrors `SUBMIT_CHECK_PREFIX` in spark-api `recaps/recap_review_checks.py`.
+ */
+export const BA_SUBMIT_CHECK_PREFIX = "ba_check_";
+
+export function isBaSubmitCheck(code: string | null | undefined): boolean {
+  return typeof code === "string" && code.startsWith(BA_SUBMIT_CHECK_PREFIX);
+}
+
+/** Short badge copy for a BA submit check: confirmed vs not. */
+function baSubmitBadge(label: string): string {
+  return label.startsWith("BA confirmed") ? "BA confirmed" : "BA check";
+}
+
 /** Map batched flagged summaries onto short list badges (stable code order). */
 export function reviewFlagBadges(
   flags: readonly { code: string; label: string }[] | null | undefined,
@@ -130,13 +146,18 @@ export function reviewFlagBadges(
     byCode.delete(code);
   }
   for (const [code, label] of byCode) {
-    badges.push({ code, badge: code, label });
+    badges.push({
+      code,
+      badge: isBaSubmitCheck(code) ? baSubmitBadge(label) : code,
+      label,
+    });
   }
   return badges;
 }
 
 /** Short list-badge copy for a flagged check code (GPS / Photos / …). */
 export function reviewFlagShortLabel(code: string): string {
+  if (isBaSubmitCheck(code)) return "BA check";
   return REVIEW_FLAG_BADGE_LABEL[code] ?? "Flag";
 }
 

@@ -4,6 +4,7 @@ import {
   reviewCheckCounts,
   reviewCheckTint,
   reviewFlagBadges,
+  isBaSubmitCheck,
   reviewFlagShortLabel,
   visibleReviewChecks,
 } from "./reviewCheckDisplay";
@@ -92,5 +93,19 @@ describe("flagExplanationLine", () => {
     expect(flagExplanationLine(undefined)).toBeNull();
     expect(flagExplanationLine({ summary: null })).toBeNull();
     expect(flagExplanationLine({ summary: "   " })).toBeNull();
+  });
+});
+
+describe("BA submit checks", () => {
+  it("get a readable badge in the Needs-review list", () => {
+    const badges = reviewFlagBadges([
+      { code: "ba_check_sold_line_zero", label: "BA confirmed: 15 upgrades, 0 tins sold" },
+      { code: "ba_check_clock_vs_schedule", label: "BA submitted anyway: On the clock 9h for a 4h shift" },
+    ]);
+    expect(badges.map((b) => b.badge)).toEqual(["BA confirmed", "BA check"]);
+    expect(badges[0].label).toBe("BA confirmed: 15 upgrades, 0 tins sold");
+    expect(reviewFlagShortLabel("ba_check_sold_total_zero")).toBe("BA check");
+    expect(isBaSubmitCheck("ba_check_x")).toBe(true);
+    expect(isBaSubmitCheck("gps_distance")).toBe(false);
   });
 });
