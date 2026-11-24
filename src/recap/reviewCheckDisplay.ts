@@ -119,6 +119,19 @@ export function isBaSubmitCheck(code: string | null | undefined): boolean {
   return typeof code === "string" && code.startsWith(BA_SUBMIT_CHECK_PREFIX);
 }
 
+/**
+ * Drop the BA submit checks unless the viewer is Ignite staff in admin
+ * chrome. The server already leaves them out for brand users; this keeps a
+ * staff member previewing Client mode from seeing them either.
+ */
+export function withoutStaffOnlyChecks<T extends { code: string }>(
+  checks: readonly T[] | null | undefined,
+  isStaff: boolean,
+): T[] {
+  const list = [...(checks ?? [])];
+  return isStaff ? list : list.filter((c) => !isBaSubmitCheck(c.code));
+}
+
 /** Short badge copy for a BA submit check: confirmed vs not. */
 function baSubmitBadge(label: string): string {
   return label.startsWith("BA confirmed") ? "BA confirmed" : "BA check";

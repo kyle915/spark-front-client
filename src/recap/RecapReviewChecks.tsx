@@ -18,8 +18,10 @@ import {
   reviewCheckCounts,
   reviewCheckTint,
   visibleReviewChecks,
+  withoutStaffOnlyChecks,
   type ReviewCheckStatus,
 } from "./reviewCheckDisplay";
+import { useSparkRole } from "@/hooks/useSparkRole";
 
 /**
  * Rule-based review checks beside Approve (roadmap #3). Compact chips on
@@ -65,10 +67,15 @@ const Inner: React.FC<{
     { recapId, isCustom },
     { fetchPolicy: "store-or-network" },
   );
-  const allVisible = useMemo(
-    () => visibleReviewChecks(data?.recapReviewChecks),
-    [data],
+  // "Asked at submit" is Ignite staff only: never in Client mode, even
+  // for staff previewing it (the server already omits it for brand users).
+  const { isAdmin, canToggleRole } = useSparkRole();
+  const isStaff = isAdmin && canToggleRole;
+  const checks = useMemo(
+    () => withoutStaffOnlyChecks(data?.recapReviewChecks, isStaff),
+    [data, isStaff],
   );
+  const allVisible = useMemo(() => visibleReviewChecks(checks), [checks]);
   // What the check-in asked the ambassador at submit gets its own block:
   // each line already says whether they confirmed it.
   const visible = useMemo(
@@ -79,10 +86,7 @@ const Inner: React.FC<{
     () => allVisible.filter((c) => isBaSubmitCheck(c.code)),
     [allVisible],
   );
-  const counts = useMemo(
-    () => reviewCheckCounts(data?.recapReviewChecks),
-    [data],
-  );
+  const counts = useMemo(() => reviewCheckCounts(checks), [checks]);
   const conv = recapConversionChip(conversion);
   const convTint = reviewCheckTint(conv.status);
   const flagged = counts.flagged + (conv.status === "flag" ? 1 : 0);

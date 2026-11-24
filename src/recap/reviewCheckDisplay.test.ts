@@ -5,6 +5,7 @@ import {
   reviewCheckTint,
   reviewFlagBadges,
   isBaSubmitCheck,
+  withoutStaffOnlyChecks,
   reviewFlagShortLabel,
   visibleReviewChecks,
 } from "./reviewCheckDisplay";
@@ -107,5 +108,19 @@ describe("BA submit checks", () => {
     expect(reviewFlagShortLabel("ba_check_sold_total_zero")).toBe("BA check");
     expect(isBaSubmitCheck("ba_check_x")).toBe(true);
     expect(isBaSubmitCheck("gps_distance")).toBe(false);
+  });
+});
+
+describe("staff-only BA submit checks", () => {
+  it("are dropped for anyone who is not Ignite staff", () => {
+    const flags = [
+      { code: "gps_distance", label: "Clock-in 3 mi from venue" },
+      { code: "ba_check_sold_total_zero", label: "BA confirmed: 5 sold, 0 total" },
+    ];
+    expect(withoutStaffOnlyChecks(flags, false).map((f) => f.code)).toEqual([
+      "gps_distance",
+    ]);
+    expect(withoutStaffOnlyChecks(flags, true)).toEqual(flags);
+    expect(withoutStaffOnlyChecks(null, true)).toEqual([]);
   });
 });
