@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { APIProvider, InfoWindow, Map as GMap } from "@vis.gl/react-google-maps";
 import { MapCamera } from "@/shared/map/MapCamera";
 import {
@@ -33,6 +33,27 @@ const PIN_SIZE = 22;
 const SELECTED_SIZE = 32;
 /** A list click zooms in far enough to pull a store out of its group. */
 const STORE_ZOOM = 15;
+
+/**
+ * Google calls `window.gm_authFailure` when it refuses the key (wrong
+ * referrer, Maps JS API off, billing). Without this the map is a blank grey
+ * canvas with no reason given.
+ */
+function useMapsAuthFailure(): boolean {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const w = window as unknown as { gm_authFailure?: () => void };
+    const previous = w.gm_authFailure;
+    w.gm_authFailure = () => {
+      setFailed(true);
+      previous?.();
+    };
+    return () => {
+      w.gm_authFailure = previous;
+    };
+  }, []);
+  return failed;
+}
 
 const LEGEND: ReadonlyArray<CoverageClass> = ["never_visited", "sampled", "repeat"];
 
@@ -102,6 +123,7 @@ function StoreCard({
     font: "inherit",
   };
   const lastRequest = formatDay(store.lastRequestDate);
+  const lastVisit = formatDay(store.lastVisitDate);
   return (
     <div
       style={{
@@ -122,6 +144,11 @@ function StoreCard({
       </p>
       {store.address ? (
         <p style={{ marginTop: 6, fontSize: 12 }}>{store.address}</p>
+      ) : null}
+      {store.source === "requests" ? (
+        <p style={{ marginTop: 6, fontSize: 12 }}>
+          {lastVisit ? `Last demo: ${lastVisit}` : "No demo filed yet"}
+        </p>
       ) : null}
       {lastRequest ? (
         <p style={{ marginTop: 6, fontSize: 12 }}>Latest request: {lastRequest}</p>
@@ -182,6 +209,7 @@ export default function AccountMapView({
   onOnlyRetailer: (name: string) => void;
 }) {
   const mapStyle = useSparkMapStyle();
+  const authFailed = useMapsAuthFailure();
   const placed = useMemo(
     () => stores.filter((s): s is Store & { position: LatLng } => s.position !== null),
     [stores],
@@ -204,6 +232,18 @@ export default function AccountMapView({
       <div className="absolute inset-0 grid place-items-center px-6">
         <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
           The map is off: no Google Maps key is set for this build.
+        </p>
+      </div>
+    );
+  }
+
+  if (authFailed) {
+    return (
+      <div className="absolute inset-0 grid place-items-center px-6 text-center">
+        <p className="text-sm max-w-sm" style={{ color: "var(--spark-text-meta)" }}>
+          Google turned down this site&rsquo;s map key, so the map can&rsquo;t
+          draw. The store list still works. An admin needs to allow this web
+          address on the Maps key in Google Cloud.
         </p>
       </div>
     );

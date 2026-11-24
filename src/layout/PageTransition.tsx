@@ -4,11 +4,13 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router";
 
 /**
- * Short opacity-only transition. The old 350ms + y-slide made every
+ * Short, subtle opacity-only transition. The old 350ms + y-slide made every
  * cached nav feel laggy after the data-path speed work landed.
  */
+// Starts almost opaque: fading in from 0 blanked the whole content pane on
+// every navigation (the old page is already gone), which read as a flicker.
 const fastVariants: Variants = {
-  initial: { opacity: 0 },
+  initial: { opacity: 0.85 },
   animate: {
     opacity: 1,
     transition: {

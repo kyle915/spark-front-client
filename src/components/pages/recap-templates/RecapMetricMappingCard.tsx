@@ -12,9 +12,10 @@
  * staff see the "—" before the client does.
  */
 
-import { Component, Suspense, useMemo, useState, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useAlertStore } from "@/store/alertStore";
+import { METRIC_MAPPING_ANCHOR } from "@/lib/kpiExplain";
 import { RecapTemplateMetricMappingQuery } from "@/api/queries/RecapTemplateMetricMappingQuery";
 import type { RecapTemplateMetricMappingQuery as MappingQueryType } from "@api/queries/__generated__/RecapTemplateMetricMappingQuery.graphql";
 import { SuggestRecapMetricMappingMutation } from "@/api/mutations/SuggestRecapMetricMappingMutation";
@@ -425,23 +426,37 @@ class QuietBoundary extends Component<{ children: ReactNode }, { failed: boolean
   }
 }
 
+/** Bring the card into view once it has loaded, when the URL asks for it. */
+const ScrollWhenAsked: React.FC = () => {
+  useEffect(() => {
+    if (window.location.hash !== `#${METRIC_MAPPING_ANCHOR}`) return;
+    document
+      .getElementById(METRIC_MAPPING_ANCHOR)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+  return null;
+};
+
 const RecapMetricMappingCard: React.FC<{
   templateId: string;
   tracksProductSamples: boolean;
 }> = ({ templateId, tracksProductSamples }) => (
-  <QuietBoundary>
-    <Suspense
-      fallback={
-        <div className="spark-card p-5">
-          <p className="text-[13px]" style={{ color: "var(--spark-text-meta)" }}>
-            Loading what Spark counts from this form…
-          </p>
-        </div>
-      }
-    >
-      <Loaded templateId={templateId} tracksProductSamples={tracksProductSamples} />
-    </Suspense>
-  </QuietBoundary>
+  <div id={METRIC_MAPPING_ANCHOR} style={{ scrollMarginTop: 24 }}>
+    <QuietBoundary>
+      <Suspense
+        fallback={
+          <div className="spark-card p-5">
+            <p className="text-[13px]" style={{ color: "var(--spark-text-meta)" }}>
+              Loading what Spark counts from this form…
+            </p>
+          </div>
+        }
+      >
+        <Loaded templateId={templateId} tracksProductSamples={tracksProductSamples} />
+        <ScrollWhenAsked />
+      </Suspense>
+    </QuietBoundary>
+  </div>
 );
 
 export default RecapMetricMappingCard;

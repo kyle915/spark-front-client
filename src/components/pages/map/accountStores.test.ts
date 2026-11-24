@@ -3,6 +3,7 @@ import {
   NO_FILTERS,
   buildStores,
   chunk,
+  cleanStoreLabel,
   filterStores,
   hasFilters,
   listEntryAddress,
@@ -13,6 +14,9 @@ import {
   noPositionWords,
   normaliseAddress,
   isDateRetailerName,
+  isDateOnlyLabel,
+  marketOptions,
+  storeLabel,
   retailerChainKey,
   retailerOptions,
   stateOptions,
@@ -407,5 +411,90 @@ describe("helpers", () => {
   it("counts stores in words", () => {
     expect(storesWord(1)).toBe("1 store");
     expect(storesWord(1200)).toBe("1,200 stores");
+  });
+});
+
+describe("store names without the visit's date", () => {
+  it.each([
+    ["BP · 2027-01-11", "BP"],
+    ["FOOD GARDEN FRAN-05/17/2026", "FOOD GARDEN FRAN"],
+    ["LINCOLN MARKET MAN -BF 12 - 2026-06-06", "LINCOLN MARKET MAN -BF 12"],
+    ["Total Wine (May 17, 2026)", "Total Wine"],
+    ["Sprouts 10am-2pm 5/3", "Sprouts"],
+    ["H-E-B Demo · Sat 11/12", "H-E-B Demo"],
+    ["7-Eleven #123", "7-Eleven #123"],
+    ["7-11", "7-11"],
+    ["Kroger 123", "Kroger 123"],
+    ["05/17/2026", "05/17/2026"],
+    ["Sunoco 5/3", "Sunoco"],
+    ["Marathon 12", "Marathon 12"],
+    ["Mayfair Market 7", "Mayfair Market 7"],
+    ["Saturday, May 17 Kroger", "Kroger"],
+    ["", ""],
+  ])("cleanStoreLabel(%j) is %j", (raw, cleaned) => {
+    expect(cleanStoreLabel(raw)).toBe(cleaned);
+  });
+
+  it("knows a label that is only a date", () => {
+    expect(isDateOnlyLabel("05/17/2026")).toBe(true);
+    expect(isDateOnlyLabel("2026-05-23")).toBe(true);
+    expect(isDateOnlyLabel("BP · 2027-01-11")).toBe(false);
+    expect(isDateOnlyLabel("7-11")).toBe(false);
+  });
+
+  it("names a store by retailer, then request name, then street; never a date", () => {
+    expect(storeLabel({ retailerName: "Kroger · 2026-05-01", name: "x" })).toBe("Kroger");
+    expect(storeLabel({ retailerName: "", name: "BP · 2027-01-11" })).toBe("BP");
+    expect(
+      storeLabel({ retailerName: "", name: "05/17/2026", address: "608 Franklin Ave, Brooklyn, NY 11238" }),
+    ).toBe("608 Franklin Ave");
+  });
+
+  it("the retailer menu lists chains, not one entry per dated visit", () => {
+    const stores = buildStores([
+      pin({ storeKey: "a", retailerName: "", name: "marathon · 2027-01-11", lat: 40.1, lng: -83.1 }),
+      pin({ storeKey: "b", retailerName: "", name: "Marathon · 2027-01-08", lat: 40.2, lng: -83.2 }),
+      pin({ storeKey: "c", retailerName: "", name: "BP · 2027-01-11", lat: 40.3, lng: -83.3 }),
+      pin({ storeKey: "d", retailerName: "", name: "05/17/2026", lat: 40.4, lng: -83.4 }),
+    ]);
+    const options = retailerOptions(stores);
+    expect(options.map((o) => [o.name, o.count])).toEqual([
+      ["Marathon", 2],
+      ["BP", 1],
+    ]);
+    expect(options.some((o) => /\d{4}-\d{2}-\d{2}|\d+\/\d+/.test(o.name))).toBe(false);
+  });
+});
+
+describe("markets and last demo", () => {
+  const stores = buildStores([
+    pin({ storeKey: "a", locationName: "Tempe", stateCode: "AZ", lastVisitDate: "2026-09-01T10:00:00" }),
+    pin({
+      storeKey: "a",
+      locationName: "Tempe",
+      stateCode: "AZ",
+      lastVisitDate: "2026-10-01T10:00:00",
+    }),
+    pin({ storeKey: "b", locationName: "tempe", stateCode: "AZ", lat: 33.4, lng: -111.9 }),
+    pin({ storeKey: "c", locationName: "Austin", stateCode: "TX", lat: 30.27, lng: -97.74 }),
+  ]);
+
+  it("keeps the store's newest filed visit", () => {
+    expect(stores.find((s) => s.key === "a")?.lastVisitDate).toBe("2026-10-01T10:00:00");
+    expect(stores.find((s) => s.key === "b")?.lastVisitDate).toBeNull();
+  });
+
+  it("lists markets by city and state, casing folded, scoped to a state", () => {
+    expect(marketOptions(stores).map((m) => [m.name, m.count])).toEqual([
+      ["Tempe, AZ", 2],
+      ["Austin, TX", 1],
+    ]);
+    expect(marketOptions(stores, "TX").map((m) => m.name)).toEqual(["Austin, TX"]);
+  });
+
+  it("filters by market", () => {
+    const tempe = filterStores(stores, { ...NO_FILTERS, market: "tempe|AZ" });
+    expect(tempe.map((s) => s.key).sort()).toEqual(["a", "b"]);
+    expect(hasFilters({ ...NO_FILTERS, market: "tempe|AZ" })).toBe(true);
   });
 });

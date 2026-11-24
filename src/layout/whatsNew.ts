@@ -14,7 +14,7 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    id: "2026-11-24a",
+    id: "2026-11-24rc",
     date: "November 24, 2026",
     title: "Recaps catch answers that disagree before they go in",
     staffOnly: true,
@@ -22,6 +22,76 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       "When a BA taps Submit on a check-in link, Spark now looks for answers that cannot both be right: a total sold of 0 next to lines that sold, sales with 0 people sampled, more first-time or brand-aware people than were sampled, more swag given out than was on hand, an end count that is not start minus given, spend that does not match the receipts, a clock that runs well past or short of the shift, and a number far above what this program usually reports.",
       "Each note sits under the field it is about, marked Likely error or Check this, with Fix and This is correct. Nothing blocks the recap: the BA can always confirm and submit.",
       "Reviewers see what the BA was asked under Review checks, in an Asked at submit block, so they can see at a glance that the BA confirmed 15 upgrades and 0 tins sold. The Needs review queue marks those recaps BA confirmed or BA check.",
+    ],
+  },
+  {
+    id: "2026-11-24am",
+    date: "November 24, 2026",
+    title: "Account map: store names, markets and last demo",
+    items: [
+      "Store names on the Account map no longer carry the visit's date. \"BP · 2027-01-11\" is BP, so the retailer menu lists stores and chains with a count, not one entry per visit. A store known only by a date is shown by its street and left out of the menu.",
+      "A new market menu (city and state) sits next to the state menu, and narrows to the chosen state.",
+      "Each store in the list and on its map card shows its last demo with a filed recap, or says no demo is filed yet.",
+      "If Google refuses the map key for a web address, the map now says so instead of showing a blank grey box. The store list keeps working.",
+    ],
+  },
+  {
+    id: "2026-11-24ui",
+    date: "November 24, 2026",
+    title: "Tidier pages on phones and small laptops",
+    items: [
+      "The sidebar has a Requests group: Master Tracker, Plans, Approvals, Walk-ups, Recent submissions, and Bulk upload. Recaps now lists only recap work, and only one row is highlighted for the page you are on.",
+      "Recent submissions shows one card per request on a phone, so venue, market, and date are readable without scrolling sideways.",
+      "On narrower screens the top bar and page buttons wrap instead of running off the right edge. The Needs you numbers on the dashboard sit in an even two-column grid on a phone.",
+      "Recaps keeps search, status, filters, and sort in one bar. If Clean scoring fails, the button says so and offers a retry instead of waiting forever.",
+      "Master Tracker opens on one filter row; date, market, plan, staffing, sort, grouping, and RMM are under More filters. The second Create Request button is gone (use the one in the top bar).",
+      "The Plans filters (All, Active, Upcoming, Past) are readable in light mode.",
+      "Calendar now lives at /calendar. Google Calendar sync lives only under Settings, and when it needs attention, Reconnect now is one click from the warning.",
+      "Moving between pages no longer flashes a second sidebar or a blank page while the next page loads.",
+    ],
+  },
+  {
+    id: "2026-11-24ta",
+    date: "November 24, 2026",
+    title: "Talent shows phone and market for walk-ups",
+    staffOnly: true,
+    items: [
+      "BAs who joined through a walk-up check-in link show their phone number and where they last worked (market and brand) instead of the internal checkin address. Search by phone in any format.",
+      "Field sampling report: the samples headline is the sum of the SKU rows below it. When a week has no per-SKU counts it says which number it used instead.",
+      "P&L and the photo wall print each event date once, in one format, and drop the date that walk-in event names repeat.",
+      "Client view on Home counts recaps the way the brand does, approved only, so the preview shows the brand's numbers.",
+    ],
+  },
+  {
+    id: "2026-11-24tb",
+    date: "November 24, 2026",
+    title: "Home numbers agree with each other",
+    items: [
+      "Consumers sampled on Home now matches the weekly chart under it for the same days. Both count approved recaps on the day the event happened.",
+      "Where the recap form only sometimes asks for engagements, that figure is now called Engagements logged, so it no longer looks like it contradicts consumers sampled.",
+      "Photos on Home show a loading shimmer, fall back to the full-size photo if the small one won't load, and say Photo unavailable instead of leaving a blank gray box.",
+      "The Timeline lists the events in the range you picked, newest first, marked Upcoming, Today, Recapped, or Recap pending. It no longer says No data yet when you have events.",
+      "Long quotes from the field stop at a whole word, with Show more to read the rest.",
+    ],
+  },
+  {
+    id: "2026-11-24b",
+    date: "November 24, 2026",
+    title: "KPI numbers explain themselves",
+    items: [
+      "Click any Program KPI tile to see how it is counted: which questions on which recap forms add up to it, and how many approved recaps it comes from.",
+      "Recaps waiting for approval show on the tile as “+3 pending approval”, and the explanation says what they would add once approved.",
+      "A number your recap form never asks about now reads “Not tracked on this form” instead of 0.",
+    ],
+  },
+  {
+    id: "2026-11-24a",
+    date: "November 24, 2026",
+    title: "Recap templates check their numbers before going live",
+    staffOnly: true,
+    items: [
+      "Saving or creating a recap template now warns when a standard number (units sold, consumers sampled, and so on) has no field, or when a count like “How many shoppers took the upgrade?” would not be added to anything. Choose Save anyway, or Save and review mapping to jump to the mapping card.",
+      "In a KPI tile's explanation, staff get a Fix mapping link straight to that form's mapping card.",
     ],
   },
   {

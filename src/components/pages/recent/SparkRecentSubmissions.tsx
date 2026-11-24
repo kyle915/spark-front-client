@@ -167,6 +167,18 @@ const Inner: React.FC = () => {
 
   const pendingCount = rows.filter((r) => r.isPending).length;
 
+  const openRow = (r: Row) => {
+    // Admin view: keep the deep-links (ops queue / edit).
+    if (isAdmin) {
+      navigate(r.isPending ? "/approvals" : `/request/edit/${r.uuid}`);
+      return;
+    }
+    // Client view: open the read-only request detail (tenant-scoped,
+    // client-safe). Pending requests show the inline Approve there too —
+    // no admin-only wall.
+    navigate(`/request/view/${r.uuid}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -208,8 +220,70 @@ const Inner: React.FC = () => {
         </div>
       </div>
 
+      {/* Phones: one card per request so venue, market and date stay
+          readable without sideways scrolling. */}
+      <ul className="md:hidden space-y-3" aria-label="Recent submissions">
+        {rows.length === 0 && (
+          <li
+            className="spark-card px-4 py-8 text-center text-sm"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
+            Nothing submitted in the last 7 days.
+          </li>
+        )}
+        {rows.map((r) => {
+          const chipClass = STATUS_CHIP[r.statusSlug] ?? "chip chip-muted";
+          const approved = approvedIds.has(r.uuid);
+          return (
+            <li key={r.uuid} className="spark-card p-4">
+              <button
+                type="button"
+                onClick={() => openRow(r)}
+                className="w-full text-left"
+                style={{ background: "transparent", border: "none", padding: 0 }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-medium min-w-0 break-words">{r.venue}</p>
+                  <span className={approved ? "chip chip-purple" : chipClass}>
+                    {approved ? "APPROVED" : r.status.toUpperCase()}
+                  </span>
+                </div>
+                <p
+                  className="text-sm mt-1"
+                  style={{ color: "var(--spark-text-secondary)" }}
+                >
+                  {r.market} · {r.date}
+                </p>
+                <p
+                  className="text-xs mt-2 mono"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  {r.reqId} · {r.createdAgo} · {r.requester}
+                </p>
+              </button>
+              {r.isPending && !approved && (
+                <button
+                  type="button"
+                  disabled={busyId === r.uuid}
+                  onClick={() => approveRequestRow(r)}
+                  className="mt-3 w-full text-sm font-semibold px-3 py-2 rounded-xl"
+                  style={{
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                    background: "transparent",
+                    opacity: busyId === r.uuid ? 0.6 : 1,
+                  }}
+                >
+                  {busyId === r.uuid ? "Approving…" : "Approve request"}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
       <div
-        className="spark-card overflow-hidden"
+        className="spark-card overflow-hidden hidden md:block"
         style={{ borderRadius: 20 }}
       >
         <div className="overflow-x-auto">
@@ -262,21 +336,7 @@ const Inner: React.FC = () => {
                     style={{
                       borderBottom: "1px solid var(--spark-border)",
                     }}
-                    onClick={() => {
-                      // Admin view: keep the deep-links (ops queue / edit).
-                      if (isAdmin) {
-                        navigate(
-                          r.isPending
-                            ? "/approvals"
-                            : `/request/edit/${r.uuid}`,
-                        );
-                        return;
-                      }
-                      // Client view: open the read-only request detail
-                      // (tenant-scoped, client-safe). Pending requests show
-                      // the inline Approve there too — no admin-only wall.
-                      navigate(`/request/view/${r.uuid}`);
-                    }}
+                    onClick={() => openRow(r)}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
                         "rgba(var(--spark-ink-rgb),0.02)")
@@ -292,7 +352,7 @@ const Inner: React.FC = () => {
                       {r.createdAgo}
                     </td>
                     <td
-                      className="px-4 py-3 mono text-xs"
+                      className="px-4 py-3 mono text-xs whitespace-nowrap"
                       style={{
                         letterSpacing: "0.14em",
                         color: "var(--spark-text-secondary)",

@@ -1846,19 +1846,25 @@ const CatalogsRoutes = [
 const CalendarLinks = {
   menu: [
     {
-      path: "/connect-calendar",
+      path: "/calendar",
       name: "Calendar",
       component: <SparkCalendar />,
       Icon: CalendarIcon,
     },
   ],
   routes: [
-    // Spark v2: /connect-calendar shows the wireframe Shifts Board.
-    // The Google Calendar integration UI moves to /settings/calendar
-    // (sidebar Settings group).
+    // One route per job: /calendar is the Shifts Board; the Google
+    // Calendar integration (connect / reconnect / disconnect) lives only at
+    // /settings/calendar. The old /connect-calendar URL redirects so
+    // bookmarks and old links keep working.
+    {
+      path: "/calendar",
+      component: <SparkCalendar />,
+      isPublic: false,
+    },
     {
       path: "/connect-calendar",
-      component: <SparkCalendar />,
+      component: <Navigate to="/calendar" replace />,
       isPublic: false,
     },
     {
@@ -2097,8 +2103,8 @@ export const navigationMenuRoutes = [
     links: CatalogsLinks.menu,
   },
   {
-    title: "Connect Calendar",
-    path: "/connect-calendar", // Solo link, no submenu
+    title: "Calendar",
+    path: "/calendar", // Solo link, no submenu
     Icon: CalendarIcon,
   },
   {

@@ -72,6 +72,34 @@ export function AppShellSkeleton({
   );
 }
 
+/**
+ * Content-pane fallback for a lazy route inside the signed-in shell. The
+ * real sidebar + topbar are already on screen, so this draws only a
+ * neutral page silhouette (no fake chrome, which used to nest a second
+ * sidebar inside the page). It stays invisible for the first ~150ms so a
+ * cached chunk swaps in without a skeleton flash.
+ */
+export function RouteContentSkeleton() {
+  return (
+    <div
+      className="spark-delayed-fallback space-y-6 max-w-7xl"
+      aria-busy="true"
+      aria-label="Loading page"
+    >
+      <div>
+        <Block style={{ height: 32, width: "36%" }} />
+        <Block style={{ height: 14, width: "24%", marginTop: 12 }} />
+      </div>
+      <Block style={{ height: 56 }} />
+      <div className="space-y-3">
+        {[0, 1, 2, 3].map((i) => (
+          <Block key={i} style={{ height: 64 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Compact card shimmer for a dashboard panel, map, or KPI slot. */
 export function PanelSkeleton({ label = "Loading" }: { label?: string }) {
   return (

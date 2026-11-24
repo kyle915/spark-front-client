@@ -1987,6 +1987,21 @@ export default function MasterTracker() {
     useLinkedSheetUrl();
   const [editingSheet, setEditingSheet] = useState(false);
   const [sheetMenuOpen, setSheetMenuOpen] = useState(false);
+  // Secondary filters (when / market / plan / staffing / sort, grouping,
+  // RMM, duplicates) sit behind "More filters" so the tracker opens on one
+  // filter row instead of a three-row stack. Opens itself when a refine
+  // filter is already narrowing the list (e.g. a shared URL).
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const refineActiveCount = [
+    dateRange !== "all" || customRange !== null,
+    marketFilter !== "all",
+    schedulingFilter !== "all",
+    sortMode !== "date-desc",
+    Boolean(planId),
+    rmmFilter !== "all",
+    groupBy !== "none",
+  ].filter(Boolean).length;
+  const refineOpen = moreFiltersOpen || refineActiveCount > 0;
   const [sheetDraft, setSheetDraft] = useState(linkedSheetUrl);
   useEffect(() => {
     setSheetDraft(linkedSheetUrl);
@@ -2123,17 +2138,19 @@ export default function MasterTracker() {
             <SparkGhostButton onClick={() => setCancelDemoOpen(true)}>
               Cancel event
             </SparkGhostButton>
-            <SparkPrimaryButton
-              onClick={() =>
-                navigate(
-                  planId
-                    ? `/requests/create?plan=${encodeURIComponent(planId)}`
-                    : "/requests/create",
-                )
-              }
-            >
-              {isClient ? "+ Submit request" : "Create Request"}
-            </SparkPrimaryButton>
+            {/* The topbar already carries Create Request on every page; the
+                page only adds its own button when it can pre-fill a plan. */}
+            {planId ? (
+              <SparkPrimaryButton
+                onClick={() =>
+                  navigate(
+                    `/requests/create?plan=${encodeURIComponent(planId)}`,
+                  )
+                }
+              >
+                Add request to plan
+              </SparkPrimaryButton>
+            ) : null}
             </>
           }
         />
@@ -2162,38 +2179,23 @@ export default function MasterTracker() {
           }
           trailing={
             <>
-              <div className="pill-group">
-                <button
-                  onClick={() => setGroupBy("none")}
-                  className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
-                >
-                  Flat
-                </button>
-                <button
-                  onClick={() => setGroupBy("date")}
-                  className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
-                >
-                  By date
-                </button>
-                <button
-                  onClick={() => setGroupBy("rmm")}
-                  className={`pill-btn ${groupBy === "rmm" ? "on" : ""}`}
-                >
-                  By RMM
-                </button>
-              </div>
               <TrackerSavedViews snapshot={viewSnapshot} onApply={applyView} />
-              <DuplicateEventsButton />
-              {tenantId && (
-                <Suspense fallback={null}>
-                  <RmmFilterInner
-                    tenantId={tenantId}
-                    value={rmmFilter}
-                    onChange={setRmmFilter}
-                    onRmms={setRmmList}
-                  />
-                </Suspense>
-              )}
+              <button
+                type="button"
+                onClick={() => setMoreFiltersOpen((v) => !v)}
+                aria-expanded={refineOpen}
+                aria-controls="tracker-more-filters"
+                className="pill-btn"
+                style={
+                  refineActiveCount > 0
+                    ? { outline: "1.5px solid currentColor", outlineOffset: 0 }
+                    : undefined
+                }
+              >
+                More filters
+                {refineActiveCount > 0 ? ` · ${refineActiveCount}` : ""}
+                <span aria-hidden>{refineOpen ? " ▴" : " ▾"}</span>
+              </button>
             </>
           }
         >
@@ -2218,7 +2220,41 @@ export default function MasterTracker() {
           })}
         </SparkFilterBar>
 
+        {/* Kept mounted while closed (CSS-hidden) so the RMM list still
+            loads for "By RMM" grouping and saved views. */}
+        <div id="tracker-more-filters" hidden={!refineOpen}>
         <SparkFilterBar label="Refine">
+            <div className="pill-group">
+              <button
+                onClick={() => setGroupBy("none")}
+                className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
+              >
+                Flat
+              </button>
+              <button
+                onClick={() => setGroupBy("date")}
+                className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
+              >
+                By date
+              </button>
+              <button
+                onClick={() => setGroupBy("rmm")}
+                className={`pill-btn ${groupBy === "rmm" ? "on" : ""}`}
+              >
+                By RMM
+              </button>
+            </div>
+            <DuplicateEventsButton />
+            {tenantId && (
+              <Suspense fallback={null}>
+                <RmmFilterInner
+                  tenantId={tenantId}
+                  value={rmmFilter}
+                  onChange={setRmmFilter}
+                  onRmms={setRmmList}
+                />
+              </Suspense>
+            )}
           <FilterSelect
             label="When"
             value={dateRange}
@@ -2315,6 +2351,7 @@ export default function MasterTracker() {
             </button>
           )}
         </SparkFilterBar>
+        </div>
         </div>
 
         {planId ? (
