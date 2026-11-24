@@ -128,13 +128,28 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest staff tip is the trust-fix batch notes; clients see their half of it first.
-    expect(WHATS_NEW[0]?.id).toBe("2026-11-24ta");
-    expect(WHATS_NEW[0]?.staffOnly).toBe(true);
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-24ta");
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-24tb");
+    // Newest November 23 tips: the queue chrome for staff, the Famus sign-off for clients.
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-23af")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-23ae"),
+    );
+    // Trust-fix batch: the staff half sits above the client half.
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24ta")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24tb"),
+    );
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24ta")?.staffOnly).toBe(true);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24tb")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ad")?.staffOnly).toBe(true);
+  });
+
+  it("routes the KPI explanation notes: client note on top, template check staff-only", () => {
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24b")?.staffOnly).toBeFalsy();
+    expect(whatsNewFor(true).some((e) => e.id === "2026-11-24b")).toBe(true);
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24b")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24a"),
+    );
+    expect(whatsNewFor(true).some((e) => e.id === "2026-11-24a")).toBe(false);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24a")?.staffOnly).toBe(true);
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
@@ -154,14 +169,14 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-24tb");
+    expect(store.get(whatsNewSeenKey(true))).toBe(whatsNewFor(true)[0]?.id);
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-24ta");
-    expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-24tb");
+    expect(store.get(whatsNewSeenKey(false))).toBe(whatsNewFor(false)[0]?.id);
+    expect(store.get(whatsNewSeenKey(true))).toBe(whatsNewFor(true)[0]?.id);
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
@@ -175,7 +190,7 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Staff newest is 2026-11-24ta. Client newest is 2026-11-24tb.
+    // Newest tips come from the data: staff and client feeds each have their own head.
     // An older shared key matches neither, so it clears neither feed.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);

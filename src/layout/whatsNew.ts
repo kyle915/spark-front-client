@@ -38,6 +38,26 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-24b",
+    date: "November 24, 2026",
+    title: "KPI numbers explain themselves",
+    items: [
+      "Click any Program KPI tile to see how it is counted: which questions on which recap forms add up to it, and how many approved recaps it comes from.",
+      "Recaps waiting for approval show on the tile as “+3 pending approval”, and the explanation says what they would add once approved.",
+      "A number your recap form never asks about now reads “Not tracked on this form” instead of 0.",
+    ],
+  },
+  {
+    id: "2026-11-24a",
+    date: "November 24, 2026",
+    title: "Recap templates check their numbers before going live",
+    staffOnly: true,
+    items: [
+      "Saving or creating a recap template now warns when a standard number (units sold, consumers sampled, and so on) has no field, or when a count like “How many shoppers took the upgrade?” would not be added to anything. Choose Save anyway, or Save and review mapping to jump to the mapping card.",
+      "In a KPI tile's explanation, staff get a Fix mapping link straight to that form's mapping card.",
+    ],
+  },
+  {
     id: "2026-11-23af",
     date: "November 23, 2026",
     title: "The queue is the page",
