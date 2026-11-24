@@ -23,6 +23,7 @@ import { LatestMonthHighlight } from "@/components/explain/MonthHighlight";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
+import { cleanEventName, formatTimelineDay, timelineKind } from "@/utils/eventLabel";
 import {
   buildProgramPulseCopy,
   buildProgramPulseOneLiner,
@@ -424,17 +425,20 @@ function InsightsTimeline({
           style={{ color: "var(--spark-text-meta)" }}
         >
           {selectedState
-            ? `No timeline rows for ${selectedState} in this range.`
-            : "No data yet. New events show up here as they're scheduled."}
+            ? `No events in ${selectedState} in this range.`
+            : "No events in this range. Pick a longer range to see more."}
         </p>
       ) : (
         <div>
           {timelineRows.slice(0, 10).map((e, i) => {
-            const dateStr = e.date ?? "";
-            const isToday =
-              dateStr &&
-              new Date(dateStr).toDateString() === new Date().toDateString();
-            const isPast = dateStr && new Date(dateStr) < new Date();
+            // The server places each event on its ops-calendar day and says
+            // where it sits (Upcoming / Today / Recapped / Recap pending).
+            // Don't re-derive it from `new Date("YYYY-MM-DD")`, which is UTC
+            // midnight and lands on the previous day across the US.
+            const kind = timelineKind(e.status);
+            const isToday = kind === "today";
+            const isPast = kind === "past";
+            const dateStr = formatTimelineDay(e.date);
             const dot = isToday
               ? "var(--spark-lime)"
               : isPast
@@ -466,7 +470,7 @@ function InsightsTimeline({
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">
-                    {e.name ?? "Untitled"}
+                    {cleanEventName(e.name) || "Untitled"}
                   </p>
                   <p
                     className="mono text-[10px] mt-0.5 truncate"
@@ -487,9 +491,8 @@ function InsightsTimeline({
                     {dateStr || "—"}
                   </p>
                   <p
-                    className="mono text-[10px]"
+                    className="text-xs"
                     style={{
-                      letterSpacing: "0.14em",
                       color: isToday
                         ? "var(--spark-lime)"
                         : isPast
@@ -497,11 +500,7 @@ function InsightsTimeline({
                           : "var(--spark-sky)",
                     }}
                   >
-                    {isToday
-                      ? "TODAY"
-                      : isPast
-                        ? (e.status ?? "DONE").toUpperCase()
-                        : (e.status ?? "SCHEDULED").toUpperCase()}
+                    {e.status || (isToday ? "Today" : isPast ? "Done" : "Upcoming")}
                   </p>
                 </div>
               </div>

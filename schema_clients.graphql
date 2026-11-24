@@ -312,6 +312,8 @@ type Ambassador implements Node {
   user: SparkUserType!
   createdAt: String!
   updatedAt: String!
+  lastWorkedMarket: String
+  lastWorkedTenant: String
   headshotUrl: String
   resumeUrl: String
   isFavorited: Boolean!
@@ -4471,6 +4473,7 @@ input EventDashboardFiltersInput {
   retailerIds: [ID!] = null
   year: Int = null
   sections: [String!] = null
+  clientView: Boolean = null
 }
 
 type EventDashboardMetrics {
@@ -8214,6 +8217,8 @@ type Query {
   campaignReportAiAnswer(requestId: ID!, question: String!): CampaignReportAiAnswer!
   tenantAiAnswer(tenantId: ID!, question: String!, recapId: ID = null, eventId: ID = null): TenantAiAnswer!
   tenantKpis(tenantId: ID!, year: Int = null): TenantKpis!
+  tenantKpiExplanation(tenantId: ID!, metric: String!, year: Int = null): TenantKpiExplanation
+  tenantKpiStatus(tenantId: ID!, year: Int = null): TenantKpiStatus!
   tenantActivationBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): TenantActivationBreakdown!
   tenantProgramHealth(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProgramHealth!
   tenantConversionKpis(tenantId: ID!, startDate: String!, endDate: String!): TenantConversionKpis!
@@ -8284,6 +8289,7 @@ type Query {
   recapStaffFlags(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, kind: String = null, unresolvedOnly: Boolean! = true, first: Int! = 200): [RecapStaffFlag!]!
   receiptSpendSummary(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, includeCsv: Boolean! = false): ReceiptSpendSummary
   recapTemplateMetricMapping(templateId: ID!): RecapTemplateMetricMapping
+  recapTemplateMetricPreview(fields: [RecapFieldPreviewInput!]!, templateId: ID = null, productSamples: Boolean! = false): RecapTemplateMetricPreview
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   tenantBaActivation(tenantId: ID!): [BaActivationRow!]!
@@ -8827,6 +8833,12 @@ type RecapFieldMetric {
   canCount: Boolean!
 }
 
+input RecapFieldPreviewInput {
+  fieldId: ID = null
+  name: String! = ""
+  fieldType: String = null
+}
+
 input RecapFieldMetricInput {
   fieldId: ID!
   metric: String = null
@@ -9229,6 +9241,11 @@ type RecapStaffFlag {
 type RecapStandardMetric {
   key: String!
   label: String!
+}
+
+type RecapTemplateMetricPreview {
+  missingMetrics: [RecapStandardMetric!]!
+  uncountedFields: [String!]!
 }
 
 type RecapTemplateMetricMapping {
@@ -10139,6 +10156,7 @@ type SamplesPerHour {
   hours: Float!
   perHour: Float
   estimated: Boolean!
+  basis: String!
 }
 
 input SaveFormInput {
@@ -11381,9 +11399,65 @@ type TenantKpiTotals {
   program: TenantProgramMetrics
 }
 
+type TenantKpiStatus {
+  untrackedMetrics: [String!]!
+  pending: [TenantKpiPending!]!
+}
+
+type TenantKpiTemplateRef {
+  templateId: ID!
+  templateUuid: String
+  templateName: String!
+}
+
 type TenantKpiTrendSeries {
   key: String!
   label: String!
+}
+
+type TenantKpiExcludedBucket {
+  key: String!
+  label: String!
+  recaps: Int!
+  wouldAdd: Int
+}
+
+type TenantKpiExplanation {
+  metric: String!
+  label: String!
+  total: Int!
+  program: Boolean!
+  summary: String!
+  recapsCounted: Int!
+  recapsInScope: Int!
+  recapsWithoutValue: Int!
+  sources: [TenantKpiExplanationSource!]!
+  excluded: [TenantKpiExcludedBucket!]!
+  notTracked: Boolean!
+  notTrackedTemplates: [TenantKpiTemplateRef!]!
+  note: String
+  canFixMapping: Boolean!
+}
+
+type TenantKpiExplanationField {
+  label: String!
+  how: String!
+  value: Int
+}
+
+type TenantKpiExplanationSource {
+  templateId: ID
+  templateUuid: String
+  templateName: String!
+  recaps: Int!
+  value: Int
+  fields: [TenantKpiExplanationField!]!
+}
+
+type TenantKpiPending {
+  metric: String!
+  recaps: Int!
+  wouldAdd: Int
 }
 
 type TenantKpis {

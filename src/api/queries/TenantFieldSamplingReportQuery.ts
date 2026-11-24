@@ -38,6 +38,7 @@ export const TenantFieldSamplingReportQuery = graphql`
         hours
         perHour
         estimated
+        basis
       }
       ytdSkuBreakdown {
         mode
