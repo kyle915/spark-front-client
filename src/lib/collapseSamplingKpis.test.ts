@@ -24,8 +24,35 @@ describe("collapseSamplingKpis", () => {
     });
     expect(tiles).toEqual([
       { key: "consumersSampled", label: "Consumers sampled", value: 8171 },
-      { key: "totalEngagements", label: "Total engagements", value: 500 },
+      {
+        key: "totalEngagements",
+        label: "Engagements logged",
+        value: 500,
+        note: "Only on recaps whose form asks for it",
+      },
     ]);
+  });
+
+  it("keeps 'Total engagements' when it covers everyone sampled", () => {
+    const tiles = collapseSamplingKpis({
+      consumersReached: 400,
+      samplesDistributed: 400,
+      totalEngagements: 900,
+    });
+    expect(tiles[1]).toEqual({
+      key: "totalEngagements",
+      label: "Total engagements",
+      value: 900,
+    });
+  });
+
+  it("never prints 'Total engagements' below consumers sampled", () => {
+    const tiles = collapseSamplingKpis({
+      consumersReached: 213128,
+      samplesDistributed: 213128,
+      totalEngagements: 209440,
+    });
+    expect(tiles.map((t) => t.label)).not.toContain("Total engagements");
   });
 
   it("keeps three tiles when every count is different", () => {
@@ -50,7 +77,7 @@ describe("collapseSamplingKpis", () => {
     });
     expect(tiles.map((t) => t.label)).toEqual([
       "Consumers sampled",
-      "Total engagements",
+      "Engagements logged",
     ]);
   });
 

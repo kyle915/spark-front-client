@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRelayEnvironment } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { RecapReviewTriageQuery } from "@/api/queries/RecapReviewTriageQuery";
@@ -15,6 +15,9 @@ type FlagTarget = {
 };
 
 const MAX_BATCH = 50;
+/** A scoring pass that takes longer than this is treated as failed so the
+ *  toolbar never sits on "Scoring Clean…" forever. */
+const SETTLE_TIMEOUT_MS = 20_000;
 
 /**
  * Staff-only batched Clean / Needs Eyes labels for the Needs-review page.
@@ -25,7 +28,14 @@ const MAX_BATCH = 50;
 export function useRecapReviewTriage(
   targets: readonly FlagTarget[],
   enabled: boolean,
-): { byId: Map<string, RecapTriageSummary>; settled: boolean } {
+): {
+  byId: Map<string, RecapTriageSummary>;
+  settled: boolean;
+  /** The last pass errored or timed out; labels may be missing. */
+  failed: boolean;
+  /** Run the scoring pass again for the same targets. */
+  retry: () => void;
+} {
   const environment = useRelayEnvironment();
   const [byId, setById] = useState<Map<string, RecapTriageSummary>>(
     () => new Map(),
@@ -34,6 +44,8 @@ export function useRecapReviewTriage(
   // including a quiet failure, is settled so the toolbar can drop
   // "Scoring Clean…".
   const [settled, setSettled] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const signature = useMemo(() => {
     if (!enabled) return "";
     return targets
@@ -42,19 +54,31 @@ export function useRecapReviewTriage(
       .join("|");
   }, [enabled, targets]);
   const lastSig = useRef("");
+  // Targets ride in a ref so a new array with the same ids (every parent
+  // re-render) does not re-run the effect. It used to: the re-run cancelled
+  // the in-flight pass, then bailed on the unchanged signature, so the
+  // cancelled pass never marked itself settled and the toolbar was stuck
+  // on "Scoring Clean…".
+  const targetsRef = useRef(targets);
+  targetsRef.current = targets;
 
   useEffect(() => {
     if (!enabled || !signature) {
       setById(new Map());
       setSettled(true);
+      setFailed(false);
       lastSig.current = "";
       return;
     }
-    if (signature === lastSig.current) return;
-    lastSig.current = signature;
+    const sigKey = `${signature}#${attempt}`;
+    if (sigKey === lastSig.current) return;
+    lastSig.current = sigKey;
     setSettled(false);
+    setFailed(false);
 
     let cancelled = false;
+    let anyFailed = false;
+    const targets = targetsRef.current;
     const legacyIds = targets
       .filter((t) => t.kind === "legacy")
       .map((t) => t.id)
@@ -111,6 +135,7 @@ export function useRecapReviewTriage(
             .then((data) => ingest(data?.recapReviewTriage))
             .catch(() => {
               /* quiet fail — leave unresolved; never invent Clean */
+              anyFailed = true;
             }),
         );
       }
@@ -125,20 +150,34 @@ export function useRecapReviewTriage(
             .then((data) => ingest(data?.recapReviewTriage))
             .catch(() => {
               /* quiet fail — leave unresolved */
+              anyFailed = true;
             }),
         );
       }
-      await Promise.all(pulls);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timedOut = await Promise.race([
+        Promise.all(pulls).then(() => false),
+        new Promise<boolean>((resolve) => {
+          timer = setTimeout(() => resolve(true), SETTLE_TIMEOUT_MS);
+        }),
+      ]);
+      if (timer) clearTimeout(timer);
       if (!cancelled) {
         setById(next);
         setSettled(true);
+        setFailed(anyFailed || timedOut);
       }
     })();
 
     return () => {
       cancelled = true;
+      // Let a re-run with the same signature start a fresh pass instead of
+      // bailing while nothing is in flight.
+      lastSig.current = "";
     };
-  }, [enabled, environment, signature, targets]);
+  }, [enabled, environment, signature, attempt]);
 
-  return { byId, settled };
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  return { byId, settled, failed, retry };
 }

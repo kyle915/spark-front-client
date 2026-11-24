@@ -44,6 +44,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/jobs": { parent: "Workspace", title: "Jobs" },
   "/recent": { parent: "Workspace", title: "Recent Submissions" },
   "/chat": { parent: "Workspace", title: "Chat" },
+  "/calendar": { parent: "Workspace", title: "Calendar" },
   "/connect-calendar": { parent: "Workspace", title: "Calendar" },
   "/account-map": { parent: "Workspace", title: "Account Map" },
   "/workspace": { parent: "Workspace", title: "Workspace & Agencies" },

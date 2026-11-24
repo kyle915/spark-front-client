@@ -2,8 +2,8 @@
 
 .plans-shell {
   --plan-gap: 1.75rem;
-  --plan-muted: rgba(255, 255, 255, 0.5);
-  --plan-faint: rgba(255, 255, 255, 0.38);
+  --plan-muted: var(--spark-text-secondary);
+  --plan-faint: var(--spark-text-meta);
   max-width: 68rem;
   margin-inline: auto;
   display: flex;
@@ -38,7 +38,7 @@
 }
 
 .plans-support {
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--spark-text-secondary);
   font-size: 0.95rem;
   line-height: 1.45;
   max-width: 36rem;
@@ -65,7 +65,7 @@
   border-radius: 999px;
   border: none;
   background: var(--spark-lime);
-  color: #0a0a0a;
+  color: var(--spark-on-accent);
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
@@ -90,7 +90,7 @@
   border-radius: 999px;
   border: 1px solid var(--spark-border);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--spark-text-secondary);
   font-size: 0.875rem;
   cursor: pointer;
   text-decoration: none;
@@ -98,22 +98,22 @@
 
 .plans-btn-ghost:hover {
   color: var(--spark-text);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(var(--spark-ink-rgb), 0.2);
 }
 
 .plans-chip {
   padding: 0.4rem 0.85rem;
   border-radius: 999px;
-  border: 1px solid var(--spark-border);
+  border: 1px solid rgba(var(--spark-ink-rgb), 0.18);
   background: transparent;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--spark-text-secondary);
   font-size: 0.8rem;
   cursor: pointer;
 }
 
 .plans-chip-on {
   background: var(--spark-lime);
-  color: #0a0a0a;
+  color: var(--spark-on-accent);
   border-color: transparent;
   font-weight: 600;
 }
@@ -157,7 +157,7 @@
   height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--spark-ink-rgb), 0.06);
 }
 
 .plans-status-mix-seg {
@@ -177,7 +177,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--spark-text-secondary);
 }
 
 .plans-status-mix-dot {
@@ -192,7 +192,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--spark-text-secondary);
   text-decoration: none;
 }
 

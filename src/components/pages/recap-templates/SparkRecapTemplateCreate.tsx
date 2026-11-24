@@ -36,6 +36,8 @@ import { CreateCustomRecapTemplateMutation } from "@/api/mutations/CreateCustomR
 import type { CreateCustomRecapTemplateMutation as CreateCustomRecapTemplateMutationType } from "@api/mutations/__generated__/CreateCustomRecapTemplateMutation.graphql";
 import { CreateRecapSectionMutation } from "@/api/mutations/CreateRecapSectionMutation";
 import type { CreateRecapSectionMutation as CreateRecapSectionMutationType } from "@api/mutations/__generated__/CreateRecapSectionMutation.graphql";
+import { TemplateNumbersCheckPanel } from "./TemplateNumbersCheck";
+import { openMappingReview, useTemplateNumbersCheck } from "./useTemplateNumbersCheck";
 
 type DraftField = {
   // Local row id — React key. Backend assigns the real id on save.
@@ -237,6 +239,9 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     return null;
   };
 
+  // The numbers check before the template goes live (see TemplateNumbersCheck).
+  const numbersCheck = useTemplateNumbersCheck();
+
   const handleSubmit = () => {
     setSubmitAttempted(true);
     const msg = validate();
@@ -244,6 +249,22 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       showAlert(msg, "error");
       return;
     }
+    numbersCheck.check(
+      {
+        templateId: null,
+        productSamples,
+        fields: fields.map((f) => ({
+          fieldId: null,
+          name: f.name.trim(),
+          fieldType: typeNameById[String(f.fieldTypeId)] ?? null,
+        })),
+      },
+      () => commitCreateNow(),
+    );
+  };
+
+  const commitCreateNow = (reviewMappingAfter = false) => {
+    numbersCheck.clear();
     commitCreate({
       variables: {
         input: {
@@ -267,6 +288,11 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             `Template "${name}" created with ${fields.length} field${fields.length === 1 ? "" : "s"}.`,
             "success",
           );
+          const createdUuid = r.customRecapTemplate?.uuid;
+          if (reviewMappingAfter && createdUuid) {
+            openMappingReview(String(createdUuid));
+            return;
+          }
           navigate("/recap-templates");
         } else {
           showAlert(r?.message || "Couldn't create template.", "error");
@@ -276,7 +302,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     });
   };
 
-  const submitDisabled = isCreating || !!validate();
+  const submitDisabled = isCreating || numbersCheck.checking || !!validate();
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -630,6 +656,17 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </div>
       </div>
 
+      {numbersCheck.guard && (
+        <TemplateNumbersCheckPanel
+          preview={numbersCheck.guard}
+          busy={isCreating}
+          saveLabel="Create anyway"
+          onKeepEditing={numbersCheck.clear}
+          onSaveAndReview={() => commitCreateNow(true)}
+          onSaveAnyway={() => commitCreateNow(false)}
+        />
+      )}
+
       {/* Footer / submit */}
       <div className="flex items-center justify-end gap-2">
         <button
@@ -656,7 +693,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               : "0 0 16px rgba(var(--spark-accent-rgb),0.30)",
           }}
         >
-          {isCreating ? "Saving…" : "Create template"}
+          {isCreating ? "Saving…" : numbersCheck.checking ? "Checking…" : "Create template"}
         </button>
       </div>
     </div>

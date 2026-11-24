@@ -24,6 +24,8 @@ export type DashboardFilters = {
   quarter: string | null;
   startDate: string | null;
   endDate: string | null;
+  /** Staff in Client view: count approved recaps only, like the brand. */
+  clientView?: boolean;
 };
 
 type FiltersFormValues = {
