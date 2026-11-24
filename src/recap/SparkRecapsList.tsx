@@ -126,6 +126,7 @@ import {
   type RecapTriageSummary,
 } from "./recapTriage";
 import { useRecapReviewTriage } from "./useRecapReviewTriage";
+import { scanRecapLine } from "./scanLine";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -774,7 +775,7 @@ const RecapCard: React.FC<{
               letterSpacing: "0.14em",
               background: "rgba(var(--spark-ok-rgb),0.10)",
               border: "1px solid rgba(var(--spark-ok-rgb),0.30)",
-              color: "var(--spark-lime)",
+              color: "var(--spark-ok-ink)",
             }}
             title="View the parent request on the Master Tracker"
           >
@@ -890,11 +891,19 @@ const RecapCompactRow: React.FC<{
   onToggleSelect: () => void;
   forceApproved?: boolean;
   onOpenRecap?: ((recap: Recap) => void) | null;
-  reviewFlags?: readonly ReviewFlagSummary[] | null;
   needsEyesWhy?: string | null;
-}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap, reviewFlags, needsEyesWhy }) => {
+}> = ({
+  recap,
+  href,
+  selected,
+  focused,
+  selectMode,
+  onToggleSelect,
+  forceApproved,
+  onOpenRecap,
+  needsEyesWhy,
+}) => {
   const baLabel = useBaLabel();
-  const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
   const { isClient } = useSparkRole();
@@ -905,13 +914,19 @@ const RecapCompactRow: React.FC<{
     archivedAt: recap.archivedAt,
     isClient,
   });
-  const statusText = status.text;
+  const line = scanRecapLine({
+    who: baLabel(recap.baName) || "Unattributed",
+    activation: recapActivationFilterLabel(recap.recapType),
+    date: formatDate(recap.date),
+    status: status.text,
+    engagements: recap.engagements,
+  });
   return (
     <div
       className="spark-inset-row relative"
       style={{
         minHeight: 40,
-        padding: "3px 10px",
+        padding: "8px 12px",
         gap: 8,
         background: focused
           ? "rgba(239,90,42,0.14)"
@@ -929,7 +944,8 @@ const RecapCompactRow: React.FC<{
       <Link
         to={href}
         onClick={() => onOpenRecap?.(recap)}
-        aria-label={`Open recap ${recap.name}`}
+        aria-label={line}
+        title={needsEyesWhy ? `${line}. ${needsEyesWhy}` : line}
         className="absolute inset-0 z-[1]"
       />
       {(selectMode || selected) && (
@@ -941,133 +957,21 @@ const RecapCompactRow: React.FC<{
             type="checkbox"
             checked={selected}
             onChange={onToggleSelect}
+            aria-label={`Select ${line}`}
             style={{ accentColor: "#ef5a2a", width: 14, height: 14 }}
           />
         </label>
       )}
-      <div
-        className="relative z-10 shrink-0 overflow-hidden"
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 8,
-          background: "rgba(239,90,42,0.08)",
-        }}
+      <p
+        className="relative z-10 min-w-0 flex-1 truncate text-[13px] leading-tight"
+        style={{ color: "var(--spark-text)" }}
       >
-        {recap.heroImage && !heroFailed ? (
-          <img
-            src={recap.heroImage}
-            alt=""
-            className="w-full h-full object-cover"
-            onError={() => setHeroFailed(true)}
-          />
-        ) : recap.heroImage && heroFailed ? (
-          <span className="chip chip-orange absolute inset-0 grid place-items-center text-[8px]">
-            Photo failed
-          </span>
-        ) : (
-          <span className="grid place-items-center w-full h-full text-base" aria-hidden>
-            ◈
-          </span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1 relative z-10">
-        <p className="text-[13px] font-semibold leading-tight truncate">{baLabel(recap.baName) || "Unattributed"}</p>
-        {recap.isThirdParty ? (
-          <div className="mt-1 flex items-center gap-1 flex-wrap">
-            <ThirdPartyRecapBadge compact notInTotals={recap.excludeFromAggregates} />
-            {recap.storeMappingStatus === "unmatched" ? (
-              <span className="chip chip-orange chip-sm">Map store</span>
-            ) : null}
-          </div>
-        ) : recap.sourceLabel ? (
-          <div className="mt-1 flex items-center gap-1 flex-wrap">
-            <RecapSourceBadge compact label={recap.sourceLabel} />
-          </div>
-        ) : null}
-        {!emptyShell && !approved ? (
-          <div className="mt-1">
-            <RecapReviewFlagBadges flags={reviewFlags} compact />
-            <NeedsEyesWhy text={needsEyesWhy} />
-          </div>
-        ) : null}
-        <p
-          className="mono text-[10px] truncate"
-          style={{ letterSpacing: "0.12em", color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))" }}
-        >
-          {recap.retailerName && recap.retailerName !== "—" ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                useStoreSheetStore.getState().openStoreSheet({
-                  recapId: recap.uuid,
-                  storeName: recap.retailerName,
-                  fallbackTitle: recap.retailerName,
-                });
-              }}
-              title={`Open store profile for ${recap.retailerName}`}
-              className="relative z-20 underline underline-offset-2 cursor-pointer mono text-[10px]"
-              style={{
-                color: "var(--spark-text-secondary)",
-                background: "none",
-                border: 0,
-                padding: 0,
-                letterSpacing: "0.12em",
-              }}
-            >
-              {recap.retailerName}
-            </button>
-          ) : (
-            recap.name
-          )}
-          {recap.date ? ` · ${formatDate(recap.date)}` : ""}
-        </p>
-      </div>
-      <span
-        className={`relative z-10 chip chip-sm shrink-0 ${
-          status.tone === "neutral"
-            ? ""
-            : status.tone === "done"
-              ? "chip-lime"
-              : "chip-orange"
-        }`}
-        style={
-          status.tone === "neutral"
-            ? {
-                background: "rgba(var(--spark-ink-rgb),0.06)",
-                border: "1px solid rgba(var(--spark-ink-rgb),0.18)",
-                color: "var(--spark-text-secondary)",
-              }
-            : undefined
-        }
-      >
-        {statusText}
-      </span>
-      <div className="relative z-10 hidden sm:flex items-center gap-2 shrink-0">
-        <SparkStat
-          size="sm"
-          value={
-            recap.engagements != null
-              ? recap.engagements.toLocaleString()
-              : "—"
-          }
-          label="Engagements"
-        />
-        <SparkStat
-          size="sm"
-          value={
-            recap.productsSold != null
-              ? recap.productsSold.toLocaleString()
-              : "—"
-          }
-          label="Sold"
-        />
-      </div>
+        {line}
+      </p>
     </div>
   );
 };
+
 
 type Meta = {
   retailers: string[];
@@ -2098,7 +2002,7 @@ const RecapsListFetched: React.FC<{
                     className="mono text-[10px] px-2.5 py-1.5 rounded-full"
                     style={{
                       letterSpacing: "0.12em",
-                      color: "var(--spark-lime)",
+                      color: "var(--spark-ok-ink)",
                       background: "rgba(var(--spark-ok-rgb),0.10)",
                       border: "1px solid rgba(var(--spark-ok-rgb),0.28)",
                     }}
@@ -2146,7 +2050,6 @@ const RecapsListFetched: React.FC<{
               onToggleSelect={() => onToggleSelected(r.id)}
               forceApproved={justApprovedIds.has(r.id)}
               onOpenRecap={onOpenRecap}
-              reviewFlags={reviewFlagsById?.get(r.id)}
               needsEyesWhy={needsEyesWhyText(
                 isClient ? null : triageById?.get(r.id),
               )}
@@ -2562,7 +2465,8 @@ export default function SparkRecapsList() {
   const reviewFlagsById = useRecapReviewFlags(flagTargets, flagsEnabled);
   // Staff-only Clean / Needs Eyes. Never enable for client chrome.
   const [triageFilter, setTriageFilter] = useState<RecapTriageFilter>("all");
-  const triageById = useRecapReviewTriage(flagTargets, flagsEnabled);
+  const triage = useRecapReviewTriage(flagTargets, flagsEnabled);
+  const triageById = triage.byId;
   const triageCounts = useMemo(
     () =>
       countRecapTriage(
@@ -3512,7 +3416,7 @@ export default function SparkRecapsList() {
               <p className="label-mini">Total</p>
               <p
                 className="tab-num text-2xl font-bold leading-none mt-0.5"
-                style={{ color: "var(--spark-lime)" }}
+                style={{ color: "var(--spark-text)" }}
               >
                 <CountReel value={meta.total} />
               </p>
@@ -3551,7 +3455,7 @@ export default function SparkRecapsList() {
                           : "transparent",
                       color:
                         pipelineKey === key
-                          ? "var(--spark-lime)"
+                          ? "var(--spark-ok-ink)"
                           : "rgba(var(--spark-ink-rgb),0.65)",
                     }}
                   >
@@ -3665,7 +3569,7 @@ export default function SparkRecapsList() {
               >
                 {isBulkApproving && approvePhase !== "idle"
                   ? "Approving…"
-                  : !triageReady
+                  : flagsEnabled && flagTargets.length > 0 && !triage.settled
                     ? "Scoring Clean…"
                     : `Approve all Clean · ${triageCounts.clean}`}
               </button>
@@ -3726,7 +3630,7 @@ export default function SparkRecapsList() {
                               : "transparent",
                           color:
                             density === key
-                              ? "var(--spark-lime)"
+                              ? "var(--spark-ok-ink)"
                               : "rgba(var(--spark-ink-rgb),0.65)",
                         }}
                       >
@@ -3828,7 +3732,7 @@ export default function SparkRecapsList() {
                               : "transparent",
                           color:
                             datePreset === p
-                              ? "var(--spark-lime)"
+                              ? "var(--spark-ok-ink)"
                               : "rgba(var(--spark-ink-rgb),0.65)",
                         }}
                       >
@@ -4264,7 +4168,7 @@ export default function SparkRecapsList() {
             className="mono text-[11px]"
             style={{
               letterSpacing: "0.16em",
-              color: "var(--spark-lime)",
+              color: "var(--spark-ok-ink)",
             }}
           >
             {selectedIds.size} SELECTED
@@ -4431,7 +4335,7 @@ export default function SparkRecapsList() {
               ].map(([key, label]) => (
                 <div key={key} className="spark-inset-row justify-between">
                   <span className="text-sm">{label}</span>
-                  <span className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}>
+                  <span className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "var(--spark-ok-ink)" }}>
                     {key}
                   </span>
                 </div>

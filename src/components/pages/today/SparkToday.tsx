@@ -24,7 +24,7 @@ import { showsMissingRecaps } from "@/field/missingRecaps";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useBaLabel from "@/hooks/useBaLabel";
 import { SparkBentoTile } from "@/shared/SparkStatBlocks";
-import { todayGroundKpis } from "@/shared/sparkStat";
+import { todayGroundKpis, todayShowsGroundTiles } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import TodayMapView, { MapLegend, StatusPin } from "./TodayMapView";
 import {
@@ -373,13 +373,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     [navigate],
   );
 
-  const tiles = (
+  const tiles = todayShowsGroundTiles(counts) ? (
     <div className="spark-bento" aria-label="Today on the ground">
       {todayGroundKpis(counts).map((k) => (
         <SparkBentoTile key={k.label} {...k} />
       ))}
     </div>
-  );
+  ) : null;
 
   if (coverage.layout === "empty") {
     return (

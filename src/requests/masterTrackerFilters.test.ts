@@ -34,7 +34,7 @@ describe("masterTrackerFilters", () => {
 
   it("parses URL search params and falls back to defaults for unknown values", () => {
     expect(parseTrackerUrlParams(new URLSearchParams())).toEqual({
-      status: "active",
+      status: "pending",
       dateRange: "all",
       market: "all",
       planId: null,
@@ -58,7 +58,7 @@ describe("masterTrackerFilters", () => {
         new URLSearchParams("status=bogus&when=yesterday&market=ALL"),
       ),
     ).toEqual({
-      status: "active",
+      status: "pending",
       dateRange: "all",
       market: "all",
       planId: null,
@@ -138,13 +138,16 @@ describe("masterTrackerFilters", () => {
       planId: "99",
     });
     expect(updated.get("foo")).toBe("bar");
-    expect(updated.get("status")).toBe("pending");
+    expect(updated.get("status")).toBeNull();
     expect(updated.get("when")).toBe("next7");
     expect(updated.get("market")).toBe("TX");
     expect(updated.get("plan")).toBe("99");
 
-    const cleared = buildTrackerUrlParams(updated, {
-      status: "active",
+    const active = buildTrackerUrlParams(updated, { status: "active" });
+    expect(active.get("status")).toBe("active");
+
+    const cleared = buildTrackerUrlParams(active, {
+      status: "pending",
       dateRange: "all",
       market: "all",
       planId: null,

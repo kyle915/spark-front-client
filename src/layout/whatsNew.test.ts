@@ -106,6 +106,7 @@ describe("whatsNewFor", () => {
     // nudge-all-overdue, denser attention, route lock, finance queue,
     // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-23af",
       "2026-11-23x",
       "2026-11-23aa",
       "2026-11-23z",
@@ -127,12 +128,12 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest tip is the Famus store sign-off, for staff and clients.
-    // The check-in label note (2026-11-23ad) stays staff-only and is no longer first.
-    expect(WHATS_NEW[0]?.id).toBe("2026-11-23ae");
-    expect(WHATS_NEW[0]?.staffOnly).toBeFalsy();
-    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23ae");
+    // Newest staff tip is the queue chrome. Clients still see the Famus sign-off first.
+    expect(WHATS_NEW[0]?.id).toBe("2026-11-23af");
+    expect(WHATS_NEW[0]?.staffOnly).toBe(true);
+    expect(whatsNewFor(false)[0]?.id).toBe("2026-11-23af");
     expect(whatsNewFor(true)[0]?.id).toBe("2026-11-23ae");
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ad")?.staffOnly).toBe(true);
   });
 
@@ -159,7 +160,7 @@ describe("whatsNewFor", () => {
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23ae");
+    expect(store.get(whatsNewSeenKey(false))).toBe("2026-11-23af");
     expect(store.get(whatsNewSeenKey(true))).toBe("2026-11-23ae");
   });
 
@@ -174,7 +175,7 @@ describe("whatsNewFor", () => {
       },
     });
 
-    // Newest for both audiences is 2026-11-23ae.
+    // Staff newest is 2026-11-23af. Client newest is 2026-11-23ae.
     // An older shared key matches neither, so it clears neither feed.
     expect(hasUnseenWhatsNew(true)).toBe(true);
     expect(hasUnseenWhatsNew(false)).toBe(true);

@@ -594,6 +594,21 @@ const StandingCheckinStudio: React.FC = () => {
   const coded = nodes.filter((n) => (n.checkinCode ?? "").trim());
   const [codeQuery, setCodeQuery] = useState("");
   const activeCode = (active?.checkinCode ?? "").trim();
+  const pinnedPrograms = (active?.checkinPrograms ?? [])
+    .map((program) => program?.name)
+    .filter((name): name is string => Boolean(name));
+  const pinnedMatchesQuery =
+    Boolean(codeQuery.trim()) &&
+    active != null &&
+    matchesStandingCodeQuery(codeQuery, {
+      name: active.name,
+      code: active.checkinCode,
+      teamCode: active.checkinTeamCode,
+      teamTitle: active.checkinTeamTitle,
+      programs: pinnedPrograms.length
+        ? pinnedPrograms
+        : active.checkinEventTypeNames,
+    });
   const shownCodes = coded.filter((tenant) => {
     const isPinned =
       Boolean(activeCode) &&
@@ -799,7 +814,9 @@ const StandingCheckinStudio: React.FC = () => {
             {shownCodes.length === 0 ? (
               <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                 {codeQuery.trim()
-                  ? "No standing code matches that."
+                  ? pinnedMatchesQuery
+                    ? "That code is on the brand pinned above."
+                    : "No standing code matches that."
                   : "No other standing codes."}
               </p>
             ) : null}

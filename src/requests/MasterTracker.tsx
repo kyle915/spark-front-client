@@ -42,6 +42,7 @@ import {
   parseTrackerUrlParams,
   trackerDateRangeToServer,
   trackerExportMatching,
+  DEFAULT_TRACKER_STATUS,
   trackerExportScope,
   trackerSortToServer,
   trackerStatusCount,
@@ -1732,7 +1733,7 @@ export default function MasterTracker() {
     ],
   );
   const applyView = (v: TrackerViewSnapshot) => {
-    const nextStatus = v.activeStatus ?? "active";
+    const nextStatus = v.activeStatus ?? DEFAULT_TRACKER_STATUS;
     const foundRange =
       VALID_TRACKER_DATE_RANGES.find((d) => d === v.dateRange) ?? "all";
     // Saved views don't capture custom from/to bounds, so a stored
@@ -1985,6 +1986,7 @@ export default function MasterTracker() {
   const { url: linkedSheetUrl, setUrl: persistLinkedSheet } =
     useLinkedSheetUrl();
   const [editingSheet, setEditingSheet] = useState(false);
+  const [sheetMenuOpen, setSheetMenuOpen] = useState(false);
   const [sheetDraft, setSheetDraft] = useState(linkedSheetUrl);
   useEffect(() => {
     setSheetDraft(linkedSheetUrl);
@@ -2011,57 +2013,113 @@ export default function MasterTracker() {
           }
           action={
             <>
-            {linkedSheetUrl ? (
-              <a
-                href={linkedSheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="spark-btn-ghost"
-                style={{
-                  color: "var(--spark-sky)",
-                  borderColor: "rgba(95,184,239,0.35)",
-                }}
-                title="Open the brand's linked Google Sheet in a new tab"
+            <div className="relative">
+              <SparkGhostButton
+                onClick={() => setSheetMenuOpen((open) => !open)}
+                aria-expanded={sheetMenuOpen}
+                aria-haspopup="menu"
               >
-                Linked sheet ↗
-              </a>
-            ) : null}
-            <SparkGhostButton
-              onClick={() => {
-                setSheetDraft(linkedSheetUrl);
-                setEditingSheet(true);
-              }}
-              title="Link this brand to a Google Sheet for tracking"
-            >
-              {linkedSheetUrl ? "Edit sheet link" : "+ Link sheet"}
-            </SparkGhostButton>
-            <SparkGhostButton onClick={() => navigate("/requests/bulk-upload")}>
-              Bulk upload
-            </SparkGhostButton>
-            <SparkGhostButton
-              onClick={copyForSheets}
-              disabled={visibleRows.length === 0 || copyState === "copying"}
-              title={
-                visibleRows.length === 0
-                  ? "Nothing to copy"
-                  : exportMatching > visibleRows.length
-                    ? `Copies the ${visibleRows.length.toLocaleString("en-US")} loaded rows, not all ${exportMatching.toLocaleString("en-US")}.`
-                    : `Copy ${visibleRows.length.toLocaleString("en-US")} rows as TSV — paste straight into Google Sheets`
-              }
-            >
-              {copyState === "copied"
-                ? `Copied (${exportScope})`
-                : copyState === "copying"
-                  ? "Copying…"
-                  : `Copy for Sheets${exportScope ? ` (${exportScope})` : ""}`}
-            </SparkGhostButton>
-            <SparkGhostButton
-              onClick={exportCsv}
-              disabled={visibleRows.length === 0}
-              title={exportTitle}
-            >
-              Export CSV{exportScope ? ` (${exportScope})` : ""}
-            </SparkGhostButton>
+                Sheet & export{sheetMenuOpen ? " ▴" : " ▾"}
+              </SparkGhostButton>
+              {sheetMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 z-40 w-72 flex flex-col gap-1 p-2 rounded-2xl"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.28)",
+                  }}
+                >
+                  <p
+                    className="px-2 py-1 text-xs"
+                    style={{ color: "var(--spark-text-secondary)" }}
+                  >
+                    {exportScope
+                      ? `Export scope: ${exportScope}. Not the full tracker unless every matching row is loaded.`
+                      : "Nothing loaded to export."}
+                  </p>
+                  {linkedSheetUrl ? (
+                    <a
+                      href={linkedSheetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      role="menuitem"
+                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                      style={{ color: "var(--spark-text)" }}
+                      title="Open the brand's linked Google Sheet in a new tab"
+                      onClick={() => setSheetMenuOpen(false)}
+                    >
+                      Linked sheet
+                    </a>
+                  ) : null}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={{ color: "var(--spark-text)", background: "transparent" }}
+                    title="Link this brand to a Google Sheet for tracking"
+                    onClick={() => {
+                      setSheetDraft(linkedSheetUrl);
+                      setEditingSheet(true);
+                      setSheetMenuOpen(false);
+                    }}
+                  >
+                    {linkedSheetUrl ? "Edit sheet link" : "Link sheet"}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={{ color: "var(--spark-text)", background: "transparent" }}
+                    onClick={() => {
+                      setSheetMenuOpen(false);
+                      navigate("/requests/bulk-upload");
+                    }}
+                  >
+                    Bulk upload
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left disabled:opacity-50"
+                    style={{ color: "var(--spark-text)", background: "transparent" }}
+                    disabled={visibleRows.length === 0 || copyState === "copying"}
+                    title={
+                      visibleRows.length === 0
+                        ? "Nothing to copy"
+                        : exportMatching > visibleRows.length
+                          ? `Copies the ${visibleRows.length.toLocaleString("en-US")} loaded rows, not all ${exportMatching.toLocaleString("en-US")}.`
+                          : `Copy ${visibleRows.length.toLocaleString("en-US")} rows as TSV — paste straight into Google Sheets`
+                    }
+                    onClick={() => {
+                      void copyForSheets();
+                      setSheetMenuOpen(false);
+                    }}
+                  >
+                    {copyState === "copied"
+                      ? `Copied (${exportScope})`
+                      : copyState === "copying"
+                        ? "Copying…"
+                        : `Copy for Sheets${exportScope ? ` (${exportScope})` : ""}`}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left disabled:opacity-50"
+                    style={{ color: "var(--spark-text)", background: "transparent" }}
+                    disabled={visibleRows.length === 0}
+                    title={exportTitle}
+                    onClick={() => {
+                      exportCsv();
+                      setSheetMenuOpen(false);
+                    }}
+                  >
+                    Export CSV{exportScope ? ` (${exportScope})` : ""}
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <SparkGhostButton onClick={() => setCancelDemoOpen(true)}>
               Cancel event
             </SparkGhostButton>
@@ -2271,7 +2329,7 @@ export default function MasterTracker() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.14em",
-                color: "var(--spark-lime)",
+                color: "var(--spark-ok-ink)",
               }}
             >
               PLAN FILTER · SHOWING REQUESTS ON THIS ACTIVATION PLAN
@@ -2308,7 +2366,7 @@ export default function MasterTracker() {
             <p className="label-mini">Scheduled</p>
             <p
               className="tab-num text-2xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
+              style={{ color: "var(--spark-text)" }}
               title="Master Tracker requests, the same number as All. Not the rows loaded on this page, and not Insights events."
             >
               <CountReel value={total} />

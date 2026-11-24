@@ -31,6 +31,7 @@ import {
   filterStores,
   hasFilters,
   noPositionWords,
+  retailerChainKey,
   retailerOptions,
   stateOptions,
   storeCounts,
@@ -466,7 +467,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     [pageSize],
   );
   const onlyRetailer = useCallback((name: string) => {
-    setRetailerFilter(name);
+    setRetailerFilter(retailerChainKey(name));
     setSelectedKey(null);
   }, []);
 
@@ -556,6 +557,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </button>
           );
         })}
+        {roster && roster.rosterTotal > 0 ? (
+          <span className="text-xs whitespace-nowrap" style={{ color: "var(--spark-text-secondary)" }}>
+            Account roster: {roster.rosterTotal.toLocaleString("en-US")}{" "}
+            {roster.rosterTotal === 1 ? "account" : "accounts"},{" "}
+            {roster.neverVisited.toLocaleString("en-US")} with no filed visit.
+          </span>
+        ) : null}
         <span className="flex-1" />
         <select
           value={stateFilter}
@@ -578,7 +586,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         >
           <option value="all">All retailers</option>
           {retailers.map((r) => (
-            <option key={r.name} value={r.name}>
+            <option key={r.key} value={r.key}>
               {r.name} · {r.count}
             </option>
           ))}
@@ -639,16 +647,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </div>
         ) : null}
       </SparkFilterBar>
-
-      {roster && roster.rosterTotal > 0 ? (
-        <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
-          Account roster: {roster.rosterTotal.toLocaleString("en-US")}{" "}
-          {roster.rosterTotal === 1 ? "account" : "accounts"},{" "}
-          {roster.neverVisited.toLocaleString("en-US")} with no filed visit. A
-          roster account appears here once it has a request or is on the
-          uploaded list.
-        </p>
-      ) : null}
 
       <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]">
         <div className="spark-card overflow-hidden order-1 flex flex-col h-[460px] lg:h-[640px]">

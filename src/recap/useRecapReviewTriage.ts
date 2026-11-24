@@ -25,11 +25,15 @@ const MAX_BATCH = 50;
 export function useRecapReviewTriage(
   targets: readonly FlagTarget[],
   enabled: boolean,
-): Map<string, RecapTriageSummary> {
+): { byId: Map<string, RecapTriageSummary>; settled: boolean } {
   const environment = useRelayEnvironment();
   const [byId, setById] = useState<Map<string, RecapTriageSummary>>(
     () => new Map(),
   );
+  // False only while the latest request is in flight. A finished request,
+  // including a quiet failure, is settled so the toolbar can drop
+  // "Scoring Clean…".
+  const [settled, setSettled] = useState(true);
   const signature = useMemo(() => {
     if (!enabled) return "";
     return targets
@@ -42,11 +46,13 @@ export function useRecapReviewTriage(
   useEffect(() => {
     if (!enabled || !signature) {
       setById(new Map());
+      setSettled(true);
       lastSig.current = "";
       return;
     }
     if (signature === lastSig.current) return;
     lastSig.current = signature;
+    setSettled(false);
 
     let cancelled = false;
     const legacyIds = targets
@@ -123,7 +129,10 @@ export function useRecapReviewTriage(
         );
       }
       await Promise.all(pulls);
-      if (!cancelled) setById(next);
+      if (!cancelled) {
+        setById(next);
+        setSettled(true);
+      }
     })();
 
     return () => {
@@ -131,5 +140,5 @@ export function useRecapReviewTriage(
     };
   }, [enabled, environment, signature, targets]);
 
-  return byId;
+  return { byId, settled };
 }
