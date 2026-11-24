@@ -138,6 +138,11 @@ describe("whatsNewFor", () => {
     );
     expect(WHATS_NEW.find((e) => e.id === "2026-11-24ta")?.staffOnly).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-24tb")?.staffOnly).toBeFalsy();
+    // Mobile + layout cleanup is a client-visible tip above the trust batch.
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24ui")?.staffOnly).toBeFalsy();
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24ui")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24ta"),
+    );
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ad")?.staffOnly).toBe(true);
   });
@@ -166,17 +171,21 @@ describe("whatsNewFor", () => {
     expect(hasUnseenWhatsNew(false)).toBe(true);
     expect(hasUnseenWhatsNew(true)).toBe(true);
 
+    // Tips come from the data so a new release note does not break this test.
+    const clientTip = whatsNewFor(true)[0]?.id;
+    const staffTip = whatsNewFor(false)[0]?.id;
+
     markWhatsNewSeen(true);
     expect(hasUnseenWhatsNew(true)).toBe(false);
     expect(hasUnseenWhatsNew(false)).toBe(true);
-    expect(store.get(whatsNewSeenKey(true))).toBe(whatsNewFor(true)[0]?.id);
+    expect(store.get(whatsNewSeenKey(true))).toBe(clientTip);
     expect(store.get(whatsNewSeenKey(false))).toBeUndefined();
 
     markWhatsNewSeen(false);
     expect(hasUnseenWhatsNew(false)).toBe(false);
     expect(hasUnseenWhatsNew(true)).toBe(false);
-    expect(store.get(whatsNewSeenKey(false))).toBe(whatsNewFor(false)[0]?.id);
-    expect(store.get(whatsNewSeenKey(true))).toBe(whatsNewFor(true)[0]?.id);
+    expect(store.get(whatsNewSeenKey(false))).toBe(staffTip);
+    expect(store.get(whatsNewSeenKey(true))).toBe(clientTip);
   });
 
   it("only honors the legacy shared key when it matches that audience tip", () => {
