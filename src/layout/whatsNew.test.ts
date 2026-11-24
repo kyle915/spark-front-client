@@ -143,6 +143,11 @@ describe("whatsNewFor", () => {
     expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24ui")).toBeLessThan(
       WHATS_NEW.findIndex((e) => e.id === "2026-11-24ta"),
     );
+    // Account map note is client-visible and sits above the UI cleanup note.
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24am")?.staffOnly).toBeFalsy();
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24am")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24ui"),
+    );
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ad")?.staffOnly).toBe(true);
   });

@@ -159,6 +159,7 @@ type AccountMapPin {
   planned: Boolean!
   storeKey: String!
   locationSource: String!
+  lastVisitDate: String
 }
 
 type ActivationPlanDetailResponse {
