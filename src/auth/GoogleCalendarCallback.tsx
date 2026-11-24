@@ -31,7 +31,7 @@ const GoogleCalendarCallback = () => {
             hasProcessed.current = true;
             showAlert("Missing authorization code or state parameter", "error");
             sessionStorage.removeItem(STATE_STORAGE_KEY);
-            navigate("/connect-calendar", { replace: true });
+            navigate("/settings/calendar", { replace: true });
             setIsProcessing(false);
             return;
         }
@@ -41,7 +41,7 @@ const GoogleCalendarCallback = () => {
             hasProcessed.current = true;
             showAlert("Invalid state parameter. Please try connecting again.", "error");
             sessionStorage.removeItem(STATE_STORAGE_KEY);
-            navigate("/connect-calendar", { replace: true });
+            navigate("/settings/calendar", { replace: true });
             setIsProcessing(false);
             return;
         }
@@ -65,16 +65,16 @@ const GoogleCalendarCallback = () => {
                 if (result?.success) {
                     showAlert(result.message || "Google Calendar connected successfully", "success");
                     // Clean up URL parameters
-                    navigate("/connect-calendar", { replace: true });
+                    navigate("/settings/calendar", { replace: true });
                 } else {
                     showAlert(result?.message || "Failed to connect Google Calendar", "error");
-                    navigate("/connect-calendar", { replace: true });
+                    navigate("/settings/calendar", { replace: true });
                 }
                 setIsProcessing(false);
             },
             onError: (error) => {
                 showAlert(`Error connecting Google Calendar: ${error.message}`, "error");
-                navigate("/connect-calendar", { replace: true });
+                navigate("/settings/calendar", { replace: true });
                 setIsProcessing(false);
             },
         });

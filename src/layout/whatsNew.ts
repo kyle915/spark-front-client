@@ -14,6 +14,21 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24ui",
+    date: "November 24, 2026",
+    title: "Tidier pages on phones and small laptops",
+    items: [
+      "The sidebar has a Requests group: Master Tracker, Plans, Approvals, Walk-ups, Recent submissions, and Bulk upload. Recaps now lists only recap work, and only one row is highlighted for the page you are on.",
+      "Recent submissions shows one card per request on a phone, so venue, market, and date are readable without scrolling sideways.",
+      "On narrower screens the top bar and page buttons wrap instead of running off the right edge. The Needs you numbers on the dashboard sit in an even two-column grid on a phone.",
+      "Recaps keeps search, status, filters, and sort in one bar. If Clean scoring fails, the button says so and offers a retry instead of waiting forever.",
+      "Master Tracker opens on one filter row; date, market, plan, staffing, sort, grouping, and RMM are under More filters. The second Create Request button is gone (use the one in the top bar).",
+      "The Plans filters (All, Active, Upcoming, Past) are readable in light mode.",
+      "Calendar now lives at /calendar. Google Calendar sync lives only under Settings, and when it needs attention, Reconnect now is one click from the warning.",
+      "Moving between pages no longer flashes a second sidebar or a blank page while the next page loads.",
+    ],
+  },
+  {
     id: "2026-11-23af",
     date: "November 23, 2026",
     title: "The queue is the page",

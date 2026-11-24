@@ -17,7 +17,7 @@ import TenantRoute from "@/layout/TenantGuard";
 import { LegalGate } from "@/legal/acceptance/LegalGate";
 import GoogleCalendarCallback from "@/auth/GoogleCalendarCallback";
 import VerifyAccount from "@/auth/VerifyAccount";
-import { AppShellSkeleton } from "@/layout/PageSkeletons";
+import { AppShellSkeleton, RouteContentSkeleton } from "@/layout/PageSkeletons";
 import { LayoutChrome } from "@/layout/Layout";
 import { LayoutShellContext } from "@/layout/LayoutShellContext";
 import environment, { useWorkspaceEpoch } from "@/api/relay/environment";
@@ -53,7 +53,9 @@ const AuthenticatedShell = () => {
     <LayoutShellContext.Provider value={true}>
       <HotRelayPrefetch />
       <LayoutChrome>
-        <Suspense key={workspaceEpoch} fallback={<RouteFallback />}>
+        {/* Inside the chrome: content-only fallback. AppShellSkeleton here
+            drew a second fake sidebar + topbar inside the page. */}
+        <Suspense key={workspaceEpoch} fallback={<RouteContentSkeleton />}>
           <Outlet />
         </Suspense>
       </LayoutChrome>

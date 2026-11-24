@@ -224,7 +224,7 @@ export const SparkTopbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-base-200/55 backdrop-blur-[20px] border-b border-base-300 px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-3 flex-nowrap md:flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)", WebkitBackdropFilter: "saturate(180%) blur(20px)", backdropFilter: "saturate(180%) blur(20px)" }}>
+    <header className="sticky top-0 z-30 bg-base-200/55 backdrop-blur-[20px] border-b border-base-300 px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-3 flex-nowrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)", WebkitBackdropFilter: "saturate(180%) blur(20px)", backdropFilter: "saturate(180%) blur(20px)" }}>
       {/* Left: menu + quiet breadcrumb + (optional) public share-link pill */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
@@ -295,7 +295,7 @@ export const SparkTopbar: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 md:flex-wrap">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <button
           type="button"
           onClick={() => navigate("/requests/create")}
@@ -312,8 +312,8 @@ export const SparkTopbar: React.FC = () => {
           }
         >
           <span aria-hidden>+</span>
-          <span className="hidden sm:inline">Create Request</span>
-          <span className="sm:hidden">New</span>
+          <span className="hidden lg:inline">Create Request</span>
+          <span className="lg:hidden">New</span>
         </button>
 
         <button
@@ -327,7 +327,7 @@ export const SparkTopbar: React.FC = () => {
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Jump</span>
           <span
-            className="hidden sm:inline ml-3 mono text-[10px] px-1.5 py-0.5 rounded border border-base-300"
+            className="hidden lg:inline ml-3 mono text-[10px] px-1.5 py-0.5 rounded border border-base-300"
             style={{
               background: "var(--color-base-300)",
               color: "var(--spark-text-secondary)",
@@ -338,7 +338,7 @@ export const SparkTopbar: React.FC = () => {
         </button>
 
         {canToggleRole ? (
-          <div className="hidden md:block">
+          <div className="hidden xl:block">
           <PillGroup
             value={role}
             onChange={(v) => onRole(v as Role)}
@@ -405,7 +405,7 @@ export const SparkTopbar: React.FC = () => {
                 </p>
               ) : null}
               {canToggleRole ? (
-                <div className="mt-3 md:hidden">
+                <div className="mt-3 xl:hidden">
                   <p
                     className="text-xs mb-1.5"
                     style={{ color: "var(--spark-text-meta)" }}

@@ -198,10 +198,33 @@ const CalendarConnectionInner = ({
           </div>
 
           {/* Alerts only when needed */}
+          {/* Action required = Google revoked or expired the token. The fix
+              is one click, so the button sits right in the warning instead
+              of at the bottom of the card. */}
           {isConnected && !isActive && (
-            <div className="alert alert-warning text-sm">
-              Your Google Calendar connection exists but is no longer active.
-              Please reconnect to restore synchronization.
+            <div
+              role="alert"
+              className="alert alert-warning text-sm flex flex-wrap items-center justify-between gap-3"
+            >
+              <span>
+                Google Calendar stopped syncing. Reconnect to pick up where it
+                left off. Your calendar settings stay the same.
+              </span>
+              <button
+                type="button"
+                onClick={handleConnect}
+                disabled={isLoading}
+                className="btn btn-sm rounded-full bg-base-100 text-base-content border-base-300 shrink-0"
+              >
+                {isConnecting ? (
+                  <>
+                    <span className="loading loading-spinner loading-xs" />
+                    Opening Google…
+                  </>
+                ) : (
+                  "Reconnect now"
+                )}
+              </button>
             </div>
           )}
 
@@ -242,7 +265,9 @@ const CalendarConnectionInner = ({
 
         {/* Footer actions */}
         <div className="px-6 py-5 border-t border-base-300 flex justify-end">
-          {isConnected && isActive ? (
+          {/* An inactive connection reconnects from the warning above; the
+              footer offers the other choice: remove it. */}
+          {isConnected ? (
             <button
               type="button"
               onClick={handleDisconnect}
@@ -271,8 +296,6 @@ const CalendarConnectionInner = ({
                   <span className="loading loading-spinner loading-sm" />
                   Connecting…
                 </>
-              ) : isConnected && !isActive ? (
-                "Reconnect Google Calendar"
               ) : (
                 "Connect Google Calendar"
               )}
