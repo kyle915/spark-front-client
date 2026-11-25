@@ -1,7 +1,11 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { reportFieldIssue } from "./fieldIssues";
 import { numberHint, wantsDecimalKeypad } from "./numberSanity";
-import { isExpenseReceiptBucket, isShelfPhotoBucket } from "./photoBuckets";
+import {
+  isExpenseReceiptBucket,
+  isShelfPhotoBucket,
+  RECEIPT_PHOTO_TIP,
+} from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
 import {
   advisoryFromShelfCoach,
@@ -1933,6 +1937,9 @@ export default function RecapForm({
               isPhotoType(f.type) &&
               isExpenseReceiptBucket(f.name) ? (
                 <div style={{ marginTop: 8 }}>
+                  <p style={{ ...helperText, fontSize: 12, margin: "0 0 6px" }}>
+                    {RECEIPT_PHOTO_TIP}
+                  </p>
                   <ReceiptAdvisoryBanners
                     readingCount={
                       loosePhotos.filter((p) => receiptReadingIds.has(p.id)).length

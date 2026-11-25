@@ -17,7 +17,8 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export type ReceiptAdvisoryKind =
   | "store_mismatch"
   | "date_mismatch"
-  | "duplicate_receipt";
+  | "duplicate_receipt"
+  | "multiple_receipts";
 
 export type ReceiptAdvisory = {
   kind: ReceiptAdvisoryKind;
@@ -52,6 +53,7 @@ const ADVISORY_KINDS: readonly ReceiptAdvisoryKind[] = [
   "store_mismatch",
   "date_mismatch",
   "duplicate_receipt",
+  "multiple_receipts",
 ];
 
 function isAdvisoryKind(value: unknown): value is ReceiptAdvisoryKind {
@@ -69,6 +71,8 @@ export function advisoryKindTitle(kind: ReceiptAdvisoryKind): string {
       return "Check receipt date";
     case "duplicate_receipt":
       return "Already submitted receipt";
+    case "multiple_receipts":
+      return "One receipt per photo";
     default: {
       const exhaustive: never = kind;
       return exhaustive;

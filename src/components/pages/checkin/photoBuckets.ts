@@ -49,6 +49,13 @@ export function isExpenseReceiptBucket(name: string | null | undefined): boolean
   return n.includes("receipt") || n.includes("expense") || n.includes("product spend");
 }
 
+/**
+ * Shown under every receipt bucket. The reader reads one receipt per photo, so
+ * two receipts in one shot means one of them is never counted.
+ */
+export const RECEIPT_PHOTO_TIP =
+  "One receipt per photo. Add a separate photo for each receipt.";
+
 /** Shelf / stock / cooler buckets that get aisle coaching. */
 export function isShelfPhotoBucket(name: string | null | undefined): boolean {
   const n = (name ?? "").trim().toLowerCase();
