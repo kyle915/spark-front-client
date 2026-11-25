@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24dw",
+    date: "November 24, 2026",
+    title: "Pick the Recaps date window from the chip",
+    staffOnly: true,
+    items: [
+      "Click the 30 days chip on Recaps to switch to 60 days, 90 days, or All time. A recap waiting for review that is older than 30 days is one click away.",
+    ],
+  },
+  {
     id: "2026-11-24rc",
     date: "November 24, 2026",
     title: "Recaps catch answers that disagree before they go in",
