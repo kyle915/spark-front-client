@@ -1,6 +1,8 @@
+import { useSparkRole } from "@/hooks/useSparkRole";
 import {
   reviewCheckTint,
   reviewFlagBadges,
+  withoutStaffOnlyChecks,
   type ReviewFlagBadge,
   type ReviewFlagSummary,
 } from "./reviewCheckDisplay";
@@ -16,7 +18,11 @@ export function RecapReviewFlagBadges({
   flags: readonly ReviewFlagSummary[] | null | undefined;
   compact?: boolean;
 }) {
-  const badges = reviewFlagBadges(flags);
+  // BA confirmed / BA check badges are Ignite staff only.
+  const { isAdmin, canToggleRole } = useSparkRole();
+  const badges = reviewFlagBadges(
+    withoutStaffOnlyChecks(flags, isAdmin && canToggleRole),
+  );
   if (badges.length === 0) return null;
   const tint = reviewCheckTint("flag");
   return (
