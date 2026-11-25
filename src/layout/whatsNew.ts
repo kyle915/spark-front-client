@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-24sb",
+    date: "November 24, 2026",
+    title: "Staffing Board opens on your workspace",
+    staffOnly: true,
+    items: [
+      "The Staffing Board's client picker starts on the workspace you're in, marked (this workspace). Pick All clients to see every brand's week, and switching workspaces moves the board with you.",
+    ],
+  },
+  {
     id: "2026-11-24rc",
     date: "November 24, 2026",
     title: "Recaps catch answers that disagree before they go in",
