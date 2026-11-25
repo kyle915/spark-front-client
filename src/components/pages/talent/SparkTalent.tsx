@@ -1,4 +1,6 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -6,7 +8,6 @@ import { TalentRosterQuery } from "@/api/queries/TalentRosterQuery";
 import type { TalentRosterQuery as TalentRosterQueryType } from "@api/queries/__generated__/TalentRosterQuery.graphql";
 import {
   displayEmail,
-  talentMatches,
   talentName,
   talentPhone,
   talentPlace,
@@ -34,6 +35,13 @@ import { useAuthStore } from "@/store/authStore";
  */
 
 type Tier = "CAPTAIN" | "TOP" | "RISING" | "NEW";
+
+/** The API's page size for the ambassadors list (its max). */
+const PAGE_SIZE = 50;
+
+type RosterEdge = NonNullable<
+  TalentRosterQueryType["response"]["ambassadors"]
+>["edges"][number];
 
 type BA = {
   uuid: string;
@@ -129,12 +137,21 @@ const TalentInner: React.FC = () => {
     null,
   );
 
-  // Server-side filters. address+city, college and the in-college flag
-  // are pushed down (AmbassadorFiltersInput); the free-text `query` box
-  // stays client-side over the loaded page for snappy name/email typing.
-  const filters = useMemo(() => {
+  // Every filter, the search box included, runs on the server: the API
+  // pages 50 BAs at a time, so filtering only the loaded page missed
+  // everyone past the first 50. The box is debounced, and the deferred
+  // value keeps the current roster (and the box's focus) on screen while
+  // the next result loads instead of dropping to the page fallback.
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [query]);
+
+  const liveFilters = useMemo(() => {
     const f: Record<string, unknown> = {};
     if (tenantId) f.tenantId = tenantId;
+    if (debouncedQuery) f.talentSearch = debouncedQuery;
     if (city.trim()) f.city = city.trim();
     if (college.trim()) f.college = college.trim();
     if (inCollegeOnly) f.inCollege = true;
@@ -142,18 +159,63 @@ const TalentInner: React.FC = () => {
     const minR = minRating === "any" ? null : parseInt(minRating, 10);
     if (minR != null && !Number.isNaN(minR)) f.ratingMin = minR;
     return f;
-  }, [tenantId, city, college, inCollegeOnly, activeOnly, minRating]);
+  }, [tenantId, debouncedQuery, city, college, inCollegeOnly, activeOnly, minRating]);
+  const filters = useDeferredValue(liveFilters);
+  const searching = filters !== liveFilters;
 
   const data = useLazyLoadQuery<TalentRosterQueryType>(
     TalentRosterQuery,
-    { first: 200, filters },
+    { first: PAGE_SIZE, after: null, filters },
     { fetchPolicy: "store-and-network" },
   );
+  const firstPage = data?.ambassadors;
+
+  // Pages fetched with "Load more", for these filters only.
+  const [more, setMore] = useState<{
+    filters: typeof filters;
+    edges: RosterEdge[];
+    endCursor: string | null;
+    hasNextPage: boolean;
+  } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const extra = more && more.filters === filters ? more : null;
+  const hasNextPage = extra ? extra.hasNextPage : Boolean(firstPage?.pageInfo?.hasNextPage);
+  const endCursor = extra ? extra.endCursor : firstPage?.pageInfo?.endCursor ?? null;
+  const totalCount = firstPage?.totalCount ?? 0;
+
+  const loadMore = async () => {
+    if (loadingMore || !hasNextPage || !endCursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchQuery<TalentRosterQueryType>(
+        environment,
+        TalentRosterQuery,
+        { first: PAGE_SIZE, after: endCursor, filters },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const page = res?.ambassadors;
+      if (page) {
+        setMore({
+          filters,
+          edges: [...(extra?.edges ?? []), ...(page.edges ?? [])],
+          endCursor: page.pageInfo?.endCursor ?? null,
+          hasNextPage: Boolean(page.pageInfo?.hasNextPage),
+        });
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const all: BA[] = useMemo(() => {
-    return (data?.ambassadors?.edges ?? [])
+    const seen = new Set<string>();
+    return [...(firstPage?.edges ?? []), ...(extra?.edges ?? [])]
       .map((e) => e?.node)
-      .filter((n): n is NonNullable<typeof n> => Boolean(n))
+      .filter((n): n is NonNullable<typeof n> => {
+        if (!n || seen.has(String(n.uuid))) return false;
+        seen.add(String(n.uuid));
+        return true;
+      })
       .map((n) => {
         // Walk-up identities carry a synthetic checkin-<phone>@walkup.spark
         // email; name them by phone and place them by their last shift.
@@ -187,7 +249,7 @@ const TalentInner: React.FC = () => {
           isActive,
         };
       });
-  }, [data]);
+  }, [firstPage, extra]);
 
   useEffect(() => {
     if (!baParam) return;
@@ -203,12 +265,7 @@ const TalentInner: React.FC = () => {
     });
   }, [baParam, all]);
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    return all.filter((b) =>
-      talentMatches({ ...b.source, college: b.college }, b.homeCity, q),
-    );
-  }, [all, query]);
+  const filtered = all;
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -221,7 +278,7 @@ const TalentInner: React.FC = () => {
               color: "var(--spark-text-meta)",
             }}
           >
-            ROSTER · {filtered.length} of {all.length} BAs
+            ROSTER · {filtered.length} of {totalCount} BAs{searching ? " · searching…" : ""}
           </p>
           <h1
             className="display text-4xl font-bold mt-2"
@@ -458,6 +515,24 @@ const TalentInner: React.FC = () => {
           ))}
         </div>
       )}
+      {hasNextPage ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-60"
+            style={{
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+            }}
+          >
+            {loadingMore
+              ? "Loading…"
+              : `Load more (${Math.max(totalCount - filtered.length, 0)} more)`}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };
