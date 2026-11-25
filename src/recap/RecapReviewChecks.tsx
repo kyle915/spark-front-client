@@ -14,11 +14,14 @@ import type { RecapFlagExplanationQuery as RecapFlagExplanationQueryType } from 
 import { recapConversionChip, type RecapKpiRow } from "@/shared/sparkStat";
 import {
   flagExplanationLine,
+  isBaSubmitCheck,
   reviewCheckCounts,
   reviewCheckTint,
   visibleReviewChecks,
+  withoutStaffOnlyChecks,
   type ReviewCheckStatus,
 } from "./reviewCheckDisplay";
+import { useSparkRole } from "@/hooks/useSparkRole";
 
 /**
  * Rule-based review checks beside Approve (roadmap #3). Compact chips on
@@ -64,14 +67,26 @@ const Inner: React.FC<{
     { recapId, isCustom },
     { fetchPolicy: "store-or-network" },
   );
+  // "Asked at submit" is Ignite staff only: never in Client mode, even
+  // for staff previewing it (the server already omits it for brand users).
+  const { isAdmin, canToggleRole } = useSparkRole();
+  const isStaff = isAdmin && canToggleRole;
+  const checks = useMemo(
+    () => withoutStaffOnlyChecks(data?.recapReviewChecks, isStaff),
+    [data, isStaff],
+  );
+  const allVisible = useMemo(() => visibleReviewChecks(checks), [checks]);
+  // What the check-in asked the ambassador at submit gets its own block:
+  // each line already says whether they confirmed it.
   const visible = useMemo(
-    () => visibleReviewChecks(data?.recapReviewChecks),
-    [data],
+    () => allVisible.filter((c) => !isBaSubmitCheck(c.code)),
+    [allVisible],
   );
-  const counts = useMemo(
-    () => reviewCheckCounts(data?.recapReviewChecks),
-    [data],
+  const askedAtSubmit = useMemo(
+    () => allVisible.filter((c) => isBaSubmitCheck(c.code)),
+    [allVisible],
   );
+  const counts = useMemo(() => reviewCheckCounts(checks), [checks]);
   const conv = recapConversionChip(conversion);
   const convTint = reviewCheckTint(conv.status);
   const flagged = counts.flagged + (conv.status === "flag" ? 1 : 0);
@@ -134,6 +149,37 @@ const Inner: React.FC<{
           );
         })}
       </div>
+      {askedAtSubmit.length > 0 ? (
+        <div
+          className="mt-3 rounded-xl px-3 py-2"
+          style={{ border: "1px solid var(--spark-border)" }}
+          aria-label="Asked at submit"
+        >
+          <p
+            className="text-[12px] font-semibold"
+            style={{ color: "var(--spark-text-secondary)" }}
+          >
+            Asked at submit
+          </p>
+          <ul className="mt-1 space-y-1.5">
+            {askedAtSubmit.map((c) => (
+              <li key={c.code}>
+                <p className="text-[13px]" style={{ color: "var(--spark-text)" }}>
+                  {c.label}
+                </p>
+                {c.detail ? (
+                  <p
+                    className="text-[12px]"
+                    style={{ color: "var(--spark-text-meta)" }}
+                  >
+                    {c.detail}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {visible.some((c) => c.detail) ? (
         <div className="mt-2 space-y-0.5">
           {visible

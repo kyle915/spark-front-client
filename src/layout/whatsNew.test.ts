@@ -106,6 +106,7 @@ describe("whatsNewFor", () => {
     // nudge-all-overdue, denser attention, route lock, finance queue,
     // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
+      "2026-11-24sb",
       "2026-11-23af",
       "2026-11-23x",
       "2026-11-23aa",
@@ -142,6 +143,23 @@ describe("whatsNewFor", () => {
     expect(WHATS_NEW.find((e) => e.id === "2026-11-24ui")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24ui")).toBeLessThan(
       WHATS_NEW.findIndex((e) => e.id === "2026-11-24ta"),
+    );
+    // Account map note is client-visible and sits above the UI cleanup note.
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24am")?.staffOnly).toBeFalsy();
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24am")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24ui"),
+    );
+    // Staffing Board default is staff-only and sits above the recap answer check note.
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24sb")?.staffOnly).toBe(true);
+    expect(whatsNewFor(true).some((e) => e.id === "2026-11-24sb")).toBe(false);
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24sb")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24rc"),
+    );
+    // Recap answer check is staff-only and sits above the Account map note.
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24rc")?.staffOnly).toBe(true);
+    expect(whatsNewFor(true).some((e) => e.id === "2026-11-24rc")).toBe(false);
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24rc")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24am"),
     );
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ad")?.staffOnly).toBe(true);

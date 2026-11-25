@@ -23,6 +23,46 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-24dw",
+    date: "November 24, 2026",
+    title: "Pick the Recaps date window from the chip",
+    staffOnly: true,
+    items: [
+      "Click the 30 days chip on Recaps to switch to 60 days, 90 days, or All time. A recap waiting for review that is older than 30 days is one click away.",
+    ],
+  },
+  {
+    id: "2026-11-24sb",
+    date: "November 24, 2026",
+    title: "Staffing Board opens on your workspace",
+    staffOnly: true,
+    items: [
+      "The Staffing Board's client picker starts on the workspace you're in, marked (this workspace). Pick All clients to see every brand's week, and switching workspaces moves the board with you.",
+    ],
+  },
+  {
+    id: "2026-11-24rc",
+    date: "November 24, 2026",
+    title: "Recaps catch answers that disagree before they go in",
+    staffOnly: true,
+    items: [
+      "When a BA taps Submit on a check-in link, Spark now looks for answers that cannot both be right: a total sold of 0 next to lines that sold, sales with 0 people sampled, more first-time or brand-aware people than were sampled, more swag given out than was on hand, an end count that is not start minus given, spend that does not match the receipts, a clock that runs well past or short of the shift, and a number far above what this program usually reports.",
+      "Each note sits under the field it is about, marked Likely error or Check this, with Fix and This is correct. Nothing blocks the recap: the BA can always confirm and submit.",
+      "Reviewers see what the BA was asked under Review checks, in an Asked at submit block, so they can see at a glance that the BA confirmed 15 upgrades and 0 tins sold. The Needs review queue marks those recaps BA confirmed or BA check.",
+    ],
+  },
+  {
+    id: "2026-11-24am",
+    date: "November 24, 2026",
+    title: "Account map: store names, markets and last demo",
+    items: [
+      "Store names on the Account map no longer carry the visit's date. \"BP · 2027-01-11\" is BP, so the retailer menu lists stores and chains with a count, not one entry per visit. A store known only by a date is shown by its street and left out of the menu.",
+      "A new market menu (city and state) sits next to the state menu, and narrows to the chosen state.",
+      "Each store in the list and on its map card shows its last demo with a filed recap, or says no demo is filed yet.",
+      "If Google refuses the map key for a web address, the map now says so instead of showing a blank grey box. The store list keeps working.",
+    ],
+  },
+  {
     id: "2026-11-24ui",
     date: "November 24, 2026",
     title: "Tidier pages on phones and small laptops",
