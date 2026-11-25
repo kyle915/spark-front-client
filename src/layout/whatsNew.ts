@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-25mr",
+    date: "November 25, 2026",
+    title: "One receipt per photo",
+    staffOnly: true,
+    items: [
+      "The check-in receipt upload now tells BAs to take one photo per receipt. If a photo still shows two or more receipts, they see a warning to photograph each one separately before they submit.",
+      "Receipt checks flags any photo that holds several receipts (Several receipts in one photo), since only one of them is read. The receipt reader also no longer mistakes a store's savings total for the receipt total.",
+    ],
+  },
+  {
     id: "2026-11-24tc",
     date: "November 24, 2026",
     title: "Talent search finds every BA",

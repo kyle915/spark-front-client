@@ -14,6 +14,7 @@ export const FLAG_KIND_OPTIONS: { value: string; label: string }[] = [
   { value: "late_staff_filing", label: "Filed late by staff" },
   { value: "duplicate_photo", label: "Duplicate photo" },
   { value: "receipt_math", label: "Receipt doesn't add up" },
+  { value: "multiple_receipts", label: "Several receipts in one photo" },
 ];
 
 const KIND_LABEL = new Map(FLAG_KIND_OPTIONS.map((o) => [o.value, o.label]));

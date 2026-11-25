@@ -1,6 +1,10 @@
 import { useRef, type ChangeEvent, type CSSProperties, type RefObject } from "react";
 import { PHOTO_CAP } from "./photoCap";
-import { bucketCountHint } from "./photoBuckets";
+import {
+  bucketCountHint,
+  isExpenseReceiptBucket,
+  RECEIPT_PHOTO_TIP,
+} from "./photoBuckets";
 import { helperText, label, photoRemove } from "./checkinStyles";
 import type { Photo, PhotoBucket } from "./checkinTypes";
 
@@ -103,6 +107,9 @@ export function PhotoBucketZone({
       </div>
       {bucket.helper ? (
         <p style={{ ...helperText, fontSize: 12, margin: "2px 0 0" }}>{bucket.helper}</p>
+      ) : null}
+      {isExpenseReceiptBucket(bucket.name) ? (
+        <p style={{ ...helperText, fontSize: 12, margin: "2px 0 0" }}>{RECEIPT_PHOTO_TIP}</p>
       ) : null}
       <PhotoGrid
         photos={photos}
