@@ -11,6 +11,7 @@
  * not file two recaps.
  */
 
+import type { RecapCheckAnswers } from "./recapCheck";
 import {
   isOfflineClockFailure,
   newIdempotencyKey,
@@ -120,6 +121,8 @@ export type PendingRecap = {
    *  classifyRecapResponse). The answers and photos stay on the device, but
    *  nothing retries until the BA taps Try again or edits and resubmits. */
   rejected?: RecapRejection;
+  /** What the ambassador did with the answer check (recapCheck.ts). */
+  submitCheck?: RecapCheckAnswers;
 };
 
 export type RecapRejection = { status: number; message: string; at: number };
@@ -384,6 +387,7 @@ export async function enqueueRecap(
     storeName?: string;
     storeNumber?: string;
     coBrands?: PendingRecap["coBrands"];
+    submitCheck?: RecapCheckAnswers;
     submittedAt?: string;
     nowMs?: number;
     photoFiles?: Record<string, File>;
@@ -419,6 +423,7 @@ export async function enqueueRecap(
     storeName: args.storeName,
     storeNumber: args.storeNumber,
     coBrands: args.coBrands,
+    ...(args.submitCheck ? { submitCheck: args.submitCheck } : {}),
   };
   writePendingRecap(pending, storage);
   if (args.photoFiles) {
@@ -698,6 +703,7 @@ async function flushRecapOnce(
         ? { storeName: pending.storeName, storeNumber: pending.storeNumber ?? "" }
         : {}),
       ...(pending.coBrands ? { coBrands: pending.coBrands } : {}),
+      ...(pending.submitCheck ? pending.submitCheck : {}),
       forceNew: pending.forceNew,
       ...(pending.forceNew && pending.shiftLabel
         ? { shiftLabel: pending.shiftLabel, secondShift: pending.secondShift ?? true }

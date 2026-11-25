@@ -149,10 +149,16 @@ describe("whatsNewFor", () => {
     expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24am")).toBeLessThan(
       WHATS_NEW.findIndex((e) => e.id === "2026-11-24ui"),
     );
-    // Staffing Board default is staff-only and sits above the Account map note.
+    // Staffing Board default is staff-only and sits above the recap answer check note.
     expect(WHATS_NEW.find((e) => e.id === "2026-11-24sb")?.staffOnly).toBe(true);
     expect(whatsNewFor(true).some((e) => e.id === "2026-11-24sb")).toBe(false);
     expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24sb")).toBeLessThan(
+      WHATS_NEW.findIndex((e) => e.id === "2026-11-24rc"),
+    );
+    // Recap answer check is staff-only and sits above the Account map note.
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-24rc")?.staffOnly).toBe(true);
+    expect(whatsNewFor(true).some((e) => e.id === "2026-11-24rc")).toBe(false);
+    expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24rc")).toBeLessThan(
       WHATS_NEW.findIndex((e) => e.id === "2026-11-24am"),
     );
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();

@@ -122,7 +122,7 @@ import {
   spendNeedingReceipt,
 } from "./checkinCompleteness";
 import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
-import { RecapCheckNotes } from "./RecapCheckNotes";
+import { RecapCheckFieldNotes, RecapCheckNotes } from "./RecapCheckNotes";
 import { TallyPhotoCard, TallyProposal } from "./TallyPhotoCard";
 import { isTallyNumberType, shownProposals, type TallyProposals } from "./tallyRead";
 import { ReceiptAdvisoryBanners, ReceiptSpendProposal } from "./ReceiptReadFeedback";
@@ -136,6 +136,8 @@ import {
 import {
   RECAP_CHECK_MAX_RUNS,
   answersSignature,
+  recapCheckAnswers,
+  recapCheckItemsForField,
   requestRecapCheck,
   type RecapCheckItem,
 } from "./recapCheck";
@@ -329,6 +331,18 @@ export default function RecapForm({
   // answers it last saw, so the same answers are never held twice: a second
   // tap on Submit, or "Submit as is", files them.
   const [checkItems, setCheckItems] = useState<RecapCheckItem[]>([]);
+  // Notes the ambassador marked "This is correct" (recapCheckKey). Sent with
+  // the recap so the reviewer sees "BA confirmed: …".
+  const [checkConfirmed, setCheckConfirmed] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const toggleCheckConfirmed = (key: string) =>
+    setCheckConfirmed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const [checking, setChecking] = useState(false);
   const checkedAnswers = useRef<string | null>(null);
   const checkRuns = useRef(0);
@@ -1440,6 +1454,15 @@ export default function RecapForm({
     const submitKey =
       pendingBefore && pendingBefore.token === token ? pendingBefore.id : newIdempotencyKey();
 
+    // The brand total read off the receipt photos, so the check can compare
+    // it with the spend answer, and what the ambassador did with the notes
+    // on screen. Both ride with the recap; the server re-runs the check and
+    // only marks its own findings confirmed.
+    const receiptSpend = receiptCombinedProposal
+      ? { total: receiptCombinedProposal.proposedSpend }
+      : null;
+    let submitCheck = recapCheckAnswers(checkItems, checkConfirmed, receiptSpend);
+
     const queueThisSubmit = async (opts: { includeUploading?: boolean; silent?: boolean } = {}) => {
       const photoFiles: Record<string, File> = {};
       const files = photos
@@ -1471,6 +1494,7 @@ export default function RecapForm({
         usedCorpoCard,
         ...storeFields,
         coBrands: coBrandsBody,
+        submitCheck,
         forceNew,
         shiftLabel: forceNew ? shiftLabel : undefined,
         secondShift: Boolean(forceNew && shiftLabel),
@@ -1502,6 +1526,7 @@ export default function RecapForm({
         fieldValues,
         totalEngagements,
         photoCount: photos.length,
+        receiptSpend,
       });
       checkedAnswers.current = answers;
       setChecking(false);
@@ -1511,6 +1536,8 @@ export default function RecapForm({
         setSubmitPhase("idle");
         return;
       }
+      // Nothing left to ask about: notes from an earlier check were fixed.
+      submitCheck = recapCheckAnswers([], checkConfirmed, receiptSpend);
     }
     setCheckItems([]);
 
@@ -1550,6 +1577,7 @@ export default function RecapForm({
         usedCorpoCard,
         ...storeFields,
         ...(coBrandsBody ? { coBrands: coBrandsBody } : {}),
+        ...submitCheck,
         forceNew,
         ...(forceNew && shiftLabel
           ? { shiftLabel, secondShift: true }
@@ -1877,6 +1905,11 @@ export default function RecapForm({
               />
               {voiceMark(f.id)}
               {voiceConflictFor("field", f.id)}
+              <RecapCheckFieldNotes
+                items={recapCheckItemsForField(checkItems, f.id)}
+                confirmedKeys={checkConfirmed}
+                onToggleConfirm={toggleCheckConfirmed}
+              />
               {f.id === primarySpendFieldId && receiptSpendShown ? (
                 <ReceiptSpendProposal
                   proposal={receiptSpendShown}
@@ -2244,7 +2277,13 @@ export default function RecapForm({
 
       <RecapCompletenessChecklist items={completenessItems} />
 
-      <RecapCheckNotes items={checkItems} busy={busy} onSubmitAsIs={submit} />
+      <RecapCheckNotes
+        items={checkItems}
+        confirmedKeys={checkConfirmed}
+        onToggleConfirm={toggleCheckConfirmed}
+        busy={busy}
+        onSubmitAsIs={submit}
+      />
 
       {err ? <p style={{ ...errText, textAlign: "center" }}>{err}</p> : null}
 

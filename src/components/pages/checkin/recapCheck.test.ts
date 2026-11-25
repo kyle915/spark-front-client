@@ -3,7 +3,11 @@ import {
   RECAP_CHECK_TIMEOUT_MS,
   answersSignature,
   parseRecapCheckItems,
+  recapCheckAnswers,
+  recapCheckItemsForField,
+  recapCheckKey,
   requestRecapCheck,
+  type RecapCheckItem,
 } from "./recapCheck";
 
 const base = {
@@ -41,6 +45,8 @@ describe("recap check request", () => {
         code: "sold_exceeds_sampled",
         message: "You sampled 40 people but sold 55 cans. Is that right?",
         fieldId: "9",
+        fieldIds: ["9"],
+        severity: "warning",
       },
     ]);
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
@@ -101,7 +107,9 @@ describe("recap check reply", () => {
       parseRecapCheckItems({
         items: [null, "x", { code: "c" }, { message: "  " }, { message: "Is 0 right?", fieldId: 4 }],
       }),
-    ).toEqual([{ code: "", message: "Is 0 right?", fieldId: null }]);
+    ).toEqual([
+      { code: "", message: "Is 0 right?", fieldId: null, fieldIds: [], severity: "warning" },
+    ]);
     expect(parseRecapCheckItems(null)).toEqual([]);
     expect(parseRecapCheckItems({ items: "nope" })).toEqual([]);
   });
@@ -132,5 +140,67 @@ describe("answers signature", () => {
     const one = answersSignature([{ customFieldId: "1", value: "40" }], null, 0);
     expect(answersSignature([{ customFieldId: "1", value: "41" }], null, 0)).not.toBe(one);
     expect(answersSignature([{ customFieldId: "1", value: "40" }], null, 1)).not.toBe(one);
+  });
+});
+
+describe("contradictions", () => {
+  it("reads severity and every field a note is about", () => {
+    const [item] = parseRecapCheckItems({
+      items: [
+        {
+          code: "sold_total_zero",
+          message: "You entered 5 for “Single cans sold” but 0 for “Total cans sold”. Is that right?",
+          fieldId: "12",
+          fieldIds: ["12", "9", 7, ""],
+          severity: "error",
+        },
+      ],
+    });
+    expect(item.severity).toBe("error");
+    expect(item.fieldId).toBe("12");
+    expect(item.fieldIds).toEqual(["12", "9"]);
+    expect(recapCheckItemsForField([item], "9")).toEqual([item]);
+    expect(recapCheckItemsForField([item], "3")).toEqual([]);
+  });
+
+  it("an unknown severity reads as a warning, never a block", () => {
+    const [item] = parseRecapCheckItems({
+      items: [{ code: "x", message: "Check this.", severity: "block" }],
+    });
+    expect(item.severity).toBe("warning");
+  });
+
+  it("sends the receipts' total with the answers when there is one", async () => {
+    const fetchImpl = vi.fn(async () => reply({ items: [] }));
+    await requestRecapCheck({ ...base, receiptSpend: { total: "42.10" }, fetchImpl });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).receiptSpend).toEqual({ total: "42.10" });
+  });
+
+  it("sends the confirmed and shown codes of the notes still on screen", () => {
+    const items: RecapCheckItem[] = [
+      { code: "sold_line_zero", message: "A", fieldId: "1", fieldIds: ["1"], severity: "warning" },
+      { code: "clock_vs_schedule", message: "B", fieldId: null, fieldIds: [], severity: "warning" },
+    ];
+    const confirmed = new Set([
+      recapCheckKey(items[0]),
+      // A note the BA confirmed and then fixed, so it is no longer showing.
+      recapCheckKey({ code: "first_time_exceeds_sampled", message: "C" }),
+    ]);
+    expect(recapCheckAnswers(items, confirmed, { total: "9.00" })).toEqual({
+      checkConfirmed: ["sold_line_zero"],
+      checkShown: ["sold_line_zero", "clock_vs_schedule"],
+      receiptSpend: { total: "9.00" },
+    });
+    expect(recapCheckAnswers([], confirmed, null)).toEqual({
+      checkConfirmed: [],
+      checkShown: [],
+    });
+  });
+
+  it("the same code with new numbers is a new question", () => {
+    expect(recapCheckKey({ code: "c", message: "15 and 0" })).not.toBe(
+      recapCheckKey({ code: "c", message: "15 and 3" }),
+    );
   });
 });
