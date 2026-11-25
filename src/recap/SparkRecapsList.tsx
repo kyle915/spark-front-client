@@ -331,6 +331,7 @@ const daysAgoIso = (n: number) => {
 const TODAY_ISO = isoLocal(new Date());
 const DAYS_7_ISO = daysAgoIso(7);
 const DAYS_30_ISO = daysAgoIso(30);
+const DAYS_60_ISO = daysAgoIso(60);
 const DAYS_90_ISO = daysAgoIso(90);
 
 const ghostBtn: React.CSSProperties = {
@@ -2315,6 +2316,26 @@ export default function SparkRecapsList() {
   }, [baFromNav]);
   const [opsOpen, setOpsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  // Date-window chip menu (30 / 60 / 90 days / All time).
+  const [windowMenuOpen, setWindowMenuOpen] = useState(false);
+  const windowMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!windowMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!windowMenuRef.current?.contains(e.target as Node)) {
+        setWindowMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setWindowMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [windowMenuOpen]);
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
   const activeFilterCount =
     Number(retailerFilter !== "all") +
@@ -3274,7 +3295,9 @@ export default function SparkRecapsList() {
       ? `${statusWord} · all time`
       : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
         ? `${statusWord} · last 30 days`
-        : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+        : dateFrom === DAYS_60_ISO && dateTo === TODAY_ISO
+          ? `${statusWord} · last 60 days`
+          : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
           ? `${statusWord} · last 90 days`
           : dateFrom && dateTo
             ? `${statusWord} · ${dateFrom} → ${dateTo}`
@@ -3297,16 +3320,20 @@ export default function SparkRecapsList() {
       ? "all"
       : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
         ? "30d"
-        : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
-          ? "90d"
-          : "custom";
-  const applyDatePreset = (preset: "30d" | "90d" | "all") => {
+        : dateFrom === DAYS_60_ISO && dateTo === TODAY_ISO
+          ? "60d"
+          : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+            ? "90d"
+            : "custom";
+  const applyDatePreset = (preset: "30d" | "60d" | "90d" | "all") => {
     if (preset === "all") {
       setDateFrom("");
       setDateTo("");
       return;
     }
-    setDateFrom(preset === "90d" ? DAYS_90_ISO : DAYS_30_ISO);
+    setDateFrom(
+      preset === "90d" ? DAYS_90_ISO : preset === "60d" ? DAYS_60_ISO : DAYS_30_ISO,
+    );
     setDateTo(TODAY_ISO);
   };
   const showAllPublished = () => {
@@ -3364,7 +3391,9 @@ export default function SparkRecapsList() {
               ? "This week"
               : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
                 ? "30d"
-                : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+                : dateFrom === DAYS_60_ISO && dateTo === TODAY_ISO
+                  ? "60d"
+                  : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
                   ? "90d"
                   : [dateFrom, dateTo].filter(Boolean).join(" → ") || "Dates",
         }
@@ -3488,23 +3517,78 @@ export default function SparkRecapsList() {
                   : `Review next${visibleReviewCount ? ` · ${visibleReviewCount}` : ""}`}
               </button>
             )}
-            <span
-              className="rounded-xl px-3 py-2 text-xs font-semibold shrink-0"
-              style={{
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-                background: "transparent",
-              }}
-              title="Date window. Change it under More."
-            >
-              {datePreset === "30d"
-                ? "30 days"
-                : datePreset === "90d"
-                  ? "90 days"
-                  : datePreset === "all"
-                    ? "All dates"
-                    : "Custom dates"}
-            </span>
+            <div className="relative shrink-0" ref={windowMenuRef}>
+              <button
+                type="button"
+                onClick={() => setWindowMenuOpen((v) => !v)}
+                className="rounded-xl px-3 py-2 text-xs font-semibold"
+                style={{
+                  color: "var(--spark-text)",
+                  border: windowMenuOpen
+                    ? "1px solid var(--spark-text)"
+                    : "1px solid var(--spark-border)",
+                  background: "transparent",
+                }}
+                aria-haspopup="menu"
+                aria-expanded={windowMenuOpen}
+                aria-label="Date window"
+              >
+                {datePreset === "30d"
+                  ? "30 days"
+                  : datePreset === "60d"
+                    ? "60 days"
+                    : datePreset === "90d"
+                      ? "90 days"
+                      : datePreset === "all"
+                        ? "All time"
+                        : "Custom dates"}
+                {windowMenuOpen ? " ▴" : " ▾"}
+              </button>
+              {windowMenuOpen && (
+                <div
+                  className="absolute left-0 top-full mt-2 z-40 flex flex-col gap-0.5 p-1.5 rounded-xl min-w-[9rem]"
+                  style={{
+                    background: "rgba(var(--spark-bg-rgb),0.98)",
+                    border: "1px solid var(--spark-border)",
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.35)",
+                  }}
+                  role="menu"
+                >
+                  {(
+                    [
+                      ["30d", "30 days"],
+                      ["60d", "60 days"],
+                      ["90d", "90 days"],
+                      ["all", "All time"],
+                    ] as const
+                  ).map(([p, label]) => (
+                    <button
+                      key={p}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={datePreset === p}
+                      onClick={() => {
+                        applyDatePreset(p);
+                        setWindowMenuOpen(false);
+                      }}
+                      className="px-3 py-2 rounded-lg text-sm text-left font-semibold"
+                      style={{
+                        background:
+                          datePreset === p
+                            ? "rgba(var(--spark-ok-rgb),0.16)"
+                            : "transparent",
+                        color:
+                          datePreset === p
+                            ? "var(--spark-ok-ink)"
+                            : "var(--spark-text)",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {!isClient && flagsEnabled && (
               <div
                 className="flex rounded-xl overflow-hidden shrink-0"
@@ -3732,7 +3816,7 @@ export default function SparkRecapsList() {
                     className="flex overflow-hidden rounded-xl"
                     style={{ border: "1px solid var(--spark-border)" }}
                   >
-                    {(["30d", "90d", "all"] as const).map((p) => (
+                    {(["30d", "60d", "90d", "all"] as const).map((p) => (
                       <button
                         key={p}
                         type="button"
