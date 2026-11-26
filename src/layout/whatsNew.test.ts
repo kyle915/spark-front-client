@@ -180,6 +180,7 @@ describe("whatsNewFor", () => {
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
     for (const id of [
+      "2026-11-26nl",
       "2026-11-26wp",
       "2026-11-26ha",
       "2026-11-26cal",

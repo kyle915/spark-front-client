@@ -14,6 +14,16 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-26nl",
+    date: "November 26, 2026",
+    title: "Plain-English bulk scheduling & Account Map Store Signals",
+    items: [
+      "Create Request now includes Schedule in plain English for both RMMs and brand teams: type a single sentence (such as 'Every Fri & Sat in June from 12pm to 4pm at our top 5 Austin HEBs') to match stores from your Account Map roster and preview 10–25 DST-accurate visits ready to submit in one click.",
+      "Submitted recaps now extract structured Store Signals (out-of-stock risks, buyer reorder leads, store manager contacts, and competitor promos) from field notes.",
+      "Account Map adds an OOS & Reorder Leads filter chip and a Field store signals card with one-click Draft RMM / distributor email links, + Wave selection, and Schedule demo shortcuts.",
+    ],
+  },
+  {
     id: "2026-11-26wp",
     date: "November 26, 2026",
     title: "Plan next month's demo wave in Ask AI",

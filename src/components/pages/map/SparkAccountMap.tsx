@@ -14,6 +14,8 @@ import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
 import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
+import { AccountMapStoreSignalsQuery } from "@/api/queries/AccountMapStoreSignalsQuery";
+import type { AccountMapStoreSignalsQuery as AccountMapStoreSignalsQueryType } from "@api/queries/__generated__/AccountMapStoreSignalsQuery.graphql";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
 import { prefersReducedMotion } from "@/shared/map/mapFit";
@@ -49,6 +51,12 @@ import {
   stripAiWaveSearchParams,
   type AiWavePrefill,
 } from "./aiWaveParams";
+import StoreSignalsCard from "./StoreSignalsCard";
+import {
+  isOosOrReorderSignal,
+  matchesStoreSignal,
+  type StoreSignalRow,
+} from "./storeSignals";
 import AccountMapView, { CoverageLegend, CoverageMark } from "./AccountMapView";
 import AccountUploader from "./AccountUploader";
 import SampleNextList from "@/components/explain/SampleNextList";
@@ -282,6 +290,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [overdueOnly, setOverdueOnly] = useState(
     () => searchParams.get("overdue") === "1",
   );
+  const [signalsOnly, setSignalsOnly] = useState(
+    () => searchParams.get("signals") === "1",
+  );
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [marketFilter, setMarketFilter] = useState("all");
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
@@ -420,22 +431,54 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     () => stores.filter((s) => isStoreOverdue60d(s, overdueCutoffMs)).length,
     [stores, overdueCutoffMs],
   );
-  const baseFiltered = useMemo(() => filterStores(stores, filters), [stores, filters]);
-  const filtered = useMemo(
-    () =>
-      overdueOnly
-        ? baseFiltered.filter((s) => isStoreOverdue60d(s, overdueCutoffMs))
-        : baseFiltered,
-    [baseFiltered, overdueOnly, overdueCutoffMs],
+  const [storeSignals, setStoreSignals] = useState<StoreSignalRow[]>([]);
+  useEffect(() => {
+    let active = true;
+    fetchQuery<AccountMapStoreSignalsQueryType>(
+      environment,
+      AccountMapStoreSignalsQuery,
+      { tenantId: tenantId || null },
+      { fetchPolicy: waveRefreshKey > 0 ? "network-only" : "store-or-network" },
+    )
+      .toPromise()
+      .then((res) => {
+        if (!active) return;
+        const rows = (res?.accountMapStoreSignals ?? []).filter(
+          (s): s is StoreSignalRow => Boolean(s),
+        );
+        setStoreSignals(rows);
+      })
+      .catch(() => {
+        if (active) setStoreSignals([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [tenantId, waveRefreshKey]);
+  const oosReorderCount = useMemo(
+    () => storeSignals.filter(isOosOrReorderSignal).length,
+    [storeSignals],
   );
+  const signalCount = storeSignals.length;
+
+  const baseFiltered = useMemo(() => filterStores(stores, filters), [stores, filters]);
+  const filtered = useMemo(() => {
+    let rows = overdueOnly
+      ? baseFiltered.filter((s) => isStoreOverdue60d(s, overdueCutoffMs))
+      : baseFiltered;
+    if (signalsOnly) {
+      rows = rows.filter((s) => matchesStoreSignal(s, storeSignals, false));
+    }
+    return rows;
+  }, [baseFiltered, overdueOnly, overdueCutoffMs, signalsOnly, storeSignals]);
   const counts = useMemo(() => storeCounts(stores), [stores]);
   const shown = useMemo(() => storeCounts(filtered), [filtered]);
   const states = useMemo(() => stateOptions(stores), [stores]);
   const retailers = useMemo(() => retailerOptions(stores), [stores]);
   const markets = useMemo(() => marketOptions(stores, stateFilter), [stores, stateFilter]);
-  const filtering = hasFilters({ ...filters, q: search }) || overdueOnly;
+  const filtering = hasFilters({ ...filters, q: search }) || overdueOnly || signalsOnly;
 
-  const scope = `${tenantId ?? "all"}|${coverage}|${overdueOnly ? "od" : ""}|${stateFilter}|${marketFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
+  const scope = `${tenantId ?? "all"}|${coverage}|${overdueOnly ? "od" : ""}|${signalsOnly ? "sig" : ""}|${stateFilter}|${marketFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
   const fitKey = useMemo(() => storesFitKey(scope, filtered), [scope, filtered]);
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -591,6 +634,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const clearFilters = () => {
     setCoverage("all");
     setOverdueOnly(false);
+    setSignalsOnly(false);
     setStateFilter("all");
     setMarketFilter("all");
     setRetailerFilter("all");
@@ -600,6 +644,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     params.delete("coverage");
     params.delete("state");
     params.delete("overdue");
+    params.delete("signals");
     setSearchParams(params, { replace: true });
   };
 
@@ -698,6 +743,27 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             }
           >
             Overdue 60d+ · {overdueCount.toLocaleString("en-US")}
+          </button>
+        )}
+        {signalCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setSignalsOnly((v) => !v)}
+            aria-pressed={signalsOnly}
+            className="chip chip-muted"
+            title="Stores with out-of-stock alerts, buyer reorder leads, or promo intel from recent recaps"
+            style={
+              signalsOnly
+                ? {
+                    color: "var(--spark-flag-ink)",
+                    outline: "1.5px solid var(--spark-orange)",
+                  }
+                : undefined
+            }
+          >
+            {oosReorderCount > 0
+              ? `OOS & Reorder Leads · ${oosReorderCount.toLocaleString("en-US")}`
+              : `Store signals · ${signalCount.toLocaleString("en-US")}`}
           </button>
         )}
         {filtering && filtered.length > 0 && filtered.length <= 50 && (
@@ -924,6 +990,27 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           )}
         </div>
       </div>
+
+      <StoreSignalsCard
+        signals={storeSignals}
+        selectedWaveKeys={selectedWaveKeys}
+        onToggleWaveKey={(sig) => {
+          if (!sig.storeKey) return;
+          const matched = stores.find((s) => s.key === sig.storeKey);
+          toggleWaveStore(
+            matched
+              ? toWaveStore(matched)
+              : {
+                  key: sig.storeKey,
+                  name: sig.storeName,
+                  address: sig.address,
+                  market: sig.city,
+                  state: sig.stateCode,
+                  position: null,
+                },
+          );
+        }}
+      />
 
       <SampleNextList
         tenantId={tenantId}

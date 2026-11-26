@@ -69,6 +69,7 @@ import { useTenantPublic } from "@/public/form/hooks/useTenantPublic";
 import PasteDetailsPanel, {
   type ZoneState,
 } from "@/requests/pasteDetails/PasteDetailsPanel";
+import NaturalLanguageBulkPanel from "@/requests/pasteDetails/NaturalLanguageBulkPanel";
 import {
   advanceQueue,
   draftFormValues,
@@ -1184,6 +1185,20 @@ const SparkRequestInner: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Plain-English bulk scheduling across tenant Account Map stores (RMMs + clients). */}
+      {tenantId ? (
+        <NaturalLanguageBulkPanel
+          tenantId={tenantId}
+          requestTypeId={requestTypeId}
+          defaultTimezoneId={timezoneId}
+          timezones={timezones}
+          catalogProducts={products}
+          selectedProductIds={selectedProducts}
+          formNotes={notes}
+          isClient={isClient}
+        />
+      ) : null}
 
       {/* Staff only: read a pasted email or sheet rows into the form. */}
       {!isClient && tenantId ? (
