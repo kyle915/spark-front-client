@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { bucketCountHint, isExpenseReceiptBucket } from "./photoBuckets";
+import {
+  bucketCountHint,
+  coachModeForBucket,
+  isExpenseReceiptBucket,
+  isSetupPhotoBucket,
+  isShelfPhotoBucket,
+} from "./photoBuckets";
 
 /**
  * Liquid Death's "Consumer Sampling Pictures" bucket carries min 8 on both
@@ -71,5 +77,21 @@ describe("isExpenseReceiptBucket", () => {
     expect(isExpenseReceiptBucket("Product Spend")).toBe(true);
     expect(isExpenseReceiptBucket("Consumer Sampling Pictures")).toBe(false);
     expect(isExpenseReceiptBucket("Table Set Up")).toBe(false);
+  });
+});
+
+describe("coachModeForBucket", () => {
+  it("routes shelf/cooler buckets to shelf mode and setup/table/footprint buckets to setup mode", () => {
+    expect(isShelfPhotoBucket("Shelf / Cooler")).toBe(true);
+    expect(coachModeForBucket("Shelf / Cooler")).toBe("shelf");
+    expect(coachModeForBucket("Before & After Stock")).toBe("shelf");
+
+    expect(isSetupPhotoBucket("Table Set Up")).toBe(true);
+    expect(coachModeForBucket("Table Set Up")).toBe("setup");
+    expect(coachModeForBucket("Event Setup / Footprint")).toBe("setup");
+    expect(coachModeForBucket("Demo Display")).toBe("setup");
+
+    expect(coachModeForBucket("Consumer Sampling Pictures")).toBeNull();
+    expect(coachModeForBucket("Product Receipt")).toBeNull();
   });
 });

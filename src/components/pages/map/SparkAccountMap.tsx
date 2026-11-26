@@ -43,6 +43,12 @@ import {
   type Store,
   type StoreFilters,
 } from "./accountStores";
+import {
+  matchWaveTargetStores,
+  parseAiWaveParams,
+  stripAiWaveSearchParams,
+  type AiWavePrefill,
+} from "./aiWaveParams";
 import AccountMapView, { CoverageLegend, CoverageMark } from "./AccountMapView";
 import AccountUploader from "./AccountUploader";
 import SampleNextList from "@/components/explain/SampleNextList";
@@ -284,6 +290,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     () => new Map(),
   );
   const [waveSheetOpen, setWaveSheetOpen] = useState(false);
+  const [waveInitialSchedule, setWaveInitialSchedule] = useState<AiWavePrefill | null>(
+    null,
+  );
   // Brand users (who cannot switch to Admin) get 200 rows a request; ask
   // for exactly that so each offset step lands where the last page ended.
   const { canToggleRole } = useSparkRole();
@@ -482,6 +491,37 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     }),
     [],
   );
+
+  // Pre-load AI-proposed demo wave (`?wave=1&waveStores=...`) once stores resolve.
+  useEffect(() => {
+    const prefill = parseAiWaveParams(searchParams);
+    if (!prefill || stores.length === 0) return;
+    const candidates = stores.map(toWaveStore);
+    const matched = matchWaveTargetStores(prefill, candidates);
+    const missingKeys = prefill.storeKeys.some(
+      (k) => !stores.some((s) => s.key === k),
+    );
+    if (missingKeys && truncation.truncated) {
+      if (!loadingRest) void loadRest();
+      return;
+    }
+    if (matched.length > 0) {
+      const next = new Map<string, WaveTargetStore>();
+      for (const t of matched) next.set(t.key, t);
+      setSelectedWaveMap(next);
+      setWaveInitialSchedule(prefill);
+      setWaveSheetOpen(true);
+    }
+    setSearchParams(stripAiWaveSearchParams(searchParams), { replace: true });
+  }, [
+    loadRest,
+    loadingRest,
+    searchParams,
+    setSearchParams,
+    stores,
+    toWaveStore,
+    truncation.truncated,
+  ]);
   const toggleWaveStore = useCallback((target: WaveTargetStore) => {
     setSelectedWaveMap((prev) => {
       const next = new Map(prev);
@@ -899,6 +939,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         tenantId={tenantId}
         stores={selectedWaveList}
         onWaveCreated={handleWaveCreated}
+        initialSchedule={waveInitialSchedule}
       />
     </div>
   );

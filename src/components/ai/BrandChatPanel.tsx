@@ -59,33 +59,67 @@ const STATUS_NOTE: Record<string, string> = {
 
 function SourceChips({ turn, onNavigate }: { turn: Turn; onNavigate: () => void }) {
   if (!turn.sources.length && !turn.links.length) return null;
+  const waveAction = turn.sources.find(
+    (s) => s.tool === "propose_demo_wave" && s.link.includes("wave=1"),
+  );
+  const regularSources = turn.sources.filter((s) => s !== waveAction);
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Sources">
-      {turn.sources.map((s) => (
-        <Link
-          key={s.tool}
-          to={s.link}
-          onClick={onNavigate}
-          className="inline-block max-w-full rounded-2xl px-2.5 py-1 text-xs leading-snug transition hover:opacity-80"
-          style={chip}
-          title={`Open ${s.linkLabel}`}
+    <div className="mt-2.5 space-y-2">
+      {waveAction ? (
+        <div
+          className="rounded-xl p-3 flex flex-wrap items-center justify-between gap-3"
+          style={{
+            border: "1px solid var(--spark-border)",
+            background: "rgba(var(--spark-ink-rgb),0.03)",
+          }}
         >
-          <span style={TEXT}>{s.label}</span>
-          {s.detail ? <span style={META}> · {s.detail}</span> : null}
-        </Link>
-      ))}
-      {turn.links.map((l) => (
-        <Link
-          key={l.url}
-          to={l.url}
-          onClick={onNavigate}
-          className="inline-flex items-center rounded-full px-2.5 py-1 text-xs transition hover:opacity-80"
-          style={chip}
-          title={`Open the store page for ${l.label}`}
-        >
-          Store: {l.label}
-        </Link>
-      ))}
+          <div className="min-w-0">
+            <p className="text-xs font-semibold" style={TEXT}>
+              Draft wave ready{waveAction.detail ? ` · ${waveAction.detail}` : ""}
+            </p>
+            <p className="text-xs mt-0.5" style={META}>
+              Pre-loads stores, dates, and shift hours in Wave Planner — nothing books until you confirm.
+            </p>
+          </div>
+          <Link
+            to={waveAction.link}
+            onClick={onNavigate}
+            className="inline-flex items-center gap-1 rounded-lg px-3.5 py-2 text-xs font-semibold shrink-0 transition hover:opacity-90"
+            style={askBtn}
+          >
+            {waveAction.label} →
+          </Link>
+        </div>
+      ) : null}
+      {regularSources.length > 0 || turn.links.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5" aria-label="Sources">
+          {regularSources.map((s) => (
+            <Link
+              key={s.tool}
+              to={s.link}
+              onClick={onNavigate}
+              className="inline-block max-w-full rounded-2xl px-2.5 py-1 text-xs leading-snug transition hover:opacity-80"
+              style={chip}
+              title={`Open ${s.linkLabel}`}
+            >
+              <span style={TEXT}>{s.label}</span>
+              {s.detail ? <span style={META}> · {s.detail}</span> : null}
+            </Link>
+          ))}
+          {turn.links.map((l) => (
+            <Link
+              key={l.url}
+              to={l.url}
+              onClick={onNavigate}
+              className="inline-flex items-center rounded-full px-2.5 py-1 text-xs transition hover:opacity-80"
+              style={chip}
+              title={`Open the store page for ${l.label}`}
+            >
+              Store: {l.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -236,7 +270,11 @@ export default function BrandChatPanel({
   };
 
   const brand = view?.brandName || "your brand";
-  const suggestions = view?.suggestions ?? [];
+  const rawSuggestions = view?.suggestions ?? [];
+  const wavePrompt = "Plan next month's 15-store demo wave";
+  const suggestions = rawSuggestions.some((s) => s.toLowerCase().includes("wave"))
+    ? rawSuggestions
+    : [wavePrompt, ...rawSuggestions.slice(0, 3)];
   const canAsk = Boolean(question.trim()) && !pending && left !== 0 && Boolean(view);
 
   return (
@@ -248,8 +286,8 @@ export default function BrandChatPanel({
           </p>
           <h2 className="spark-overlay-title">Ask about {brand}'s program</h2>
           <p className="text-sm mt-1" style={META}>
-            Answers come only from {brand}'s data in Spark, with the source under each
-            answer. Read only: it can't change anything.
+            Answers come only from {brand}'s data in Spark, with sources and optional draft
+            waves you can review on Account Map. Read only: nothing changes automatically.
           </p>
         </div>
         <button

@@ -31,12 +31,21 @@ export interface WaveCreatedSummary {
   retainStoreKeys: string[];
 }
 
+export interface WaveInitialSchedule {
+  windowStart?: string;
+  windowEnd?: string;
+  weekdays?: number[];
+  startTime?: string;
+  endTime?: string;
+}
+
 interface WaveScheduleSheetProps {
   open: boolean;
   onClose: () => void;
   tenantId: string | null;
   stores: ReadonlyArray<WaveTargetStore>;
   onWaveCreated: (summary: WaveCreatedSummary) => void;
+  initialSchedule?: WaveInitialSchedule | null;
 }
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -57,7 +66,8 @@ const WaveScheduleSheetBody: React.FC<{
   stores: ReadonlyArray<WaveTargetStore>;
   onClose: () => void;
   onWaveCreated: (summary: WaveCreatedSummary) => void;
-}> = ({ tenantId, stores, onClose, onWaveCreated }) => {
+  initialSchedule?: WaveInitialSchedule | null;
+}> = ({ tenantId, stores, onClose, onWaveCreated, initialSchedule }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
 
   const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
@@ -105,12 +115,36 @@ const WaveScheduleSheetBody: React.FC<{
   const [requestTypeId, setRequestTypeId] = useState<string>("");
   const [dateMode, setDateMode] = useState<WaveDateMode>("window");
   const [singleDate, setSingleDate] = useState<string>(initialDates.singleDate);
-  const [windowStart, setWindowStart] = useState<string>(initialDates.windowStart);
-  const [windowEnd, setWindowEnd] = useState<string>(initialDates.windowEnd);
-  const [weekdays, setWeekdays] = useState<number[]>([5, 6]);
+  const [windowStart, setWindowStart] = useState<string>(
+    initialSchedule?.windowStart ?? initialDates.windowStart,
+  );
+  const [windowEnd, setWindowEnd] = useState<string>(
+    initialSchedule?.windowEnd ?? initialDates.windowEnd,
+  );
+  const [weekdays, setWeekdays] = useState<number[]>(
+    initialSchedule?.weekdays?.length ? initialSchedule.weekdays : [5, 6],
+  );
   const [assignMode, setAssignMode] = useState<WaveWindowAssignMode>("spread");
-  const [startTime, setStartTime] = useState<string>("12:00");
-  const [endTime, setEndTime] = useState<string>("16:00");
+  const [startTime, setStartTime] = useState<string>(
+    initialSchedule?.startTime ?? "12:00",
+  );
+  const [endTime, setEndTime] = useState<string>(
+    initialSchedule?.endTime ?? "16:00",
+  );
+
+  const scheduleKey = initialSchedule
+    ? `${initialSchedule.windowStart ?? ""}|${initialSchedule.windowEnd ?? ""}|${(initialSchedule.weekdays ?? []).join(",")}|${initialSchedule.startTime ?? ""}|${initialSchedule.endTime ?? ""}`
+    : "";
+  useEffect(() => {
+    if (!initialSchedule) return;
+    setDateMode("window");
+    if (initialSchedule.windowStart) setWindowStart(initialSchedule.windowStart);
+    if (initialSchedule.windowEnd) setWindowEnd(initialSchedule.windowEnd);
+    if (initialSchedule.weekdays?.length) setWeekdays(initialSchedule.weekdays);
+    if (initialSchedule.startTime) setStartTime(initialSchedule.startTime);
+    if (initialSchedule.endTime) setEndTime(initialSchedule.endTime);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when AI wave prefill changes
+  }, [scheduleKey]);
   const [schedulingStatus, setSchedulingStatus] = useState<
     "needs_scheduling" | "already_scheduled"
   >("needs_scheduling");
@@ -937,6 +971,7 @@ export const WaveScheduleSheet: React.FC<WaveScheduleSheetProps> = ({
   tenantId,
   stores,
   onWaveCreated,
+  initialSchedule,
 }) => {
   return (
     <SparkSheet
@@ -966,6 +1001,7 @@ export const WaveScheduleSheet: React.FC<WaveScheduleSheetProps> = ({
             stores={stores}
             onClose={onClose}
             onWaveCreated={onWaveCreated}
+            initialSchedule={initialSchedule}
           />
         </Suspense>
       )}

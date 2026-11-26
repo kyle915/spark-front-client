@@ -121,6 +121,10 @@ export function PhotoBucketZone({
           onRemove(id);
           cameraRef.current?.click();
         }}
+        onReplace={(id) => {
+          onRemove(id);
+          libraryRef.current?.click();
+        }}
         accent={accent}
         allowVideo={Boolean(bucket.accept?.includes("video"))}
       />
@@ -241,6 +245,7 @@ export function PhotoGrid({
   onRemove,
   onKeep,
   onRetake,
+  onReplace,
   accent,
   allowVideo = false,
 }: {
@@ -250,6 +255,7 @@ export function PhotoGrid({
   onRemove: (id: string) => void;
   onKeep?: (id: string) => void;
   onRetake?: (id: string) => void;
+  onReplace?: (id: string) => void;
   accent: string;
   allowVideo?: boolean;
 }) {
@@ -339,24 +345,96 @@ export function PhotoGrid({
             </button>
           </div>
           {p.check && !p.check.dismissed && p.check.message ? (
-            <div style={{ marginTop: 6 }}>
+            <div
+              style={{
+                marginTop: 6,
+                borderRadius: 8,
+                padding: p.check.kind === "warn" ? "6px 8px" : "4px 0",
+                background: p.check.kind === "warn" ? "#fffbeb" : "transparent",
+                border: p.check.kind === "warn" ? "1px solid #f59e0b" : "none",
+                color:
+                  p.check.kind === "warn"
+                    ? "#78350f"
+                    : p.check.kind === "ok"
+                      ? "#166534"
+                      : "#44403c",
+              }}
+            >
               <p style={{ fontSize: 12, margin: 0, lineHeight: 1.35 }}>{p.check.message}</p>
               {p.check.kind === "warn" || p.check.kind === "unavailable" ? (
-                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                   {p.check.kind === "warn" && onRetake ? (
-                    <button type="button" onClick={() => onRetake(p.id)} style={{ fontSize: 12, fontWeight: 700 }}>
+                    <button
+                      type="button"
+                      onClick={() => onRetake(p.id)}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        border: "1px solid #d97706",
+                        background: "#fff",
+                        color: "#92400e",
+                        cursor: "pointer",
+                      }}
+                    >
                       Retake
                     </button>
                   ) : null}
+                  {p.check.kind === "warn" && onReplace ? (
+                    <button
+                      type="button"
+                      onClick={() => onReplace(p.id)}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        border: "1px solid #d6d3c8",
+                        background: "#fff",
+                        color: "#44403c",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Replace
+                    </button>
+                  ) : null}
                   {onKeep ? (
-                    <button type="button" onClick={() => onKeep(p.id)} style={{ fontSize: 12, fontWeight: 700 }}>
+                    <button
+                      type="button"
+                      onClick={() => onKeep(p.id)}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "3px 6px",
+                        border: "none",
+                        background: "transparent",
+                        color: "#57534e",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                      }}
+                    >
                       Keep
                     </button>
                   ) : null}
                 </div>
               ) : onKeep ? (
-                <button type="button" onClick={() => onKeep(p.id)} style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>
-                  Keep
+                <button
+                  type="button"
+                  onClick={() => onKeep(p.id)}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    marginTop: 4,
+                    padding: 0,
+                    border: "none",
+                    background: "transparent",
+                    color: "#57534e",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                  }}
+                >
+                  Dismiss
                 </button>
               ) : null}
             </div>

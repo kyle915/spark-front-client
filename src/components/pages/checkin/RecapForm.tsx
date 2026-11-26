@@ -2,8 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSPr
 import { reportFieldIssue } from "./fieldIssues";
 import { numberHint, wantsDecimalKeypad } from "./numberSanity";
 import {
+  coachModeForBucket,
   isExpenseReceiptBucket,
-  isShelfPhotoBucket,
   RECEIPT_PHOTO_TIP,
 } from "./photoBuckets";
 import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
@@ -824,7 +824,7 @@ export default function RecapForm({
     });
   };
 
-  // Aisle shelf coach for shelf-bucket photos. Sibling of photo-check; never blocks.
+  // Real-time vision coach for shelf/stock/cooler AND table/setup/footprint photos. Never blocks.
   const runShelfCoach = (id: string, file: File) => {
     if (!token || !file.type.startsWith("image/")) return;
     const photo = photosRef.current.find((ph) => ph.id === id);
@@ -832,9 +832,13 @@ export default function RecapForm({
     const bucketName =
       photo.category != null
         ? (photoBuckets ?? []).find((b) => b.id === photo.category)?.name ?? null
-        : null;
-    // Only coach labelled shelf/stock/cooler buckets — never every photo.
-    if (!isShelfPhotoBucket(bucketName)) return;
+        : (photoBuckets ?? []).length === 0
+          ? templateFields.find(
+              (f) => isPhotoType(f.type) && coachModeForBucket(f.name) != null,
+            )?.name ?? null
+          : null;
+    const coachMode = coachModeForBucket(bucketName);
+    if (!coachMode) return;
 
     void requestShelfCoach({
       origin: apiOrigin(),
@@ -842,6 +846,8 @@ export default function RecapForm({
       session: token,
       file,
       contentType: file.type || "image/jpeg",
+      mode: coachMode,
+      bucketName,
     }).then((result) => {
       const shelf = advisoryFromShelfCoach(result);
       if (shelf.kind === "unavailable") return;
@@ -2127,6 +2133,10 @@ export default function RecapForm({
                   removePhoto(id);
                   cameraRef.current?.click();
                 }}
+                onReplace={(id) => {
+                  removePhoto(id);
+                  libraryRef.current?.click();
+                }}
                 accent={accent}
               />
             </div>
@@ -2750,6 +2760,10 @@ function FieldInput({
           onRetake={(id) => {
             onRemovePhoto(id);
             cameraRef.current?.click();
+          }}
+          onReplace={(id) => {
+            onRemovePhoto(id);
+            libraryRef.current?.click();
           }}
           accent={accent}
         />

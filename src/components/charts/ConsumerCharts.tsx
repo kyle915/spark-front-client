@@ -27,7 +27,7 @@ import {
   type RankedSplit,
 } from "@/lib/consumerBreakdown";
 import type { ChartKind } from "@/lib/dashboardExplain";
-import type { ChartOptions, TooltipItem } from "chart.js";
+import type { ChartOptions, Plugin, TooltipItem } from "chart.js";
 import { barSeries, chartOptions, lineSeries, valueLabels } from "@/lib/sparkChart";
 import { useAppearance } from "@/theme/appearance";
 
@@ -113,11 +113,68 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
     };
   }, [trend]);
 
+  const plottedValues = useMemo(() => {
+    if (!focusTypical || !spikeMeta) return trend.values;
+    return trend.values.map((v) => Math.min(v, spikeMeta.cap));
+  }, [focusTypical, spikeMeta, trend.values]);
+
+  const cappedPeakPlugin = useMemo<Plugin<"line"> | null>(() => {
+    if (!focusTypical || !spikeMeta) return null;
+    const rawValues = trend.values;
+    const capVal = spikeMeta.cap;
+    return {
+      id: "sparkCappedPeakBadge",
+      afterDatasetsDraw(chart) {
+        const meta = chart.getDatasetMeta(0);
+        if (!meta?.data?.length) return;
+        const { ctx } = chart;
+        ctx.save();
+        ctx.font = '600 11px "JetBrains Mono", ui-monospace, monospace';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        meta.data.forEach((pt, idx) => {
+          const raw = rawValues[idx] ?? 0;
+          if (raw <= capVal) return;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = chart.options.color?.toString() || "#111";
+          ctx.fill();
+          ctx.fillText(`${count(raw)} ↑`, pt.x, Math.max(13, pt.y - 6));
+        });
+        ctx.restore();
+      },
+    };
+  }, [focusTypical, spikeMeta, trend.values]);
+
   const lineOptions = useMemo(() => {
     const base = chartOptions<"line">();
     if (!focusTypical || !spikeMeta) return base;
+    const tooltip = base.plugins?.tooltip;
     return {
       ...base,
+      layout: {
+        ...base.layout,
+        padding: {
+          ...(typeof base.layout?.padding === "object" ? base.layout.padding : {}),
+          top: 22,
+        },
+      },
+      plugins: {
+        ...base.plugins,
+        tooltip: {
+          ...tooltip,
+          callbacks: {
+            ...tooltip?.callbacks,
+            label: (item: TooltipItem<"line">) => {
+              const raw = trend.values[item.dataIndex] ?? item.parsed.y ?? 0;
+              const prefix = item.dataset.label ? `${item.dataset.label}: ` : "";
+              return raw > spikeMeta.cap
+                ? `${prefix}${count(raw)} (capped at ${count(spikeMeta.cap)} on Typical weeks)`
+                : `${prefix}${count(raw)}`;
+            },
+          },
+        },
+      },
       scales: {
         ...base.scales,
         y: {
@@ -126,7 +183,7 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
         },
       },
     } as ChartOptions<"line">;
-  }, [focusTypical, spikeMeta]);
+  }, [focusTypical, spikeMeta, trend.values]);
 
   if (!breakdown) {
     return <Nothing title={WEEKLY_TITLE}>This chart could not load.</Nothing>;
@@ -166,10 +223,10 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
           aria-label={`${WEEKLY_TITLE}: ${trend.labels.length} weeks, peak ${count(peakVal)}`}
           data={{
             labels: trend.labels,
-            datasets: [lineSeries({ label: "Consumers sampled", data: trend.values })],
+            datasets: [lineSeries({ label: "Consumers sampled", data: plottedValues })],
           }}
           options={lineOptions}
-          plugins={[lastValue]}
+          plugins={cappedPeakPlugin ? [lastValue, cappedPeakPlugin] : [lastValue]}
         />
       </ChartBlock>
       {focusTypical && spikeMeta ? (

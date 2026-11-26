@@ -124,6 +124,8 @@ export async function requestShelfCoach(args: {
   session: string;
   file: Blob;
   contentType: string;
+  mode?: "shelf" | "setup";
+  bucketName?: string | null;
   fileId?: string | number | null;
   fetchImpl?: typeof fetch;
 }): Promise<ShelfCoachResult> {
@@ -144,6 +146,12 @@ export async function requestShelfCoach(args: {
       imageBase64,
       contentType: args.contentType,
     };
+    if (args.mode) {
+      body.mode = args.mode;
+    }
+    if (args.bucketName && args.bucketName.trim()) {
+      body.bucketName = args.bucketName.trim();
+    }
     if (args.fileId != null && String(args.fileId).trim()) {
       body.fileId = String(args.fileId).trim();
     }

@@ -14,6 +14,26 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-26wp",
+    date: "November 26, 2026",
+    title: "Plan next month's demo wave in Ask AI",
+    items: [
+      "Ask AI can now draft an upcoming multi-store demo wave from your historical conversion, volume, and overdue accounts (automatically skipping stores that already have a visit scheduled).",
+      "Click Create N-store wave right inside Ask AI to open Account Map's Wave Planner pre-loaded with those stores, dates, recommended weekdays, and peak shift hours — nothing books until you review and confirm.",
+      "Consumers sampled per week in Typical weeks mode now clamps outlier peaks cleanly inside the chart grid with an inline peak callout badge.",
+    ],
+  },
+  {
+    id: "2026-11-26sc",
+    date: "November 26, 2026",
+    title: "Real-time setup & shelf photo coaching on Check-In",
+    staffOnly: true,
+    items: [
+      "Walk-up check-in now coaches Table Setup, Event Setup / Footprint, and Display photos in addition to Shelf and Cooler shots — flagging blurry or dark captures, missing product on the setup, or labels turned away while the BA is still on site.",
+      "Photo advisories now highlight warnings clearly under each thumbnail with one-tap Retake (camera), Replace (library), and Keep buttons, without ever blocking recap submission.",
+    ],
+  },
+  {
     id: "2026-11-26ha",
     date: "November 26, 2026",
     title: "Interactive charts, 1-click wave actions, and Rebook from any recap",

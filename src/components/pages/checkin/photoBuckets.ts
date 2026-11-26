@@ -59,11 +59,44 @@ export const RECEIPT_PHOTO_TIP =
 /** Shelf / stock / cooler buckets that get aisle coaching. */
 export function isShelfPhotoBucket(name: string | null | undefined): boolean {
   const n = (name ?? "").trim().toLowerCase();
-  if (!n) return false;
+  if (!n || isExpenseReceiptBucket(n)) return false;
   return (
     n.includes("shelf") ||
     n.includes("stock") ||
     n.includes("on-shelf") ||
-    n.includes("cooler")
+    n.includes("cooler") ||
+    n.includes("aisle") ||
+    n.includes("endcap")
   );
+}
+
+export type PhotoCoachMode = "shelf" | "setup";
+
+/** Table / booth / footprint / display buckets that get setup coaching. */
+export function isSetupPhotoBucket(name: string | null | undefined): boolean {
+  const n = (name ?? "").trim().toLowerCase();
+  if (!n || isExpenseReceiptBucket(n) || n.includes("tally")) return false;
+  if (isShelfPhotoBucket(n)) return false;
+  return (
+    n.includes("setup") ||
+    n.includes("set up") ||
+    n.includes("set-up") ||
+    n.includes("footprint") ||
+    n.includes("table") ||
+    n.includes("booth") ||
+    n.includes("display") ||
+    n.includes("stand") ||
+    n.includes("banner") ||
+    n.includes("tablecloth") ||
+    n.includes("activation")
+  );
+}
+
+/** Resolve real-time vision coaching mode (`"shelf"` | `"setup"`) for a photo bucket. */
+export function coachModeForBucket(
+  name: string | null | undefined,
+): PhotoCoachMode | null {
+  if (isShelfPhotoBucket(name)) return "shelf";
+  if (isSetupPhotoBucket(name)) return "setup";
+  return null;
 }

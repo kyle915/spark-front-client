@@ -70,4 +70,46 @@ describe("shelf coach advisory", () => {
     expect(result.available).toBe(false);
     expect(result.message).toBe(SHELF_COACH_UNAVAILABLE);
   });
+
+  it("forwards setup mode and bucketName to the shelf-coach endpoint", async () => {
+    let sentBody: Record<string, unknown> | null = null;
+    const result = await requestShelfCoach({
+      origin: "https://api.test",
+      code: "BD-AQRACD",
+      session: "tok",
+      file: new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" }),
+      contentType: "image/jpeg",
+      mode: "setup",
+      bucketName: "Event Setup / Footprint",
+      fetchImpl: async (_url, init) => {
+        sentBody = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+        return new Response(
+          JSON.stringify({
+            available: true,
+            reason: "",
+            status: "read",
+            answers: null,
+            nudges: [
+              {
+                code: "blurry_or_dark",
+                severity: "warn",
+                message: "Photo looks blurry or dark.",
+              },
+            ],
+            message: "Photo looks blurry or dark.",
+            persisted: false,
+          }),
+          { status: 200 },
+        );
+      },
+    });
+    expect(sentBody).toMatchObject({
+      mode: "setup",
+      bucketName: "Event Setup / Footprint",
+    });
+    expect(advisoryFromShelfCoach(result)).toEqual({
+      kind: "warn",
+      message: "Photo looks blurry or dark.",
+    });
+  });
 });
