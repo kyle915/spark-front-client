@@ -1,3 +1,4 @@
+import { executeAuthenticatedGraphQL } from "@/api/relay/environment";
 import { useEffect, useState } from "react";
 import SparkOverlay from "@/shared/SparkOverlay";
 import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
@@ -30,15 +31,7 @@ async function postGql<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
-  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
+  const json = await executeAuthenticatedGraphQL<T>(query, variables);
   if (json.errors?.length) {
     throw new Error(json.errors[0]?.message || "Request failed");
   }

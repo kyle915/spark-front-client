@@ -397,6 +397,20 @@ export default function RecapForm({
   const failedCount = photos.filter((p) => p.state === "failed").length;
   const doneCount = photos.filter((p) => p.state === "done").length;
   const [stallTick, setStallTick] = useState(0);
+  const [isOffline, setIsOffline] = useState(
+    () => typeof navigator !== "undefined" && navigator.onLine === false,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onOffline = () => setIsOffline(true);
+    const onOnline = () => setIsOffline(false);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
   useEffect(() => {
     if (uploadingCount <= 0) return;
     const id = window.setInterval(() => setStallTick((n) => n + 1), 5_000);
@@ -1686,6 +1700,68 @@ export default function RecapForm({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* ── Sticky Sync & Signal Status Bar ── */}
+      {(isOffline || uploadingCount > 0 || failedCount > 0) && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "sticky",
+            top: 8,
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 14px",
+            borderRadius: 12,
+            background: failedCount > 0 || isOffline ? "#fff7ed" : "#ffffff",
+            border: `1px solid ${failedCount > 0 || isOffline ? "#EF5A2A" : "rgba(0,0,0,0.14)"}`,
+            boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+          }}
+        >
+          {isOffline && failedCount === 0 && (
+            <span style={{ fontSize: 13, flex: 1, color: "#9a3412", fontWeight: 600 }}>
+              Offline — your answers & photos stay saved on this device until signal returns.
+            </span>
+          )}
+          {!isOffline && uploadingCount > 0 && failedCount === 0 && (
+            <span style={{ fontSize: 13, flex: 1, color: "#1c1917", fontWeight: 500 }}>
+              Uploading {uploadingCount} photo{uploadingCount === 1 ? "" : "s"}…
+              {doneCount > 0 ? ` (${doneCount} saved)` : ""}
+            </span>
+          )}
+          {failedCount > 0 && (
+            <>
+              <span style={{ fontSize: 13, flex: 1, color: "#9a3412", fontWeight: 600 }}>
+                {failedCount} photo{failedCount === 1 ? "" : "s"} didn&apos;t upload.
+                {isOffline
+                  ? " You're offline — they'll stay saved until signal returns."
+                  : ""}
+              </span>
+              {!isOffline && photos.some((p) => p.state === "failed" && !p.unrecoverable) && (
+                <button
+                  type="button"
+                  onClick={retryFailed}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    padding: "7px 12px",
+                    minHeight: 36,
+                    borderRadius: 8,
+                    border: "1px solid #9a3412",
+                    color: "#9a3412",
+                    background: "#ffffff",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Retry
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
       {eventDate ? (
         <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: 0 }}>
           Recap for {fmtDay(eventDate)}

@@ -140,7 +140,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
       {totals.missing > 0 && (
         <p
           className="text-xs mb-3"
-          style={{ color: "rgba(255,200,80,0.85)" }}
+          style={{ color: "var(--spark-flag-ink)" }}
         >
           ⚠ {totals.missing} booked BA(s) in this range have no booked
           rate — labor totals are incomplete for their events. Set rates
@@ -216,7 +216,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
                     {r.estimated && (
                       <span
                         className="mono text-[9px] ml-2"
-                        style={{ color: "rgba(255,200,80,0.8)" }}
+                        style={{ color: "var(--spark-flag-ink)" }}
                         title="No clock pair for at least one BA — scheduled duration used"
                       >
                         EST.
@@ -225,7 +225,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
                     {r.missingRates > 0 && (
                       <span
                         className="mono text-[9px] ml-2"
-                        style={{ color: "rgba(255,120,90,0.85)" }}
+                        style={{ color: "var(--spark-orange)" }}
                         title="BAs without a booked rate — labor incomplete"
                       >
                         {r.missingRates} NO RATE

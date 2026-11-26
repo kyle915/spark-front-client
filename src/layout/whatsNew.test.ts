@@ -175,6 +175,26 @@ describe("whatsNewFor", () => {
     expect(WHATS_NEW.find((e) => e.id === "2026-11-24a")?.staffOnly).toBe(true);
   });
 
+  it("routes November 26 scheduling, approvals, and ops notes to matching audiences", () => {
+    const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
+    const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
+
+    for (const id of [
+      "2026-11-26cal",
+      "2026-11-26req",
+      "2026-11-26up",
+      "2026-11-26app",
+    ] as const) {
+      expect(clientIds.has(id)).toBe(true);
+      expect(staffIds.has(id)).toBe(true);
+      expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBeFalsy();
+    }
+
+    expect(clientIds.has("2026-11-26ops")).toBe(false);
+    expect(staffIds.has("2026-11-26ops")).toBe(true);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-26ops")?.staffOnly).toBe(true);
+  });
+
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
     const store = new Map<string, string>();
     vi.stubGlobal("window", {

@@ -23,6 +23,10 @@ export type UpcomingRow = {
   status: string;
   statusSlug: string;
   source: "event" | "request";
+  /** False when the event/request has no street address yet. */
+  hasAddress?: boolean;
+  /** Venue timezone display label for inline rescheduling. */
+  timezoneLabel?: string | null;
 };
 
 const fmtDay = (iso: string) =>
@@ -69,26 +73,47 @@ const QUIET = new Set(["", "approved", "scheduled", "confirmed", "booked"]);
 
 function StatusPill({ row }: { row: UpcomingRow }) {
   const slug = row.statusSlug;
-  if (QUIET.has(slug)) return null;
+  const showStatus = !QUIET.has(slug);
   const pending = slug === "pending" || slug === "queue";
+  const missingAddress = row.hasAddress === false;
+  if (!showStatus && !missingAddress) return null;
   return (
-    <span className={`chip chip-sm ${pending ? "chip-orange" : "chip-muted"}`}>
-      {pending ? "Pending" : row.status}
+    <span className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+      {showStatus ? (
+        <span className={`chip chip-sm ${pending ? "chip-orange" : "chip-muted"}`}>
+          {pending ? "Needs approval" : row.status}
+        </span>
+      ) : null}
+      {missingAddress ? (
+        <span className="chip chip-sm chip-orange">Needs address</span>
+      ) : null}
     </span>
   );
 }
 
-function Row({ row }: { row: UpcomingRow }) {
+const NON_RESCHEDULABLE = new Set(["cancelled", "canceled", "declined", "done", "completed"]);
+
+function Row({
+  row,
+  onReschedule,
+}: {
+  row: UpcomingRow;
+  onReschedule?: (row: UpcomingRow) => void;
+}) {
   const t = fmtTimeRange(row.startRaw, row.endRaw);
   const to =
     row.source === "event" ? `/event/view/${row.uuid}` : `/request/view/${row.uuid}`;
   const name = row.name.trim() || "Untitled";
+  const canReschedule =
+    Boolean(onReschedule) &&
+    row.source === "event" &&
+    !NON_RESCHEDULABLE.has(row.statusSlug);
   return (
-    <li>
+    <li className="flex items-center justify-between gap-2">
       <Link
         to={to}
         state={row.source === "request" ? { from: "/upcoming" } : undefined}
-        className="spark-upcoming-row"
+        className="spark-upcoming-row flex-1 min-w-0"
       >
         <span className="spark-upcoming-time">
           {t.start === t.startFull ? (
@@ -119,6 +144,20 @@ function Row({ row }: { row: UpcomingRow }) {
           <StatusPill row={row} />
         </span>
       </Link>
+      {canReschedule ? (
+        <button
+          type="button"
+          onClick={() => onReschedule?.(row)}
+          className="shrink-0 mr-3 px-2.5 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-80"
+          style={{
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text-secondary)",
+            background: "transparent",
+          }}
+        >
+          Change date
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -126,9 +165,11 @@ function Row({ row }: { row: UpcomingRow }) {
 export function UpcomingList({
   rows,
   today,
+  onReschedule,
 }: {
   rows: UpcomingRow[];
   today: string;
+  onReschedule?: (row: UpcomingRow) => void;
 }) {
   const groups = new Map<string, UpcomingRow[]>();
   for (const r of rows) {
@@ -153,7 +194,11 @@ export function UpcomingList({
             </h2>
             <ul className="spark-upcoming-list">
               {items.map((r) => (
-                <Row key={`${r.source}-${r.uuid}`} row={r} />
+                <Row
+                  key={`${r.source}-${r.uuid}`}
+                  row={r}
+                  onReschedule={onReschedule}
+                />
               ))}
             </ul>
           </section>

@@ -306,21 +306,33 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const loadRest = useCallback(async (upTo: number = Number.POSITIVE_INFINITY) => {
     if (loadingRest || pinTotal == null || scanned >= pinTotal) return;
     setLoadingRest(true);
+    const CONCURRENCY = 4;
     try {
       let offset = scanned;
       const accumulated = [...extraPins];
-      while (offset < pinTotal && offset < upTo) {
-        const page = await fetchQuery<AccountMapQueryType>(
-          environment,
-          AccountMapQuery,
-          { first: pageSize, offset, tenantId: tenantId || null },
-          { fetchPolicy: "network-only" },
-        ).toPromise();
-        const rows = (page?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
-        accumulated.push(...rows);
-        offset += pageSize;
+      const cap = Math.min(pinTotal, upTo);
+      while (offset < cap) {
+        const batchOffsets: number[] = [];
+        for (let i = 0; i < CONCURRENCY && offset < cap; i += 1) {
+          batchOffsets.push(offset);
+          offset += pageSize;
+        }
+        const pages = await Promise.all(
+          batchOffsets.map((batchOffset) =>
+            fetchQuery<AccountMapQueryType>(
+              environment,
+              AccountMapQuery,
+              { first: pageSize, offset: batchOffset, tenantId: tenantId || null },
+              { fetchPolicy: "network-only" },
+            ).toPromise(),
+          ),
+        );
+        for (const page of pages) {
+          const rows = (page?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
+          accumulated.push(...rows);
+        }
         setExtraPins([...accumulated]);
-        setScanned(offset);
+        setScanned(Math.min(cap, offset));
       }
     } catch {
       // The network layer already said why (e.g. a rate limit); keep the

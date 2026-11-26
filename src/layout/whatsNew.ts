@@ -14,6 +14,56 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-26ops",
+    date: "November 26, 2026",
+    title: "Field upload bar, Staffing Board scope, and DST-accurate imports",
+    staffOnly: true,
+    items: [
+      "Field check-in recaps now pin a live status bar at the top when offline, uploading photos, or retrying failed uploads, with a one-tap Retry button.",
+      "Staffing Board filters by client on the server when a workspace is picked, so busy multi-client weeks don't cut off shifts past the row cap.",
+      "Bulk request spreadsheet imports convert venue wall-clock times using daylight-saving-aware time zones instead of a fixed offset.",
+      "P&L and Field Sampling warnings now use high-contrast text in light mode, and Edit Event shows missing-field validation as an error.",
+    ],
+  },
+  {
+    id: "2026-11-26cal",
+    date: "November 26, 2026",
+    title: "Calendar: Day, Week, and Month views plus click-to-schedule",
+    items: [
+      "Switch between Day, Week, and Month views on Calendar, with smooth horizontal scroll on phones and smaller screens.",
+      "Early-morning and late-night shifts expand the daily schedule automatically instead of clipping at 7 AM or 11 PM.",
+      "Click any open time slot, a day's + button, or Schedule demo in the header to open a request pre-filled with that date and time.",
+    ],
+  },
+  {
+    id: "2026-11-26req",
+    date: "November 26, 2026",
+    title: "Repeat weekly demos and smarter request editing",
+    items: [
+      "Use + Repeat weekly ×3 on Create Request to schedule three weekly visits at the same venue in one click, with live progress as multi-visit requests submit.",
+      "Picking an address from Google suggestions carries its coordinates straight into the request, and Edit Request now supports Google address autocomplete, store numbers, and daylight-saving-aware time zones.",
+    ],
+  },
+  {
+    id: "2026-11-26up",
+    date: "November 26, 2026",
+    title: "Reschedule upcoming demos and spot missing details",
+    items: [
+      "Upcoming flags demos that still need approval or are missing a street address so issues are easy to catch before shift day.",
+      "Scheduled upcoming events now include a Change date button right in the list and refresh in place as soon as you save.",
+    ],
+  },
+  {
+    id: "2026-11-26app",
+    date: "November 26, 2026",
+    title: "Filter pending recap approvals, faster Account map, cleaner products",
+    items: [
+      "My Approvals adds All / With photos / No photos filters and a search box so you can narrow down larger recap queues by store, market, or program.",
+      "Account map loads large multi-page pin lists up to 4× faster in parallel batches.",
+      "Product cards keep category badges off the product photo and use high-contrast Edit buttons in light mode.",
+    ],
+  },
+  {
     id: "2026-11-25mr",
     date: "November 25, 2026",
     title: "One receipt per photo",

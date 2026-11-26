@@ -44,16 +44,28 @@ export function mergeEventPages(pages: ReadonlyArray<ReadonlyArray<EventNode>>):
   return out;
 }
 
-export function useAllEventPages(filters: EventFiltersInput | null): {
+export function useAllEventPages(
+  filters: EventFiltersInput | null,
+  options?: {
+    fetchKey?: number;
+    fetchPolicy?: "store-or-network" | "store-and-network" | "network-only";
+  },
+): {
   events: EventNode[];
   loadingMore: boolean;
   totalCount: number;
 } {
   const environment = useRelayEnvironment();
+  const fetchKey = options?.fetchKey ?? 0;
   const first = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
     { first: EVENTS_PAGE_SIZE, filters },
-    { fetchPolicy: "store-or-network" },
+    {
+      fetchPolicy:
+        options?.fetchPolicy ??
+        (fetchKey > 0 ? "network-only" : "store-or-network"),
+      fetchKey,
+    },
   );
   const [rest, setRest] = useState<EventNode[][]>([]);
   const [loadingMore, setLoadingMore] = useState(false);

@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import { useNavigate, useParams } from "react-router";
 import Loading from "@/shared/Loading";
@@ -23,6 +23,7 @@ import {
   buildDateTimeWithOffset,
   extractDatePart,
   extractTimePart,
+  resolveTimezoneIdByDate,
 } from "@/utils";
 import { useAuthStore } from "@/store/authStore";
 
@@ -32,9 +33,6 @@ type EditEventContentProps = {
 
 const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const { tenantId, user } = useAuthStore();
-
-  const renderCountRef = useRef(0);
-  renderCountRef.current++;
 
   const navigate = useNavigate();
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
@@ -83,16 +81,21 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
 
   const handleSubmit = (formData: EventFormValues) => {
     if (!formData.eventTypeId || !formData.startTime || !formData.endTime) {
-      showAlert("Missing required fields for event update", "success");
+      showAlert("Missing required fields for event update", "error");
       return;
     }
 
+    const dateValue = dateFormat(formData.date ?? event.date ?? "");
+    const resolvedTzId =
+      dateValue && formData.timezoneId
+        ? (resolveTimezoneIdByDate(timeZones, dateValue, formData.timezoneId) ??
+          formData.timezoneId)
+        : formData.timezoneId;
     const timezone =
-      timeZones.find((tz) => tz.id === formData.timezoneId) ??
+      timeZones.find((tz) => tz.id === resolvedTzId) ??
       event.timezone ??
       null;
     const offsetMinutes = timezone?.offset ?? null;
-    const dateValue = dateFormat(formData.date ?? event.date ?? "");
     const normalizedDate = dateValue
       ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
       : "";
@@ -106,7 +109,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           requestId: formData.associateRequest
             ? (formData.requestId ?? event.request?.id ?? "")
             : null,
-          timezoneId: formData.timezoneId,
+          timezoneId: resolvedTzId,
           coordinates: formData.coordinates ?? [],
           address: formData.address,
           locationId: formData.entitiesLocationId,

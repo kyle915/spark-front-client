@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
@@ -267,19 +267,11 @@ const Inner: React.FC<{
   const startDate = ymd(days[0]);
   const endDate = ymd(days[6]);
 
-  const data = useLazyLoadQuery<StaffingBoardQueryType>(
-    StaffingBoardQuery,
-    { startDate, endDate },
-    { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
-  );
-  const allShifts: Shift[] = useMemo(
-    () => (data?.staffingBoard ?? []).filter(Boolean) as Shift[],
-    [data],
-  );
-
   // Board filters — client, unstaffed-only, and a venue search. The board
-  // loads every client's shifts for the week; the client picker starts on the
-  // workspace you're in, and "All clients" is one click away.
+  // scopes server-side when a client is chosen so busy multi-client weeks
+  // never drop that client's shifts past the 600-row cap, while "All clients"
+  // fetches across every workspace. Previously seen brand options are retained
+  // in knownBrandsRef so switching back to another brand stays one click away.
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const currentKey = tenantKey(tenantId);
   const [brandFilter, setBrandFilter] = useState(() =>
@@ -288,16 +280,32 @@ const Inner: React.FC<{
   const [unstaffedOnly, setUnstaffedOnly] = useState(false);
   const [view, setView] = useState<"venue" | "person">("venue");
   const [venueQuery, setVenueQuery] = useState("");
-  const brands = useMemo(
-    () =>
-      clientOptions(allShifts, {
-        key: currentKey,
-        fallbackName:
-          tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug) ||
-          "This workspace",
-      }),
-    [allShifts, currentKey, tenantMeta?.requestUrlName, tenantSlug],
+
+  const data = useLazyLoadQuery<StaffingBoardQueryType>(
+    StaffingBoardQuery,
+    { startDate, endDate, tenantId: brandFilter || null },
+    { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
   );
+  const allShifts: Shift[] = useMemo(
+    () => (data?.staffingBoard ?? []).filter(Boolean) as Shift[],
+    [data],
+  );
+
+  const knownBrandsRef = useRef<Map<string, string>>(new Map());
+  const brands = useMemo(() => {
+    const fresh = clientOptions(allShifts, {
+      key: currentKey,
+      fallbackName:
+        tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug) ||
+        "This workspace",
+    });
+    for (const b of fresh) {
+      knownBrandsRef.current.set(b.key, b.name);
+    }
+    return [...knownBrandsRef.current.entries()]
+      .map(([key, name]) => ({ key, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [allShifts, currentKey, tenantMeta?.requestUrlName, tenantSlug]);
   const shifts: Shift[] = useMemo(() => {
     const q = venueQuery.trim().toLowerCase();
     return allShifts.filter((s) => {

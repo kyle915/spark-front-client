@@ -564,10 +564,38 @@ const ClientApprovalsMerged: React.FC<{
     return [...legacy, ...custom].sort((a, b) => b.sortMs - a.sortMs);
   }, [data, customData]);
 
+  const [photoFilter, setPhotoFilter] = useState<"all" | "with_photos" | "missing_photos">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
   const visibleRows = useMemo(
     () => rows.filter((r) => !approvedKeys.has(`${r.kind}:${r.id}`)),
     [rows, approvedKeys],
   );
+
+  const photoCounts = useMemo(() => {
+    let withPhotos = 0;
+    let missingPhotos = 0;
+    for (const r of visibleRows) {
+      if (Boolean(r.heroImage) || r.fileCount > 0) withPhotos += 1;
+      else missingPhotos += 1;
+    }
+    return { withPhotos, missingPhotos };
+  }, [visibleRows]);
+
+  const filteredRows = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return visibleRows.filter((r) => {
+      const hasPhotos = Boolean(r.heroImage) || r.fileCount > 0;
+      if (photoFilter === "with_photos" && !hasPhotos) return false;
+      if (photoFilter === "missing_photos" && hasPhotos) return false;
+      if (!q) return true;
+      return (
+        r.name.toLowerCase().includes(q) ||
+        r.where.toLowerCase().includes(q) ||
+        (r.typeLabel ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [visibleRows, photoFilter, searchQuery]);
 
   // Bulk sign-off: tick rows, then confirm once. Each recap is signed off
   // with the same mutation the per-row button uses, one after another, so
@@ -586,11 +614,11 @@ const ClientApprovalsMerged: React.FC<{
     });
   }, []);
   const selectedRows = useMemo(
-    () => visibleRows.filter((r) => selected.has(`${r.kind}:${r.id}`)),
-    [visibleRows, selected],
+    () => filteredRows.filter((r) => selected.has(`${r.kind}:${r.id}`)),
+    [filteredRows, selected],
   );
   const allSelected =
-    visibleRows.length > 0 && selectedRows.length === visibleRows.length;
+    filteredRows.length > 0 && selectedRows.length === filteredRows.length;
 
   const signOffOne = (row: PendingRecap) =>
     new Promise<boolean>((resolve) => {
@@ -649,6 +677,42 @@ const ClientApprovalsMerged: React.FC<{
 
   return (
     <>
+      {visibleRows.length > 1 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <div className="pill-group">
+            {(
+              [
+                { id: "all", label: `All (${visibleRows.length})` },
+                { id: "with_photos", label: `With photos (${photoCounts.withPhotos})` },
+                { id: "missing_photos", label: `No photos (${photoCounts.missingPhotos})` },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setPhotoFilter(opt.id)}
+                className={`pill-btn ${photoFilter === opt.id ? "on" : ""}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter by store, market, or program…"
+            aria-label="Filter pending recaps"
+            className="rounded-xl px-3 py-1.5 text-sm"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              minWidth: 220,
+            }}
+          />
+        </div>
+      )}
       <div className="flex items-center gap-3 flex-wrap mb-3 text-sm">
         <label className="inline-flex items-center gap-2 cursor-pointer">
           <input
@@ -658,13 +722,13 @@ const ClientApprovalsMerged: React.FC<{
               setSelected(
                 allSelected
                   ? new Set()
-                  : new Set(visibleRows.map((r) => `${r.kind}:${r.id}`)),
+                  : new Set(filteredRows.map((r) => `${r.kind}:${r.id}`)),
               )
             }
             className="w-4 h-4"
             style={{ accentColor: "var(--spark-lime)" }}
           />
-          Select all ({visibleRows.length})
+          Select all ({filteredRows.length})
         </label>
         {selectedRows.length > 0 &&
           (bulkConfirming ? (
@@ -713,17 +777,37 @@ const ClientApprovalsMerged: React.FC<{
           </span>
         )}
       </div>
-      <ul className="space-y-2">
-        {visibleRows.map((r) => (
-          <ApprovalRow
-            key={`${r.kind}:${r.id}`}
-            row={r}
-            onApproved={onApproved}
-            selected={selected.has(`${r.kind}:${r.id}`)}
-            onToggleSelected={toggleSelected}
-          />
-        ))}
-      </ul>
+      {filteredRows.length === 0 ? (
+        <div
+          className="spark-card p-6 text-center text-sm"
+          style={{ color: "var(--spark-text-meta)" }}
+        >
+          No pending recaps match your filter.{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setPhotoFilter("all");
+              setSearchQuery("");
+            }}
+            className="underline font-semibold"
+            style={{ color: "var(--spark-text)" }}
+          >
+            Reset filters
+          </button>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {filteredRows.map((r) => (
+            <ApprovalRow
+              key={`${r.kind}:${r.id}`}
+              row={r}
+              onApproved={onApproved}
+              selected={selected.has(`${r.kind}:${r.id}`)}
+              onToggleSelected={toggleSelected}
+            />
+          ))}
+        </ul>
+      )}
     </>
   );
 };

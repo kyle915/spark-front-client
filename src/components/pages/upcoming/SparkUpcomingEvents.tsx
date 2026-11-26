@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -8,6 +8,7 @@ import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import { addDaysIso, opsTodayIso, venueDayOf } from "@/utils/venueDay";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import ChangeEventDateDialog from "@/events/ChangeEventDateDialog";
 
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -57,6 +58,8 @@ function UpcomingHeader({ count }: { count?: number }) {
 
 const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
   const { tenantId } = useAuthStore();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [rescheduleRow, setRescheduleRow] = useState<UpcomingRow | null>(null);
   // Days are the venue's, compared as YYYY-MM-DD strings; "today" is the
   // ops day (Pacific), as on the live board. Nothing goes through the
   // viewer's browser clock.
@@ -66,11 +69,14 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
   // The API filters by UTC day, so ask for a day either side of the window
   // and keep rows whose venue day falls inside it. Every page is loaded: the
   // list returns at most 100 a request.
-  const { events, loadingMore: loadingMoreEvents } = useAllEventPages({
-    ...(tenantId ? { tenantId } : {}),
-    startDate: addDaysIso(today, -1),
-    endDate: addDaysIso(end, 1),
-  });
+  const { events, loadingMore: loadingMoreEvents } = useAllEventPages(
+    {
+      ...(tenantId ? { tenantId } : {}),
+      startDate: addDaysIso(today, -1),
+      endDate: addDaysIso(end, 1),
+    },
+    { fetchKey: refreshKey },
+  );
 
   // Brand users get 200 rows a request; walk the rest by cursor.
   const { nodes: requests, loadingMore: loadingMoreRequests } =
@@ -109,6 +115,8 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
           .toString()
           .toLowerCase(),
         source: "event",
+        hasAddress: Boolean((n.address ?? "").trim()),
+        timezoneLabel: n.timezone?.code ?? n.timezone?.name ?? null,
       });
     }
 
@@ -138,6 +146,7 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
         status: r.status?.name ?? "Pending",
         statusSlug: slug || "pending",
         source: "request",
+        hasAddress: Boolean((r.address ?? "").trim()),
       });
     }
 
@@ -170,11 +179,31 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
         />
       ) : (
         <>
-          <UpcomingList rows={rows} today={today} />
+          <UpcomingList
+            rows={rows}
+            today={today}
+            onReschedule={(row) => setRescheduleRow(row)}
+          />
           {loadingMore ? (
             <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
               Loading more events…
             </p>
+          ) : null}
+          {rescheduleRow ? (
+            <ChangeEventDateDialog
+              open
+              onClose={() => setRescheduleRow(null)}
+              eventUuid={rescheduleRow.uuid}
+              date={rescheduleRow.date}
+              startTime={rescheduleRow.startRaw}
+              endTime={rescheduleRow.endRaw}
+              storeName={rescheduleRow.name}
+              timezoneLabel={rescheduleRow.timezoneLabel}
+              onChanged={() => {
+                setRescheduleRow(null);
+                setRefreshKey((k) => k + 1);
+              }}
+            />
           ) : null}
         </>
       )}

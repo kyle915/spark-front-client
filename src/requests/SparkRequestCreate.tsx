@@ -20,6 +20,7 @@ import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 // option per region (Pacific/Central/…), so we re-expand the picked
 // region to the right sibling for the visit date at submit time.
 import { resolveTimezoneIdByDate } from "@/utils";
+import { generateWeeklyRepeatDates } from "./repeatDates";
 import {
   isEventActivationRequestType,
   isOnPremiseRequestType,
@@ -354,6 +355,12 @@ const SparkRequestInner: React.FC = () => {
   const [endTime, setEndTime] = useState(qpEnd);
   const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
   const [address, setAddress] = useState(searchParams.get("address") ?? "");
+  // coords resolved from Google Places — avoids a geocode() round-trip at submit
+  const [resolvedCoords, setResolvedCoords] = useState<ReadonlyArray<number>>([]);
+  const [submitProgress, setSubmitProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [storeNumber, setStoreNumber] = useState(
     searchParams.get("storeNumber") ?? "",
   );
@@ -508,7 +515,7 @@ const SparkRequestInner: React.FC = () => {
   // Only a pasted draft can leave a time empty (the form starts with
   // 12:00 PM to 4:00 PM). An empty time is never sent as a default.
   const timeMissing = !multiDateEvent && (!startTime || !endTime);
-  const canSubmit = !isCommitting && !submitBlocker && !timeMissing;
+  const canSubmit = !isCommitting && !submitProgress && !submitBlocker && !timeMissing;
   const listedVisits = multiDateEvent
     ? visitSlots.filter((slot) => slot.date.trim()).length
     : (date ? 1 : 0) + (legacyBulkDates ? extraDates.filter(Boolean).length : 0);
@@ -902,7 +909,10 @@ const SparkRequestInner: React.FC = () => {
         return;
       }
     }
-    const geocoded = await geocode(address);
+    // Use coords from GooglePlacesInput if already resolved; fall back to geocode().
+    const geocoded = resolvedCoords.length === 2 && (resolvedCoords[0] !== 0 || resolvedCoords[1] !== 0)
+      ? resolvedCoords
+      : await geocode(address);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
     // Store number stays in notes (no typed column). BA count is a
     // real field on Event Activation for Wook / FAMUS / Alcohol Armor;
@@ -930,9 +940,11 @@ const SparkRequestInner: React.FC = () => {
     // instead of a generic "try again". First distinct message is enough.
     const failureReasons: string[] = [];
 
-    for (let i = 0; i < submitSlots.length; i += 1) {
-      const slot = submitSlots[i];
-      const d = slot.date;
+    try {
+      for (let i = 0; i < submitSlots.length; i += 1) {
+        setSubmitProgress({ current: i + 1, total: submitSlots.length });
+        const slot = submitSlots[i];
+        const d = slot.date;
       const composedName =
         submitSlots.length > 1
           ? `${venue} · ${d} (${i + 1}/${submitSlots.length})`
@@ -1030,6 +1042,9 @@ const SparkRequestInner: React.FC = () => {
           },
         });
       });
+      }
+    } finally {
+      setSubmitProgress(null);
     }
 
     if (failures.length === 0) {
@@ -1287,9 +1302,17 @@ const SparkRequestInner: React.FC = () => {
             <label className="label-mini block mb-1.5">Address *</label>
             <GooglePlacesInput
               value={address}
-              onChange={setAddress}
+              onChange={(val) => { setAddress(val); setResolvedCoords([]); }}
               onResolved={(p) => {
                 setAddress(p.formattedAddress);
+                // Capture lat/lng from Places so we skip geocode() at submit.
+                if (
+                  Number.isFinite(p.lat) &&
+                  Number.isFinite(p.lng) &&
+                  (p.lat !== 0 || p.lng !== 0)
+                ) {
+                  setResolvedCoords([p.lat, p.lng]);
+                }
                 // Derive the venue timezone from the picked place — same
                 // as the external /spark-form. Replaces the old silent
                 // "Chicago-or-first" guess that produced Alaska.
@@ -1773,17 +1796,37 @@ const SparkRequestInner: React.FC = () => {
           )}
           {legacyBulkDates && (
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setExtraDates((d) => [...d, ""])}
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.14em",
-                color: "var(--spark-lime)",
-              }}
-            >
-              + ANOTHER VISIT AT THIS VENUE
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setExtraDates((d) => [...d, ""])}
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                + ANOTHER VISIT AT THIS VENUE
+              </button>
+              {date && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExtraDates((prev) => [
+                      ...prev,
+                      ...generateWeeklyRepeatDates(date, prev, 3),
+                    ]);
+                  }}
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "var(--spark-text-secondary)",
+                  }}
+                >
+                  + REPEAT WEEKLY ×3
+                </button>
+              )}
+            </div>
             {/* BA count selector */}
             <div className="flex items-center gap-2">
               <span className="label-mini">BAs</span>
@@ -2058,11 +2101,17 @@ const SparkRequestInner: React.FC = () => {
                 opacity: !canSubmit ? 0.5 : 1,
               }}
             >
-              {isCommitting
-                ? "Submitting…"
+              {isCommitting || submitProgress
+                ? submitProgress && submitProgress.total > 1
+                  ? `Submitting ${submitProgress.current}/${submitProgress.total}…`
+                  : "Submitting…"
                 : isClient
-                  ? "Submit request →"
-                  : "Create internal request →"}
+                  ? listedVisits > 1
+                    ? `Submit ${listedVisits} requests →`
+                    : "Submit request →"
+                  : listedVisits > 1
+                    ? `Create ${listedVisits} requests →`
+                    : "Create internal request →"}
             </button>
           </div>
         </div>

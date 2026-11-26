@@ -103,7 +103,7 @@ const modeColor = (mode: string): string =>
   mode === "quantity"
     ? "var(--spark-lime, #f2f3ee)"
     : mode === "sessions"
-      ? "rgba(255,200,80,0.85)"
+      ? "var(--spark-flag-ink)"
       : "rgba(var(--spark-ink-rgb),0.4)";
 
 const SkuBreakdownCard: React.FC<{
@@ -360,7 +360,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </p>
       ) : null}
       {report.samplesPerHour.estimated && (
-        <p className="text-xs" style={{ color: "rgba(255,200,80,0.85)" }}>
+        <p className="text-xs" style={{ color: "var(--spark-flag-ink)" }}>
           ⚠ At least one shift in this window has no real clock-in/out pair —
           scheduled duration was used for hours.
         </p>

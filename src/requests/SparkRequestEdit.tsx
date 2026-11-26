@@ -1,3 +1,9 @@
+import { executeAuthenticatedGraphQL } from "@/api/relay/environment";
+import GooglePlacesInput, {
+  matchTimezoneOption,
+  resolveAddressPlace,
+} from "@/components/inputs/GooglePlacesInput";
+import { resolveTimezoneIdByDate } from "@/utils";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
@@ -17,10 +23,9 @@ import { useAuthStore } from "@/store/authStore";
  *
  * Lean replacement for the legacy /request/edit/:uuid (RequestForm,
  * 600+ lines of old chrome). Covers the 80% of edits kyle / RMMs
- * actually do day-to-day: date, times, address, notes, BA count
- * proxy via store_number, distributor, RMM assignee. Products + line-
- * level details are read-only here — clicking 'Full edit' bounces to
- * the legacy page for anything more complex.
+ * actually do day-to-day: date, times, address, notes, store number,
+ * RMM assignee. Products + line-level details are read-only here —
+ * clicking 'Full edit' bounces to the legacy page for anything more complex.
  *
  * Submits via the existing updateRequest mutation, filling in
  * unchanged fields from the loaded request so the all-fields-required
@@ -31,15 +36,7 @@ async function gqlPost<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
-  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
+  const json = await executeAuthenticatedGraphQL<T>(query, variables);
   if (json.errors?.length) {
     throw new Error(
       json.errors.map((e: { message: string }) => e.message).join("; "),
@@ -106,6 +103,12 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   );
   const [endTime, setEndTime] = useState(() => toLocalTime(request?.endTime));
   const [address, setAddress] = useState(request?.address ?? "");
+  const [coords, setCoords] = useState<[number, number] | null>(() =>
+    Array.isArray(request?.coordinates) && request.coordinates.length >= 2
+      ? [Number(request.coordinates[0]), Number(request.coordinates[1])]
+      : null,
+  );
+  const [storeNumber, setStoreNumber] = useState(request?.storeNumber ?? "");
   const [notes, setNotes] = useState(request?.notes ?? "");
   const [rmmId, setRmmId] = useState(() =>
     request?.rmmAsigned?.id ? String(request.rmmAsigned.id) : "",
@@ -122,6 +125,12 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     setStartTime(toLocalTime(request?.startTime));
     setEndTime(toLocalTime(request?.endTime));
     setAddress(request?.address ?? "");
+    setCoords(
+      Array.isArray(request?.coordinates) && request.coordinates.length >= 2
+        ? [Number(request.coordinates[0]), Number(request.coordinates[1])]
+        : null,
+    );
+    setStoreNumber(request?.storeNumber ?? "");
     setNotes(request?.notes ?? "");
     setRmmId(request?.rmmAsigned?.id ? String(request.rmmAsigned.id) : "");
     setTimezoneId(request?.timezone?.id ? String(request.timezone.id) : "");
@@ -130,6 +139,8 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     request?.startTime,
     request?.endTime,
     request?.address,
+    request?.coordinates,
+    request?.storeNumber,
     request?.notes,
     request?.rmmAsigned?.id,
     request?.timezone?.id,
@@ -184,8 +195,16 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
       // wall-clock times are interpreted as local in whichever zone is
       // chosen, and that zone is what we persist. Falls back to the
       // request's stored tz if the selection somehow isn't in the list.
+      const effectiveTimezoneId =
+        (resolveTimezoneIdByDate(
+          timezones,
+          date,
+          timezoneId || String(request.timezone?.id ?? ""),
+        ) ??
+          timezoneId) ||
+        request.timezone?.id;
       const selectedTz =
-        timezones.find((t) => String(t.id) === String(timezoneId)) ??
+        timezones.find((t) => String(t.id) === String(effectiveTimezoneId)) ??
         request.timezone;
       const ianaTz = ianaForVenueTz(selectedTz);
       const startIso = venueLocalToUtcIso(date, startTime, ianaTz);
@@ -193,6 +212,15 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
       // Date row stays anchored to midnight in the venue's tz for
       // consistency with how the public form's date input is stored.
       const dateIso = venueLocalToUtcIso(date, "00:00", ianaTz);
+      const trimmedAddress = address.trim();
+      const addressChanged = trimmedAddress !== (request.address ?? "").trim();
+      let nextCoords = coords;
+      if (addressChanged && nextCoords == null) {
+        const resolved = await resolveAddressPlace(trimmedAddress);
+        if (resolved) {
+          nextCoords = [resolved.lat, resolved.lng];
+        }
+      }
       const productInputs = (request.products ?? [])
         .filter((p): p is NonNullable<typeof p> => Boolean(p))
         .map((p) => ({ productId: String(p.id) }));
@@ -202,12 +230,16 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         date: dateIso,
         startTime: startIso,
         endTime: endIso,
-        address: address.trim(),
+        address: trimmedAddress,
+        storeNumber: storeNumber.trim() || null,
         notes: notes.trim() || null,
-        coordinates: Array.isArray(request.coordinates)
-          ? [...request.coordinates]
-          : [0, 0],
-        timezoneId: timezoneId || request.timezone?.id,
+        coordinates:
+          nextCoords && nextCoords.length >= 2
+            ? nextCoords
+            : Array.isArray(request.coordinates) && !addressChanged
+              ? [...request.coordinates]
+              : [0, 0],
+        timezoneId: effectiveTimezoneId,
         requestTypeId: request.requestType?.id,
         distributorId: request.distributor?.id ?? null,
         retailerId: request.retailer?.id ?? null,
@@ -430,11 +462,44 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           >
             ADDRESS *
           </label>
+          <GooglePlacesInput
+            value={address}
+            onChange={(next) => {
+              setAddress(next);
+              setCoords(null);
+            }}
+            onResolved={(p) => {
+              setAddress(p.formattedAddress);
+              setCoords([p.lat, p.lng]);
+              if (p.timezoneId) {
+                const match = matchTimezoneOption(p.timezoneId, timezones);
+                if (match) setTimezoneId(String(match.id));
+              }
+            }}
+            placeholder="Start typing — Google suggestions appear"
+            className="w-full rounded-lg px-3 py-2 text-[15px] spark-input"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+            }}
+          />
+        </div>
+        <div>
+          <label
+            className="mono text-[10px] block mb-1"
+            style={{
+              letterSpacing: "0.16em",
+              color: "var(--spark-text-meta)",
+            }}
+          >
+            STORE NUMBER
+          </label>
           <input
             type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            required
+            value={storeNumber}
+            onChange={(e) => setStoreNumber(e.target.value)}
+            placeholder="Optional (e.g. 1247)"
             className="w-full rounded-lg px-3 py-2 text-[15px] spark-input"
             style={{
               background: "var(--spark-bg)",
