@@ -108,3 +108,17 @@ export const buildScheduleHref = (day: Date, startHour?: number): string => {
   }
   return `/requests/create?${params.toString()}`;
 };
+
+/**
+ * Strip redundant leading dates ("11/24/2026 - ", "2026-11-24 · ", etc.)
+ * from shift titles so narrow calendar chips show the store/venue name first.
+ */
+export const cleanCalendarShiftTitle = (raw: string | null | undefined): string => {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return "Untitled";
+  const stripped = trimmed
+    .replace(/^(?:\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—·:]\s*/, "")
+    .trim();
+  return stripped || trimmed;
+};
+

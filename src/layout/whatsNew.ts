@@ -14,6 +14,29 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-26ha",
+    date: "November 26, 2026",
+    title: "Interactive charts, 1-click wave actions, and Rebook from any recap",
+    items: [
+      "Consumers sampled per week adds a Typical weeks scale toggle whenever a large event week would flatten normal retail weeks. Click any store bar to open its Store profile, or any state bar to open Account map filtered to that state.",
+      "Consumers sampled by store keeps real retail accounts to scale by moving unlinked event volume into a summary note below the chart.",
+      "Worth a look and Where to go next now include direct Plan wave on Map and Schedule demo buttons, and Account map adds an Overdue 60d+ filter plus a one-click Book wave button.",
+      "Every recap detail header now includes Rebook store (pre-filled with venue, address, and store number) and Ask AI.",
+      "Photo Wall moves Pin to a clean corner badge on each photo, and Field Sampling and ROI Pacing tables add visual share bars.",
+    ],
+  },
+  {
+    id: "2026-11-26qa",
+    date: "November 26, 2026",
+    title: "Approvals Upcoming vs. Past-due triage, Recap QA checks, and workspace summaries",
+    staffOnly: true,
+    items: [
+      "Approvals decodes full REQ numbers (REQ-1481 instead of base64 suffixes), splits Pending into All, Upcoming, and Past-due tabs, and adds a one-click Decline all past-due flow.",
+      "Recap Quality now deducts points when audience sub-counts (such as willing + not willing) exceed total consumers sampled, and Photo buckets counts photos stored in matching template image fields.",
+      "Client Summaries defaults to the active workspace (with All brands one click away), Staffing Board pins the venue column while scrolling and shows readable BA names (Dana B.), and Light-mode route loading skeletons no longer flash dark.",
+    ],
+  },
+  {
     id: "2026-11-26ops",
     date: "November 26, 2026",
     title: "Field upload bar, Staffing Board scope, and DST-accurate imports",

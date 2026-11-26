@@ -180,6 +180,7 @@ describe("whatsNewFor", () => {
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
     for (const id of [
+      "2026-11-26ha",
       "2026-11-26cal",
       "2026-11-26req",
       "2026-11-26up",
@@ -190,9 +191,11 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBeFalsy();
     }
 
-    expect(clientIds.has("2026-11-26ops")).toBe(false);
-    expect(staffIds.has("2026-11-26ops")).toBe(true);
-    expect(WHATS_NEW.find((e) => e.id === "2026-11-26ops")?.staffOnly).toBe(true);
+    for (const id of ["2026-11-26qa", "2026-11-26ops"] as const) {
+      expect(clientIds.has(id)).toBe(false);
+      expect(staffIds.has(id)).toBe(true);
+      expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
+    }
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {

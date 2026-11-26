@@ -386,23 +386,23 @@ const PulseCard: React.FC<{
             {mix.map((b) => {
               const active = b.count > 0;
               const color = active
-                ? (ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(var(--spark-ink-rgb),0.45)")
-                : "rgba(var(--spark-ink-rgb),0.35)";
+                ? (ACTIVATION_BADGE_COLOR[b.key] ?? "var(--spark-text-secondary)")
+                : "var(--spark-text-secondary)";
               return (
                 <span
                   key={b.key}
-                  className="display text-[11px] px-2 py-0.5 rounded-md inline-flex items-center gap-1.5"
+                  className="display text-[11px] px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 whitespace-nowrap"
                   style={{
                     color,
                     background: "rgba(var(--spark-ink-rgb),0.04)",
                     border: `1px solid ${active ? `${color}55` : "var(--spark-border)"}`,
-                    opacity: active ? 1 : 0.45,
+                    opacity: active ? 1 : 0.78,
                   }}
                   title={`${b.label} in ${rangeLabel}`}
                 >
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full"
-                    style={{ background: color }}
+                    style={{ background: active ? color : "var(--spark-text-meta)" }}
                   />
                   {fmt(b.count)} {b.label}
                 </span>

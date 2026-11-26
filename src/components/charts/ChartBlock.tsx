@@ -8,21 +8,26 @@ import type { ReactNode } from "react";
 export default function ChartBlock({
   title,
   height,
+  headerAction,
   children,
 }: {
   title: string;
   /** Height of the plot in px. Chart.js needs a sized, positioned box. */
   height: number;
+  headerAction?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <figure className="m-0">
-      <figcaption
-        className="mb-1 text-[13px] font-medium"
-        style={{ color: "var(--spark-text-secondary)" }}
-      >
-        {title}
-      </figcaption>
+      <div className="mb-1.5 flex items-center justify-between gap-2 flex-wrap">
+        <figcaption
+          className="text-[13px] font-medium"
+          style={{ color: "var(--spark-text-secondary)" }}
+        >
+          {title}
+        </figcaption>
+        {headerAction}
+      </div>
       <div className="relative w-full" style={{ height }}>
         {children}
       </div>

@@ -10,6 +10,7 @@ import {
   type CalendarViewMode,
   buildScheduleHref,
   calendarQueryWindow,
+  cleanCalendarShiftTitle,
   computeCalendarHourBounds,
   stepCalendarAnchor,
   ymdOf,
@@ -619,7 +620,7 @@ const SparkCalendarInner: React.FC<{
         eh = Math.max(sh + 0.25, Math.min(24, eh));
         return {
           uuid: String(n.uuid),
-          title: n.name ?? "Untitled",
+          title: cleanCalendarShiftTitle(n.name),
           market: n.request?.retailer?.name ?? n.address ?? "",
           startHour: sh,
           endHour: eh,

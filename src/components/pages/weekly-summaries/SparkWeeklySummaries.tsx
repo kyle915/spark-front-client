@@ -5,6 +5,7 @@ import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAlertStore } from "@/store/alertStore";
+import { useAuthStore } from "@/store/authStore";
 import { WeeklyClientSummariesQuery } from "@/api/queries/WeeklyClientSummariesQuery";
 import type { WeeklyClientSummariesQuery as WeekQueryType } from "@api/queries/__generated__/WeeklyClientSummariesQuery.graphql";
 import {
@@ -280,6 +281,10 @@ const WeekBody: React.FC<{
   weekStart: string | null;
   onWeek: (weekStart: string) => void;
 }> = ({ period, weekStart, onWeek }) => {
+  const { tenantId: activeTenantId } = useAuthStore();
+  const [scopeMode, setScopeMode] = useState<"workspace" | "all">(() =>
+    activeTenantId ? "workspace" : "all",
+  );
   const data = useLazyLoadQuery<WeekQueryType>(
     WeeklyClientSummariesQuery,
     { weekStart, period },
@@ -303,38 +308,76 @@ const WeekBody: React.FC<{
   const step = (by: number) =>
     onWeek(monthly ? shiftMonth(week.weekStart, by) : shiftWeek(week.weekStart, by));
 
+  const scopedRows =
+    scopeMode === "workspace" && activeTenantId
+      ? week.rows.filter((r) => String(r.tenantId) === String(activeTenantId))
+      : week.rows;
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          className="spark-btn-ghost"
-          onClick={() => step(-1)}
-        >
-          {monthly ? "Earlier month" : "Earlier week"}
-        </button>
-        <p className="text-sm font-medium" style={{ color: "var(--spark-text)" }}>
-          {monthly ? monthLabel(week.weekStart) : weekLabel(week.weekStart, week.weekEnd)}
-        </p>
-        <button
-          type="button"
-          className="spark-btn-ghost"
-          onClick={() => step(1)}
-          disabled={latest}
-          style={{ opacity: latest ? 0.5 : 1 }}
-        >
-          {monthly ? "Later month" : "Later week"}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="spark-btn-ghost"
+            onClick={() => step(-1)}
+          >
+            {monthly ? "Earlier month" : "Earlier week"}
+          </button>
+          <p className="text-sm font-medium" style={{ color: "var(--spark-text)" }}>
+            {monthly ? monthLabel(week.weekStart) : weekLabel(week.weekStart, week.weekEnd)}
+          </p>
+          <button
+            type="button"
+            className="spark-btn-ghost"
+            onClick={() => step(1)}
+            disabled={latest}
+            style={{ opacity: latest ? 0.5 : 1 }}
+          >
+            {monthly ? "Later month" : "Later week"}
+          </button>
+        </div>
+        {activeTenantId && (
+          <div className="pill-group" role="group" aria-label="Workspace scope">
+            <button
+              type="button"
+              onClick={() => setScopeMode("workspace")}
+              className={`pill-btn ${scopeMode === "workspace" ? "on" : ""}`}
+            >
+              This workspace
+            </button>
+            <button
+              type="button"
+              onClick={() => setScopeMode("all")}
+              className={`pill-btn ${scopeMode === "all" ? "on" : ""}`}
+            >
+              All brands ({week.rows.length})
+            </button>
+          </div>
+        )}
       </div>
 
       <section className="spark-card p-5 sm:p-6">
-        {week.rows.length === 0 ? (
-          <p className="text-sm" style={META}>
-            No brand has an approved or waiting recap for this {period}.
-          </p>
+        {scopedRows.length === 0 ? (
+          <div className="text-sm flex flex-wrap items-center gap-3" style={META}>
+            <span>
+              No approved or waiting recaps for{" "}
+              {scopeMode === "workspace" ? "this workspace" : "any brand"} in this {period}.
+            </span>
+            {scopeMode === "workspace" && week.rows.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setScopeMode("all")}
+                className="underline font-semibold"
+                style={{ color: "var(--spark-text)" }}
+              >
+                Show all {week.rows.length} brands →
+              </button>
+            ) : null}
+          </div>
         ) : (
           <ul className="m-0 p-0 list-none">
-            {week.rows.map((row, i) => (
+            {scopedRows.map((row, i) => (
               <BrandSummary
                 key={`${period}|${week.weekStart}|${row.tenantId}`}
                 row={row}

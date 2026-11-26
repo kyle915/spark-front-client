@@ -23,7 +23,8 @@ export function AppShellSkeleton({
 }) {
   return (
     <div
-      className="flex h-screen bg-base-200 text-base-content spark-mesh"
+      className="flex h-screen spark-mesh"
+      style={{ background: "var(--spark-bg)", color: "var(--spark-text)" }}
       aria-busy="true"
       aria-label="Loading"
     >

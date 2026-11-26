@@ -363,39 +363,67 @@ const PacingBody: React.FC<{
                 </tr>
               </thead>
               <tbody>
-                {pacing.leaderboard.map((row) => (
-                  <tr
-                    key={row.groupKey}
-                    style={{ borderTop: "1px solid var(--spark-border)" }}
-                  >
-                    <td className="py-2">
-                      <div style={{ color: "var(--spark-text)" }}>
-                        {row.groupLabel}
-                      </div>
-                      {row.note ? (
-                        <div className="text-xs mt-0.5" style={META}>
-                          {row.note}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="text-right mono py-2">{row.visitCount}</td>
-                    <td className="text-right mono py-2">
-                      {money(row.demoDollars)}
-                    </td>
-                    <td className="text-right mono py-2">
-                      {row.units ?? "—"}
-                    </td>
-                    <td className="text-right mono py-2">
-                      {money(row.salesDollars)}
-                    </td>
-                    <td className="text-right mono py-2">
-                      {rate(row.unitsPerDollar)}
-                    </td>
-                    <td className="text-right mono py-2">
-                      {rate(row.revenuePerDollar)}
-                    </td>
-                  </tr>
-                ))}
+                {(() => {
+                  const maxVisits = Math.max(
+                    1,
+                    ...pacing.leaderboard.map((r) => r.visitCount || 0),
+                  );
+                  return pacing.leaderboard.map((row) => {
+                    const displayGroup =
+                      row.groupLabel.trim().toLowerCase() === "unknown"
+                        ? "Unassigned / Direct"
+                        : row.groupLabel;
+                    const visitSharePct = Math.min(
+                      100,
+                      Math.round(((row.visitCount || 0) / maxVisits) * 100),
+                    );
+                    return (
+                      <tr
+                        key={row.groupKey}
+                        style={{ borderTop: "1px solid var(--spark-border)" }}
+                      >
+                        <td className="py-2.5 pr-4">
+                          <div className="font-medium" style={{ color: "var(--spark-text)" }}>
+                            {displayGroup}
+                          </div>
+                          <div
+                            className="mt-1 h-1.5 rounded-full overflow-hidden max-w-[160px]"
+                            style={{ background: "rgba(var(--spark-ink-rgb),0.07)" }}
+                          >
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${visitSharePct}%`,
+                                background: "var(--spark-accent-strong, #1a5c3a)",
+                              }}
+                            />
+                          </div>
+                          {row.note ? (
+                            <div className="text-xs mt-1" style={META}>
+                              {row.note}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="text-right mono py-2">{row.visitCount}</td>
+                        <td className="text-right mono py-2">
+                          {money(row.demoDollars)}
+                        </td>
+                        <td className="text-right mono py-2">
+                          {row.units ?? "—"}
+                        </td>
+                        <td className="text-right mono py-2">
+                          {money(row.salesDollars)}
+                        </td>
+                        <td className="text-right mono py-2">
+                          {rate(row.unitsPerDollar)}
+                        </td>
+                        <td className="text-right mono py-2">
+                          {rate(row.revenuePerDollar)}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
           </div>

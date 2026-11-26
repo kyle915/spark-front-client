@@ -2157,15 +2157,6 @@ export default function MasterTracker() {
 
         {torchProgram ? <ProgramSwitch active="retail" /> : null}
 
-        {tenantId ? (
-          <ListSearch
-            list="events"
-            tenantId={String(tenantId)}
-            isClient={isClient}
-            className="mb-3"
-          />
-        ) : null}
-
         <div className="sticky top-0 z-20 flex flex-col spark-sticky-filters spark-tracker-filters">
         <SparkFilterBar
           label="Status"
@@ -2223,6 +2214,14 @@ export default function MasterTracker() {
         {/* Kept mounted while closed (CSS-hidden) so the RMM list still
             loads for "By RMM" grouping and saved views. */}
         <div id="tracker-more-filters" hidden={!refineOpen}>
+        {tenantId ? (
+          <ListSearch
+            list="events"
+            tenantId={String(tenantId)}
+            isClient={isClient}
+            className="mb-2 mt-2"
+          />
+        ) : null}
         <SparkFilterBar label="Refine">
             <div className="pill-group">
               <button
@@ -2400,7 +2399,7 @@ export default function MasterTracker() {
         {/* Request count only. Sampled totals live on Insights. */}
         <div className="spark-tracker-kpis">
           <div className="spark-card p-3 max-w-sm">
-            <p className="label-mini">Scheduled</p>
+            <p className="label-mini">Total requests</p>
             <p
               className="tab-num text-2xl font-bold mt-1"
               style={{ color: "var(--spark-text)" }}

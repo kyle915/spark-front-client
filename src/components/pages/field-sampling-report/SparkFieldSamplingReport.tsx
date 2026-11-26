@@ -139,19 +139,43 @@ const SkuBreakdownCard: React.FC<{
         <div className="overflow-x-auto">
           <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
             <tbody>
-              {items.map((item) => (
-                <tr
-                  key={item.product}
-                  style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
-                >
-                  <td className="py-1.5 pr-3" style={{ color: "var(--spark-text)" }}>
-                    {item.product}
-                  </td>
-                  <td className="py-1.5 text-right tabular-nums font-semibold">
-                    {fmtNum(item.total)}
-                  </td>
-                </tr>
-              ))}
+              {(() => {
+                const maxItem = Math.max(1, ...items.map((i) => i.total));
+                return items.map((item) => {
+                  const barPct = Math.min(100, Math.round((item.total / maxItem) * 100));
+                  const sharePct = total > 0 ? Math.round((item.total / total) * 100) : 0;
+                  return (
+                    <tr
+                      key={item.product}
+                      style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
+                    >
+                      <td className="py-2 pr-3" style={{ color: "var(--spark-text)" }}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">{item.product}</span>
+                          <span className="mono text-[10px] shrink-0" style={dim}>
+                            {sharePct}%
+                          </span>
+                        </div>
+                        <div
+                          className="mt-1 h-1.5 rounded-full overflow-hidden"
+                          style={{ background: "rgba(var(--spark-ink-rgb),0.06)" }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${barPct}%`,
+                              background: "rgba(var(--spark-accent-rgb),0.6)",
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td className="py-2 text-right tabular-nums font-semibold align-top">
+                        {fmtNum(item.total)}
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
               <tr>
                 <td className="pt-2 font-semibold" style={dim}>
                   Total
@@ -529,7 +553,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             {report.callouts.map((c, i) => (
               <li key={i} className="py-2" style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}>
                 <p className="mono text-[9px] mb-1" style={dimmer}>
-                  {[c.market, c.corridor].filter(Boolean).join(" · ") || "UNKNOWN LOCATION"}
+                  {[c.market, c.corridor].filter(Boolean).join(" · ") || "FIELD NOTE"}
                   {c.date ? ` · ${shortDate(c.date).toUpperCase()}` : ""}
                 </p>
                 <p className="text-sm" style={{ color: "var(--spark-text)" }}>

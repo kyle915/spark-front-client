@@ -314,9 +314,9 @@ const RecommendationRow: React.FC<{
           <span className="mono">{item.visitCount} visits</span>
         )}
         {item.comparisonPeriod && <span>· {item.comparisonPeriod}</span>}
-        {item.supportedCost && (
+        {item.supportedCost && Number(item.supportedCost) > 0 ? (
           <span className="mono">· Supported cost ${item.supportedCost}</span>
-        )}
+        ) : null}
         {item.adjustedPosUnits != null && (
           <span className="mono">· Adjusted POS {item.adjustedPosUnits}u</span>
         )}
@@ -365,6 +365,16 @@ const RecommendationRow: React.FC<{
               >
                 Restock check
               </button>
+              <Link
+                to={`/requests/create?venue=${encodeURIComponent(item.subject)}`}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold transition hover:opacity-80"
+                style={{
+                  ...SECONDARY_BTN_STYLE,
+                  textDecoration: "none",
+                }}
+              >
+                Schedule demo →
+              </Link>
             </>
           )}
         </div>

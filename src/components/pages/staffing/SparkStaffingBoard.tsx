@@ -59,6 +59,13 @@ const initials = (name: string): string =>
     .slice(0, 2)
     .toUpperCase() || "BA";
 
+const shortBaLabel = (name: string): string => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "BA";
+  if (parts.length === 1) return parts[0].slice(0, 10);
+  return `${parts[0]} ${parts[parts.length - 1][0]?.toUpperCase() ?? ""}.`;
+};
+
 type AssignTarget = {
   eventId: string;
   eventDate: string | null;
@@ -646,7 +653,16 @@ const Inner: React.FC<{
                   borderBottom: "1px solid var(--spark-border)",
                 }}
               >
-                <div className="px-3 py-2 min-w-0">
+                <div
+                  className="px-3 py-2 min-w-0"
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 2,
+                    background: "var(--spark-surface)",
+                    boxShadow: "1px 0 0 var(--spark-border)",
+                  }}
+                >
                   <p className="text-sm font-medium truncate">{row.label}</p>
                   <p
                     className="mono text-[9px] truncate"
@@ -701,15 +717,11 @@ const Inner: React.FC<{
                                 <span
                                   key={a.ambassadorUuid}
                                   title={`${a.name}${a.isApproved ? "" : " (pending)"}`}
-                                  className="grid place-items-center rounded-full text-[9px] font-bold"
+                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold max-w-full truncate"
                                   style={{
-                                    width: 20,
-                                    height: 20,
                                     background: a.isApproved
                                       ? "var(--spark-lime)"
                                       : "rgba(255,196,0,0.2)",
-                                    // The fill flips with the appearance (ink in
-                                    // light, off-white in dark); so must the text.
                                     color: a.isApproved
                                       ? "var(--spark-on-accent)"
                                       : "var(--spark-gold)",
@@ -718,7 +730,7 @@ const Inner: React.FC<{
                                       : "1px solid var(--spark-gold)",
                                   }}
                                 >
-                                  {initials(a.name)}
+                                  {shortBaLabel(a.name)}
                                 </span>
                               ))}
                             </div>

@@ -1,4 +1,5 @@
-import { Suspense, useMemo, type ReactNode } from "react";
+import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Bar, Line } from "react-chartjs-2";
 import "@/lib/sparkChartRegister";
@@ -6,6 +7,7 @@ import ChartBlock from "@/components/charts/ChartBlock";
 import AskAboutChart from "@/components/explain/AskAboutChart";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { StoreChartLinks } from "@/components/store/StoreLinks";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import { ConsumersPerEventQuery } from "@/api/queries/ConsumersPerEventQuery";
 import type { ConsumersPerEventQuery as ConsumersPerEventQueryType } from "@api/queries/__generated__/ConsumersPerEventQuery.graphql";
@@ -89,26 +91,93 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
   note,
 }) => {
   useAppearance();
+  const [focusTypical, setFocusTypical] = useState(false);
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
   const trend = useMemo(() => weeklyTrend(breakdown?.byWeek ?? []), [breakdown]);
+
+  const spikeMeta = useMemo(() => {
+    const pos = trend.values.filter((v) => v > 0).sort((a, b) => a - b);
+    if (pos.length < 3) return null;
+    const max = pos[pos.length - 1];
+    const median = pos[Math.floor(pos.length / 2)];
+    if (median <= 0 || max < median * 4) return null;
+    const nonPeak = pos.filter((v) => v < max);
+    const refMax = nonPeak.length > 0 ? nonPeak[nonPeak.length - 1] : median * 2;
+    const cap = Math.max(10, Math.ceil(refMax * 1.25));
+    if (cap >= max) return null;
+    const peakIdx = trend.values.indexOf(max);
+    return {
+      max,
+      cap,
+      peakLabel: peakIdx >= 0 ? trend.labels[peakIdx] : "Peak week",
+    };
+  }, [trend]);
+
+  const lineOptions = useMemo(() => {
+    const base = chartOptions<"line">();
+    if (!focusTypical || !spikeMeta) return base;
+    return {
+      ...base,
+      scales: {
+        ...base.scales,
+        y: {
+          ...base.scales?.y,
+          max: spikeMeta.cap,
+        },
+      },
+    } as ChartOptions<"line">;
+  }, [focusTypical, spikeMeta]);
+
   if (!breakdown) {
     return <Nothing title={WEEKLY_TITLE}>This chart could not load.</Nothing>;
   }
   if (!trend.hasData) {
     return <Nothing title={WEEKLY_TITLE}>No approved recaps in these weeks yet.</Nothing>;
   }
+  const peakVal = Math.max(0, ...trend.values);
   return (
     <div className="flex flex-col gap-2">
-      <ChartBlock title={WEEKLY_TITLE} height={WEEKLY_HEIGHT}>
+      <ChartBlock
+        title={WEEKLY_TITLE}
+        height={WEEKLY_HEIGHT}
+        headerAction={
+          spikeMeta ? (
+            <div className="pill-group" role="group" aria-label="Y-axis scale">
+              <button
+                type="button"
+                onClick={() => setFocusTypical(false)}
+                className={`pill-btn ${!focusTypical ? "on" : ""}`}
+              >
+                Full scale
+              </button>
+              <button
+                type="button"
+                onClick={() => setFocusTypical(true)}
+                className={`pill-btn ${focusTypical ? "on" : ""}`}
+                title="Cap event outlier spike so typical weekly volume stays legible"
+              >
+                Typical weeks
+              </button>
+            </div>
+          ) : null
+        }
+      >
         <Line
+          aria-label={`${WEEKLY_TITLE}: ${trend.labels.length} weeks, peak ${count(peakVal)}`}
           data={{
             labels: trend.labels,
             datasets: [lineSeries({ label: "Consumers sampled", data: trend.values })],
           }}
-          options={chartOptions<"line">()}
+          options={lineOptions}
           plugins={[lastValue]}
         />
       </ChartBlock>
+      {focusTypical && spikeMeta ? (
+        <p className="text-xs" style={META}>
+          Peak week ({spikeMeta.peakLabel}: {count(spikeMeta.max)}) extends above the{" "}
+          {count(spikeMeta.cap)} axis cap so typical demo weeks stay readable.
+        </p>
+      ) : null}
       {note ? (
         <p className="text-xs" style={META}>
           {note}
@@ -169,7 +238,9 @@ const RankedSplitChart: React.FC<{
   where: string;
   /** Which chart this is, so a question about it can be asked. */
   ask: Window & { chart: ChartKind };
-}> = ({ title, measure, split, empty, noun, where, ask }) => {
+  /** Optional click handler when a non-context bar is clicked. */
+  onBarSelect?: (bar: RankedSplit["bars"][number]) => void;
+}> = ({ title, measure, split, empty, noun, where, ask, onBarSelect }) => {
   const { bars, aside } = split;
   const appearance = useAppearance();
   // The tooltip names the whole row (the axis may cut it) and says when it
@@ -179,6 +250,20 @@ const RankedSplitChart: React.FC<{
     const tooltip = base.plugins?.tooltip;
     return {
       ...base,
+      ...(onBarSelect
+        ? {
+            onHover: (event, elements) => {
+              const target = event.native?.target as HTMLElement | null;
+              if (!target) return;
+              const hit = elements[0] ? bars[elements[0].index] : null;
+              target.style.cursor = hit && !hit.context ? "pointer" : "default";
+            },
+            onClick: (_event, elements) => {
+              const hit = elements[0] ? bars[elements[0].index] : null;
+              if (hit && !hit.context) onBarSelect(hit);
+            },
+          }
+        : {}),
       plugins: {
         ...base.plugins,
         tooltip: {
@@ -193,7 +278,7 @@ const RankedSplitChart: React.FC<{
         },
       },
     } as ChartOptions<"bar">;
-  }, [bars, appearance]);
+  }, [bars, appearance, onBarSelect]);
   if (bars.length === 0) return <Nothing title={title}>{empty}</Nothing>;
   // One row is a sentence, not a one-bar chart.
   if (bars.length === 1 && !aside) {
@@ -212,6 +297,7 @@ const RankedSplitChart: React.FC<{
     <div className="flex flex-col gap-2">
       <ChartBlock title={title} height={splitHeight(bars.length)}>
         <Bar
+          aria-label={`${title}: top ${bars[0]?.label ?? ""} (${count(bars[0]?.value ?? 0)})`}
           data={{
               labels: bars.map((b) => barLabel(b, b.context ? 28 : 18)),
             datasets: [
@@ -255,14 +341,29 @@ const PRODUCT_TITLE = "Samples handed out by product";
 
 const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
-  const split = useMemo(
-    () =>
-      rankedSplit(breakdown?.byStore ?? [], {
+  const { split, liftedUnlinked } = useMemo(() => {
+    const rawRows = breakdown?.byStore ?? [];
+    const hasNamed = rawRows.some(
+      (r) => (r.kind === "named" || r.kind === "venue") && r.consumers > 0,
+    );
+    const missingTotal = rawRows
+      .filter((r) => r.kind === "missing")
+      .reduce((s, r) => s + r.consumers, 0);
+    // When named stores exist, lift unlinked ("No store on the event") out of
+    // the horizontal bars so 8,000+ festival/unlinked samples never squash real
+    // retail accounts into tiny slivers.
+    const rowsForBars =
+      hasNamed && missingTotal > 0
+        ? rawRows.filter((r) => r.kind !== "missing")
+        : rawRows;
+    return {
+      split: rankedSplit(rowsForBars, {
         missingLabel: "No store on the event",
         namedCount: breakdown?.storeCount,
       }),
-    [breakdown],
-  );
+      liftedUnlinked: hasNamed && missingTotal > 0 ? missingTotal : 0,
+    };
+  }, [breakdown]);
   if (!breakdown) return <Nothing title={STORE_TITLE}>This chart could not load.</Nothing>;
   return (
     <div className="flex flex-col gap-2">
@@ -274,7 +375,24 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
         noun="store"
         ask={{ tenantId, startDate, endDate, chart: "consumers_by_store" }}
         where="at"
+        onBarSelect={(bar) => {
+          if (bar.venue) return;
+          useStoreSheetStore.getState().openStoreSheet({
+            storeName: bar.label,
+            fallbackTitle: bar.label,
+          });
+        }}
       />
+      {liftedUnlinked > 0 ? (
+        <p className="text-xs flex items-center gap-2 flex-wrap" style={META}>
+          <span>
+            +{count(liftedUnlinked)} samples from events with no linked retail store (omitted from bars so store rankings stay to scale).
+          </span>
+          <Link to="/recaps/list" className="underline" style={SECONDARY}>
+            Review recaps →
+          </Link>
+        </p>
+      ) : null}
       <StoreChartLinks
         tenantId={tenantId}
         labels={split.bars.filter((b) => !b.context && !b.venue).map((b) => b.label)}
@@ -284,6 +402,7 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
 };
 
 const StateInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+  const navigate = useNavigate();
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
   const split = useMemo(
     () =>
@@ -303,6 +422,9 @@ const StateInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       noun="state"
       ask={{ tenantId, startDate, endDate, chart: "consumers_by_state" }}
       where="in"
+      onBarSelect={(bar) => {
+        navigate(`/account-map?state=${encodeURIComponent(bar.label)}`);
+      }}
     />
   );
 };

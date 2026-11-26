@@ -1369,6 +1369,7 @@ a.spark-upcoming-row:focus-visible {
   font-weight: 700;
   font-size: 1.25rem;
   line-height: 1;
+  white-space: nowrap;
   letter-spacing: -0.04em;
 }
 .spark-stat-lg {

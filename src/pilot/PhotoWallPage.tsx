@@ -200,20 +200,44 @@ const PhotoWallBody: React.FC<{
         {photos.map((photo, idx) => (
           <article
             key={photo.id}
-            className="rounded-xl overflow-hidden flex flex-col"
+            className="rounded-xl overflow-hidden flex flex-col group"
             style={{ border: "1px solid var(--spark-border)" }}
           >
-            <button
-              type="button"
-              className="relative aspect-[4/3] bg-black/20"
-              onClick={() => setLightboxIndex(idx)}
-            >
-              <SparkThumb
-                sources={[thumbUrl(photo.url, 400), photo.url]}
-                alt={photo.caption || photo.store || "In-store photo"}
-              />
-            </button>
-            <div className="p-2.5 space-y-1.5 flex-1 flex flex-col">
+            <div className="relative aspect-[4/3]" style={{ background: "rgba(var(--spark-ink-rgb),0.05)" }}>
+              <button
+                type="button"
+                className="w-full h-full block"
+                onClick={() => setLightboxIndex(idx)}
+              >
+                <SparkThumb
+                  sources={[thumbUrl(photo.url, 400), photo.url]}
+                  alt={photo.caption || photo.store || "In-store photo"}
+                />
+              </button>
+              <button
+                type="button"
+                disabled={pinInFlight}
+                onClick={() => togglePin(photo.id, photo.isPinned)}
+                title={photo.isPinned ? "Unpin from Buyer Pitch Deck" : "Pin to Buyer Pitch Deck"}
+                className={`absolute top-2 right-2 px-2.5 py-1 rounded-full text-[11px] font-semibold transition ${
+                  photo.isPinned
+                    ? "opacity-100"
+                    : "opacity-90 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+                }`}
+                style={
+                  photo.isPinned
+                    ? PINNED_BTN_STYLE
+                    : {
+                        background: "rgba(20, 22, 15, 0.78)",
+                        color: "#fff",
+                        backdropFilter: "blur(6px)",
+                      }
+                }
+              >
+                {photo.isPinned ? "★ Pinned" : "+ Pin"}
+              </button>
+            </div>
+            <div className="p-2.5 space-y-1 flex-1 flex flex-col">
               {/* Walk-in titles embed the date ("11/23/2026 - 42nd St…"),
                   and store / retailer / market often repeat each other.
                   Say each thing once; print the date once. */}
@@ -227,15 +251,6 @@ const PhotoWallBody: React.FC<{
                 {photo.category}
                 {photo.skus.length ? ` · ${photo.skus.slice(0, 2).join(", ")}` : ""}
               </p>
-              <button
-                type="button"
-                disabled={pinInFlight}
-                onClick={() => togglePin(photo.id, photo.isPinned)}
-                className="mt-auto w-full px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
-                style={photo.isPinned ? PINNED_BTN_STYLE : PRIMARY_BTN_STYLE}
-              >
-                {photo.isPinned ? "Unpin from deck" : "Pin to Buyer Pitch Deck"}
-              </button>
             </div>
           </article>
         ))}

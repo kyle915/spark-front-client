@@ -3,6 +3,7 @@ import {
   computeCalendarHourBounds,
   buildScheduleHref,
   calendarQueryWindow,
+  cleanCalendarShiftTitle,
   stepCalendarAnchor,
   monthGridDays,
   ymdOf,
@@ -139,3 +140,20 @@ describe("calendarQueryWindow", () => {
     expect(startDate).toBe(ymdOf(expectedStart));
   });
 });
+
+describe("cleanCalendarShiftTitle", () => {
+  it("strips leading US slash and ISO date prefixes", () => {
+    expect(cleanCalendarShiftTitle("11/24/2026 - K Slope Marketplace")).toBe(
+      "K Slope Marketplace",
+    );
+    expect(cleanCalendarShiftTitle("2026-11-24 · Whole Foods Market")).toBe(
+      "Whole Foods Market",
+    );
+  });
+
+  it("preserves normal store titles and handles empty values", () => {
+    expect(cleanCalendarShiftTitle("Trader Joe's #142")).toBe("Trader Joe's #142");
+    expect(cleanCalendarShiftTitle("")).toBe("Untitled");
+  });
+});
+

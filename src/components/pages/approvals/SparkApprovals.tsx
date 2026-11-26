@@ -19,6 +19,7 @@ import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkOverlay from "@/shared/SparkOverlay";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { CountReel } from "@/motion/CountReel";
+import { decodeReqLabel } from "./decodeReqLabel";
 
 /**
  * Spark v2 — Approvals.
@@ -37,12 +38,18 @@ const formatDate = (raw: string | null | undefined) => {
   }
 };
 
+const localTodayYmd = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
 type Row = {
   id: string;
   uuid: string;
   reqId: string;
   venue: string;
   locationDate: string;
+  eventDateYmd: string | null;
   requester: string;
   type: string;
   source: "external" | "internal";
@@ -430,12 +437,14 @@ const ApprovalsInner: React.FC = () => {
       const pendingHours = Number.isFinite(createdMs)
         ? Math.max(0, Math.round((Date.now() - createdMs) / 3_600_000))
         : null;
+      const eventDateMatch = n.date ? String(n.date).match(/^(\d{4}-\d{2}-\d{2})/) : null;
       return {
         id: String(n.id),
         uuid: String(n.uuid),
-        reqId: `REQ-${String(n.id).slice(-4).toUpperCase()}`,
+        reqId: decodeReqLabel(String(n.id)),
         venue: n.retailer?.name ?? n.name ?? "—",
         locationDate: `${market} · ${date}`,
+        eventDateYmd: eventDateMatch ? eventDateMatch[1] : null,
         requester: n.client?.name ?? n.distributor?.name ?? "—",
         type: n.requestType?.name ?? "Activation",
         source: "external" as const,
@@ -470,6 +479,8 @@ const ApprovalsInner: React.FC = () => {
   // SLA-only filter — when ON, show only requests pending >72h.
   // Defaults OFF so the queue isn't hidden when there are no breaches.
   const [slaOnly, setSlaOnly] = useState(false);
+  const [horizonTab, setHorizonTab] = useState<"all" | "upcoming" | "past_due">("all");
+  const todayIso = useMemo(() => localTodayYmd(), []);
   const searchRef = useRef<HTMLInputElement | null>(null);
   // Index of the keyboard-focused row (j/k navigation). -1 = no focus.
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
@@ -488,16 +499,35 @@ const ApprovalsInner: React.FC = () => {
   // Local removal so we don't have to round-trip the page after each
   // decision — the row simply disappears with a tiny fade.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const activePendingRows = useMemo(
+    () => pendingRows.filter((r) => !removedIds.has(r.id)),
+    [pendingRows, removedIds],
+  );
+  const horizonCounts = useMemo(() => {
+    let upcoming = 0;
+    let pastDue = 0;
+    for (const r of activePendingRows) {
+      if (r.eventDateYmd && r.eventDateYmd < todayIso) pastDue += 1;
+      else upcoming += 1;
+    }
+    return { upcoming, pastDue, all: activePendingRows.length };
+  }, [activePendingRows, todayIso]);
+
   const rows = useMemo(
     () =>
-      pendingRows
-        .filter((r) => !removedIds.has(r.id))
+      activePendingRows
+        .filter((r) => {
+          const isPast = Boolean(r.eventDateYmd && r.eventDateYmd < todayIso);
+          if (horizonTab === "upcoming") return !isPast;
+          if (horizonTab === "past_due") return isPast;
+          return true;
+        })
         .filter((r) => matchesSearch(r, search))
         .filter((r) => {
           if (!slaOnly) return true;
           return typeof r.pendingHours === "number" && r.pendingHours >= 72;
         }),
-    [pendingRows, removedIds, search, slaOnly],
+    [activePendingRows, horizonTab, todayIso, search, slaOnly],
   );
 
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -910,14 +940,54 @@ const ApprovalsInner: React.FC = () => {
 
   const SearchBar = (
     <div className="spark-card px-4 py-3 flex items-center gap-3 flex-wrap">
+      {horizonCounts.pastDue > 0 && (
+        <div className="pill-group">
+          {(
+            [
+              { key: "all", label: `All (${horizonCounts.all})` },
+              { key: "upcoming", label: `Upcoming (${horizonCounts.upcoming})` },
+              { key: "past_due", label: `Past-due (${horizonCounts.pastDue})` },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setHorizonTab(tab.key)}
+              className={`pill-btn ${horizonTab === tab.key ? "on" : ""}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
       <input
         ref={searchRef}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search pending queue — venue, requester, REQ-id…  ( / to focus )"
-        className="flex-1 bg-transparent text-sm focus:outline-none"
+        className="flex-1 min-w-[200px] bg-transparent text-sm focus:outline-none"
         style={{ color: "var(--spark-text)" }}
       />
+      {horizonTab === "past_due" && rows.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedIds(new Set(rows.map((r) => r.id)));
+            setBulkDeclineReason(
+              "Event date has already passed without confirmation — please submit a new request if you'd like to reschedule.",
+            );
+            setBulkDeclineOpen(true);
+          }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+          style={{
+            background: "rgba(239,90,42,0.12)",
+            border: "1px solid var(--spark-orange)",
+            color: "var(--spark-flag-ink)",
+          }}
+        >
+          Decline all {rows.length} past-due…
+        </button>
+      )}
       {/* SLA-breach quick-filter — only renders when there's actually
           something to filter. Toggles between "show only >72h pending"
           and the full queue. */}
@@ -1784,7 +1854,7 @@ const ApprovalsCopyQueueButtonInner: React.FC = () => {
       "",
     ];
     for (const n of rows.slice(0, 50)) {
-      const reqId = `REQ-${String(n.id).slice(-4).toUpperCase()}`;
+      const reqId = decodeReqLabel(String(n.id));
       const venue = n.retailer?.name ?? n.name ?? "—";
       const market = n.market ?? "";
       const created = n.createdAt

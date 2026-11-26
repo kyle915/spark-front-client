@@ -1571,14 +1571,22 @@ const RecapCustomViewInner = ({
   }
 
   const statusLabel = recapReviewStatus(Boolean(recap.approved));
-  const place = [
+  const placeParts: string[] = [];
+  for (const part of [
     recap.eventRetailer ?? recap.retailer?.name,
     recap.eventVenue ?? recap.location?.name,
     recap.eventCity,
     recap.eventState ?? recap.state?.name,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ]) {
+    const clean = (part ?? "").trim();
+    if (
+      clean &&
+      !placeParts.some((p) => p.toLowerCase() === clean.toLowerCase())
+    ) {
+      placeParts.push(clean);
+    }
+  }
+  const place = placeParts.join(" · ");
 
   const openShare = useCallback(() => {
     if (!recap.shareToken) {
@@ -1604,7 +1612,10 @@ const RecapCustomViewInner = ({
             <RecapDetailBackLink to={backToListUrl}>
               ← Recaps
               {recap.name ? ` / ${recap.name}` : ""}
-              {place ? ` / ${place}` : ""}
+              {place &&
+              place.trim().toLowerCase() !== (recap.name ?? "").trim().toLowerCase()
+                ? ` / ${place}`
+                : ""}
               {` / ${formatDate(recap.event?.date ?? recap.eventDate ?? null)}`}
             </RecapDetailBackLink>
             {/* Edit-values toolbar. Toggles every custom-field value
@@ -1614,7 +1625,7 @@ const RecapCustomViewInner = ({
                 updated from the mutation's selection set). */}
             {!isEditingValues ? (
               <div className="flex items-center gap-2 flex-wrap">
-                {!isClient && tenantId ? (
+                {tenantId ? (
                   <AskAiButton
                     tenantId={tenantId}
                     variant="ghost"
@@ -1623,6 +1634,38 @@ const RecapCustomViewInner = ({
                     subjectLabel={recap.name ?? undefined}
                   />
                 ) : null}
+                <Link
+                  to={`/requests/create?${new URLSearchParams({
+                    ...(recap.eventRetailer ||
+                    recap.retailer?.name ||
+                    recap.typedStoreName ||
+                    recap.name
+                      ? {
+                          venue:
+                            recap.eventRetailer ??
+                            recap.retailer?.name ??
+                            recap.typedStoreName ??
+                            recap.name ??
+                            "",
+                        }
+                      : {}),
+                    ...(recap.typedStoreAddress ||
+                    [recap.eventCity, recap.eventState].filter(Boolean).length > 0
+                      ? {
+                          address:
+                            recap.typedStoreAddress ??
+                            [recap.eventVenue, recap.eventCity, recap.eventState]
+                              .filter(Boolean)
+                              .join(", "),
+                        }
+                      : {}),
+                  }).toString()}`}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
+                  style={{ ...ghostBtn, textDecoration: "none" }}
+                  title="Schedule another demo at this store with details pre-filled"
+                >
+                  Rebook store →
+                </Link>
                 {recap.approved ? (
                   <>
                     <span className="chip chip-lime">

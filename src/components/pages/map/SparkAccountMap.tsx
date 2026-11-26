@@ -232,6 +232,34 @@ function StoreRow({
 
 const selectStyle: React.CSSProperties = { maxWidth: 220 };
 
+const STATE_NAME_TO_CODE: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA",
+  hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA",
+  kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO",
+  montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ",
+  "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND",
+  ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI",
+  "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT",
+  vermont: "VT", virginia: "VA", washington: "WA", "west virginia": "WV",
+  wisconsin: "WI", wyoming: "WY", "district of columbia": "DC",
+};
+
+const normalizeStateParam = (raw: string | null): string => {
+  if (!raw) return "all";
+  const t = raw.trim();
+  if (!t || t.toLowerCase() === "all") return "all";
+  if (t.length === 2) return t.toUpperCase();
+  return STATE_NAME_TO_CODE[t.toLowerCase()] ?? t.toUpperCase();
+};
+
+const isStoreOverdue60d = (store: Store, cutoffMs: number): boolean => {
+  if (store.planned || !store.lastVisitDate) return false;
+  const ms = Date.parse(store.lastVisitDate);
+  return Number.isFinite(ms) && ms > 0 && ms <= cutoffMs;
+};
+
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -242,7 +270,12 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     coverageFilterFromParam(searchParams.get("coverage")),
   );
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
-  const [stateFilter, setStateFilter] = useState("all");
+  const [stateFilter, setStateFilter] = useState(() =>
+    normalizeStateParam(searchParams.get("state")),
+  );
+  const [overdueOnly, setOverdueOnly] = useState(
+    () => searchParams.get("overdue") === "1",
+  );
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [marketFilter, setMarketFilter] = useState("all");
   const [extraPins, setExtraPins] = useState<MapPin[]>([]);
@@ -264,12 +297,14 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     setMapsReady(true);
   }, []);
 
-  // Jump deep-links (`?q=`, `?coverage=`) seed the filters.
+  // Jump deep-links (`?q=`, `?coverage=`, `?state=`, `?overdue=1`) seed the filters.
   useEffect(() => {
     const q = searchParams.get("q");
     if (q != null && q !== search) setSearch(q);
     const cov = coverageFilterFromParam(searchParams.get("coverage"));
     if (cov !== coverage) setCoverage(cov);
+    const st = normalizeStateParam(searchParams.get("state"));
+    if (st !== "all" && st !== stateFilter) setStateFilter(st);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- URL seeds Jump deep-links once
   }, [searchParams]);
 
@@ -371,15 +406,27 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     }),
     [deferredSearch, coverage, stateFilter, retailerFilter, marketFilter],
   );
-  const filtered = useMemo(() => filterStores(stores, filters), [stores, filters]);
+  const overdueCutoffMs = useMemo(() => Date.now() - 60 * 86_400_000, []);
+  const overdueCount = useMemo(
+    () => stores.filter((s) => isStoreOverdue60d(s, overdueCutoffMs)).length,
+    [stores, overdueCutoffMs],
+  );
+  const baseFiltered = useMemo(() => filterStores(stores, filters), [stores, filters]);
+  const filtered = useMemo(
+    () =>
+      overdueOnly
+        ? baseFiltered.filter((s) => isStoreOverdue60d(s, overdueCutoffMs))
+        : baseFiltered,
+    [baseFiltered, overdueOnly, overdueCutoffMs],
+  );
   const counts = useMemo(() => storeCounts(stores), [stores]);
   const shown = useMemo(() => storeCounts(filtered), [filtered]);
   const states = useMemo(() => stateOptions(stores), [stores]);
   const retailers = useMemo(() => retailerOptions(stores), [stores]);
   const markets = useMemo(() => marketOptions(stores, stateFilter), [stores, stateFilter]);
-  const filtering = hasFilters({ ...filters, q: search });
+  const filtering = hasFilters({ ...filters, q: search }) || overdueOnly;
 
-  const scope = `${tenantId ?? "all"}|${coverage}|${stateFilter}|${marketFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
+  const scope = `${tenantId ?? "all"}|${coverage}|${overdueOnly ? "od" : ""}|${stateFilter}|${marketFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
   const fitKey = useMemo(() => storesFitKey(scope, filtered), [scope, filtered]);
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -503,6 +550,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
   const clearFilters = () => {
     setCoverage("all");
+    setOverdueOnly(false);
     setStateFilter("all");
     setMarketFilter("all");
     setRetailerFilter("all");
@@ -510,6 +558,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     const params = new URLSearchParams(searchParams);
     params.delete("q");
     params.delete("coverage");
+    params.delete("state");
+    params.delete("overdue");
     setSearchParams(params, { replace: true });
   };
 
@@ -567,12 +617,15 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         }
       >
         {chips.map((c) => {
-          const on = coverage === c.key;
+          const on = coverage === c.key && !overdueOnly;
           return (
             <button
               key={c.key}
               type="button"
-              onClick={() => setCoverageFilter(c.key)}
+              onClick={() => {
+                setOverdueOnly(false);
+                setCoverageFilter(c.key);
+              }}
               aria-pressed={on}
               className="chip chip-muted"
               style={
@@ -588,6 +641,44 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </button>
           );
         })}
+        {overdueCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setOverdueOnly((v) => !v)}
+            aria-pressed={overdueOnly}
+            className="chip chip-muted"
+            title="Stores whose last filed demo was 60+ days ago with no upcoming visit planned"
+            style={
+              overdueOnly
+                ? {
+                    color: "var(--spark-flag-ink)",
+                    outline: "1.5px solid var(--spark-orange)",
+                  }
+                : undefined
+            }
+          >
+            Overdue 60d+ · {overdueCount.toLocaleString("en-US")}
+          </button>
+        )}
+        {filtering && filtered.length > 0 && filtered.length <= 50 && (
+          <button
+            type="button"
+            onClick={() => {
+              const next = new Map(selectedWaveMap);
+              for (const s of filtered) next.set(s.key, toWaveStore(s));
+              setSelectedWaveMap(next);
+              setWaveSheetOpen(true);
+            }}
+            className="chip chip-sm font-semibold"
+            style={{
+              background: "var(--spark-text)",
+              color: "var(--spark-surface)",
+              border: "none",
+            }}
+          >
+            Book wave ({filtered.length}) →
+          </button>
+        )}
         {roster && roster.rosterTotal > 0 ? (
           <span className="text-xs whitespace-nowrap" style={{ color: "var(--spark-text-secondary)" }}>
             Account roster: {roster.rosterTotal.toLocaleString("en-US")}{" "}
