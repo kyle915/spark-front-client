@@ -37,10 +37,10 @@ export function briefFooter(brief: BriefTone): string {
     return "Draft. The brand does not see this until it is marked reviewed.";
   }
   if (brief.autoReviewed) {
-    return "Written by AI from approved recaps. Every number was checked against this report.";
+    return "Compiled from approved recaps. Every number was checked against this report.";
   }
   const who = brief.reviewedByName?.trim();
   return who
-    ? `Written by AI from approved recaps and reviewed by ${who}.`
-    : "Written by AI from approved recaps and reviewed by the Ignite team.";
+    ? `Compiled from approved recaps and reviewed by ${who}.`
+    : "Compiled from approved recaps and reviewed by the Ignite team.";
 }

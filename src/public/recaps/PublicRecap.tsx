@@ -276,6 +276,7 @@ const PublicRecap: React.FC = () => {
       <RecapDocument
         page
         status={recap ? (recap.approved ? "APPROVED" : "DRAFT") : null}
+        brandName={brandName !== "Spark" ? brandName : null}
         actions={actions}
       >
         <main
@@ -329,35 +330,21 @@ const PublicRecap: React.FC = () => {
     <>
       {shell(
         <div className="space-y-6">
-          {/* Brand + title — tenant first, not Spark ops chrome */}
+          {/* Editorial title + venue/date dateline (co-branded mark sits in sticky header) */}
           <header className="px-1 pt-1">
-            {brandName && brandName !== "Spark" ? (
-              <p
-                className="display"
-                style={{
-                  fontWeight: 800,
-                  fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
-                  letterSpacing: "-0.04em",
-                  lineHeight: 1.05,
-                  margin: 0,
-                  color: "var(--recap-brand, var(--recap-heading, #3f5c12))",
-                }}
-              >
-                {brandName}
-              </p>
-            ) : null}
             <h1
-              className="display font-bold mt-2"
+              className="display font-semibold"
               style={{
                 letterSpacing: "-0.03em",
-                fontSize: brandName && brandName !== "Spark" ? "1.35rem" : "1.875rem",
+                fontSize: "clamp(1.5rem, 3.2vw, 2.125rem)",
+                lineHeight: 1.12,
                 margin: 0,
                 color: "var(--recap-text, #14160f)",
               }}
             >
               {recap.name}
             </h1>
-            <p className="mt-1 recap-doc-kicker">
+            <p className="mt-1.5 recap-doc-kicker">
               {place || recap.address || "—"}
               {" · "}
               {fmtDate(recap.date)}

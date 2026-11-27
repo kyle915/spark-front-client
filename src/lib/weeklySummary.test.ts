@@ -121,12 +121,12 @@ describe("draft lines", () => {
     ).toBe("Sent by Sam Staff to 2 recipients on Nov 17");
   });
 
-  it("says it was written by AI, and when it has been edited", () => {
+  it("says it was compiled from approved recaps, and when it has been edited", () => {
     expect(writtenLine({ generatedAt: "2026-11-16T15:00:00+00:00", editedBody: "" })).toBe(
-      "Written by AI from approved recaps on Nov 16.",
+      "Compiled from approved recaps on Nov 16.",
     );
     expect(writtenLine({ generatedAt: "bad", editedBody: "Mine." })).toBe(
-      "Written by AI from approved recaps. Edited since.",
+      "Compiled from approved recaps. Edited since.",
     );
   });
 

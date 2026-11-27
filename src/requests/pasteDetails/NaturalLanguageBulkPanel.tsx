@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { commitMutation } from "relay-runtime";
 import { useMutation } from "react-relay/hooks";
@@ -26,6 +26,7 @@ interface NaturalLanguageBulkPanelProps {
   selectedProductIds: ReadonlySet<string>;
   formNotes: string;
   isClient: boolean;
+  initialPrompt?: string;
 }
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -46,6 +47,7 @@ export const NaturalLanguageBulkPanel: React.FC<NaturalLanguageBulkPanelProps> =
   selectedProductIds,
   formNotes,
   isClient,
+  initialPrompt,
 }) => {
   const inputId = useId();
   const navigate = useNavigate();
@@ -54,7 +56,8 @@ export const NaturalLanguageBulkPanel: React.FC<NaturalLanguageBulkPanelProps> =
     CreateRequestsWaveMutation,
   );
 
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt ?? "");
+  const consumedInitialRef = useRef<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [summary, setSummary] = useState("");
@@ -120,6 +123,14 @@ export const NaturalLanguageBulkPanel: React.FC<NaturalLanguageBulkPanelProps> =
       },
     });
   };
+
+  useEffect(() => {
+    const seeded = (initialPrompt ?? "").trim();
+    if (!seeded || !tenantId || consumedInitialRef.current === seeded) return;
+    consumedInitialRef.current = seeded;
+    runParse(seeded);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt, tenantId]);
 
   const activeRows = useMemo(
     () => rows.filter((r) => !excludedKeys.has(r.rowKey)),

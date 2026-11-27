@@ -3570,7 +3570,10 @@ const RecapCustomViewInner = ({
             </div>
           </div>
 
-          <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
+          <RecapDocument
+            status={recap.approved ? "APPROVED" : "DRAFT"}
+            brandLogoUrl={useAuthStore.getState().tenantMeta?.logo}
+          >
           <div className="space-y-6">
           <div className="spark-card p-6">
             {recap.isThirdParty ? (

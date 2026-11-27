@@ -142,9 +142,9 @@ export function statusLine(summary: {
   return `Reviewed${who}${when ? ` on ${when}` : ""}`;
 }
 
-/** "Written by AI from approved recaps on Nov 16. Edited since." */
+/** "Compiled from approved recaps on Nov 16. Edited since." */
 export function writtenLine(summary: { generatedAt: string; editedBody: string }): string {
   const when = shortDate(summary.generatedAt);
-  const base = `Written by AI from approved recaps${when ? ` on ${when}` : ""}.`;
+  const base = `Compiled from approved recaps${when ? ` on ${when}` : ""}.`;
   return summary.editedBody.trim() ? `${base} Edited since.` : base;
 }

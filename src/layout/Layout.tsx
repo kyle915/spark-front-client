@@ -5,6 +5,7 @@ import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
 import CommandPalette from "./CommandPalette";
 import StoreSheet from "@/components/store/StoreSheet";
+import AskSparkHost from "@/components/ai/AskSparkHost";
 import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
@@ -47,6 +48,7 @@ function LayoutChromeInner({ children }: LayoutProps) {
       <UpdateBanner />
       <CommandPalette />
       <StoreSheet />
+      <AskSparkHost />
       {open ? (
         <button
           type="button"

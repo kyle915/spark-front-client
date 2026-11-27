@@ -44,18 +44,18 @@ export function SparkSheet({
           {!isRight ? <div className="spark-sheet-handle" aria-hidden /> : null}
           <div
             className={`spark-sheet-header flex items-center gap-3${
-              isRight ? " pt-4 pb-3 px-5" : ""
+              isRight ? " pt-3.5 pb-3 px-5" : ""
             }`}
           >
             <div className="min-w-0 flex-1">
               {eyebrow ? (
-                <Drawer.Description className="spark-sheet-eyebrow mono text-[10px] mb-0.5 uppercase">
+                <Drawer.Description className="spark-sheet-eyebrow text-xs font-medium mb-0.5">
                   {eyebrow}
                 </Drawer.Description>
               ) : (
                 <Drawer.Description className="sr-only">{title}</Drawer.Description>
               )}
-              <Drawer.Title className="spark-sheet-title display font-bold truncate">
+              <Drawer.Title className="spark-sheet-title display font-semibold truncate">
                 {title}
               </Drawer.Title>
             </div>
@@ -64,11 +64,14 @@ export function SparkSheet({
             ) : null}
             <button
               type="button"
-              className="spark-sheet-close mono text-[11px] shrink-0 px-2.5 py-2 rounded-lg"
+              className="spark-sheet-close inline-flex items-center gap-1.5 text-xs font-medium shrink-0 px-2.5 py-1.5 rounded-lg"
               aria-label="Close"
               onClick={() => onOpenChange(false)}
             >
-              ✕
+              <span aria-hidden className="text-sm leading-none">
+                ✕
+              </span>
+              <span className="mono text-[10px] opacity-75">Esc</span>
             </button>
           </div>
           <div

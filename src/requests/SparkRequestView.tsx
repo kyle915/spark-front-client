@@ -990,7 +990,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                   subjectLabel={ev.name || "this event"}
                   label={
                     (request.events ?? []).filter(Boolean).length > 1
-                      ? `Ask AI · ${ev.name || "event"}`
+                      ? `Ask Spark · ${ev.name || "event"}`
                       : undefined
                   }
                 />

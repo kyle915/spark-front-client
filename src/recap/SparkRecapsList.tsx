@@ -128,6 +128,8 @@ import {
 } from "./recapTriage";
 import { useRecapReviewTriage } from "./useRecapReviewTriage";
 import { scanRecapLine } from "./scanLine";
+import RecapQuickPeekSheet from "./RecapQuickPeekSheet";
+import { buildPublicRecapShareUrl } from "./recapQuickPeek";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -492,7 +494,7 @@ const RecapCard: React.FC<{
   forceApproved?: boolean;
   // Ops-only: pick which of this recap's numbers count toward a plan.
   onPushToPlan?: ((recap: Recap) => void) | null;
-  onOpenRecap?: ((recap: Recap) => void) | null;
+  onOpenRecap?: ((recap: Recap, e?: React.MouseEvent) => void) | null;
   reviewFlags?: readonly ReviewFlagSummary[] | null;
   needsEyesWhy?: string | null;
 }> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap, reviewFlags, needsEyesWhy }) => {
@@ -547,7 +549,7 @@ const RecapCard: React.FC<{
         they still receive their own clicks instead of the overlay. */}
     <Link
       to={href}
-      onClick={() => onOpenRecap?.(recap)}
+      onClick={(e) => onOpenRecap?.(recap, e)}
       aria-label={`Open recap ${recap.name}`}
       className="absolute inset-0 z-[1]"
     />
@@ -892,7 +894,7 @@ const RecapCompactRow: React.FC<{
   selectMode: boolean;
   onToggleSelect: () => void;
   forceApproved?: boolean;
-  onOpenRecap?: ((recap: Recap) => void) | null;
+  onOpenRecap?: ((recap: Recap, e?: React.MouseEvent) => void) | null;
   needsEyesWhy?: string | null;
 }> = ({
   recap,
@@ -945,7 +947,7 @@ const RecapCompactRow: React.FC<{
     >
       <Link
         to={href}
-        onClick={() => onOpenRecap?.(recap)}
+        onClick={(e) => onOpenRecap?.(recap, e)}
         aria-label={line}
         title={needsEyesWhy ? `${line}. ${needsEyesWhy}` : line}
         className="absolute inset-0 z-[1]"
@@ -1154,7 +1156,7 @@ const RecapsListInner: React.FC<{
   targetPage: number;
   onPageChange: (page: number) => void;
   returnFilters?: RecapListReturnFilters | null;
-  onOpenRecap?: ((recap: Recap) => void) | null;
+  onOpenRecap?: ((recap: Recap, e?: React.MouseEvent) => void) | null;
   reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
   triageFilter?: RecapTriageFilter;
   triageById?: Map<string, RecapTriageSummary>;
@@ -1398,7 +1400,7 @@ const RecapsBothLive: React.FC<{
   targetPage: number;
   onPageChange: (page: number) => void;
   returnFilters?: RecapListReturnFilters | null;
-  onOpenRecap?: ((recap: Recap) => void) | null;
+  onOpenRecap?: ((recap: Recap, e?: React.MouseEvent) => void) | null;
   reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
   triageFilter?: RecapTriageFilter;
   triageById?: Map<string, RecapTriageSummary>;
@@ -1467,7 +1469,7 @@ const RecapsListFetched: React.FC<{
   targetPage: number;
   onPageChange: (page: number) => void;
   returnFilters?: RecapListReturnFilters | null;
-  onOpenRecap?: ((recap: Recap) => void) | null;
+  onOpenRecap?: ((recap: Recap, e?: React.MouseEvent) => void) | null;
   reviewFlagsById?: Map<string, ReviewFlagSummary[]>;
   triageFilter?: RecapTriageFilter;
   triageById?: Map<string, RecapTriageSummary>;
@@ -2196,6 +2198,8 @@ export default function SparkRecapsList() {
     }
   });
   const [focusedIdx, setFocusedIdx] = useState(-1);
+  const [peekUuid, setPeekUuid] = useState<string | null>(null);
+  const [peekShareModalRecap, setPeekShareModalRecap] = useState<Recap | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [retailerFilter, setRetailerFilter] = useState(
     initialUrlFilters.retailer,
@@ -2512,7 +2516,7 @@ export default function SparkRecapsList() {
   }, [isClient, queueItems, currentReturnHref]);
 
   const handleOpenRecap = useCallback(
-    (r: Recap) => {
+    (r: Recap, e?: React.MouseEvent) => {
       if (!isClient && queueItems.length > 0) {
         saveRecapReviewQueue({
           items: queueItems,
@@ -2525,14 +2529,29 @@ export default function SparkRecapsList() {
       if (!isClient) {
         prefetchRecapDetails(
           environment,
-          recapQueueWarmTargets(r.uuid).map((item) => ({
-            uuid: item.uuid,
-            isCustom: item.isCustom,
-          })),
+          [
+            { uuid: r.uuid, isCustom: r.kind === "custom" },
+            ...recapQueueWarmTargets(r.uuid).map((item) => ({
+              uuid: item.uuid,
+              isCustom: item.isCustom,
+            })),
+          ],
         );
       }
+      if (
+        e &&
+        !selectMode &&
+        e.button === 0 &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.shiftKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        setPeekUuid(r.uuid);
+      }
     },
-    [currentReturnHref, environment, isClient, queueItems],
+    [currentReturnHref, environment, isClient, queueItems, selectMode],
   );
 
   const openNextReview = useCallback(async () => {
@@ -2682,6 +2701,7 @@ export default function SparkRecapsList() {
       );
     };
     const onKey = (e: KeyboardEvent) => {
+      if (peekUuid) return;
       if (showHelp) {
         if (e.key === "Escape" || e.key === "?") {
           e.preventDefault();
@@ -2718,6 +2738,10 @@ export default function SparkRecapsList() {
       } else if (e.key === "k" || e.key === "ArrowUp") {
         e.preventDefault();
         setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
+      } else if (e.key === " " && focused) {
+        e.preventDefault();
+        handleOpenRecap(focused);
+        setPeekUuid(focused.uuid);
       } else if (e.key === "Enter" && focused) {
         e.preventDefault();
         handleOpenRecap(focused);
@@ -2729,7 +2753,7 @@ export default function SparkRecapsList() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [focusedIdx, handleOpenRecap, isClient, navigate, openNextReview, returnFilters, showHelp, statusFilter, activationFilter, visibleRecaps]);
+  }, [focusedIdx, handleOpenRecap, isClient, navigate, openNextReview, peekUuid, returnFilters, showHelp, statusFilter, activationFilter, visibleRecaps]);
 
   // ─── Campaign report multi-select ────────────────────────────
   // Set of recap.id (relay id) the user has ticked. Survives filter
@@ -3432,7 +3456,7 @@ export default function SparkRecapsList() {
               <div className="flex flex-wrap gap-2">
                 <SparkGhostButton
                   onClick={() => {
-                    window.location.href = "/recap/create";
+                    navigate("/recap/create");
                   }}
                 >
                   + New recap
@@ -3444,17 +3468,19 @@ export default function SparkRecapsList() {
         <div
           className="sticky top-0 z-20 relative spark-sticky-filters flex flex-col"
           style={{
-            background: "rgba(var(--spark-bg-rgb),0.94)",
-            border: "1px solid rgba(var(--spark-ink-rgb),0.07)",
-            borderRadius: 10,
+            background: "color-mix(in srgb, var(--spark-bg) 94%, transparent)",
+            borderBottom: "1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb),0.08))",
+            borderRadius: 0,
+            paddingLeft: 0,
+            paddingRight: 0,
           }}
         >
           <div className="flex flex-wrap gap-2 items-center">
-            <div className="min-w-[120px] mr-1 shrink-0">
+            <div className="min-w-[96px] mr-1 shrink-0">
               <p className="label-mini">Total</p>
               <p
-                className="tab-num text-2xl font-bold leading-none mt-0.5"
-                style={{ color: "var(--spark-text)" }}
+                className="tab-num text-2xl font-semibold leading-none mt-0.5"
+                style={{ color: "var(--spark-text)", letterSpacing: "-0.03em" }}
               >
                 <CountReel value={meta.total} />
               </p>
@@ -3464,14 +3490,11 @@ export default function SparkRecapsList() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search venue, retailer, R-ID…"
-              className="rounded-xl text-sm"
-              style={{ ...filterStyle, flex: 1, minWidth: 140, maxWidth: 320 }}
+              className="rounded-lg text-sm"
+              style={{ ...filterStyle, flex: 1, minWidth: 140, maxWidth: 300 }}
             />
             {!isClient && (
-              <div
-                className="flex rounded-xl overflow-x-auto max-w-full spark-scroll-fade"
-                style={{ border: "1px solid var(--spark-border)" }}
-              >
+              <div className="pill-group overflow-x-auto max-w-full spark-scroll-fade">
                 {(
                   [
                     ["needs_review", "Needs review"],
@@ -3485,17 +3508,7 @@ export default function SparkRecapsList() {
                     key={key}
                     type="button"
                     onClick={() => setStatusFilter(key)}
-                    className="px-2.5 py-2 text-xs font-semibold whitespace-nowrap"
-                    style={{
-                      background:
-                        pipelineKey === key
-                          ? "rgba(var(--spark-ok-rgb),0.16)"
-                          : "transparent",
-                      color:
-                        pipelineKey === key
-                          ? "var(--spark-ok-ink)"
-                          : "rgba(var(--spark-ink-rgb),0.65)",
-                    }}
+                    className={`pill-btn whitespace-nowrap ${pipelineKey === key ? "on" : ""}`}
                   >
                     {label}
                     {key === "needs_review" ? (
@@ -3600,8 +3613,7 @@ export default function SparkRecapsList() {
             </div>
             {!isClient && flagsEnabled && (
               <div
-                className="flex rounded-xl overflow-hidden shrink-0"
-                style={{ border: "1px solid var(--spark-border)" }}
+                className="pill-group shrink-0"
                 role="group"
                 aria-label="Clean versus Needs Eyes triage"
               >
@@ -3616,25 +3628,16 @@ export default function SparkRecapsList() {
                     key={key}
                     type="button"
                     onClick={() => setTriageFilter(key)}
-                    className="px-2.5 py-2 text-xs font-semibold whitespace-nowrap"
-                    style={{
-                      background:
-                        triageFilter === key
-                          ? key === "needs_eyes"
-                            ? "rgba(239,90,42,0.16)"
-                            : "rgba(var(--spark-ok-rgb),0.16)"
-                          : "transparent",
-                      color:
-                        triageFilter === key
-                          ? key === "needs_eyes"
-                            ? "var(--spark-orange)"
-                            : "var(--spark-ok-ink)"
-                          : "rgba(var(--spark-ink-rgb),0.65)",
-                    }}
+                    className={`pill-btn whitespace-nowrap ${triageFilter === key ? "on" : ""}`}
+                    style={
+                      triageFilter === key && key === "needs_eyes"
+                        ? { color: "var(--spark-orange)" }
+                        : undefined
+                    }
                   >
                     {label}
                     {count > 0 ? (
-                      <span className="mono ml-1 text-[10px] opacity-70">
+                      <span className="mono ml-1 text-[10px] opacity-75">
                         {count}
                       </span>
                     ) : null}
@@ -3942,7 +3945,8 @@ export default function SparkRecapsList() {
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href = "/imports";
+                  navigate("/imports");
+                  setOpsOpen(false);
                 }}
                 className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
                 style={ghostBtn}
@@ -3953,7 +3957,8 @@ export default function SparkRecapsList() {
                 <button
                   type="button"
                   onClick={() => {
-                    window.location.href = "/recaps/templates";
+                    navigate("/recaps/templates");
+                    setOpsOpen(false);
                   }}
                   className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
                   style={ghostBtn}
@@ -4437,14 +4442,17 @@ export default function SparkRecapsList() {
               {[
                 ["/", "Focus search"],
                 ["n", "Review next"],
-                ["j / k", "Move focus"],
-                ["Enter", "Open recap"],
+                ["j / k", "Move focus / next recap"],
+                ["Space", "Quick-peek recap"],
+                ["a", "Approve in quick peek"],
+                ["s", "Copy share link in quick peek"],
+                ["Enter", "Open full recap"],
                 ["?", "This help"],
-                ["Esc", "Clear focus"],
+                ["Esc", "Close / clear focus"],
               ].map(([key, label]) => (
                 <div key={key} className="spark-inset-row justify-between">
                   <span className="text-sm">{label}</span>
-                  <span className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "var(--spark-ok-ink)" }}>
+                  <span className="mono text-[10px]" style={{ letterSpacing: "0.08em", color: "var(--spark-text-secondary)" }}>
                     {key}
                   </span>
                 </div>
@@ -4453,6 +4461,115 @@ export default function SparkRecapsList() {
           </div>
         </div>
       )}
+      {(() => {
+        const peekIdx = peekUuid
+          ? visibleRecaps.findIndex((r) => r.uuid === peekUuid)
+          : -1;
+        const peekRecap = peekIdx >= 0 ? visibleRecaps[peekIdx] : null;
+        return (
+          <RecapQuickPeekSheet
+            recap={peekRecap}
+            open={Boolean(peekRecap)}
+            onOpenChange={(next) => {
+              if (!next) setPeekUuid(null);
+            }}
+            index={Math.max(0, peekIdx)}
+            total={visibleRecaps.length}
+            onPrev={() => {
+              if (peekIdx > 0) {
+                const prev = visibleRecaps[peekIdx - 1];
+                if (prev) setPeekUuid(prev.uuid);
+              }
+            }}
+            onNext={() => {
+              if (peekIdx >= 0 && peekIdx < visibleRecaps.length - 1) {
+                const nxt = visibleRecaps[peekIdx + 1];
+                if (nxt) setPeekUuid(nxt.uuid);
+              }
+            }}
+            isClient={isClient}
+            forceApproved={
+              peekRecap ? justApprovedIds.has(peekRecap.id) : false
+            }
+            approving={isBulkApproving || approvePhase !== "idle"}
+            onApprove={(item) => {
+              const target = visibleRecaps.find((r) => r.uuid === item.uuid);
+              if (!target) return;
+              commitApproveTargets([target]);
+              if (
+                (statusFilter === "needs_review" || statusFilter === "draft") &&
+                peekIdx >= 0 &&
+                peekIdx < visibleRecaps.length - 1
+              ) {
+                const nxt = visibleRecaps[peekIdx + 1];
+                if (nxt) setPeekUuid(nxt.uuid);
+              }
+            }}
+            onCopyShareLink={async (item) => {
+              const url = buildPublicRecapShareUrl(
+                window.location.origin,
+                item.shareToken,
+              );
+              if (!url) return;
+              try {
+                await navigator.clipboard.writeText(url);
+                const target = visibleRecaps.find((r) => r.uuid === item.uuid);
+                if (target) {
+                  const byKind = idsByKind([target]);
+                  commitMarkShared({
+                    variables: {
+                      input: {
+                        recapIds: byKind.recapIds,
+                        customRecapIds: byKind.customRecapIds,
+                      },
+                    },
+                  });
+                }
+                showAlert("Copied public recap link.", "success");
+              } catch {
+                showAlert("Couldn't copy share link.", "warning");
+              }
+            }}
+            onOpenShareModal={(item) => {
+              const target = visibleRecaps.find((r) => r.uuid === item.uuid);
+              if (target) setPeekShareModalRecap(target);
+            }}
+            onOpenFull={(item) => {
+              const target = visibleRecaps.find((r) => r.uuid === item.uuid);
+              if (!target) return;
+              setPeekUuid(null);
+              navigate(
+                recapHref(target, statusFilter, activationFilter, returnFilters),
+              );
+            }}
+            onOpenRequest={(reqUuid) => {
+              setPeekUuid(null);
+              navigate(`/request/view/${reqUuid}`, {
+                state: { from: "/recaps/list" },
+              });
+            }}
+            reviewFlags={
+              peekRecap ? reviewFlagsById?.get(peekRecap.id) : undefined
+            }
+            needsEyesWhy={
+              peekRecap
+                ? needsEyesWhyText(
+                    isClient ? null : triageById?.get(peekRecap.id),
+                  )
+                : null
+            }
+          />
+        );
+      })()}
+      {peekShareModalRecap?.shareToken ? (
+        <ShareRecapModal
+          recapId={peekShareModalRecap.id}
+          kind={peekShareModalRecap.kind}
+          shareToken={peekShareModalRecap.shareToken}
+          recapName={peekShareModalRecap.name}
+          onClose={() => setPeekShareModalRecap(null)}
+        />
+      ) : null}
       {confirmArchiveTargets ? (
         <SparkConfirm
           tone="danger"

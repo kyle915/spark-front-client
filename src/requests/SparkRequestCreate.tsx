@@ -349,6 +349,20 @@ const SparkRequestInner: React.FC = () => {
   const qpDate = (searchParams.get("date") || searchParams.get("startsOn") || "")
     .trim()
     .slice(0, 10);
+  const qpMode = (searchParams.get("mode") ?? "").trim().toLowerCase();
+  const qpPrompt = (searchParams.get("prompt") ?? "").trim();
+  const [entryMode, setEntryMode] = useState<"single" | "wave" | "paste">(() => {
+    if (qpMode === "wave" || qpPrompt) return "wave";
+    if (qpMode === "paste" && !isClient) return "paste";
+    return "single";
+  });
+  useEffect(() => {
+    if (qpMode === "wave" || qpPrompt) {
+      setEntryMode("wave");
+    } else if (qpMode === "paste" && !isClient) {
+      setEntryMode("paste");
+    }
+  }, [qpMode, qpPrompt, isClient]);
 
   const email = user?.email ?? "";
   const [date, setDate] = useState(qpDate);
@@ -601,6 +615,7 @@ const SparkRequestInner: React.FC = () => {
     if (drafts.length === 0) return;
     setPasteQueue({ drafts, index: 0 });
     loadPastedDraft(drafts[0]);
+    setEntryMode("single");
   };
 
   /** Move to the next pasted draft. Returns it, or null when none is left. */
@@ -1091,7 +1106,7 @@ const SparkRequestInner: React.FC = () => {
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-6 max-w-3xl mx-auto px-1 sm:px-0"
+      className="space-y-6 max-w-5xl mx-auto px-1 sm:px-0"
     >
       {/* Repeat-venue suggestions load in the background — their own
           Suspense boundary keeps the heavy request scan off the critical
@@ -1103,58 +1118,95 @@ const SparkRequestInner: React.FC = () => {
         />
       </Suspense>
 
-      {/* Header */}
-      <div>
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-text-meta)",
-          }}
-        >
-          NEW REQUEST · QUICK FORM
-        </p>
-        <h1
-          className="display text-4xl font-bold mt-2"
-          style={{ letterSpacing: "-0.04em" }}
-        >
-          Tell us about the visit.
-        </h1>
-        <p
-          className="mt-2"
-          style={{ color: "var(--spark-text-meta)" }}
-        >
-          A few fields. We auto-route to your Ignite RMM for approval,
-          staffing, and scheduling.
-        </p>
-        {activationPlanId ? (
+      {/* Studio Header + Mode Switch */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
           <p
-            className="mono text-[10px] mt-3"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-lime)",
-            }}
+            className="text-xs font-medium"
+            style={{ color: "var(--spark-text-meta)" }}
           >
-            ▸ WILL ATTACH TO PLAN ON SUBMIT
+            {publicTenant?.name
+              ? `${publicTenant.name} · New activation`
+              : "New activation"}
           </p>
-        ) : null}
+          <h1
+            className="display text-3xl sm:text-4xl font-semibold mt-1"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            Schedule an activation
+          </h1>
+          <p
+            className="text-sm mt-1.5"
+            style={{ color: "var(--spark-text-meta)" }}
+          >
+            Auto-routed to your Ignite regional manager for approval, staffing,
+            and scheduling.
+          </p>
+          {activationPlanId ? (
+            <p
+              className="text-xs font-medium mt-2"
+              style={{ color: "var(--spark-ok-ink)" }}
+            >
+              ● Attaches to selected plan on submit
+            </p>
+          ) : null}
+        </div>
+
+        <div className="pill-group" role="tablist" aria-label="Scheduling mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={entryMode === "single"}
+            onClick={() => setEntryMode("single")}
+            className={`pill-btn ${entryMode === "single" ? "on" : ""}`}
+          >
+            Single / Repeat
+          </button>
+          {tenantId ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={entryMode === "wave"}
+              onClick={() => setEntryMode("wave")}
+              className={`pill-btn ${entryMode === "wave" ? "on" : ""}`}
+            >
+              Plain-English wave
+            </button>
+          ) : null}
+          {!isClient && tenantId ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={entryMode === "paste"}
+              onClick={() => setEntryMode("paste")}
+              className={`pill-btn ${entryMode === "paste" ? "on" : ""}`}
+            >
+              Paste list
+              {pasteQueue ? (
+                <span className="mono ml-1 text-[10px] opacity-75">
+                  {pasteQueue.index + 1}/{pasteQueue.drafts.length}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* Restored-draft banner. Auto-dismisses when the user starts
           editing (they implicitly accept the restore by typing). */}
-      {draftRestored && (
+      {entryMode === "single" && draftRestored && (
         <div
-          className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl"
+          className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl"
           style={{
-            background: "rgba(95,184,239,0.08)",
-            border: "1px solid rgba(95,184,239,0.3)",
+            background: "rgba(var(--spark-ink-rgb),0.03)",
+            border: "1px solid var(--spark-border)",
           }}
         >
           <span
             className="text-sm"
             style={{ color: "var(--spark-text-secondary)" }}
           >
-            ↻ Picked up your unfinished draft.
+            Picked up your unfinished draft.
           </span>
           <button
             type="button"
@@ -1175,33 +1227,69 @@ const SparkRequestInner: React.FC = () => {
               clearDraft();
               setDraftRestored(false);
             }}
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-sky)",
-            }}
+            className="text-xs font-medium underline underline-offset-2"
+            style={{ color: "var(--spark-text-secondary)" }}
           >
-            CLEAR + START FRESH
+            Clear draft
           </button>
         </div>
       )}
 
       {/* Plain-English bulk scheduling across tenant Account Map stores (RMMs + clients). */}
-      {tenantId ? (
-        <NaturalLanguageBulkPanel
-          tenantId={tenantId}
-          requestTypeId={requestTypeId}
-          defaultTimezoneId={timezoneId}
-          timezones={timezones}
-          catalogProducts={products}
-          selectedProductIds={selectedProducts}
-          formNotes={notes}
-          isClient={isClient}
-        />
+      {entryMode === "wave" && tenantId ? (
+        <div className="space-y-4">
+          {requestTypes.length > 0 ? (
+            <div className="spark-card p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium" style={{ color: "var(--spark-text-meta)" }}>
+                  Wave defaults
+                </p>
+                <p className="text-sm font-medium mt-0.5">
+                  Choose the activation type applied to every visit in this wave
+                </p>
+              </div>
+              <select
+                style={{ ...inputStyle, width: "auto", minWidth: 220, padding: "0.55rem 0.85rem" }}
+                value={requestTypeId}
+                onChange={(e) => setRequestTypeId(e.target.value)}
+                aria-label="Wave activation type"
+              >
+                <option value="">Select activation type</option>
+                {requestTypes
+                  .filter((t) =>
+                    [
+                      "retail sampling",
+                      "event activation",
+                      "on-premise sampling",
+                      "on-premise",
+                    ].includes((t.name ?? "").toLowerCase()),
+                  )
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {(t.name ?? "").toLowerCase() === "on-premise"
+                        ? "On-Premise Sampling"
+                        : t.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          ) : null}
+          <NaturalLanguageBulkPanel
+            tenantId={tenantId}
+            requestTypeId={requestTypeId}
+            defaultTimezoneId={timezoneId}
+            timezones={timezones}
+            catalogProducts={products}
+            selectedProductIds={selectedProducts}
+            formNotes={notes}
+            isClient={isClient}
+            initialPrompt={qpPrompt}
+          />
+        </div>
       ) : null}
 
       {/* Staff only: read a pasted email or sheet rows into the form. */}
-      {!isClient && tenantId ? (
+      {!isClient && tenantId && (entryMode === "paste" || pasteQueue !== null) ? (
         <PasteDetailsPanel
           tenantId={tenantId}
           queue={pasteQueue}
@@ -1219,7 +1307,9 @@ const SparkRequestInner: React.FC = () => {
         />
       ) : null}
 
-      {/* Card */}
+      {/* Single / Repeat Form + Live Activation Summary Rail */}
+      {entryMode === "single" ? (
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
       <div className="spark-card p-6 lg:p-8 space-y-6" style={{ paddingBottom: "6rem" }}>
         {/* HERO — 3 fields visible by default. Everything else collapses. */}
         <div className="space-y-5">
@@ -1948,14 +2038,12 @@ const SparkRequestInner: React.FC = () => {
                     className="aspect-square rounded-xl relative overflow-hidden transition"
                     style={{
                       background: on
-                        ? "rgba(var(--spark-accent-rgb),0.10)"
+                        ? "rgba(var(--spark-ink-rgb),0.06)"
                         : "rgba(var(--spark-ink-rgb),0.025)",
                       border: on
                         ? "2px solid var(--spark-lime)"
                         : "1px solid var(--spark-border)",
-                      boxShadow: on
-                        ? "0 0 18px rgba(var(--spark-accent-rgb),0.25)"
-                        : "none",
+                      boxShadow: "none",
                     }}
                     title={p.name}
                   >
@@ -2067,52 +2155,160 @@ const SparkRequestInner: React.FC = () => {
 
       </div>
 
-      {/* Sticky submit bar — always in view */}
+      {/* Desktop sticky Live Activation Summary rail */}
+      <aside
+        aria-label="Live activation summary"
+        className="hidden lg:block sticky top-6 spark-card p-5 space-y-4"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold" style={{ color: "var(--spark-text)" }}>
+            Live activation summary
+          </p>
+          <span
+            className={`chip ${canSubmit ? "chip-lime" : "chip-muted"}`}
+          >
+            {canSubmit ? "● Ready" : "Draft"}
+          </span>
+        </div>
+
+        <div className="space-y-3 text-xs" style={{ borderTop: "1px solid var(--spark-hairline, var(--spark-border))", paddingTop: "0.75rem" }}>
+          <div>
+            <p style={{ color: "var(--spark-text-meta)" }}>Venue & address</p>
+            <p className="text-sm font-medium mt-0.5 truncate" style={{ color: "var(--spark-text)" }}>
+              {venue.trim() || "No venue selected"}
+            </p>
+            {address.trim() ? (
+              <p className="mt-0.5 leading-snug" style={{ color: "var(--spark-text-secondary)" }}>
+                {address.trim()}
+              </p>
+            ) : null}
+            <p
+              className="mt-1 font-medium"
+              style={{
+                color: /\b\d{5}\b/.test(address)
+                  ? "var(--spark-ok-ink)"
+                  : "var(--spark-text-meta)",
+              }}
+            >
+              {/\b\d{5}\b/.test(address)
+                ? "✓ Territory ZIP verified"
+                : "Add full street + 5-digit ZIP"}
+            </p>
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--spark-hairline, var(--spark-border))", paddingTop: "0.75rem" }}>
+            <p style={{ color: "var(--spark-text-meta)" }}>Schedule & timezone</p>
+            <p className="text-sm font-medium mt-0.5 tab-num" style={{ color: "var(--spark-text)" }}>
+              {multiDateEvent
+                ? listedVisits > 0
+                  ? `${listedVisits} event ${listedVisits === 1 ? "slot" : "slots"}`
+                  : "Pick event dates"
+                : date
+                  ? listedVisits > 1
+                    ? `${date} + ${listedVisits - 1} more`
+                    : date
+                  : "Pick visit date"}
+            </p>
+            <p className="mt-0.5 tab-num" style={{ color: "var(--spark-text-secondary)" }}>
+              {!multiDateEvent ? `${startTime || "12:00"} – ${endTime || "16:00"} · ` : ""}
+              {timezoneOptions.find((tz) => String(tz.id) === displayTimezoneId)?.name ||
+                "Timezone auto-fills from address"}
+            </p>
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--spark-hairline, var(--spark-border))", paddingTop: "0.75rem" }}>
+            <p style={{ color: "var(--spark-text-meta)" }}>Format & staffing</p>
+            <p className="text-sm font-medium mt-0.5" style={{ color: "var(--spark-text)" }}>
+              {(selectedRequestTypeName || "").toLowerCase() === "on-premise"
+                ? "On-Premise Sampling"
+                : selectedRequestTypeName || "Select activation type"}
+            </p>
+            <p className="mt-0.5 tab-num" style={{ color: "var(--spark-text-secondary)" }}>
+              {baCount} {baCount === 1 ? "Ambassador" : "Ambassadors"}
+              {" · "}
+              {schedulingStatus === "already_scheduled"
+                ? "Booked with account"
+                : schedulingStatus === "needs_scheduling"
+                  ? "Ignite books visit"
+                  : "Pick booking status"}
+            </p>
+          </div>
+
+          {products.length > 0 ? (
+            <div style={{ borderTop: "1px solid var(--spark-hairline, var(--spark-border))", paddingTop: "0.75rem" }}>
+              <p className="tab-num" style={{ color: "var(--spark-text-meta)" }}>
+                SKUs ({selectedProducts.size} selected)
+              </p>
+              {selectedProducts.size > 0 ? (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {products
+                    .filter((p) => selectedProducts.has(String(p.id)))
+                    .slice(0, 5)
+                    .map((p) => (
+                      <span key={p.id} className="chip chip-muted">
+                        {p.name}
+                      </span>
+                    ))}
+                  {selectedProducts.size > 5 ? (
+                    <span className="chip chip-muted tab-num">
+                      +{selectedProducts.size - 5}
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
+                  Optional — select featured SKUs
+                </p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </aside>
+      </div>
+      ) : null}
+
+      {/* Sticky submit bar — shown in Single / Repeat mode */}
+      {entryMode === "single" ? (
       <div
         className="fixed left-0 right-0 z-40"
         style={{
           bottom: 0,
-          background: "rgba(var(--spark-bg-rgb),0.92)",
-          backdropFilter: "blur(14px)",
+          background: "color-mix(in srgb, var(--spark-bg) 92%, transparent)",
+          backdropFilter: "blur(12px)",
           borderTop: "1px solid var(--spark-border)",
         }}
       >
-        <div className="max-w-3xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">
           <button
             type="button"
             onClick={() => navigate("/requests/create-detailed")}
-            className="mono text-[10px] transition"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-text-meta)",
-            }}
+            className="text-xs font-medium transition underline underline-offset-2"
+            style={{ color: "var(--spark-text-meta)" }}
           >
-            ⛁ DETAILED FORM →
+            Detailed form →
           </button>
           <div className="flex items-center gap-3 flex-wrap">
             <div
-              className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
+              className="text-xs tab-num"
+              style={{ color: "var(--spark-text-meta)" }}
             >
-              {listedVisits > 1 ? `${listedVisits} VISITS · ` : ""}
-              {`${selectedProducts.size} PRODUCTS`}
+              {listedVisits > 1 ? `${listedVisits} visits · ` : ""}
+              {`${selectedProducts.size} ${selectedProducts.size === 1 ? "SKU" : "SKUs"}`}
               {showBaCount ? ` · ${baCount} BAs` : ""}
               {submitBlocker || timeMissing ? (
                 <span style={{ color: "var(--spark-orange, #ef5a2a)" }}>
-                  {` · Needs: ${submitBlocker ?? "Time"}`}
+                  {` · Needs ${submitBlocker ?? "time"}`}
                 </span>
               ) : null}
             </div>
             <button
               type="submit"
               disabled={!canSubmit}
-              className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold transition"
               style={{
                 background: "var(--spark-lime)",
                 color: "var(--spark-on-accent)",
-                boxShadow: !canSubmit
-                  ? "none"
-                  : "0 0 24px rgba(var(--spark-accent-rgb),0.35)",
+                boxShadow: "none",
                 opacity: !canSubmit ? 0.5 : 1,
               }}
             >
@@ -2126,11 +2322,12 @@ const SparkRequestInner: React.FC = () => {
                     : "Submit request →"
                   : listedVisits > 1
                     ? `Create ${listedVisits} requests →`
-                    : "Create internal request →"}
+                    : "Create request →"}
             </button>
           </div>
         </div>
       </div>
+      ) : null}
     </form>
   );
 };
@@ -2141,7 +2338,7 @@ export default function SparkRequestCreate() {
       <Suspense
         fallback={
           <div
-            className="spark-card p-8 text-center text-sm max-w-3xl"
+            className="spark-card p-8 text-center text-sm max-w-5xl mx-auto"
             style={{ color: "var(--spark-text-meta)" }}
           >
             Loading form…

@@ -2234,12 +2234,14 @@ body { background: var(--spark-bg); }
   --recap-border: #e2e4d8;
   background: var(--recap-bg);
   color: var(--recap-text);
-  border-radius: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--recap-border);
   padding: 1.35rem 1.5rem 1.75rem;
 }
 .recap-doc-page {
   min-height: 100dvh;
   border-radius: 0;
+  border: none;
   padding: 0;
 }
 .recap-doc-page > .recap-doc-header {
@@ -2271,23 +2273,31 @@ body { background: var(--spark-bg); }
 .recap-doc-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
   font-weight: 600;
   border: 1px solid currentColor;
   background: transparent;
 }
+.recap-doc-badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
 .recap-doc-badge.is-draft {
-  color: #ef5a2a;
-  border-color: rgba(239, 90, 42, 0.55);
+  color: #9b2c14;
+  background: rgba(239, 90, 42, 0.08);
+  border-color: rgba(155, 44, 20, 0.28);
 }
 .recap-doc-badge.is-approved {
-  color: #3f5c12;
-  border-color: rgba(63, 92, 18, 0.45);
+  color: #2f4a0c;
+  background: rgba(63, 92, 18, 0.08);
+  border-color: rgba(63, 92, 18, 0.26);
 }
 .recap-doc-kicker {
   margin: 0.35rem 0 0;
@@ -2677,14 +2687,10 @@ body { background: var(--spark-bg); }
 .recap-kpi-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--spark-hairline, var(--spark-border));
-  border-radius: var(--spark-radius-card, 14px);
+  border: 1px solid var(--spark-border);
+  border-radius: 12px;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    rgba(var(--spark-ink-rgb), 0.03),
-    rgba(var(--spark-bg-rgb), 0.35)
-  );
+  background: var(--spark-surface);
 }
 @media (min-width: 1024px) {
   .recap-kpi-strip {
@@ -2693,53 +2699,39 @@ body { background: var(--spark-bg); }
 }
 .recap-kpi-cell {
   position: relative;
-  padding: 0.75rem 0.9rem 0.85rem;
+  padding: 0.85rem 1rem 0.9rem;
   min-width: 0;
 }
 .recap-kpi-cell:not(:last-child)::after {
   content: "";
   position: absolute;
-  top: 18%;
-  bottom: 18%;
+  top: 16%;
+  bottom: 16%;
   right: 0;
   width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(var(--spark-ink-rgb), 0.12),
-    transparent
-  );
+  background: var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.1));
 }
 .recap-kpi-cell.is-glow .recap-kpi-value {
-  color: var(--spark-lime);
+  color: var(--spark-text);
 }
 .recap-kpi-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 0.35rem;
-  font-size: 0.7rem;
-  background: rgba(var(--spark-accent-rgb), 0.1);
-  border: 1px solid rgba(var(--spark-accent-rgb), 0.22);
-  color: var(--spark-lime);
+  display: none;
 }
 .recap-kpi-label {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(var(--spark-ink-rgb), 0.48);
-  font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.56));
+  font-family: "Space Grotesk", system-ui, sans-serif;
 }
 .recap-kpi-value {
   margin-top: 0.25rem;
-  font-size: 1.45rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1.08;
   color: var(--spark-text);
 }
 
@@ -2779,19 +2771,10 @@ body { background: var(--spark-bg); }
 }
 .recap-doc .recap-kpi-strip {
   border-color: var(--recap-border);
-  background: linear-gradient(
-    135deg,
-    rgba(20, 22, 15, 0.03),
-    rgba(20, 22, 15, 0.07)
-  );
+  background: #ffffff;
 }
 .recap-doc .recap-kpi-cell:not(:last-child)::after {
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(20, 22, 15, 0.14),
-    transparent
-  );
+  background: var(--recap-border);
 }
 .recap-doc .recap-kpi-label {
   color: var(--recap-muted);
@@ -3218,15 +3201,20 @@ tr:hover > td .spark-row-actions > a,
   }
 }
 
-/* Vaul sheet — springy scrim + denser Origin header */
+/* Vaul sheet — studio drawer aligned with .spark-studio-frame */
 .spark-sheet-scrim {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(var(--spark-bg-rgb), 0.55);
-  backdrop-filter: saturate(180%) blur(8px);
+  background: rgba(10, 11, 13, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   animation: spark-sheet-scrim-in var(--spark-spring-duration, 0.35s)
     var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+[data-spark-mode="light"] .spark-sheet-scrim,
+[data-theme="spark-v2"][data-spark-mode="light"] .spark-sheet-scrim {
+  background: rgba(20, 22, 15, 0.24);
 }
 .spark-sheet-content {
   position: fixed;
@@ -3235,12 +3223,12 @@ tr:hover > td .spark-row-actions > a,
   right: 0;
   z-index: 61;
   max-height: 92dvh;
-  border-top-left-radius: var(--spark-radius-sheet, 18px);
-  border-top-right-radius: var(--spark-radius-sheet, 18px);
-  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  background: var(--spark-surface);
   border: 1px solid var(--spark-border);
   border-bottom: none;
-  box-shadow: 0 -18px 40px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 -14px 36px rgba(0, 0, 0, 0.28);
   transition: transform var(--spark-spring-duration, 0.35s)
     var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
 }
@@ -3249,18 +3237,33 @@ tr:hover > td .spark-row-actions > a,
   right: 0;
   bottom: 0;
   left: auto;
-  width: min(640px, 95vw);
+  width: min(620px, 95vw);
   height: 100dvh;
   max-height: 100dvh;
   border-top-right-radius: 0;
-  border-top-left-radius: var(--spark-radius-sheet, 18px);
-  border-bottom-left-radius: var(--spark-radius-sheet, 18px);
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
   border-bottom: 1px solid var(--spark-border);
   border-right: none;
-  box-shadow: -20px 0 48px rgba(0, 0, 0, 0.48);
+  box-shadow: -16px 0 44px rgba(0, 0, 0, 0.38);
 }
 .spark-sheet-content--right-lg {
-  width: min(740px, 96vw);
+  width: min(720px, 96vw);
+}
+@media (min-width: 768px) {
+  .spark-sheet-content--right {
+    top: 6px;
+    right: 6px;
+    bottom: 6px;
+    height: calc(100dvh - 12px);
+    max-height: calc(100dvh - 12px);
+    border-radius: 12px;
+    border: 1px solid var(--spark-border);
+  }
+}
+[data-spark-mode="light"] .spark-sheet-content--right,
+[data-theme="spark-v2"][data-spark-mode="light"] .spark-sheet-content--right {
+  box-shadow: -12px 0 36px rgba(20, 22, 15, 0.14);
 }
 .spark-sheet-handle {
   width: 2.25rem;
@@ -3270,35 +3273,34 @@ tr:hover > td .spark-row-actions > a,
   margin: 0.5rem auto 0.2rem;
 }
 .spark-sheet-header {
-  padding: 0.35rem 1rem 0.65rem;
-  border-bottom: 1px solid rgba(var(--spark-ink-rgb), 0.07);
+  padding: 0.5rem 1rem 0.65rem;
+  border-bottom: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08));
 }
 .spark-sheet-eyebrow {
-  letter-spacing: 0.16em;
-  color: rgba(var(--spark-ink-rgb), 0.45);
+  letter-spacing: 0.01em;
+  color: var(--spark-text-meta, rgba(var(--spark-ink-rgb), 0.55));
 }
 .spark-sheet-title {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   letter-spacing: -0.02em;
   line-height: 1.25;
   color: var(--spark-text);
 }
 .spark-sheet-close {
-  letter-spacing: 0.12em;
-  min-width: var(--spark-hit, 44px);
-  min-height: var(--spark-hit, 44px);
-  color: rgba(var(--spark-ink-rgb), 0.55);
-  border: 1px solid rgba(var(--spark-ink-rgb), 0.1);
+  letter-spacing: 0.01em;
+  min-height: 32px;
+  color: var(--spark-text-secondary, rgba(var(--spark-ink-rgb), 0.68));
+  border: 1px solid var(--spark-border);
   background: rgba(var(--spark-ink-rgb), 0.03);
   transition:
-    color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
-    border-color var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
-    background var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1));
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 .spark-sheet-close:hover {
   color: var(--spark-text);
-  border-color: rgba(var(--spark-ink-rgb), 0.18);
-  background: rgba(var(--spark-ink-rgb), 0.05);
+  border-color: rgba(var(--spark-ink-rgb), 0.22);
+  background: rgba(var(--spark-ink-rgb), 0.06);
 }
 .spark-sheet-body {
   /* lf-field-client: clear the home indicator. Parallel PR also edits this file. */

@@ -2,7 +2,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router";
 import {
-  SPARK_SPRING_DURATION_S,
   SPARK_SPRING_EASE,
   jumpOriginCss,
   jumpOriginFromEvent,
@@ -36,13 +35,15 @@ import {
   AlertCircle,
   Sun,
   Store,
+  Sparkles,
+  CalendarPlus,
 } from "lucide-react";
 import { showsMissingRecaps } from "@/field/missingRecaps";
 import { fetchSwitchableTenants } from "@/hooks/useAdoptRecordTenant";
 import useSparkRole from "@/hooks/useSparkRole";
+import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import type { SwitchableTenant } from "@/lib/tenantDeepLink";
 import { storeHref } from "@/lib/storeProfile";
-import { padIndex } from "@/shared/sparkStat";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import { checkinUrl, sparkFormUrl } from "@/utils/publicHosts";
@@ -581,7 +582,38 @@ export const CommandPalette: React.FC = () => {
       }
     }
 
-    return [...out, ...searchBuckets.storeRequestActions];
+    const smartHandoffs: CommandEntry[] = [];
+    const trimmedPrompt = query.trim();
+    if (trimmedPrompt.length >= 3) {
+      smartHandoffs.push({
+        id: "action-ask-spark-query",
+        label: `Ask Spark: “${trimmedPrompt}”`,
+        hint: "Open docked Ask Spark side-panel · grounded in your program data",
+        to: "",
+        Icon: Sparkles,
+        keywords: `ask spark ai question ${trimmedPrompt}`,
+        actionBadge: "↵ Ask",
+        run: () => {
+          dispatchOpenAskSpark({ question: trimmedPrompt });
+        },
+      });
+      smartHandoffs.push({
+        id: "action-schedule-wave-query",
+        label: `Schedule in plain English: “${trimmedPrompt}”`,
+        hint: "Match Account Map stores and preview a multi-store wave",
+        to: "",
+        Icon: CalendarPlus,
+        keywords: `schedule wave plain english bulk ${trimmedPrompt}`,
+        actionBadge: "↵ Wave",
+        run: () => {
+          navigate(
+            `/requests/create?mode=wave&prompt=${encodeURIComponent(trimmedPrompt)}`,
+          );
+        },
+      });
+    }
+
+    return [...out, ...searchBuckets.storeRequestActions, ...smartHandoffs];
   }, [
     query,
     activeCheckinCode,
@@ -712,13 +744,14 @@ export const CommandPalette: React.FC = () => {
         style={{
           maxWidth: "36rem",
           padding: 0,
+          borderRadius: 12,
           transformOrigin: jumpOriginCss(origin),
         }}
-        initial={{ opacity: 0, scale: 0.94, y: 8 }}
+        initial={{ opacity: 0, scale: 0.97, y: 4 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 4 }}
+        exit={{ opacity: 0, scale: 0.98, y: 2 }}
         transition={{
-          duration: SPARK_SPRING_DURATION_S,
+          duration: 0.14,
           ease: SPARK_SPRING_EASE,
         }}
       >
@@ -730,14 +763,14 @@ export const CommandPalette: React.FC = () => {
             setActive(0);
           }}
           onKeyDown={onKey}
-          placeholder="Jump to a recap, store, event, action, or screen…"
+          placeholder="Jump anywhere, ask Spark a question, or schedule in plain English…"
           className="w-full text-base"
           style={{
             background: "transparent",
             border: "none",
             outline: "none",
             color: "var(--spark-text)",
-            padding: "1rem 1.25rem",
+            padding: "0.95rem 1.15rem",
             fontFamily: "Space Grotesk, sans-serif",
           }}
         />
@@ -748,7 +781,7 @@ export const CommandPalette: React.FC = () => {
         ) : null}
         <div
           style={{
-            borderTop: "1px solid rgba(var(--spark-ink-rgb),0.06)",
+            borderTop: "1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb),0.08))",
           }}
         />
         <div
@@ -760,7 +793,7 @@ export const CommandPalette: React.FC = () => {
               className="px-4 py-6 text-center text-sm"
               style={{ color: "var(--spark-text-meta)" }}
             >
-              No matches.
+              No matching pages or records.
             </p>
           )}
           {grouped.map((group) => (
@@ -773,73 +806,54 @@ export const CommandPalette: React.FC = () => {
                   const Icon = entry.Icon;
                   return (
                     <Fragment key={entry.id}>
-                      <motion.button
+                      <button
+                        type="button"
                         onMouseEnter={() => setActive(i)}
                         onClick={() => select(entry)}
-                        className="spark-inset-row w-full text-left transition"
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.2,
-                          delay: Math.min(i * 0.028, 0.16),
-                          ease: SPARK_SPRING_EASE,
-                        }}
+                        className="spark-inset-row w-full text-left transition-colors duration-75"
                         style={{
                           background: on
-                            ? "rgba(239,90,42,0.10)"
+                            ? "rgba(var(--spark-ink-rgb),0.06)"
                             : "transparent",
                           color: "var(--spark-text)",
                           borderRadius: 0,
                         }}
                       >
-                        <span
-                          className="spark-idx"
-                          aria-hidden
-                          style={{
-                            color: on
-                              ? "rgba(239,90,42,0.85)"
-                              : "rgba(var(--spark-ink-rgb),0.28)",
-                          }}
-                        >
-                          {padIndex(i + 1)}
-                        </span>
                         <Icon
                           size={16}
                           className="shrink-0"
                           style={{
                             color: on
-                              ? "var(--spark-orange)"
-                              : "rgba(var(--spark-ink-rgb),0.55)",
+                              ? "var(--spark-text)"
+                              : "var(--spark-text-meta)",
                           }}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">
+                          <p className="text-sm font-medium truncate">
                             {entry.label}
                           </p>
                           <p
-                            className="mono text-[10px] truncate"
+                            className="text-xs truncate"
                             style={{
-                              letterSpacing: "0.14em",
-                              color: on
-                                ? "rgba(var(--spark-accent-rgb),0.65)"
-                                : "rgba(var(--spark-ink-rgb),0.4)",
+                              color: "var(--spark-text-meta)",
                             }}
                           >
-                            {entry.hint.toUpperCase()}
+                            {entry.hint}
                           </p>
                         </div>
                         {on && (
-                          <span
-                            className="mono text-[10px] shrink-0"
+                          <kbd
+                            className="mono text-[10px] shrink-0 px-1.5 py-0.5 rounded"
                             style={{
-                              letterSpacing: "0.14em",
-                              color: "var(--spark-orange)",
+                              border: "1px solid var(--spark-border)",
+                              background: "var(--spark-surface)",
+                              color: "var(--spark-text-secondary)",
                             }}
                           >
-                            {entry.actionBadge ?? "↵ OPEN"}
-                          </span>
+                            {entry.actionBadge ?? "↵ Open"}
+                          </kbd>
                         )}
-                      </motion.button>
+                      </button>
                     </Fragment>
                   );
                 })}
@@ -848,30 +862,36 @@ export const CommandPalette: React.FC = () => {
           ))}
         </div>
         <div
-          className="flex items-center justify-between px-4 py-2.5"
+          className="flex items-center justify-between px-4 py-2 text-xs"
           style={{
-            borderTop: "1px solid rgba(var(--spark-ink-rgb),0.06)",
+            borderTop: "1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb),0.08))",
             background: "rgba(var(--spark-ink-rgb),0.02)",
+            color: "var(--spark-text-meta)",
           }}
         >
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-text-meta)",
-            }}
-          >
-            ↑↓ NAVIGATE · ↵ OPEN · ESC CLOSE
-          </p>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-text-meta)",
-            }}
-          >
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="inline-flex items-center gap-1">
+              <kbd className="mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--spark-border)]">
+                ↑↓
+              </kbd>
+              <span>Navigate</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--spark-border)]">
+                ↵
+              </kbd>
+              <span>Select</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--spark-border)]">
+                Esc
+              </kbd>
+              <span>Close</span>
+            </span>
+          </div>
+          <kbd className="mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--spark-border)]">
             ⌘K
-          </p>
+          </kbd>
         </div>
       </motion.div>
     </motion.div>

@@ -127,7 +127,7 @@ const AskAboutChart: React.FC<{
           {!reply.failed && !reply.answered ? (
             <>
               {" "}
-              <AskAiButton tenantId={tenantId} variant="text" label="Open Ask AI" className="underline" />
+              <AskAiButton tenantId={tenantId} variant="text" label="Open Ask Spark" className="underline" />
             </>
           ) : null}
         </p>

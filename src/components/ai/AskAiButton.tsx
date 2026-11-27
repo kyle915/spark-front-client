@@ -15,35 +15,9 @@ import {
   type AskAiScope,
   type JumpOrigin,
 } from "@/motion/opsMotion";
-import SparkOverlay from "@/shared/SparkOverlay";
+import SparkSheet from "@/shared/SparkSheet";
 import { askAiModalTitle } from "./askAiSubjectName";
 import BrandChatPanel from "./BrandChatPanel";
-
-/**
- * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
- * for asking a freeform question about ONE client's whole program (all of
- * that tenant's aggregated events, recaps, and KPIs).
- *
- * Mounted on both dashboards:
- *   • the admin home/dashboard (DashboardEvent), scoped to the active tenant
- *     selected in the workspace switcher, and
- *   • the client dashboard (SparkClientDashboard), scoped to the client's own
- *     tenant.
- *
- * Both resolve the active tenant id the same way every other per-tenant
- * surface does — `useAuthStore().tenantId` — and hand it down as `tenantId`.
- *
- * The Q&A logic mirrors <AiAnswerCard> in CampaignReportAdminView exactly:
- * the query is fired imperatively via `fetchQuery(environment, …, {
- * fetchPolicy: "network-only" }).toPromise()` on submit — never on mount — so
- * the model cost is only paid when someone actually asks something. While in
- * flight it shows "Thinking…"; on success it renders `answer` as markdown
- * (headings, bold, bullet lists) via <AiMarkdown>; a failure (`ok: false`)
- * shows the server's `reason`
- * muted. The input stays editable so the user can ask again — the latest
- * answer replaces the previous one. The Ask button is disabled while the
- * input is empty or a request is in flight.
- */
 
 type AiAnswerResult = {
   ok: boolean;
@@ -57,14 +31,12 @@ const limeBtn: React.CSSProperties = {
   color: "var(--spark-on-accent)",
 };
 
-// The trigger that opens Ask AI is a secondary control: it sits beside a
-// page's main action and must not compete with it.
 const triggerBtn: React.CSSProperties = {
   background: "transparent",
   color: "var(--spark-text)",
-  border: "1px solid rgba(var(--spark-accent-rgb),0.45)",
+  border: "1px solid var(--spark-border)",
 };
-// Same outline as the plain buttons it sits beside (PDF, Photos).
+
 const ghostTriggerBtn: React.CSSProperties = {
   background: "transparent",
   color: "var(--spark-text)",
@@ -87,8 +59,8 @@ function scopeCopy(
   switch (scope) {
     case "tenant":
       return {
-        kicker: "Ask AI",
-        title: askAiModalTitle(tenantName),
+        kicker: "Ask Spark",
+        title: askAiModalTitle(tenantName).replace(/\.$/, ""),
         blurb:
           "Answers draw on this client's whole program — every event, recap, and KPI we have.",
         placeholder: "Ask anything about this client's program…",
@@ -96,8 +68,8 @@ function scopeCopy(
       };
     case "recap":
       return {
-        kicker: "Ask AI · this recap",
-        title: subjectLabel ? `Ask about ${subjectLabel}.` : "Ask about this recap.",
+        kicker: "Ask Spark · Recap",
+        title: subjectLabel ? `Ask about ${subjectLabel}` : "Ask about this recap",
         blurb:
           "Answers use only this recap's filed fields, notes, stored KPIs, and photo metadata.",
         placeholder: "Ask about this recap…",
@@ -105,8 +77,8 @@ function scopeCopy(
       };
     case "event":
       return {
-        kicker: "Ask AI · this event",
-        title: subjectLabel ? `Ask about ${subjectLabel}.` : "Ask about this event.",
+        kicker: "Ask Spark · Event",
+        title: subjectLabel ? `Ask about ${subjectLabel}` : "Ask about this event",
         blurb:
           "Answers use only this event's filed recaps, notes, stored KPIs, and photo metadata.",
         placeholder: "Ask about this event…",
@@ -119,7 +91,7 @@ function scopeCopy(
   }
 }
 
-const AskAiModal: React.FC<{
+export const AskAiModal: React.FC<{
   tenantId: string;
   tenantName?: string;
   scope: AskAiScope;
@@ -127,6 +99,7 @@ const AskAiModal: React.FC<{
   eventId?: string | null;
   subjectLabel?: string;
   origin?: JumpOrigin | null;
+  initialQuestion?: string;
   onClose: () => void;
 }> = ({
   tenantId,
@@ -135,26 +108,18 @@ const AskAiModal: React.FC<{
   recapId,
   eventId,
   subjectLabel,
-  origin = null,
+  initialQuestion,
   onClose,
 }) => {
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(initialQuestion ?? "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiAnswerResult | null>(null);
   const [thoughtFor, setThoughtFor] = useState<number | null>(null);
   const startedAt = useRef(0);
+  const consumedInitialRef = useRef<string | null>(null);
 
   const trimmed = question.trim();
   const canAsk = trimmed.length > 0 && !loading && Boolean(tenantId);
-
-  // Close on Escape so the pop-up behaves like the workspace's other modals.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const ask = useCallback(async (raw?: string) => {
     const q = (raw ?? question).trim();
@@ -203,39 +168,33 @@ const AskAiModal: React.FC<{
     }
   }, [tenantId, question, scope, recapId, eventId]);
 
+  useEffect(() => {
+    const seeded = (initialQuestion ?? "").trim();
+    if (!seeded || !tenantId || consumedInitialRef.current === seeded) return;
+    consumedInitialRef.current = seeded;
+    void ask(seeded);
+  }, [initialQuestion, tenantId, ask]);
+
   const copy = scopeCopy(scope, tenantName, subjectLabel);
 
   return (
-    <SparkOverlay
-      onClose={onClose}
-      origin={origin}
+    <SparkSheet
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      side="right"
       size="lg"
-      label={copy.title}
+      eyebrow={copy.kicker}
+      title={copy.title}
     >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="spark-overlay-kicker" style={{ color: "var(--spark-ok-ink)" }}>
-              {copy.kicker}
-            </p>
-            <h2 className="spark-overlay-title">{copy.title}</h2>
-            <p className="spark-overlay-copy">{copy.blurb}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mono text-[11px]"
-            style={{
-              letterSpacing: "0.14em",
-              color: "var(--spark-text-meta)",
-            }}
-            title="Close"
-          >
-            CLOSE
-          </button>
-        </div>
+      <div className="flex flex-col h-full min-h-[65dvh]">
+        <p className="text-xs leading-relaxed" style={{ color: "var(--spark-text-meta)" }}>
+          {copy.blurb}
+        </p>
 
         <form
-          className="mt-4 flex items-center gap-2 flex-wrap"
+          className="mt-3 flex items-center gap-2 flex-wrap"
           onSubmit={(e) => {
             e.preventDefault();
             if (canAsk) void ask();
@@ -248,7 +207,7 @@ const AskAiModal: React.FC<{
             disabled={loading}
             autoFocus
             placeholder={copy.placeholder}
-            className="flex-1 min-w-[220px] px-4 py-2 rounded-xl text-sm transition disabled:opacity-60"
+            className="flex-1 min-w-[200px] px-3.5 py-2 rounded-lg text-sm transition disabled:opacity-60"
             style={{
               background: "rgba(var(--spark-ink-rgb),0.04)",
               color: "var(--spark-text)",
@@ -258,35 +217,55 @@ const AskAiModal: React.FC<{
           <button
             type="submit"
             disabled={!canAsk}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
             style={limeBtn}
-            title="Ask a question about this client's program"
+            title="Ask Spark about this program"
           >
             Ask
           </button>
         </form>
 
+        {!result && !loading ? (
+          <div className="mt-4">
+            <p className="text-xs font-medium mb-2" style={{ color: "var(--spark-text-meta)" }}>
+              Suggested questions
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {copy.followups.map((chipLabel) => (
+                <button
+                  key={chipLabel}
+                  type="button"
+                  className="spark-ops-chip"
+                  onClick={() => void ask(chipLabel)}
+                >
+                  {chipLabel}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {loading ? (
-          <p className="spark-ops-thinking mt-4">Thinking…</p>
+          <p className="spark-ops-thinking mt-4">Checking program data…</p>
         ) : thoughtFor != null ? (
           <p className="spark-ops-thought mt-4">{thoughtLabel(thoughtFor)}</p>
         ) : null}
 
         {result && !loading && (
-          <div className="mt-3 max-h-[55vh] overflow-y-auto pr-1">
+          <div className="mt-3 flex-1 overflow-y-auto pr-1">
             {result.ok ? (
               <>
                 <AiMarkdown>{result.answer}</AiMarkdown>
                 {result.chart ? <AiChartView chart={result.chart} /> : null}
                 <div className="spark-ops-followups">
-                  {copy.followups.map((chip) => (
+                  {copy.followups.map((chipLabel) => (
                     <button
-                      key={chip}
+                      key={chipLabel}
                       type="button"
                       className="spark-ops-chip"
-                      onClick={() => void ask(chip)}
+                      onClick={() => void ask(chipLabel)}
                     >
-                      {chip}
+                      {chipLabel}
                     </button>
                   ))}
                 </div>
@@ -302,7 +281,8 @@ const AskAiModal: React.FC<{
             )}
           </div>
         )}
-    </SparkOverlay>
+      </div>
+    </SparkSheet>
   );
 };
 
@@ -316,8 +296,6 @@ const AskAiButton: React.FC<{
   eventId?: string | null;
   subjectLabel?: string;
   label?: string;
-  /** Brand dashboard: open brand chat (a conversation over the brand's own
-   * data, with sources) instead of the one-question pop-up. Tenant scope only. */
   chat?: boolean;
 }> = ({
   tenantId,
@@ -337,7 +315,7 @@ const AskAiButton: React.FC<{
   if (!tenantId) return null;
   if (scope === "recap" && !recapId) return null;
   if (scope === "event" && !eventId) return null;
-  const buttonLabel = label ?? "Ask AI";
+  const buttonLabel = label ?? "Ask Spark";
 
   return (
     <>
@@ -350,7 +328,7 @@ const AskAiButton: React.FC<{
         className={
           variant === "text"
             ? `text-sm font-medium ${className ?? ""}`
-            : `px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2 whitespace-nowrap ${
+            : `px-3.5 py-2 rounded-lg text-sm font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap ${
                 className ?? ""
               }`
         }
@@ -368,8 +346,8 @@ const AskAiButton: React.FC<{
         }
         title={
           chat
-            ? "Ask questions about your program, answered from your own data"
-            : "Ask AI a question about this client's program"
+            ? "Open Ask Spark side-panel for your program"
+            : "Open Ask Spark side-panel"
         }
       >
         {buttonLabel}

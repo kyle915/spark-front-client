@@ -126,11 +126,6 @@ export function RecapKpiStrip({
           key={`${item.label}-${i}`}
           className={cn("recap-kpi-cell", item.glow && "is-glow")}
         >
-          {item.icon ? (
-            <div className="recap-kpi-icon" aria-hidden>
-              {item.icon}
-            </div>
-          ) : null}
           <p className="recap-kpi-label">{item.label}</p>
           <p className="recap-kpi-value">{item.value}</p>
         </div>

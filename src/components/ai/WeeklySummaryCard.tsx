@@ -42,7 +42,6 @@ const Body: React.FC<{
   return (
     <section
       className={cn("spark-card p-6 lg:p-8", className)}
-      style={{ borderRadius: 22 }}
     >
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-x-4 gap-y-1">
         <h2 className="display text-lg lg:text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
@@ -68,7 +67,7 @@ const Body: React.FC<{
             </Link>
           </>
         ) : (
-          "Written by AI from approved recaps and reviewed by the Ignite team."
+          "Compiled from approved recaps · Reviewed by Ignite"
         )}
       </p>
     </section>

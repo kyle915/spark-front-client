@@ -1059,7 +1059,10 @@ const SparkRecapInner: React.FC<{
         {` / ${fmtDate(fieldDate)}`}
       </RecapDetailBackLink>
 
-      <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
+      <RecapDocument
+        status={recap.approved ? "APPROVED" : "DRAFT"}
+        brandLogoUrl={isClient ? useAuthStore.getState().tenantMeta?.logo : null}
+      >
       <div className="space-y-6">
       {/* Title card */}
       <div className="spark-card p-6">
