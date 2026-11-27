@@ -14,6 +14,51 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-27sg",
+    date: "November 27, 2026",
+    title: "Built-in Setup Guide & Interactive Sample Brand Sandbox",
+    items: [
+      "Open Setup Guide (/setup-guide) from the Workspace sidebar or Help page for step-by-step walkthroughs of Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, and Spark MCP — with live readiness status and copyable snippets.",
+      "Share the read-only Sample Brand Sandbox (/sandbox — also linked on Login, Onboarding, and Settings) so prospective CPG founders and new teammates can explore Reports, StoreSheet, Shelf & Voice, Photo Wall, Ask Spark, and PowerPoint exports safely without login.",
+    ],
+  },
+  {
+    id: "2026-11-27sv",
+    date: "November 27, 2026",
+    title: "Saved Report Views, Friday Broker Digests & Outbound Webhooks",
+    items: [
+      "Save named regional/retailer filter slices (such as 'Texas Whole Foods · Last 90d') on Buyer Report and Shelf & Voice, re-apply them in one click, and schedule automated Friday (or custom-cadence) email digests with CSV attachments — or click Send now to test immediately.",
+      "AI Connector & Webhooks (/ai-connector) adds HMAC-SHA256 signed outbound webhooks (recap.approved, request.created, shelf.oos_detected) with one-click test pings, secret rotation, and delivery logs for Zapier, HubSpot, Klaviyo, and Airtable.",
+    ],
+  },
+  {
+    id: "2026-11-27sh",
+    date: "November 27, 2026",
+    title: "Shelf Compliance, Pricing & Competitor Voice Hub",
+    items: [
+      "Reports & ROI adds a Shelf & Voice tab (/shelf-voice) surfacing on-shelf availability (OSA %), price-tag compliance, average facings, and a live Target MSRP $ input that flags ±5% price drift, missing tags, and OOS gaps with one-click StoreSheet drill-down.",
+      "Inspect Before & After repeat-visit shelf proof, browse audited shelf photos in PhotoLightbox, and track Rising Competitor Mentions by Market (↑ Rising, New, Steady, ↓ Cooling) alongside buyer-safe quotes and field promo alerts.",
+    ],
+  },
+  {
+    id: "2026-11-27qb",
+    date: "November 27, 2026",
+    title: "One-Click Retail Buyer QBR Decks & PowerPoint (.pptx) Export",
+    items: [
+      "Generate co-branded Buyer QBR / Line-Review Decks from Buyer Report (/buyer-report?deck=1) or Photo Wall (/photo-wall) featuring a US activation footprint map, 4-week POS lift halo, Shelf OSA compliance, Shopper Voice themes, and pinned photos.",
+      "Share a live buyer link (with optional passcode and cost toggle) or export an editable native 16:9 PowerPoint (.pptx) deck for PowerPoint, Keynote, and Google Slides.",
+    ],
+  },
+  {
+    id: "2026-11-27pl",
+    date: "November 27, 2026",
+    title: "Light Public Request Forms & smoother workspace switching",
+    items: [
+      "Public express request forms (/spark-form/:tenantSlug) now render in Spark's clean light studio theme with an aligned Live Activation Summary rail.",
+      "Switching brand workspaces directly on Buyer Report, Retailer POS, Budget Pacing, Demo Costs, Finance Queue, Workspace & Agencies, and Provider Imports now transitions cleanly without error flashes; StoreSheet → Ask Spark handoff and mobile dock highlights are also refined.",
+    ],
+  },
+  {
     id: "2026-11-26st",
     date: "November 26, 2026",
     title: "Studio workspace frame, editorial KPIs, and Recent Field Proof",

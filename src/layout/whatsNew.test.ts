@@ -206,6 +206,24 @@ describe("whatsNewFor", () => {
     }
   });
 
+  it("includes November 27 releases at the top for both brand and staff audiences", () => {
+    const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
+    const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
+
+    for (const id of [
+      "2026-11-27sg",
+      "2026-11-27sv",
+      "2026-11-27sh",
+      "2026-11-27qb",
+      "2026-11-27pl",
+    ] as const) {
+      expect(clientIds.has(id)).toBe(true);
+      expect(staffIds.has(id)).toBe(true);
+      expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBeFalsy();
+    }
+    expect(WHATS_NEW[0]?.id).toBe("2026-11-27sg");
+  });
+
   it("tracks unseen state per audience so staff and client tips stay independent", () => {
     const store = new Map<string, string>();
     vi.stubGlobal("window", {
