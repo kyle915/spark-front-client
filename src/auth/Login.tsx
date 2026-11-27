@@ -1,10 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@store/authStore";
 import { GoogleButton } from "@auth/components/GoogleButton";
 import { requestMagicLink } from "@/auth/MagicLinkButton";
-import { themes } from "@/utils";
 import { blockedReason, primaryLabel, type SignInMode } from "./signInSteps";
 import { playArrival } from "./arrivalSweep";
 import { AuthShell } from "./AuthShell";
@@ -28,19 +27,6 @@ const Login = () => {
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Select the stylesheet's Spark theme (the app reads these two keys on
-    // start-up). No inline colours: those used to follow people into the app.
-    document.documentElement.setAttribute("color-scheme", "dark");
-    document.documentElement.setAttribute("data-theme", themes.dark);
-    try {
-      localStorage.setItem("@color-scheme", "dark");
-      localStorage.setItem("@theme", themes.dark);
-    } catch {
-      /* private mode: the attributes above still apply for this visit */
-    }
-  }, []);
 
   const busy = sending || loading;
 

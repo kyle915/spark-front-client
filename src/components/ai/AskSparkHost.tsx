@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { ASK_SPARK_EVENT, type OpenAskSparkDetail } from "@/lib/askSparkEvent";
 import { askAiSubjectFromTenant } from "./askAiSubjectName";
+import { routeAskSparkPrompts } from "./routeAskSparkPrompts";
 import BrandChatPanel from "./BrandChatPanel";
 import { AskAiModal } from "./AskAiButton";
 
 /**
  * Global docked Ask Spark drawer host inside the authenticated layout shell.
- * Lets Jump (⌘K) or any screen open Ask Spark with a pre-populated question
- * without losing page context.
+ * Lets Jump (⌘K), the mobile dock, or any screen open Ask Spark with a
+ * pre-populated question or route-aware starter prompts without losing context.
  */
 export default function AskSparkHost() {
+  const location = useLocation();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
   const [state, setState] = useState<{
@@ -36,11 +39,14 @@ export default function AskSparkHost() {
   const activeTenantId = state.overrideTenantId || tenantId;
   if (!state.open || !activeTenantId) return null;
 
+  const routePrompts = routeAskSparkPrompts(location.pathname, isClient);
+
   if (isClient) {
     return (
       <BrandChatPanel
         tenantId={activeTenantId}
         initialQuestion={state.question}
+        routePrompts={routePrompts}
         onClose={() => setState({ open: false })}
       />
     );
@@ -55,6 +61,7 @@ export default function AskSparkHost() {
       })}
       scope="tenant"
       initialQuestion={state.question}
+      routePrompts={routePrompts}
       onClose={() => setState({ open: false })}
     />
   );

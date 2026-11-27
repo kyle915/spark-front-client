@@ -154,11 +154,13 @@ function TurnView({ turn, onNavigate }: { turn: Turn; onNavigate: () => void }) 
 export default function BrandChatPanel({
   tenantId,
   initialQuestion,
+  routePrompts,
   onClose,
 }: {
   tenantId: string;
   origin?: JumpOrigin | null;
   initialQuestion?: string;
+  routePrompts?: readonly string[];
   onClose: () => void;
 }) {
   const [view, setView] = useState<View | null>(null);
@@ -275,9 +277,12 @@ export default function BrandChatPanel({
   const brand = view?.brandName || "your brand";
   const rawSuggestions = view?.suggestions ?? [];
   const wavePrompt = "Plan next month's 15-store demo wave";
-  const suggestions = rawSuggestions.some((s) => s.toLowerCase().includes("wave"))
+  const baseSuggestions = rawSuggestions.some((s) => s.toLowerCase().includes("wave"))
     ? rawSuggestions
     : [wavePrompt, ...rawSuggestions.slice(0, 3)];
+  const suggestions = routePrompts?.length
+    ? Array.from(new Set([...routePrompts, ...baseSuggestions])).slice(0, 4)
+    : baseSuggestions;
   const canAsk = Boolean(question.trim()) && !pending && left !== 0 && Boolean(view);
 
   return (

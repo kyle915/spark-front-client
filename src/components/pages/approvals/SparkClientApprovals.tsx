@@ -5,13 +5,18 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { commitMutation } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import Layout from "@/layout/Layout";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import SparkEmptyState from "@/shared/SparkEmptyState";
+import {
+  RecapQuickPeekSheet,
+  type RecapQuickPeekItem,
+} from "@/recap/RecapQuickPeekSheet";
+import { stepQuickPeekIndex } from "@/requests/quickPeekNav";
 import { useAuthStore } from "@/store/authStore";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
@@ -153,7 +158,8 @@ const ApprovalRow: React.FC<{
   onApproved: (key: string) => void;
   selected: boolean;
   onToggleSelected: (key: string) => void;
-}> = ({ row, onApproved, selected, onToggleSelected }) => {
+  onQuickPeek: () => void;
+}> = ({ row, onApproved, selected, onToggleSelected, onQuickPeek }) => {
   const reviewTo =
     row.kind === "custom"
       ? `/recap/view-custom/${row.uuid}`
@@ -216,11 +222,19 @@ const ApprovalRow: React.FC<{
         style={{ accentColor: "var(--spark-lime)" }}
       />
       {row.heroImage ? (
-        <img
-          src={row.heroImage}
-          alt=""
-          className="w-16 h-16 rounded-lg object-cover shrink-0"
-        />
+        <button
+          type="button"
+          onClick={onQuickPeek}
+          className="shrink-0 rounded-lg overflow-hidden cursor-pointer"
+          aria-label={`Quick peek ${row.name}`}
+          title="Quick peek (j / k to step)"
+        >
+          <img
+            src={row.heroImage}
+            alt=""
+            className="w-16 h-16 rounded-lg object-cover block"
+          />
+        </button>
       ) : (
         <div
           className="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center mono text-[10px] text-center px-1"
@@ -307,10 +321,23 @@ const ApprovalRow: React.FC<{
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+        <button
+          type="button"
+          onClick={onQuickPeek}
+          className="px-3.5 py-2 rounded-lg text-sm font-semibold transition cursor-pointer"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text-secondary)",
+            border: "1px solid var(--spark-border)",
+          }}
+          title="Quick peek in side drawer (j / k to step, a to approve)"
+        >
+          Quick peek
+        </button>
         <Link
           to={reviewTo}
-          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          className="px-3.5 py-2 rounded-lg text-sm font-semibold transition"
           style={{
             background: "rgba(var(--spark-ink-rgb),0.06)",
             color: "var(--spark-text)",
@@ -501,6 +528,9 @@ const ClientApprovalsMerged: React.FC<{
   approvedKeys: Set<string>;
   onApproved: (key: string) => void;
 }> = ({ data, customData, approvedKeys, onApproved }) => {
+  const navigate = useNavigate();
+  const [peekIndex, setPeekIndex] = useState<number | null>(null);
+  const [peekApproving, setPeekApproving] = useState(false);
   const rows: PendingRecap[] = useMemo(() => {
     const legacy: PendingRecap[] =
       data?.recaps?.edges
@@ -797,17 +827,125 @@ const ClientApprovalsMerged: React.FC<{
         </div>
       ) : (
         <ul className="space-y-2">
-          {filteredRows.map((r) => (
+          {filteredRows.map((r, idx) => (
             <ApprovalRow
               key={`${r.kind}:${r.id}`}
               row={r}
               onApproved={onApproved}
               selected={selected.has(`${r.kind}:${r.id}`)}
               onToggleSelected={toggleSelected}
+              onQuickPeek={() => setPeekIndex(idx)}
             />
           ))}
         </ul>
       )}
+      {(() => {
+        const clampedIdx =
+          peekIndex != null && filteredRows.length > 0
+            ? Math.min(peekIndex, filteredRows.length - 1)
+            : null;
+        const activeRow = clampedIdx != null ? filteredRows[clampedIdx] : null;
+        const peekRecap: RecapQuickPeekItem | null = activeRow
+          ? {
+              kind: activeRow.kind,
+              id: activeRow.id,
+              uuid: activeRow.uuid,
+              name: activeRow.name,
+              date: activeRow.date,
+              retailerName: activeRow.venue || activeRow.where || activeRow.name,
+              stateCode: null,
+              approved: false,
+              approvalMeta: null,
+              heroImage: activeRow.heroImage,
+              fileCount: activeRow.fileCount,
+              engagements: activeRow.numbers.engaged ?? null,
+              consumersSampled: activeRow.numbers.sampled ?? null,
+              productsSold: activeRow.numbers.sold ?? null,
+              isDryDemo: false,
+              peopleEngaged: activeRow.numbers.engaged ?? null,
+              cansSold: null,
+              packsSold: null,
+              accountSpendAmount: null,
+              baName: "",
+              isExternalBa: false,
+              isThirdParty: false,
+              excludeFromAggregates: false,
+              sourceLabel: activeRow.typeLabel || "Recap",
+              recapType: "retail",
+              requestUuid: null,
+              requestShortId: null,
+              shareToken: null,
+              sharedAt: null,
+              archivedAt: null,
+            }
+          : null;
+
+        const approveFromPeek = (item: RecapQuickPeekItem) => {
+          if (peekApproving) return;
+          setPeekApproving(true);
+          const key = `${item.kind}:${item.id}`;
+          const done = (ok: boolean) => {
+            setPeekApproving(false);
+            if (ok) {
+              onApproved(key);
+              if (filteredRows.length <= 1) setPeekIndex(null);
+            }
+          };
+          if (item.kind === "custom") {
+            commitMutation<ApproveCustomRecapMutationType>(environment, {
+              mutation: ApproveCustomRecapMutation,
+              variables: { input: { id: item.id, approved: true } },
+              onCompleted: (res) => done(Boolean(res.approveCustomRecap?.success)),
+              onError: () => done(false),
+            });
+          } else {
+            commitMutation<ApproveRecapMutationType>(environment, {
+              mutation: ApproveRecapMutation,
+              variables: { input: { id: item.id, approved: true } },
+              onCompleted: (res) => done(Boolean(res.approveRecap?.success)),
+              onError: () => done(false),
+            });
+          }
+        };
+
+        return (
+          <RecapQuickPeekSheet
+            recap={peekRecap}
+            open={peekRecap !== null}
+            onOpenChange={(next) => {
+              if (!next) setPeekIndex(null);
+            }}
+            index={clampedIdx ?? 0}
+            total={filteredRows.length}
+            onPrev={() =>
+              setPeekIndex((cur) =>
+                cur == null
+                  ? null
+                  : stepQuickPeekIndex(cur, filteredRows.length, -1),
+              )
+            }
+            onNext={() =>
+              setPeekIndex((cur) =>
+                cur == null
+                  ? null
+                  : stepQuickPeekIndex(cur, filteredRows.length, 1),
+              )
+            }
+            isClient
+            allowClientApprove
+            approving={peekApproving}
+            onApprove={approveFromPeek}
+            onOpenFull={(item) => {
+              setPeekIndex(null);
+              navigate(
+                item.kind === "custom"
+                  ? `/recap/view-custom/${item.uuid}`
+                  : `/recap/view/${item.uuid}`,
+              );
+            }}
+          />
+        );
+      })()}
     </>
   );
 };

@@ -8,6 +8,7 @@ import {
 } from "@vis.gl/react-google-maps";
 import { EventLocationTrailQuery } from "@/api/queries/EventLocationTrailQuery";
 import type { EventLocationTrailQuery as EventLocationTrailQueryType } from "@api/queries/__generated__/EventLocationTrailQuery.graphql";
+import { useAppearance } from "@/theme/appearance";
 
 /**
  * Shift Replay — renders the BA's GPS trail during an activation as
@@ -29,8 +30,27 @@ type TrailPoint = {
   source: string;
 };
 
-const TRAIL_LIME = "#f2f3ee";
-const TRAIL_LIME_TRANSLUCENT = "rgba(var(--spark-accent-rgb),0.35)";
+const TRAIL_DARK = "#f2f3ee";
+const TRAIL_LIGHT = "#14160f";
+const TRAIL_TRANSLUCENT = "rgba(var(--spark-accent-rgb),0.35)";
+
+const DARK_MAP_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1f2418" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#050605" }] },
+];
+
+const LIGHT_MAP_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#f6f6f2" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#4a4e42" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#dcddd5" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#dfe7ee" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#eaeee4" }] },
+];
 
 const fmtTimeLabel = (raw: string): string => {
   try {
@@ -96,6 +116,7 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
   eventUuid,
   apiKey,
 }) => {
+  const appearance = useAppearance();
   const data = useLazyLoadQuery<EventLocationTrailQueryType>(
     EventLocationTrailQuery,
     { eventUuid },
@@ -192,37 +213,20 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
 
       <div
         className="spark-card overflow-hidden relative"
-        style={{ borderRadius: 16, height: 360 }}
+        style={{ borderRadius: 12, height: 360 }}
       >
         <APIProvider apiKey={apiKey}>
+          {(() => {
+            const isLight = appearance === "light";
+            const trailInk = isLight ? TRAIL_LIGHT : TRAIL_DARK;
+            const pinRing = isLight ? "#ffffff" : "#0a0d09";
+            return (
           <GMap
+            key={appearance}
             defaultCenter={center}
             defaultZoom={15}
             mapId="spark-v2-shift-replay"
-            styles={
-              [
-                // Literal colours: Google Maps cannot resolve a CSS variable.
-                { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
-                {
-                  elementType: "labels.text.stroke",
-                  stylers: [{ color: "#0a0d09" }],
-                },
-                {
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#8b8e84" }],
-                },
-                {
-                  featureType: "road",
-                  elementType: "geometry",
-                  stylers: [{ color: "#1f2418" }],
-                },
-                {
-                  featureType: "water",
-                  elementType: "geometry",
-                  stylers: [{ color: "#050605" }],
-                },
-              ] as never
-            }
+            styles={(isLight ? LIGHT_MAP_STYLES : DARK_MAP_STYLES) as never}
             gestureHandling="greedy"
             style={{ width: "100%", height: "100%" }}
           >
@@ -237,9 +241,11 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
                   width: 18,
                   height: 18,
                   borderRadius: 9,
-                  background: TRAIL_LIME,
-                  border: "3px solid #0a0d09",
-                  boxShadow: `0 0 14px ${TRAIL_LIME}`,
+                  background: trailInk,
+                  border: `3px solid ${pinRing}`,
+                  boxShadow: isLight
+                    ? "0 2px 6px rgba(20, 22, 15, 0.25)"
+                    : `0 0 14px ${trailInk}`,
                 }}
                 title="Clock-in"
               />
@@ -259,15 +265,17 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
                     height: 18,
                     borderRadius: 9,
                     background: "var(--spark-orange)",
-                    border: "3px solid #0a0d09",
-                    boxShadow: "0 0 14px var(--spark-orange)",
+                    border: `3px solid ${pinRing}`,
+                    boxShadow: isLight
+                      ? "0 2px 6px rgba(210, 72, 27, 0.3)"
+                      : "0 0 14px var(--spark-orange)",
                   }}
                   title="Clock-out"
                 />
               </AdvancedMarker>
             )}
 
-            {/* Intermediate pings as small lime dots */}
+            {/* Intermediate pings */}
             {points.slice(1, -1).map((p, i) => (
               <AdvancedMarker
                 key={p.uuid}
@@ -279,8 +287,8 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    background: TRAIL_LIME_TRANSLUCENT,
-                    border: `1px solid ${TRAIL_LIME}`,
+                    background: TRAIL_TRANSLUCENT,
+                    border: `1px solid ${trailInk}`,
                   }}
                 />
               </AdvancedMarker>
@@ -325,8 +333,11 @@ const Inner: React.FC<{ eventUuid: string; apiKey: string }> = ({
 
             <PolylineLayer
               points={points.map((p) => ({ lat: p.lat, lng: p.lng }))}
+              strokeColor={trailInk}
             />
           </GMap>
+            );
+          })()}
         </APIProvider>
       </div>
     </div>
@@ -342,7 +353,8 @@ import { useMap } from "@vis.gl/react-google-maps";
 
 const PolylineLayer: React.FC<{
   points: { lat: number; lng: number }[];
-}> = ({ points }) => {
+  strokeColor: string;
+}> = ({ points, strokeColor }) => {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
@@ -351,7 +363,7 @@ const PolylineLayer: React.FC<{
     if (!g?.maps?.Polyline) return;
     const line = new g.maps.Polyline({
       path: points,
-      strokeColor: TRAIL_LIME,
+      strokeColor,
       strokeOpacity: 0.85,
       strokeWeight: 3,
       geodesic: true,
@@ -364,7 +376,7 @@ const PolylineLayer: React.FC<{
         /* map unmounted */
       }
     };
-  }, [map, points]);
+  }, [map, points, strokeColor]);
   return null;
 };
 

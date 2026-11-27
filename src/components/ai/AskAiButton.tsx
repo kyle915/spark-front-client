@@ -100,6 +100,7 @@ export const AskAiModal: React.FC<{
   subjectLabel?: string;
   origin?: JumpOrigin | null;
   initialQuestion?: string;
+  routePrompts?: readonly string[];
   onClose: () => void;
 }> = ({
   tenantId,
@@ -109,6 +110,7 @@ export const AskAiModal: React.FC<{
   eventId,
   subjectLabel,
   initialQuestion,
+  routePrompts,
   onClose,
 }) => {
   const [question, setQuestion] = useState(initialQuestion ?? "");
@@ -176,6 +178,10 @@ export const AskAiModal: React.FC<{
   }, [initialQuestion, tenantId, ask]);
 
   const copy = scopeCopy(scope, tenantName, subjectLabel);
+  const starterPrompts =
+    scope === "tenant" && routePrompts?.length
+      ? Array.from(new Set([...routePrompts, ...copy.followups])).slice(0, 4)
+      : copy.followups;
 
   return (
     <SparkSheet
@@ -231,7 +237,7 @@ export const AskAiModal: React.FC<{
               Suggested questions
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {copy.followups.map((chipLabel) => (
+              {starterPrompts.map((chipLabel) => (
                 <button
                   key={chipLabel}
                   type="button"

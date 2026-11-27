@@ -11,24 +11,23 @@ import { addDaysIso, opsTodayIso, venueDayOf } from "@/utils/venueDay";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import ChangeEventDateDialog from "@/events/ChangeEventDateDialog";
-
 import { useAuthStore } from "@/store/authStore";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import UpcomingList, { UpcomingSkeleton, type UpcomingRow } from "./UpcomingList";
+import {
+  filterUpcomingRows,
+  rowNeedsAttention,
+  UPCOMING_HORIZONS,
+  type UpcomingAttentionFilter,
+  type UpcomingHorizonDays,
+} from "./upcomingFilters";
 
 type UpcomingRequestRow = NonNullable<
   NonNullable<RequestsQueryType["response"]["requests"]["edges"][number]>["node"]
 >;
 
-/**
- * "Upcoming" — next 7 days, grouped by day. Combines two sources:
- *  - Approved/scheduled events from EventsQuery (event row already exists)
- *  - Pending/queue/approved requests from RequestsQuery (no event row yet)
- * so admins see what's locked in AND what's still working through approval.
- */
-
-/** "Retailer · address", dropping a part that only repeats the row's name. */
 function locationOf(
   name: string,
   retailer: string | null | undefined,
@@ -44,33 +43,46 @@ function locationOf(
   return parts.join(" · ");
 }
 
-function UpcomingHeader({ count }: { count?: number }) {
+function UpcomingHeader({
+  horizonDays,
+  count,
+}: {
+  horizonDays: UpcomingHorizonDays;
+  count?: number;
+}) {
   return (
     <SparkPageHeader
+      eyebrow="Schedule · Upcoming shifts"
       title="Upcoming"
       support={
         count === undefined
-          ? "Next 7 days"
-          : `Next 7 days · ${count} ${count === 1 ? "event" : "events"}`
+          ? `Next ${horizonDays} days`
+          : `Next ${horizonDays} days · ${count} ${count === 1 ? "event" : "events"}`
       }
       action={<LinkedSheetChip />}
     />
   );
 }
 
-const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
+const Inner: React.FC<{
+  isClient: boolean;
+  horizonDays: UpcomingHorizonDays;
+  onHorizonChange: (days: UpcomingHorizonDays) => void;
+}> = ({ isClient, horizonDays, onHorizonChange }) => {
   const { tenantId } = useAuthStore();
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const [refreshKey, setRefreshKey] = useState(0);
   const [rescheduleRow, setRescheduleRow] = useState<UpcomingRow | null>(null);
-  // Days are the venue's, compared as YYYY-MM-DD strings; "today" is the
-  // ops day (Pacific), as on the live board. Nothing goes through the
-  // viewer's browser clock.
-  const today = useMemo(() => opsTodayIso(), []);
-  const end = useMemo(() => addDaysIso(today, 7), [today]);
+  const [attentionFilter, setAttentionFilter] =
+    useState<UpcomingAttentionFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // The API filters by UTC day, so ask for a day either side of the window
-  // and keep rows whose venue day falls inside it. Every page is loaded: the
-  // list returns at most 100 a request.
+  const today = useMemo(() => opsTodayIso(), []);
+  const end = useMemo(
+    () => addDaysIso(today, horizonDays),
+    [today, horizonDays],
+  );
+
   const { events, loadingMore: loadingMoreEvents } = useAllEventPages(
     {
       ...(tenantId ? { tenantId } : {}),
@@ -80,7 +92,6 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
     { fetchKey: refreshKey },
   );
 
-  // Brand users get 200 rows a request; walk the rest by cursor.
   const { nodes: requests, loadingMore: loadingMoreRequests } =
     useAllConnectionPages<RequestsQueryType, UpcomingRequestRow>(
       RequestsQuery,
@@ -99,7 +110,6 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
   const rows: UpcomingRow[] = useMemo(() => {
     const out: UpcomingRow[] = [];
 
-    // 1. Scheduled / approved events with a real event row.
     for (const n of events) {
       const day = venueDayOf(n);
       if (!day || day < today || day > end) continue;
@@ -112,6 +122,7 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
         startRaw: n.startTime ?? null,
         endRaw: n.endTime ?? null,
         location: locationOf(name, n.request?.retailer?.name, n.address),
+        address: n.address ?? null,
         status: n.status?.name ?? "",
         statusSlug: (n.status?.slug ?? n.status?.name ?? "")
           .toString()
@@ -122,18 +133,13 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
       });
     }
 
-    // 2. Pending/queue/approved requests in the same window that haven't
-    //    been promoted to events yet. Avoid duplicates by checking the
-    //    event.uuid set we already added.
     const seenEventUuids = new Set(out.map((r) => r.uuid));
     for (const r of requests) {
-      // Request times are venue wall-clock strings: read the day off them.
       const day = venueDayOf(r);
       if (!day || day < today || day > end) continue;
       const slug = (r.status?.slug ?? r.status?.name ?? "")
         .toString()
         .toLowerCase();
-      // Skip rows already covered by events query and skip done/declined.
       if (r.event?.uuid && seenEventUuids.has(String(r.event.uuid))) continue;
       if (slug === "done" || slug === "completed" || slug === "declined") continue;
       const name = r.retailer?.name ?? r.name ?? "Untitled";
@@ -145,6 +151,7 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
         startRaw: r.startTime ?? null,
         endRaw: r.endTime ?? null,
         location: locationOf(name, null, r.address),
+        address: r.address ?? null,
         status: r.status?.name ?? "Pending",
         statusSlug: slug || "pending",
         source: "request",
@@ -157,12 +164,68 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
     );
   }, [events, requests, today, end]);
 
+  const attentionCount = useMemo(
+    () => rows.filter(rowNeedsAttention).length,
+    [rows],
+  );
+  const visibleRows = useMemo(
+    () => filterUpcomingRows(rows, attentionFilter, searchQuery),
+    [rows, attentionFilter, searchQuery],
+  );
+
   return (
     <>
-      <UpcomingHeader count={rows.length} />
+      <UpcomingHeader horizonDays={horizonDays} count={visibleRows.length} />
+
+      <div className="spark-card p-3 flex flex-wrap items-center gap-2.5">
+        <div className="pill-group" role="group" aria-label="Upcoming window">
+          {UPCOMING_HORIZONS.map((opt) => (
+            <button
+              key={opt.days}
+              type="button"
+              onClick={() => onHorizonChange(opt.days)}
+              className={`pill-btn ${horizonDays === opt.days ? "on" : ""}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="pill-group" role="group" aria-label="Attention filter">
+          <button
+            type="button"
+            onClick={() => setAttentionFilter("all")}
+            className={`pill-btn ${attentionFilter === "all" ? "on" : ""}`}
+          >
+            All ({rows.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setAttentionFilter("attention")}
+            className={`pill-btn ${attentionFilter === "attention" ? "on" : ""}`}
+          >
+            Needs attention ({attentionCount})
+          </button>
+        </div>
+
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search venue or address…"
+          aria-label="Filter upcoming shifts"
+          className="ml-auto rounded-lg px-3 py-1.5 text-xs flex-1 sm:flex-none min-w-[200px]"
+          style={{
+            background: "var(--spark-field-bg, var(--spark-surface))",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+          }}
+        />
+      </div>
+
       {rows.length === 0 ? (
         <SparkEmptyState
-          title="Nothing scheduled in the next 7 days"
+          title={`Nothing scheduled in the next ${horizonDays} days`}
           body={
             isClient
               ? "Your requests show here once they're approved or waiting for approval."
@@ -179,12 +242,38 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
             </>
           }
         />
+      ) : visibleRows.length === 0 ? (
+        <div
+          className="spark-card p-6 text-center text-sm"
+          style={{ color: "var(--spark-text-meta)" }}
+        >
+          No upcoming shifts match your filter.{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setAttentionFilter("all");
+              setSearchQuery("");
+            }}
+            className="underline font-semibold cursor-pointer"
+            style={{ color: "var(--spark-text)" }}
+          >
+            Reset filters
+          </button>
+        </div>
       ) : (
         <>
           <UpcomingList
-            rows={rows}
+            rows={visibleRows}
             today={today}
             onReschedule={(row) => setRescheduleRow(row)}
+            onPeekStore={(row) =>
+              openStoreSheet({
+                requestId: row.source === "request" ? row.uuid : undefined,
+                storeName: row.name,
+                address: row.address ?? null,
+                fallbackTitle: row.name,
+              })
+            }
           />
           {loadingMore ? (
             <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
@@ -215,6 +304,8 @@ const Inner: React.FC<{ isClient: boolean }> = ({ isClient }) => {
 
 export default function SparkUpcomingEvents() {
   const { isClient } = useSparkRole();
+  const [horizonDays, setHorizonDays] = useState<UpcomingHorizonDays>(7);
+
   return (
     <Layout>
       <div className="space-y-5 max-w-7xl spark-scale">
@@ -222,12 +313,16 @@ export default function SparkUpcomingEvents() {
         <Suspense
           fallback={
             <>
-              <UpcomingHeader />
+              <UpcomingHeader horizonDays={horizonDays} />
               <UpcomingSkeleton />
             </>
           }
         >
-          <Inner isClient={isClient} />
+          <Inner
+            isClient={isClient}
+            horizonDays={horizonDays}
+            onHorizonChange={setHorizonDays}
+          />
         </Suspense>
       </div>
     </Layout>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { thumbUrl } from "@/utils/thumb";
 
 export type PhotoLightboxItem = {
@@ -31,12 +31,14 @@ export function PhotoLightbox({
   onClose,
   onStep,
   loop = false,
+  headerAction,
 }: {
   photos: ReadonlyArray<PhotoLightboxItem>;
   index: number;
   onClose: () => void;
   onStep: (next: number) => void;
   loop?: boolean;
+  headerAction?: ReactNode;
 }) {
   const photo = photos[index];
   const last = photos.length - 1;
@@ -106,6 +108,14 @@ export function PhotoLightbox({
       aria-modal="true"
       aria-label={photo.caption || photo.name || `Photo ${index + 1} of ${photos.length}`}
     >
+      {headerAction ? (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed top-4 right-16 z-[71] flex items-center gap-2"
+        >
+          {headerAction}
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={onClose}

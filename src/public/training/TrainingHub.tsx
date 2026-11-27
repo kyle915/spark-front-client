@@ -113,17 +113,17 @@ export function trainingHubTheme(
     isLiquidDeath: false,
     displayFont:
       "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
-    bg: "#0A0B0D",
-    text: "#F2F3EE",
-    accent: "#f2f3ee",
-    secondary: "#f2f3ee",
-    muted: "rgba(242,243,238,0.55)",
-    cardBg: "#11140e",
-    cardBorder: "rgba(255,255,255,0.08)",
-    description: "rgba(242,243,238,0.72)",
-    buttonBg: "#f2f3ee",
-    buttonColor: "#0A0B0D",
-    videoButtonBg: "#f2f3ee",
+    bg: "#f6f6f2",
+    text: "#14160f",
+    accent: "#14160f",
+    secondary: "rgba(20, 22, 15, 0.78)",
+    muted: "rgba(20, 22, 15, 0.58)",
+    cardBg: "#ffffff",
+    cardBorder: "#dcddd5",
+    description: "rgba(20, 22, 15, 0.76)",
+    buttonBg: "#14160f",
+    buttonColor: "#ffffff",
+    videoButtonBg: "#14160f",
   };
 }
 

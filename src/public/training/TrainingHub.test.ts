@@ -16,13 +16,14 @@ describe("training hub tenant skin", () => {
     expect(theme.displayFont).toContain("Bungee");
   });
 
-  it("uses neutral Spark dark + lime + Space Grotesk for other brands", () => {
+  it("uses light Spark studio paper + Space Grotesk for other brands", () => {
     const theme = trainingHubTheme("Torch THC");
     expect(theme.isLiquidDeath).toBe(false);
-    expect(theme.bg).toBe("#0A0B0D");
-    expect(theme.accent).toBe("#f2f3ee");
+    expect(theme.bg).toBe("#f6f6f2");
+    expect(theme.cardBg).toBe("#ffffff");
+    expect(theme.accent).toBe("#14160f");
     expect(theme.displayFont).toContain("Space Grotesk");
-    expect(theme.text).not.toBe("#F4EFE3");
+    expect(theme.text).toBe("#14160f");
   });
 
   it("resolves a tenant logo through the shared candidates, null when unknown", () => {

@@ -198,15 +198,19 @@ export default function NotificationBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={toggle}
-        className="relative w-9 h-9 rounded-full border border-base-300 flex items-center justify-center hover:text-primary hover:border-primary transition"
-        style={{ color: "var(--spark-text-secondary)" }}
+        className="relative w-9 h-9 rounded-lg flex items-center justify-center transition hover:opacity-85 cursor-pointer"
+        style={{
+          color: "var(--spark-text-secondary)",
+          border: "1px solid var(--spark-border)",
+          background: "transparent",
+        }}
         aria-label="Notifications"
         title="Notifications"
       >
-        <BellIcon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+        <BellIcon className="w-4.5 h-4.5" style={{ width: 17, height: 17 }} />
         {unread > 0 && (
           <span
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
+            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-md text-[10px] font-bold tab-num flex items-center justify-center"
             style={{
               background: "var(--spark-badge-alert-bg, #c2410c)",
               color: "var(--spark-badge-alert-ink, #ffffff)",
@@ -219,11 +223,11 @@ export default function NotificationBell() {
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-[360px] max-w-[90vw] rounded-2xl overflow-hidden z-50"
+          className="absolute right-0 mt-2 w-[360px] max-w-[90vw] rounded-xl overflow-hidden z-50"
           style={{
-            background: "var(--spark-surface, #11140e)",
-            border: "1px solid var(--spark-border, #1f2418)",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+            background: "var(--spark-surface, #ffffff)",
+            border: "1px solid var(--spark-border)",
+            boxShadow: "var(--spark-elev-2, 0 18px 36px rgba(20, 22, 15, 0.12))",
           }}
         >
           <div
@@ -231,8 +235,8 @@ export default function NotificationBell() {
             style={{ borderBottom: "1px solid var(--spark-border)" }}
           >
             <span
-              className="mono text-[10px]"
-              style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}
+              className="mono text-[10px] font-semibold"
+              style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
             >
               NOTIFICATIONS
             </span>
@@ -240,14 +244,16 @@ export default function NotificationBell() {
               {feed.length > 0 && (
                 <button
                   onClick={() => clear()}
-                  className="text-[11px] text-base-content/50 hover:text-error"
+                  className="text-[11px] font-medium hover:underline cursor-pointer"
+                  style={{ color: "var(--spark-text-secondary)" }}
                 >
                   Clear all
                 </button>
               )}
               <button
                 onClick={load}
-                className="text-[11px] text-base-content/50 hover:text-primary"
+                className="text-[11px] font-medium hover:underline cursor-pointer"
+                style={{ color: "var(--spark-text-secondary)" }}
               >
                 Refresh
               </button>
@@ -270,11 +276,11 @@ export default function NotificationBell() {
                     key={p.uuid}
                     className="p-3 mb-2 rounded-xl"
                     style={{
-                      background: "var(--spark-bg, #0a0d09)",
+                      background: "var(--spark-surface-2, var(--spark-bg))",
                       border: "1px solid var(--spark-border)",
                     }}
                   >
-                    <p className="text-sm font-semibold">
+                    <p className="text-sm font-semibold" style={{ color: "var(--spark-text)" }}>
                       ⏱ {p.baName} · +{p.minutesRequested} min
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-secondary)" }}>
@@ -299,7 +305,7 @@ export default function NotificationBell() {
                           }
                           className="w-full text-xs rounded-lg p-2"
                           style={{
-                            background: "var(--spark-surface, #11140e)",
+                            background: "var(--spark-field-bg, var(--spark-surface))",
                             border: "1px solid var(--spark-border)",
                             color: "var(--spark-text)",
                           }}

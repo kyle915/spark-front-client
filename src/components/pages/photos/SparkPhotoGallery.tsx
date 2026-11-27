@@ -1,9 +1,11 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
+import { Check, Maximize2 } from "lucide-react";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
+import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { PHOTOS_HUB_TABS } from "@/shared/sparkHubNav";
 import { TenantPhotoGalleryQuery } from "@/api/queries/TenantPhotoGalleryQuery";
 import type { TenantPhotoGalleryQuery as QueryType } from "@api/queries/__generated__/TenantPhotoGalleryQuery.graphql";
@@ -64,6 +66,7 @@ const Grid: React.FC<{
   selected: Map<string, GalleryPhoto>;
   onToggle: (p: GalleryPhoto) => void;
   onSelectMany: (photos: readonly GalleryPhoto[], on: boolean) => void;
+  onPreview: (photos: readonly GalleryPhoto[], index: number) => void;
 }> = ({
   tenantId,
   filters,
@@ -75,6 +78,7 @@ const Grid: React.FC<{
   selected,
   onToggle,
   onSelectMany,
+  onPreview,
 }) => {
   const dates = useMemo(() => rangeDates(filters.range), [filters.range]);
   const data = useLazyLoadQuery<QueryType>(
@@ -143,12 +147,12 @@ const Grid: React.FC<{
         </button>
       </div>
       <ul className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 list-none p-0 m-0">
-        {g.photos.map((p) => {
+        {g.photos.map((p, idx) => {
           const on = selected.has(p.id);
           return (
             <li key={p.id}>
               <div
-                className="relative overflow-hidden"
+                className="group relative overflow-hidden"
                 style={{
                   borderRadius: 12,
                   border: on
@@ -157,21 +161,55 @@ const Grid: React.FC<{
                   background: "var(--spark-surface-2)",
                 }}
               >
-                <label className="block cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => onPreview(g.photos, idx)}
+                  aria-label={`Inspect photo: ${p.caption || p.category || "field photo"}`}
+                  className="block w-full text-left cursor-zoom-in"
+                >
                   <img
                     src={thumbUrl(p.url, 400)}
                     alt={p.caption || p.category || "Field photo"}
                     loading="lazy"
-                    className="w-full aspect-[4/3] object-cover block"
+                    className="w-full aspect-[4/3] object-cover block transition duration-200 group-hover:scale-[1.02]"
                   />
+                  <span
+                    aria-hidden
+                    className="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    style={{
+                      background: "rgba(20, 22, 15, 0.72)",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <Maximize2 size={13} strokeWidth={2} />
+                  </span>
+                </button>
+                <label
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-2 left-2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition"
+                  style={{
+                    background: on ? "var(--spark-lime)" : "rgba(255, 255, 255, 0.92)",
+                    border: on
+                      ? "1px solid var(--spark-lime)"
+                      : "1px solid rgba(20, 22, 15, 0.18)",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={on}
                     onChange={() => onToggle(p)}
                     aria-label={`Select photo: ${p.category || "field photo"}, ${photoCaption(p)}`}
-                    className="absolute top-2 left-2 w-5 h-5"
-                    style={{ accentColor: "var(--spark-lime)" }}
+                    className="sr-only"
                   />
+                  {on ? (
+                    <Check size={14} strokeWidth={2.5} style={{ color: "var(--spark-on-accent)" }} />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="w-3.5 h-3.5 rounded-[4px]"
+                      style={{ border: "1.5px solid rgba(20, 22, 15, 0.45)" }}
+                    />
+                  )}
                 </label>
               </div>
               <p className="text-xs mt-1.5 font-semibold truncate" title={p.category}>
@@ -279,6 +317,10 @@ const SparkPhotoGallery: React.FC = () => {
     states: readonly string[];
   }>({ categories: [], states: [] });
   const [selected, setSelected] = useState<Map<string, GalleryPhoto>>(new Map());
+  const [preview, setPreview] = useState<{
+    photos: readonly GalleryPhoto[];
+    index: number;
+  } | null>(null);
   const [perPage, setPerPage] = useState<DeckLayout>(4);
   const [zipping, setZipping] = useState(false);
 
@@ -572,6 +614,7 @@ const SparkPhotoGallery: React.FC = () => {
                 selected={selected}
                 onToggle={toggle}
                 onSelectMany={selectMany}
+                onPreview={(photos, index) => setPreview({ photos, index })}
               />
             ) : (
               <Grid
@@ -585,6 +628,7 @@ const SparkPhotoGallery: React.FC = () => {
                 selected={selected}
                 onToggle={toggle}
                 onSelectMany={selectMany}
+                onPreview={(photos, index) => setPreview({ photos, index })}
               />
             )}
           </Suspense>
@@ -593,6 +637,41 @@ const SparkPhotoGallery: React.FC = () => {
             Choose a client to see its photos.
           </p>
         )}
+
+        {preview && preview.photos[preview.index] ? (() => {
+          const activePhoto = preview.photos[preview.index];
+          const isSelected = selected.has(activePhoto.id);
+          return (
+            <PhotoLightbox
+              photos={preview.photos.map((p) => ({
+                url: p.url,
+                thumb: thumbUrl(p.url, 400),
+                name: photoCaption(p) || p.category || undefined,
+                caption: p.caption || p.category || undefined,
+              }))}
+              index={preview.index}
+              onClose={() => setPreview(null)}
+              onStep={(next) =>
+                setPreview((cur) => (cur ? { ...cur, index: next } : null))
+              }
+              loop
+              headerAction={
+                <button
+                  type="button"
+                  onClick={() => toggle(activePhoto)}
+                  className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
+                  style={{
+                    background: isSelected ? "#f2f3ee" : "rgba(10, 13, 9, 0.72)",
+                    color: isSelected ? "#14160f" : "#f2f3ee",
+                    border: "1px solid rgba(255, 255, 255, 0.34)",
+                  }}
+                >
+                  {isSelected ? "✓ Selected for deck" : "+ Select for deck"}
+                </button>
+              }
+            />
+          );
+        })() : null}
       </div>
     </Layout>
   );

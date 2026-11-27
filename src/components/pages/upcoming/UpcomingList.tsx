@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Store } from "lucide-react";
 import { dayToDate } from "@/utils/venueDay";
 
 /**
@@ -27,6 +28,8 @@ export type UpcomingRow = {
   hasAddress?: boolean;
   /** Venue timezone display label for inline rescheduling. */
   timezoneLabel?: string | null;
+  /** Raw street address for StoreSheet drill-down. */
+  address?: string | null;
 };
 
 const fmtDay = (iso: string) =>
@@ -96,9 +99,11 @@ const NON_RESCHEDULABLE = new Set(["cancelled", "canceled", "declined", "done", 
 function Row({
   row,
   onReschedule,
+  onPeekStore,
 }: {
   row: UpcomingRow;
   onReschedule?: (row: UpcomingRow) => void;
+  onPeekStore?: (row: UpcomingRow) => void;
 }) {
   const t = fmtTimeRange(row.startRaw, row.endRaw);
   const to =
@@ -144,20 +149,38 @@ function Row({
           <StatusPill row={row} />
         </span>
       </Link>
-      {canReschedule ? (
-        <button
-          type="button"
-          onClick={() => onReschedule?.(row)}
-          className="shrink-0 mr-3 px-2.5 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-80"
-          style={{
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text-secondary)",
-            background: "transparent",
-          }}
-        >
-          Change date
-        </button>
-      ) : null}
+      <div className="shrink-0 mr-3 flex items-center gap-1.5">
+        {onPeekStore ? (
+          <button
+            type="button"
+            onClick={() => onPeekStore(row)}
+            className="p-1.5 rounded-lg text-xs transition hover:opacity-80 cursor-pointer"
+            style={{
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text-secondary)",
+              background: "transparent",
+            }}
+            aria-label={`Peek store profile for ${name}`}
+            title="Store profile & history"
+          >
+            <Store size={14} strokeWidth={1.8} />
+          </button>
+        ) : null}
+        {canReschedule ? (
+          <button
+            type="button"
+            onClick={() => onReschedule?.(row)}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-80 cursor-pointer"
+            style={{
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text-secondary)",
+              background: "transparent",
+            }}
+          >
+            Change date
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -166,10 +189,12 @@ export function UpcomingList({
   rows,
   today,
   onReschedule,
+  onPeekStore,
 }: {
   rows: UpcomingRow[];
   today: string;
   onReschedule?: (row: UpcomingRow) => void;
+  onPeekStore?: (row: UpcomingRow) => void;
 }) {
   const groups = new Map<string, UpcomingRow[]>();
   for (const r of rows) {
@@ -198,6 +223,7 @@ export function UpcomingList({
                   key={`${r.source}-${r.uuid}`}
                   row={r}
                   onReschedule={onReschedule}
+                  onPeekStore={onPeekStore}
                 />
               ))}
             </ul>

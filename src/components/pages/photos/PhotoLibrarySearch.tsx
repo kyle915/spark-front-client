@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { commitMutation, fetchQuery } from "react-relay";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
+import { Check, Maximize2 } from "lucide-react";
 import environment from "@/api/relay/environment";
 import { InterpretPhotoSearchQuery, PhotoLibraryQuery } from "@/api/queries/PhotoLibraryQuery";
 import type { PhotoLibraryQuery as LibraryQueryType } from "@api/queries/__generated__/PhotoLibraryQuery.graphql";
@@ -221,6 +222,7 @@ export const LibraryGrid: React.FC<{
   selected: Map<string, GalleryPhoto>;
   onToggle: (p: GalleryPhoto) => void;
   onSelectMany: (photos: readonly GalleryPhoto[], on: boolean) => void;
+  onPreview?: (photos: readonly GalleryPhoto[], index: number) => void;
 }> = ({
   tenantId,
   filters,
@@ -234,6 +236,7 @@ export const LibraryGrid: React.FC<{
   selected,
   onToggle,
   onSelectMany,
+  onPreview,
 }) => {
   const data = useLazyLoadQuery<LibraryQueryType>(
     PhotoLibraryQuery,
@@ -305,7 +308,7 @@ export const LibraryGrid: React.FC<{
           return (
             <li key={p.id}>
               <div
-                className="relative overflow-hidden"
+                className="group relative overflow-hidden"
                 style={{
                   borderRadius: 12,
                   border: on
@@ -314,21 +317,55 @@ export const LibraryGrid: React.FC<{
                   background: "var(--spark-surface-2)",
                 }}
               >
-                <label className="block cursor-pointer">
+                <button
+                  type="button"
+                  onClick={() => onPreview?.(photos, i)}
+                  aria-label={`Inspect photo: ${p.caption || tags || "field photo"}`}
+                  className="block w-full text-left cursor-zoom-in"
+                >
                   <img
                     src={thumbUrl(p.url, 400)}
                     alt={p.caption || tags || "Field photo"}
                     loading="lazy"
-                    className="w-full aspect-[4/3] object-cover block"
+                    className="w-full aspect-[4/3] object-cover block transition duration-200 group-hover:scale-[1.02]"
                   />
+                  <span
+                    aria-hidden
+                    className="absolute bottom-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    style={{
+                      background: "rgba(20, 22, 15, 0.72)",
+                      color: "#ffffff",
+                    }}
+                  >
+                    <Maximize2 size={13} strokeWidth={2} />
+                  </span>
+                </button>
+                <label
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute top-2 left-2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition"
+                  style={{
+                    background: on ? "var(--spark-lime)" : "rgba(255, 255, 255, 0.92)",
+                    border: on
+                      ? "1px solid var(--spark-lime)"
+                      : "1px solid rgba(20, 22, 15, 0.18)",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={on}
                     onChange={() => onToggle(g)}
                     aria-label={`Select photo: ${p.caption || tags || "field photo"}, ${photoCaption(g)}`}
-                    className="absolute top-2 left-2 w-5 h-5"
-                    style={{ accentColor: "var(--spark-lime)" }}
+                    className="sr-only"
                   />
+                  {on ? (
+                    <Check size={14} strokeWidth={2.5} style={{ color: "var(--spark-on-accent)" }} />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="w-3.5 h-3.5 rounded-[4px]"
+                      style={{ border: "1.5px solid rgba(20, 22, 15, 0.45)" }}
+                    />
+                  )}
                 </label>
                 {showApproval && !p.approved ? (
                   <span

@@ -71,6 +71,7 @@ export function RecapQuickPeekSheet({
   onPrev,
   onNext,
   isClient,
+  allowClientApprove = false,
   forceApproved = false,
   approving = false,
   onApprove,
@@ -89,6 +90,7 @@ export function RecapQuickPeekSheet({
   onPrev: () => void;
   onNext: () => void;
   isClient: boolean;
+  allowClientApprove?: boolean;
   forceApproved?: boolean;
   approving?: boolean;
   onApprove?: (recap: RecapQuickPeekItem) => void;
@@ -111,7 +113,12 @@ export function RecapQuickPeekSheet({
   const emptyShell = recap ? recapIsEmptyShell(recap) : false;
   const approved = Boolean(recap?.approved || forceApproved);
   const canApprove = Boolean(
-    recap && !isClient && !approved && !emptyShell && onApprove && !approving,
+    recap &&
+      (!isClient || allowClientApprove) &&
+      !approved &&
+      !emptyShell &&
+      onApprove &&
+      !approving,
   );
   const canShare = Boolean(recap?.shareToken && onCopyShareLink);
 

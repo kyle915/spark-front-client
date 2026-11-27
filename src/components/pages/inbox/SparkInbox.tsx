@@ -9,6 +9,8 @@ import { useAlertStore } from "@/store/alertStore";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
+import RequestQuickPeekSheet from "@/requests/RequestQuickPeekSheet";
+import { stepQuickPeekIndex, type QuickPeekItem } from "@/requests/quickPeekNav";
 import {
   INBOX_PAGE_SIZE,
   inboxEndCursor,
@@ -77,10 +79,15 @@ async function callApprovalMutation(
  */
 
 type ActionItem = {
+  id: string;
   uuid: string;
   reqId: string;
   venue: string;
   market: string;
+  address: string | null;
+  dateLabel: string;
+  statusSlug: string;
+  statusLabel: string;
   requester: string;
   whenIso: string;
   kind: "sla" | "pending" | "declined";
@@ -151,15 +158,29 @@ const toActionItems = (
     const reqId = `REQ-${id.slice(-4).toUpperCase()}`;
     const venue = r.retailer?.name ?? r.name ?? "—";
     const market = r.market || "—";
+    const address = r.address ?? null;
+    const dateLabel = r.date
+      ? new Date(r.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "Date TBD";
+    const statusLabel = r.status?.name ?? "Pending";
     const requester = r.client?.name ?? r.distributor?.name ?? "—";
 
     if (wantPending && slug === "pending") {
       const isBreach = Number.isFinite(created) && created <= cutoff72;
       out.push({
+        id,
         uuid: String(r.uuid),
         reqId,
         venue,
         market,
+        address,
+        dateLabel,
+        statusSlug: slug || "pending",
+        statusLabel,
         requester,
         whenIso: r.createdAt ?? "",
         kind: isBreach ? "sla" : "pending",
@@ -171,10 +192,15 @@ const toActionItems = (
       updated >= cutoff7d
     ) {
       out.push({
+        id,
         uuid: String(r.uuid),
         reqId,
         venue,
         market,
+        address,
+        dateLabel,
+        statusSlug: "declined",
+        statusLabel: r.status?.name ?? "Declined",
         requester,
         whenIso: r.updatedAt ?? "",
         kind: "declined",
@@ -230,6 +256,7 @@ const Inner: React.FC = () => {
   } | null>(null);
   const [declineFor, setDeclineFor] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState("");
+  const [peekIndex, setPeekIndex] = useState<number | null>(null);
   const [optimisticallyResolved, setOptimisticallyResolved] = useState<
     Set<string>
   >(new Set());
@@ -569,7 +596,8 @@ const Inner: React.FC = () => {
                     />
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => navigate(target, navOpts)}
+                      onClick={() => setPeekIndex(i)}
+                      title="Click to quick-peek in side drawer (j / k to step, a to approve)"
                     >
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
@@ -787,6 +815,121 @@ const Inner: React.FC = () => {
           )}
         </div>
       )}
+      {(() => {
+        const clampedIdx =
+          peekIndex != null && items.length > 0
+            ? Math.min(peekIndex, items.length - 1)
+            : null;
+        const active = clampedIdx != null ? items[clampedIdx] : null;
+        const peekItem: QuickPeekItem | null = active
+          ? {
+              uuid: active.uuid,
+              id: active.id,
+              reqLabel: active.reqId,
+              venue: active.venue,
+              market: active.market !== "—" ? active.market : null,
+              address: active.address,
+              dateLabel: active.dateLabel,
+              statusLabel: active.statusLabel,
+              statusSlug: active.statusSlug,
+              requester: active.requester !== "—" ? active.requester : null,
+              statusNote: KIND_META[active.kind].label,
+              fullHref: `/request/view/${active.uuid}`,
+              canApprove: active.kind === "sla" || active.kind === "pending",
+              isApprovedOptimistic: optimisticallyResolved.has(active.uuid),
+            }
+          : null;
+
+        return (
+          <RequestQuickPeekSheet
+            open={peekItem !== null}
+            onOpenChange={(next) => {
+              if (!next) {
+                setPeekIndex(null);
+                setDeclineFor(null);
+              }
+            }}
+            item={peekItem}
+            index={clampedIdx ?? 0}
+            total={items.length}
+            onStep={(delta) =>
+              setPeekIndex((cur) =>
+                cur == null ? null : stepQuickPeekIndex(cur, items.length, delta),
+              )
+            }
+            onOpenFull={(it) => {
+              setPeekIndex(null);
+              navigate(it.fullHref, { state: { from: "/inbox" } });
+            }}
+            approving={Boolean(active && actingOn?.uuid === active.uuid)}
+            onApprove={
+              active && (active.kind === "sla" || active.kind === "pending")
+                ? (it) => void handleApprove(it.uuid)
+                : undefined
+            }
+            onDecline={
+              active && (active.kind === "sla" || active.kind === "pending")
+                ? (it) => {
+                    setDeclineFor(it.uuid);
+                    setDeclineReason("");
+                  }
+                : undefined
+            }
+            extraContent={
+              active && declineFor === active.uuid ? (
+                <div
+                  className="rounded-xl p-3 space-y-2"
+                  style={{
+                    border: "1px solid var(--spark-border)",
+                    background: "var(--spark-surface-2)",
+                  }}
+                >
+                  <p className="text-xs font-semibold" style={{ color: "var(--spark-text)" }}>
+                    Decline reason (optional — sent to requester)
+                  </p>
+                  <input
+                    autoFocus
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    placeholder="e.g., Store requested next Saturday instead"
+                    className="w-full rounded-lg px-3 py-2 text-xs"
+                    style={{
+                      background: "var(--spark-field-bg, var(--spark-surface))",
+                      border: "1px solid var(--spark-border)",
+                      color: "var(--spark-text)",
+                    }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={actingOn?.uuid === active.uuid}
+                      onClick={() => void handleDecline(active.uuid, declineReason)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                      style={{
+                        background: "var(--spark-orange)",
+                        color: "#ffffff",
+                      }}
+                    >
+                      Confirm decline
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeclineFor(null);
+                        setDeclineReason("");
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg text-xs"
+                      style={{ color: "var(--spark-text-meta)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null
+            }
+          />
+        );
+      })()}
     </div>
   );
 };
