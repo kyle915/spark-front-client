@@ -1,8 +1,33 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
+
+vi.mock("@/store/authStore", () => ({
+  useAuthStore: (selector?: (s: { tenantId: string | null }) => unknown) => {
+    const state = { tenantId: "42" };
+    return typeof selector === "function" ? selector(state) : state;
+  },
+}));
+
+vi.mock("@/hooks/useSparkRole", () => ({
+  default: () => ({
+    role: "admin",
+    isAdmin: true,
+    isClient: false,
+    canToggleRole: true,
+    setRole: () => {},
+  }),
+  useSparkRole: () => ({
+    role: "admin",
+    isAdmin: true,
+    isClient: false,
+    canToggleRole: true,
+    setRole: () => {},
+  }),
+}));
+
 import { MobileNavProvider } from "./MobileNavContext";
 import SparkMobileDock from "./SparkMobileDock";
 import { activeMobileDockKey, buildMobileDockItems } from "./mobileDockItems";
