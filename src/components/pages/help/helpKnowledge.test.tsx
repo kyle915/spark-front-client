@@ -26,9 +26,14 @@ describe("Spark Help Knowledge Base, Chat AI Assist & Client/Admin Boundaries", 
 
     const clientPrompts = routeSparkHelpPrompts("/", true).join(" ").toLowerCase();
     const adminPrompts = routeSparkHelpPrompts("/", false).join(" ").toLowerCase();
-    expect(clientPrompts).not.toContain("wingspan");
-    expect(clientPrompts).not.toContain("payroll");
-    expect(adminPrompts).toContain("payroll");
+    // Neither client nor admin help prompts should ever mention internal Ignite financials/payroll/Wingspan/cron
+    for (const joined of [clientPrompts, adminPrompts]) {
+      expect(joined).not.toContain("wingspan");
+      expect(joined).not.toContain("payroll");
+      expect(joined).not.toContain("cron");
+    }
+    expect(clientPrompts).not.toContain("sandbox");
+    expect(adminPrompts).toContain("sandbox");
 
     const demoCostPrompts = routeSparkHelpPrompts("/demo-costs", true).join(" ").toLowerCase();
     expect(demoCostPrompts).toContain("demo costs");

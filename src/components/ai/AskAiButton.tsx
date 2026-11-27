@@ -273,7 +273,7 @@ export const AskAiModal: React.FC<{
       side="right"
       size="lg"
       eyebrow={mode === "help" ? (isAdmin ? "Ask Spark · Admin Help" : "Ask Spark · Help") : copy.kicker}
-      title={mode === "help" ? "Spark Help & SOPs" : copy.title}
+      title={mode === "help" ? "Spark Product Help" : copy.title}
     >
       <div className="flex flex-col h-full min-h-[65dvh]">
         {scope === "tenant" ? (
@@ -310,8 +310,8 @@ export const AskAiModal: React.FC<{
         <p className="text-xs leading-relaxed" style={{ color: "var(--spark-text-meta)" }}>
           {mode === "help"
             ? isAdmin
-              ? `Route-aware Spark Help (${location.pathname || "/"}) grounded in built-in docs, admin SOPs, and OpenAI semantic embeddings.`
-              : `Route-aware Spark Help (${location.pathname || "/"}) grounded in Spark product guides.`
+              ? `Route-aware Spark product help (${location.pathname || "/"}) grounded in Spark guides and OpenAI semantic embeddings. Never discusses internal Ignite financials or processes.`
+              : `Route-aware Spark product help (${location.pathname || "/"}) grounded in Spark guides.`
             : copy.blurb}
         </p>
 
@@ -335,7 +335,7 @@ export const AskAiModal: React.FC<{
             autoFocus
             placeholder={
               mode === "help"
-                ? "Ask how a Spark page, workflow, or SOP works…"
+                ? "Ask how any Spark page or feature works…"
                 : copy.placeholder
             }
             className="flex-1 min-w-[200px] px-3.5 py-2 rounded-lg text-sm transition disabled:opacity-60"

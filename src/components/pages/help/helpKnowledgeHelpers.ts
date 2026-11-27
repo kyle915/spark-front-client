@@ -24,7 +24,8 @@ export const HELP_AUDIENCE_OPTIONS: ReadonlyArray<{
   {
     value: "admin",
     label: "Ignite Admins Only",
-    description: "Internal ops, BA staffing, payroll & SOPs — NEVER shown to brand clients.",
+    description:
+      "Admin-only Spark UI how-to guides — never shown to brand clients. Never store internal Ignite financials or internal processes.",
   },
 ];
 
@@ -39,7 +40,7 @@ export const HELP_CATEGORY_OPTIONS: ReadonlyArray<{
   { value: "requests", label: "Requests & Scheduling" },
   { value: "billing_costs", label: "Demo Costs & Pacing" },
   { value: "integrations", label: "Webhooks & AI MCP" },
-  { value: "ba_ops", label: "BA Ops & Staffing (Internal)" },
+  { value: "field_ui", label: "Field & Chat UI (Admin)" },
   { value: "general", label: "General" },
 ];
 
@@ -61,8 +62,6 @@ export const SPARK_ROUTE_PRESETS: ReadonlyArray<{
   { path: "/ai-connector", label: "Open AI Connector" },
   { path: "/workspace", label: "Open Workspace & Agencies" },
   { path: "/chat", label: "Open Chat Inbox" },
-  { path: "/payroll", label: "Open Payroll" },
-  { path: "/payments", label: "Open Wingspan Payments" },
   { path: "/help", label: "Open Help & Support" },
 ];
 

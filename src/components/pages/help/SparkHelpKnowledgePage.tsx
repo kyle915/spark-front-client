@@ -295,7 +295,7 @@ const KnowledgeConsoleBody: React.FC<{
       <SparkPageHeader
         eyebrow="Ignite Admin · OpenAI Help Knowledge & Gaps"
         title="Spark Help Knowledge"
-        support="Curate FAQs and internal SOPs, answer unanswered user questions, and sync OpenAI semantic embeddings (text-embedding-3-small). Brand clients can read client-safe answers in Ask Spark, never add knowledge."
+        support="Curate Spark product FAQs, answer unanswered questions, and sync OpenAI semantic embeddings (text-embedding-3-small). Spark Help covers workspace features only — never internal Ignite financials or internal Ignite processes. Brand clients can never add knowledge."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -334,7 +334,7 @@ const KnowledgeConsoleBody: React.FC<{
         <div className="spark-card p-4 space-y-1">
           <p className="text-xs font-medium" style={META}>Custom Admin Articles</p>
           <p className="display text-3xl font-bold tab-num">{kb.articles.length}</p>
-          <p className="text-[11px]" style={META}>FAQs, SOPs &amp; Chat-taught entries</p>
+          <p className="text-[11px]" style={META}>FAQs &amp; Chat-taught product guides</p>
         </div>
         <div className="spark-card p-4 space-y-1">
           <p className="text-xs font-medium" style={META}>Built-in Spark Docs</p>
@@ -398,7 +398,7 @@ const KnowledgeConsoleBody: React.FC<{
                 Unanswered Questions &amp; Feedback Queue
               </h2>
               <p className="text-xs mt-0.5" style={META}>
-                Logged automatically when Ask Spark has low confidence, a client clicks &ldquo;Not helpful&rdquo;, or a `/chat` AI draft spots missing SOP info.
+                Logged automatically when Ask Spark has low confidence, a client clicks &ldquo;Not helpful&rdquo;, or a `/chat` AI draft spots missing product info.
               </p>
             </div>
             <div className="pill-group" role="group" aria-label="Filter gap status">
@@ -482,7 +482,7 @@ const KnowledgeConsoleBody: React.FC<{
                             resolvingGapQuestion: g.question,
                             title: g.question.slice(0, 120),
                             body: "",
-                            category: g.callerRole === "admin" ? "ba_ops" : "general",
+                            category: g.callerRole === "admin" ? "field_ui" : "general",
                             audience: g.callerRole === "admin" ? "admin" : "all",
                             routePath: g.routePath || "",
                             routeLabel:
@@ -559,7 +559,7 @@ const KnowledgeConsoleBody: React.FC<{
               <BookOpen size={20} className="mx-auto" style={META} />
               <p className="text-sm font-semibold">No custom articles yet</p>
               <p className="text-xs max-w-md mx-auto" style={META}>
-                Built-in Spark docs ({kb.builtinCount}) already answer standard platform questions. Click &ldquo;Add Knowledge Article&rdquo; or use &ldquo;Teach Spark&rdquo; in /chat to add custom FAQs and internal SOPs.
+                Built-in Spark docs ({kb.builtinCount}) already answer standard platform questions. Click &ldquo;Add Knowledge Article&rdquo; or use &ldquo;Teach Spark&rdquo; in /chat to add custom Spark product FAQs (internal Ignite financials and processes are blocked).
               </p>
             </div>
           ) : (
@@ -666,7 +666,7 @@ const KnowledgeConsoleBody: React.FC<{
               Test Client vs. Admin Visibility
             </h2>
             <p className="text-xs mt-0.5" style={META}>
-              Ask any question while toggling Brand Client vs. Ignite Admin scope to confirm internal SOPs (payroll, Wingspan, BA staffing, cron jobs) stay completely invisible to brand clients.
+              Ask any question while toggling Brand Client vs. Ignite Admin scope to confirm admin-only UI guides stay hidden from clients — and that internal Ignite financials or processes are always declined for everyone.
             </p>
           </div>
 
@@ -709,7 +709,7 @@ const KnowledgeConsoleBody: React.FC<{
                 type="text"
                 value={simQuestion}
                 onChange={(e) => setSimQuestion(e.target.value)}
-                placeholder="Try: 'How do BA Wingspan payments work?' or 'How does this page work?'"
+                placeholder="Try: 'How do I preview the admin sandbox?' or 'How does this page work?'"
                 className="flex-1 rounded-lg px-3.5 py-2 text-sm"
                 style={FIELD}
               />
@@ -902,7 +902,7 @@ const KnowledgeConsoleBody: React.FC<{
               </p>
 
               <div>
-                <label className="block text-xs font-semibold mb-1">Answer / SOP body</label>
+                <label className="block text-xs font-semibold mb-1">Answer / product guide</label>
                 <textarea
                   required
                   rows={5}

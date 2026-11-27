@@ -112,11 +112,11 @@ export function routeSparkHelpPrompts(
       "What events trigger Spark webhooks?",
     ];
   }
-  if (!isClient && (clean === "/chat" || clean === "/payroll" || clean === "/payments")) {
+  if (!isClient && clean === "/chat") {
     return [
       "How do AI draft replies and Teach Spark work in Chat?",
-      "How do BA payroll hours and Wingspan payouts work?",
-      "How do I configure Cloud Scheduler cron for Saved View digests?",
+      "How do I filter exceptions and MSRP drift in Shelf & Voice?",
+      "How do I export a Buyer QBR PowerPoint (.pptx) deck?",
     ];
   }
   return isClient
@@ -127,7 +127,7 @@ export function routeSparkHelpPrompts(
       ]
     : [
         "How does this page work?",
-        "How do I invite a BA to a shift and manage the roster?",
-        "How do BA payroll hours and Wingspan payments work?",
+        "How do I use the Missing Recaps and Recap Flag views?",
+        "How do I preview the admin Sample Brand Sandbox?",
       ];
 }

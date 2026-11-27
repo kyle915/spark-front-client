@@ -19,8 +19,8 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Admin Help Knowledge Base, OpenAI Embeddings & Chat AI Assist",
     staffOnly: true,
     items: [
-      "Ask Spark now includes a Program Data / Spark Help (Admin) switcher grounded in built-in docs, internal ops SOPs, and OpenAI semantic embeddings (text-embedding-3-small) — with strict audience isolation so brand clients never see admin-only docs or add knowledge.",
-      "Inside /chat, Ignite admins can click Draft AI to draft BA replies from shift context, brand product knowledge, and Spark SOPs (always editable before sending), and click Teach Spark on any admin reply to distill a PII-scrubbed FAQ straight into Spark Knowledge.",
+      "Ask Spark now includes a Program Data / Spark Help (Admin) switcher grounded in Spark product guides and OpenAI semantic embeddings (text-embedding-3-small) — with strict audience isolation (clients cannot see admin guides or add knowledge) and guardrails blocking internal Ignite financials or processes.",
+      "Inside /chat, Ignite admins can click Draft AI to draft BA replies from shift context, brand product knowledge, and Spark Help docs (always editable before sending), and click Teach Spark on any admin reply to distill a PII-scrubbed product FAQ into Spark Knowledge.",
       "Open System → Help Knowledge (/help-knowledge) to review unanswered or flagged Knowledge Gaps, publish/edit audience-scoped articles, sync OpenAI embeddings, and test Client vs. Admin visibility side by side.",
     ],
   },

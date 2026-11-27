@@ -42,7 +42,7 @@ export const TeachSparkModal: React.FC<{
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [category, setCategory] = useState("ba_ops");
+  const [category, setCategory] = useState("field_ui");
   const [audience, setAudience] = useState<HelpAudience>("admin");
   const [tagsRaw, setTagsRaw] = useState("");
   const [routePath, setRoutePath] = useState("/chat");
@@ -64,7 +64,7 @@ export const TeachSparkModal: React.FC<{
         }
         setTitle(r.title);
         setBody(r.body);
-        setCategory(r.category || "ba_ops");
+        setCategory(r.category || "field_ui");
         setAudience(
           r.audience === "all" || r.audience === "client" ? r.audience : "admin",
         );
@@ -156,7 +156,7 @@ export const TeachSparkModal: React.FC<{
               Save answer to Spark Knowledge
             </h2>
             <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
-              Review the PII-scrubbed draft below and choose whether brand clients or only Ignite admins can retrieve it.
+              Review the PII-scrubbed product-help draft below and choose visibility. Internal Ignite financials and processes are blocked from Help Knowledge.
             </p>
           </div>
           <button
@@ -263,7 +263,7 @@ export const TeachSparkModal: React.FC<{
 
             <div>
               <label className="block text-xs font-semibold mb-1">
-                Answer / SOP guidance
+                Answer / product guidance
               </label>
               <textarea
                 value={body}
