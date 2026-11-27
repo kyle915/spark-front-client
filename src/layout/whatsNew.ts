@@ -14,6 +14,17 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-26st",
+    date: "November 26, 2026",
+    title: "Studio workspace frame, editorial KPIs, and Recent Field Proof",
+    items: [
+      "Desktop workspace now sits inside a 12px-rounded studio frame with a slimmer 48px header bar and squared monogram tiles.",
+      "Headline KPIs and stat lockups use Space Grotesk tabular numerals instead of heavy terminal monospace, keeping digits vertically aligned with cleaner editorial hierarchy.",
+      "Page hubs (Schedule, Photos, Reports & ROI, and Home) use flush underline tabs, range/scale switchers use recessed 8px segmented tracks, and status badges use compact 6px tags with status dots.",
+      "Client Home adds a 4-up Recent Field Proof contact strip of approved setup and sampling shots with store and date captions.",
+    ],
+  },
+  {
     id: "2026-11-26ux",
     date: "November 26, 2026",
     title: "Focused navigation hubs, collapsible sidebar rail, and table Quick-Peek",

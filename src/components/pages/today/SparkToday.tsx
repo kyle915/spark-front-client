@@ -532,11 +532,11 @@ export default function SparkToday() {
       <div className="space-y-5 max-w-7xl spark-fade-in spark-scale">
         <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
         <SparkPageHeader
-          title={isClient ? "Today's activations." : "Today, on the ground."}
-          support={
+          title={isClient ? "Today's activations" : "Today, on the ground"}
+          infoTip={
             isClient
-              ? "Every event on today's board: where it is, when it runs, and who is clocked in."
-              : "Every event on today's board: where it is, who is booked, and who is clocked in. Punch edits stay on On the clock."
+              ? "Live schedule and check-in status across today's activations."
+              : "Live bookings and check-ins for today. Punch edits live under On the clock."
           }
         />
 

@@ -385,7 +385,7 @@ const SparkPhotoGallery: React.FC = () => {
         <SparkPageHeader
           eyebrow="Recaps · Field gallery"
           title="Photos"
-          support="Field photos from approved recaps, best photos first. Search in plain words or by what is in the photo, pick the ones you want, then download them or build a photo deck."
+          infoTip="Approved recap photos, best shots first. Search by content, pin selections, or export a deck."
         />
 
         {tenantId ? (

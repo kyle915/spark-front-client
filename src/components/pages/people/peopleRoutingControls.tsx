@@ -134,13 +134,12 @@ export const PeopleTabsSwitcher: React.FC<{
           className="spark-dot"
           style={{
             background: "var(--spark-lime)",
-            boxShadow: "0 0 6px var(--spark-lime)",
           }}
         />
         <span>{summaryText}</span>
         <span
-          className="mono text-[10px] font-semibold"
-          style={{ letterSpacing: "0.12em", color: "var(--spark-lime)" }}
+          className="text-xs font-semibold"
+          style={{ color: "var(--spark-lime)" }}
         >
           Notifications &amp; Routing →
         </span>

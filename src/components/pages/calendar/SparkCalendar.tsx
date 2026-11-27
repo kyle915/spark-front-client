@@ -313,7 +313,6 @@ const TimeGrid: React.FC<{
                           height: 8,
                           borderRadius: 4,
                           background: "var(--spark-lime)",
-                          boxShadow: "0 0 8px var(--spark-lime)",
                           zIndex: 4,
                         }}
                       />
@@ -690,7 +689,7 @@ export default function SparkCalendar() {
         <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
         <SparkPageHeader
           title="Calendar"
-          support={`${rangeHeading} · Click any open slot or + to schedule a demo.`}
+          support={rangeHeading}
           action={
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-1">

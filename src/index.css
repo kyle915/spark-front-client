@@ -2,10 +2,10 @@
 @plugin "daisyui";
 
 /* One corner scale. Tailwind's larger radii line up with the Spark tokens
-   (card 14px, panel 18px) so hand-rolled containers match .spark-card. */
+   (card 12px, control 8px) so hand-rolled containers match .spark-card. */
 @theme {
-  --radius-2xl: 14px;
-  --radius-3xl: 18px;
+  --radius-2xl: 12px;
+  --radius-3xl: 12px;
 }
 
 /* Spark v2 fonts are self-hosted via index.html → /fonts/fonts.css */
@@ -319,10 +319,9 @@ code, kbd, samp, pre, .mono-code {
 /* Tabular numbers for any column showing $/counts — keeps things aligned */
 .tab-num { font-variant-numeric: tabular-nums; }
 
-/* Lime accent text with a soft glow — used for headline highlights */
+/* Accent text — crisp matte ink/accent, no neon drop-shadow */
 .spark-accent {
   color: var(--color-primary);
-  filter: drop-shadow(0 0 12px rgba(var(--spark-accent-rgb), 0.35));
 }
 
 /* The Spark wordmark style: italic, tightened, with a quiet "BY IGNITE" tag */
@@ -363,20 +362,29 @@ code, kbd, samp, pre, .mono-code {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
-/* Pill chip used for status indicators. Pair with chip-lime / chip-orange / chip-sky / chip-muted. */
+/* Compact 6px rounded-square status badge with a crisp 5px status dot.
+   Pair with chip-lime / chip-orange / chip-sky / chip-muted. */
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
+  gap: 0.35rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
   font-family: inherit; /* captions use the UI typeface; mono is for numbers and code */
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   font-weight: 600;
-  border: 1px solid currentColor;
+  border: 1px solid color-mix(in srgb, currentColor 26%, transparent);
   background: rgba(var(--spark-ink-rgb), 0.04);
+}
+span.chip:not(:has(> svg, > .spark-dot, > span[aria-hidden]))::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 .chip-lime    { color: var(--color-primary); background: rgba(var(--spark-accent-rgb), 0.10); }
 .chip-orange  { color: var(--color-warning); background: rgba(255, 138, 76, 0.10); }
@@ -390,10 +398,11 @@ code, kbd, samp, pre, .mono-code {
    than loud pills. Use alongside .chip + a color variant; must follow .chip
    so its padding/font-size win the cascade. */
 .chip-sm {
-  padding: 0.08rem 0.45rem;
-  font-size: 0.58rem;
-  letter-spacing: 0.07em;
-  gap: 0.2rem;
+  padding: 0.08rem 0.42rem;
+  border-radius: 5px;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  gap: 0.28rem;
 }
 
 /* Subtle grid background used on hero panels (e.g. login splash) */
@@ -455,9 +464,9 @@ code, kbd, samp, pre, .mono-code {
   --spark-faint: rgba(255, 255, 255, 0.52);
   --spark-hairline: rgba(255, 255, 255, 0.08);
   --spark-radius-control: 8px;
-  --spark-radius-card: 14px;
-  --spark-radius-panel: 18px;
-  --spark-radius-sheet: 18px;
+  --spark-radius-card: 12px;
+  --spark-radius-panel: 12px;
+  --spark-radius-sheet: 14px;
   --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);
   --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
   --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);
@@ -879,8 +888,8 @@ textarea::placeholder {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.55rem 1.1rem;
-  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  border-radius: var(--spark-radius-control, 8px);
   border: none;
   background: var(--spark-lime);
   color: var(--spark-on-accent);
@@ -888,22 +897,22 @@ textarea::placeholder {
   font-size: 0.875rem;
   cursor: pointer;
   text-decoration: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 .spark-btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .spark-btn-primary:not(:disabled):hover {
-  transform: scale(1.02);
+  opacity: 0.9;
 }
 .spark-btn-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  padding: 0.55rem 0.95rem;
-  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--spark-radius-control, 8px);
   border: 1px solid var(--spark-border);
   background: transparent;
   color: var(--spark-muted);
@@ -913,19 +922,20 @@ textarea::placeholder {
 }
 .spark-btn-ghost:hover {
   color: var(--spark-text);
-  border-color: rgba(var(--spark-ink-rgb), 0.2);
+  border-color: rgba(var(--spark-ink-rgb), 0.24);
 }
-/* Soft X density — square-ui quieter shells + admin-kit filter chrome.
-   Patterns only; no kit vendoring. */
+/* Unboxed filter chrome — sits directly on the canvas divided by hairlines
+   so white cards stay reserved for primary data. */
 .spark-filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.28rem 0.35rem;
-  padding: 0.4rem 0.55rem;
-  background: rgba(var(--spark-ink-rgb), 0.015);
-  border: 1px solid var(--spark-hairline, var(--spark-border));
-  border-radius: var(--spark-radius-control, 8px);
+  padding: 0.4rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--spark-hairline, var(--spark-border));
+  border-radius: 0;
 }
 .spark-filter-bar .label-mini {
   margin-right: 0.15rem;
@@ -954,7 +964,7 @@ textarea::placeholder {
 .spark-filter-bar .pill-btn {
   padding: 0.22rem 0.48rem;
   font-size: 0.7rem;
-  border-radius: 999px;
+  border-radius: 6px;
   min-height: 28px;
 }
 .spark-filter-bar .chip:focus-visible,
@@ -964,13 +974,14 @@ textarea::placeholder {
   outline-offset: 2px;
 }
 
-/* Recaps / Tracker sticky refine shells — denser than spark-card padding */
+/* Recaps / Tracker sticky refine shells — flush on the canvas with a hairline */
 .spark-sticky-filters {
-  padding: 0.45rem 0.55rem !important;
+  padding: 0.45rem 0 !important;
   gap: 0.4rem !important;
-  border-radius: var(--spark-radius-control, 8px) !important;
-  border-color: rgba(var(--spark-ink-rgb), 0.07) !important;
-  background: rgba(var(--spark-bg-rgb), 0.9) !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--spark-hairline, var(--spark-border)) !important;
+  background: color-mix(in srgb, var(--spark-bg) 92%, transparent) !important;
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
 }
@@ -1163,7 +1174,7 @@ thead .spark-table-sticky-date {
 .spark-inset-group {
   background: rgba(var(--spark-ink-rgb), 0.03);
   border: 1px solid var(--spark-border);
-  border-radius: 16px;
+  border-radius: var(--spark-radius-card, 12px);
   overflow: hidden;
 }
 .spark-inset-row {
@@ -1285,12 +1296,12 @@ a.spark-upcoming-row:focus-visible {
 .spark-card-flat {
   background: rgba(var(--spark-ink-rgb), 0.025);
   border: 1px solid var(--spark-border);
-  border-radius: var(--spark-radius-card, 14px);
+  border-radius: var(--spark-radius-card, 12px);
 }
 .spark-card-glow {
   background: var(--spark-surface);
   border: 1px solid var(--spark-border);
-  border-radius: var(--spark-radius-sheet, 22px);
+  border-radius: var(--spark-radius-card, 12px);
   box-shadow: none;
 }
 
@@ -1299,7 +1310,7 @@ a.spark-upcoming-row:focus-visible {
   padding: 1.5rem;
   background: var(--spark-surface);
   border: 1px solid var(--spark-border);
-  border-radius: var(--spark-radius-sheet, 22px);
+  border-radius: var(--spark-radius-card, 12px);
   cursor: default;
   transition: border-color 0.2s ease;
 }
@@ -1313,7 +1324,7 @@ a.spark-upcoming-row:focus-visible {
 .kpi-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   background: rgba(var(--spark-accent-rgb), 0.1);
@@ -1322,19 +1333,21 @@ a.spark-upcoming-row:focus-visible {
   font-size: 1rem;
 }
 .kpi-delta {
-  font-family: "JetBrains Mono", monospace;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   color: var(--spark-text);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.005em;
 }
 .kpi-delta.neg { color: var(--spark-orange); }
 .kpi-delta.muted { color: rgba(var(--spark-ink-rgb), 0.45); }
 .kpi-value {
-  font-weight: 700;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  font-weight: 600;
   font-size: 2.5rem;
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
   font-variant-numeric: tabular-nums;
   margin-top: 1rem;
 }
@@ -1344,9 +1357,8 @@ a.spark-upcoming-row:focus-visible {
   margin-top: 0.4rem;
 }
 
-/* Tanjim / Abrar + Tremor lockups — Recaps, Today, Needs-you, Insights.
-   JetBrains figure + muted Space Grotesk label. Orange delta only when
-   attention-worthy. DashWind-ish band spacing on Spark near-black cards. */
+/* Editorial KPI lockups — Space Grotesk tabular-nums figure + muted label.
+   Orange delta only when attention-worthy. */
 .spark-bento {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
@@ -1355,13 +1367,13 @@ a.spark-upcoming-row:focus-visible {
 .spark-bento-tile {
   background: rgba(var(--spark-ink-rgb), 0.03);
   border: 1px solid var(--spark-border);
-  border-radius: 14px;
+  border-radius: 10px;
   padding: 12px 14px;
   min-width: 0;
 }
 .spark-stat-band {
   padding: 1rem 1.25rem;
-  border-radius: 18px;
+  border-radius: var(--spark-radius-card, 12px);
 }
 /* Fixed column counts per breakpoint: auto-fit left a lone tile on its own
    row on phones and split the band mid-section. Tiles stretch to the row
@@ -1391,13 +1403,13 @@ a.spark-upcoming-row:focus-visible {
   font-size: 0.95rem;
 }
 .spark-stat-value {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 1.25rem;
   line-height: 1;
   white-space: nowrap;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
 }
 .spark-stat-lg {
   font-size: 1.65rem;
@@ -1453,7 +1465,7 @@ a.spark-upcoming-row:focus-visible {
 }
 .spark-panel-count {
   margin-left: 0.5rem;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Space Grotesk", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -1787,25 +1799,35 @@ a.spark-upcoming-row:focus-visible {
   font-variant-numeric: tabular-nums;
   color: var(--spark-text-secondary);
 }
-/* Two-way switch between the board's views. */
+/* Two-way switch between the board's views — recessed 8px track. */
 .spark-viewswitch {
   display: inline-flex;
+  gap: 2px;
   padding: 2px;
-  border: 1px solid var(--spark-border);
-  border-radius: 999px;
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+  border-radius: 8px;
+  background: var(--spark-surface-2);
 }
 .spark-viewswitch button {
-  padding: 0.3rem 0.8rem;
+  padding: 0.3rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--spark-text-secondary);
+  color: var(--spark-text-meta);
   background: transparent;
   border: none;
-  border-radius: 999px;
+  border-radius: 6px;
 }
 .spark-viewswitch button[aria-pressed="true"] {
-  color: var(--spark-selected-ink);
-  background: var(--spark-selected-bg);
+  color: var(--spark-text);
+  background: rgba(255, 255, 255, 0.13);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+[data-spark-mode="light"] .spark-viewswitch button[aria-pressed="true"],
+[data-theme="spark-v2"][data-spark-mode="light"] .spark-viewswitch button[aria-pressed="true"] {
+  color: #14160f;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(20, 22, 15, 0.08), 0 0 0 1px rgba(20, 22, 15, 0.06);
 }
 
 /* Dashboard page frame. One column up to a laptop; from 1720px the
@@ -1874,7 +1896,7 @@ a.spark-upcoming-row:focus-visible {
   line-height: 1.3;
 }
 
-/* Tremor KPI lockup: Space Grotesk label, JetBrains figure, orange delta on attention only. */
+/* Editorial KPI lockup: Space Grotesk label & tabular-nums figure, orange delta on attention only. */
 .spark-kpi-lockup {
   display: flex;
   flex-direction: column;
@@ -1886,17 +1908,17 @@ a.spark-upcoming-row:focus-visible {
   font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: rgba(var(--spark-ink-rgb), 0.48);
+  color: rgba(var(--spark-ink-rgb), 0.56);
   margin: 0;
   line-height: 1.25;
 }
 .spark-kpi-value {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
   font-size: clamp(1.65rem, 3.5vw, 2.15rem);
-  line-height: 1;
-  letter-spacing: -0.045em;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
   margin: 0;
   color: var(--spark-text);
 }
@@ -1916,10 +1938,11 @@ a.spark-upcoming-row:focus-visible {
 .spark-kpi-delta {
   margin: 0.15rem 0 0;
   font-family: "Space Grotesk", system-ui, sans-serif;
-  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(var(--spark-ink-rgb), 0.5);
+  color: rgba(var(--spark-ink-rgb), 0.54);
 }
 .spark-kpi-delta.is-attention {
   color: var(--spark-orange);
@@ -1934,36 +1957,72 @@ a.spark-upcoming-row:focus-visible {
   flex-shrink: 0;
 }
 
-/* === Apple-style time pill toggle === */
+/* === Flush underline hub tabs (Schedule, Photos, Reports & ROI, Home) === */
+.spark-hub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  border-bottom: 1px solid var(--spark-border);
+  padding: 0;
+}
+.spark-hub-tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 0.5rem 0.1rem 0.65rem;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--spark-text-meta);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+}
+.spark-hub-tab:hover {
+  color: var(--spark-text);
+}
+.spark-hub-tab.is-active {
+  color: var(--spark-text);
+  font-weight: 600;
+  border-bottom-color: var(--spark-text);
+}
+
+/* === Recessed 8px segmented control with raised 6px active keycap === */
 .pill-group {
   display: inline-flex;
-  gap: 0.15rem;
-  padding: 0.25rem;
-  border-radius: 9999px;
-  border: 1px solid var(--spark-border);
-  background: var(--spark-surface);
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--spark-hairline, var(--spark-border));
+  background: var(--spark-surface-2);
 }
 .pill-btn {
-  padding: 0.4rem 0.95rem;
-  border-radius: 9999px;
+  padding: 0.34rem 0.78rem;
+  border-radius: 6px;
   font-size: 0.78rem;
   font-weight: 500;
-  /* 0.55 ink washed out under AA on light cream; keep muted but readable. */
-  color: rgba(var(--spark-ink-rgb), 0.72);
+  color: var(--spark-text-meta);
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   font-family: "Space Grotesk", sans-serif;
 }
-.pill-btn:hover { color: rgba(var(--spark-ink-rgb), 0.92); }
-/* Selected segment: a quiet "you are here", not a filled button. The solid
-   accent fill is reserved for a screen's one primary action. */
+.pill-btn:hover { color: var(--spark-text); }
 .pill-btn.on {
-  color: var(--spark-selected-ink);
-  background: var(--spark-selected-bg);
+  color: var(--spark-text);
+  background: rgba(255, 255, 255, 0.13);
   font-weight: 600;
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+[data-spark-mode="light"] .pill-btn.on,
+[data-theme="spark-v2"][data-spark-mode="light"] .pill-btn.on {
+  color: #14160f;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(20, 22, 15, 0.08), 0 0 0 1px rgba(20, 22, 15, 0.06);
 }
 
 /* === Sidebar nav === */
@@ -2131,17 +2190,18 @@ a.spark-upcoming-row:focus-visible {
 }
 .spark-blink { animation: spark-blink 1.6s infinite; }
 
-/* === Avatar (lime gradient) === */
+/* === Squared 8px monogram tile (replaces CSS gradient circle) === */
 .spark-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--spark-lime), var(--spark-lime-dim));
-  color: var(--spark-on-accent);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(var(--spark-accent-rgb), 0.12);
+  color: var(--spark-text);
+  box-shadow: inset 0 0 0 1px rgba(var(--spark-ink-rgb), 0.16);
   display: grid;
   place-items: center;
-  font-weight: 700;
-  font-size: 0.85rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
   flex-shrink: 0;
 }
 
@@ -2756,7 +2816,7 @@ body { background: var(--spark-bg); }
   min-height: 160px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: var(--spark-radius-card, 12px);
   border: 1px dashed rgba(var(--spark-ink-rgb), 0.12);
   background:
     linear-gradient(180deg, rgba(var(--spark-ink-rgb), 0.025), transparent 55%),
@@ -2777,14 +2837,59 @@ body { background: var(--spark-bg); }
 /* Sticky Program Performance range — sits under SparkTopbar once.
    overflow must stay visible so wrapped support / SHOWING lines are never clipped. */
 .spark-insights-range {
-  top: 3.75rem;
+  top: 3rem;
   margin: 0 -0.25rem;
-  padding: 0.75rem 0.25rem 1rem;
+  padding: 0.65rem 0.25rem 0.85rem;
   overflow: visible;
-  background: color-mix(in srgb, var(--spark-bg, #0a0b0d) 88%, transparent);
+  background: color-mix(in srgb, var(--spark-bg, #0a0b0d) 92%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(var(--spark-ink-rgb), 0.06);
+  border-bottom: 1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb), 0.08));
+}
+
+/* Desktop Studio Frame — #0A0B0D obsidian outer shell framing an inset 12px
+   rounded workspace canvas (Linear / Attio posture). Mobile stays full-bleed. */
+.spark-app-shell {
+  background-color: var(--spark-bg, #0A0B0D);
+}
+.spark-studio-frame {
+  background-color: var(--spark-bg);
+  min-height: 100dvh;
+}
+@media (min-width: 768px) {
+  .spark-app-shell {
+    background-color: #0A0B0D;
+  }
+  .spark-app-shell .spark-sidebar {
+    background: #0A0B0D !important;
+    border-right-color: transparent !important;
+  }
+  .spark-studio-frame {
+    min-height: 0;
+    margin: 6px 6px 6px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  [data-spark-mode="light"] .spark-studio-frame,
+  [data-theme="spark-v2"][data-spark-mode="light"] .spark-studio-frame {
+    border-color: rgba(20, 22, 15, 0.14);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  }
+  .spark-insights-range {
+    top: 0;
+  }
+}
+@media print {
+  .spark-app-shell,
+  .spark-studio-frame {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
 }
 
 /* Desktop sidebar icon rail. Width stays 4.5rem so the page title in the
@@ -2955,7 +3060,7 @@ body { background: var(--spark-bg); }
   --spark-text-meta: rgba(var(--spark-ink-rgb), 0.64);
   --spark-faint: rgba(var(--spark-ink-rgb), 0.52);
   --spark-radius-control: 8px;
-  --spark-radius-panel: 18px;
+  --spark-radius-panel: 12px;
   --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);
   --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
   --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);

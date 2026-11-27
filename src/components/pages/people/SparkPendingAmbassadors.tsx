@@ -334,7 +334,7 @@ export default function SparkPendingAmbassadors() {
               className="display text-4xl font-bold mt-2"
               style={{ letterSpacing: "-0.04em" }}
             >
-              Waiting on you.
+              Waiting on you
             </h1>
             <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
               Brand ambassadors who created an account but haven't been

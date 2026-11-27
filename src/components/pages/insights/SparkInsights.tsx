@@ -21,6 +21,7 @@ import WhatChangedLine from "@/components/explain/WhatChangedLine";
 import Callouts from "@/components/explain/Callouts";
 import { LatestMonthHighlight } from "@/components/explain/MonthHighlight";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkInfoTip from "@/shared/SparkInfoTip";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { CountReel } from "@/motion/CountReel";
 import { cleanEventName, formatTimelineDay, timelineKind } from "@/utils/eventLabel";
@@ -160,7 +161,6 @@ const ActivationBreakdown: React.FC<{
     <div
       className="spark-card p-6 lg:p-8"
       style={{
-        borderRadius: 22,
         opacity: demoted ? 0.62 : 1,
       }}
     >
@@ -175,14 +175,13 @@ const ActivationBreakdown: React.FC<{
           By activation type
         </h2>
         <p
-          className="mono text-[10px]"
+          className="text-xs tab-num"
           style={{
-            letterSpacing: "0.18em",
             color: "var(--spark-text-meta)",
           }}
         >
-          CONFIRMED + COMPLETED · {rangeLabel.toUpperCase()}
-          {demoted ? " · MOSTLY QUIET" : ""}
+          Confirmed &amp; completed · {rangeLabel}
+          {demoted ? " · mostly quiet" : ""}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -201,16 +200,15 @@ const ActivationBreakdown: React.FC<{
                   className="spark-dot"
                   style={{
                     background: color,
-                    boxShadow: active ? `0 0 8px ${color}` : "none",
                   }}
                 />
-                <p className="label-mini">{s.label.toUpperCase()}</p>
+                <p className="label-mini">{s.label}</p>
               </div>
               <p
-                className="display tab-num font-bold"
+                className="display tab-num font-semibold"
                 style={{
                   fontSize: demoted ? "2rem" : "2.5rem",
-                  letterSpacing: "-0.04em",
+                  letterSpacing: "-0.035em",
                   lineHeight: 1,
                   color,
                 }}
@@ -404,36 +402,33 @@ function InsightsTimeline({
             <button
               type="button"
               onClick={onClearState}
-              className="mono text-[10px]"
+              className="text-xs font-medium"
               style={{
-                letterSpacing: "0.14em",
                 color: "var(--spark-orange)",
               }}
             >
-              CLEAR STATE
+              Clear state
             </button>
           )}
           <button
             type="button"
             onClick={() => navigate("/requests/list")}
-            className="mono text-[10px] transition"
+            className="text-xs font-medium transition hover:underline"
             style={{
-              letterSpacing: "0.18em",
               color: "var(--spark-text-meta)",
             }}
           >
-            ALL EVENTS →
+            All events →
           </button>
         </div>
       </div>
       <p
-        className="mono text-[10px] mb-4"
+        className="text-xs tab-num mb-4"
         style={{
-          letterSpacing: "0.16em",
           color: "var(--spark-text-meta)",
         }}
       >
-        SHOWING {rangeLabel.toUpperCase()}
+        Showing {rangeLabel}
         {selectedState ? ` · ${selectedState}` : ""}
       </p>
 
@@ -483,7 +478,6 @@ function InsightsTimeline({
                   className="spark-dot shrink-0"
                   style={{
                     background: dot,
-                    boxShadow: `0 0 8px ${dot}`,
                   }}
                 />
                 <div className="flex-1 min-w-0">
@@ -491,11 +485,9 @@ function InsightsTimeline({
                     {cleanEventName(e.name) || "Untitled"}
                   </p>
                   <p
-                    className="mono text-[10px] mt-0.5 truncate"
+                    className="text-xs mt-0.5 truncate"
                     style={{
-                      letterSpacing: "0.14em",
                       color: "var(--spark-text-meta)",
-                      textTransform: "uppercase",
                     }}
                   >
                     {e.location ?? ""}
@@ -643,7 +635,7 @@ export function InsightsBody({
         type="button"
         onClick={onCopySummary}
         disabled={!tenantId || copying}
-        className="px-3 py-2 rounded-xl text-sm font-medium"
+        className="px-3 py-1.5 rounded-[8px] text-sm font-medium"
         style={{
           background: "transparent",
           color: "var(--spark-text-secondary)",
@@ -657,7 +649,7 @@ export function InsightsBody({
       <button
         type="button"
         onClick={() => navigate("/reports")}
-        className="px-3 py-2 rounded-xl text-sm font-medium"
+        className="px-3 py-1.5 rounded-[8px] text-sm font-medium"
         style={{
           background: "transparent",
           color: "var(--spark-text-secondary)",
@@ -674,14 +666,19 @@ export function InsightsBody({
   const showingLine =
     fieldProgram ? null : (
       <p
-        className="mono text-[10px] min-w-0 whitespace-normal"
+        className="text-xs tab-num min-w-0 whitespace-normal inline-flex items-center gap-1"
         style={{
-          letterSpacing: "0.16em",
           color: "var(--spark-text-meta)",
         }}
       >
-        SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
-        {selectedState ? ` · STATE ${selectedState}` : ""}
+        <span>
+          {startDate} → {endDate}
+          {selectedState ? ` · ${selectedState}` : ""}
+        </span>
+        <SparkInfoTip
+          note="Date range scopes pulse metrics, activation mix, geo map, and timeline. Program KPIs below show calendar-year totals."
+          label="Range scope"
+        />
       </p>
     );
 
@@ -727,14 +724,10 @@ export function InsightsBody({
       ) : (
         <div className="flex flex-col gap-3">
           <SparkPageHeader
-            eyebrow={fieldProgram ? "FIELD MARKETING" : "PROGRAM ANALYTICS"}
+            eyebrow={fieldProgram ? "Field marketing" : "Program analytics"}
             title="Dashboard"
             titleClassName="text-2xl lg:text-3xl font-bold"
-            support={
-              fieldProgram
-                ? "Monthly scorecard from logged field events. Retail sampling stays on the other tab."
-                : "Page range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."
-            }
+            support={fieldProgram ? "Monthly scorecard from logged field events." : undefined}
           />
           <div className="w-full min-w-0">{rangeControls}</div>
           {showingLine}
@@ -749,7 +742,7 @@ export function InsightsBody({
           Everything heavier sits behind More detail so the first paint is
           a single answer instead of a wall of panels. */}
       {tenantId && (
-        <div className="spark-card overflow-hidden" style={{ borderRadius: 22 }}>
+        <div className="spark-card overflow-hidden">
           <div className="p-5 lg:p-6">
             <ExecutiveInsightsStrip
               tenantId={tenantId}
@@ -800,7 +793,6 @@ export function InsightsBody({
         >
           <section
             className="spark-card p-5 lg:p-6 space-y-5"
-            style={{ borderRadius: 22 }}
             aria-label="Sampling analytics stage"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -892,7 +884,6 @@ export function InsightsBody({
             aria-expanded={showDetail}
             onClick={() => setShowDetail((v) => !v)}
             className="spark-card w-full px-5 py-4 flex items-center justify-between text-left"
-            style={{ borderRadius: 18 }}
           >
             <span>
               <span
@@ -923,7 +914,7 @@ export function InsightsBody({
           {/* What consumers said in the same dates, grouped into themes.
               Sits behind More detail, so the grouping is only asked for
               when someone opens it. */}
-          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+          <div className="spark-card p-5 lg:p-6">
             <Suspense fallback={null}>
               <FeedbackThemes
                 tenantId={tenantId}
@@ -935,7 +926,7 @@ export function InsightsBody({
 
           {/* Read from the same comments: the other brands people named,
               and which product leads in which state. */}
-          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+          <div className="spark-card p-5 lg:p-6">
             <Suspense fallback={null}>
               <CompetitorMentions
                 tenantId={tenantId}
@@ -947,12 +938,12 @@ export function InsightsBody({
           {/* The same comments month by month: which themes and other
               brands come up, and whether they are rising or falling. Its own
               six months, not the range above. */}
-          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+          <div className="spark-card p-5 lg:p-6">
             <Suspense fallback={null}>
               <MentionTrends tenantId={tenantId} />
             </Suspense>
           </div>
-          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+          <div className="spark-card p-5 lg:p-6">
             <Suspense fallback={null}>
               <ProductRegions
                 tenantId={tenantId}

@@ -137,7 +137,7 @@ const Inner: React.FC = () => {
             SYSTEM
           </p>
           <h1 className="display text-4xl font-bold mt-2" style={{ letterSpacing: "-0.04em" }}>
-            System health.
+            System health
           </h1>
           <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             Backend errors, delivery failures, and the running build. Problems

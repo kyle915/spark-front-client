@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
+import SparkInfoTip from "./SparkInfoTip";
 
 /**
  * Shared page header — quieter Linear-ish chrome by default.
- * Title + one support line + optional primary action.
+ * Title + optional ⓘ methodology tooltip + concise support line + optional primary action.
  */
 export function SparkPageHeader({
   title,
   support,
+  infoTip,
   eyebrow,
   action,
   className = "",
@@ -14,6 +16,7 @@ export function SparkPageHeader({
 }: {
   title: ReactNode;
   support?: ReactNode;
+  infoTip?: string;
   eyebrow?: ReactNode;
   action?: ReactNode;
   className?: string;
@@ -25,7 +28,10 @@ export function SparkPageHeader({
     >
       <div className="min-w-0">
         {eyebrow ? <p className="label-mini">{eyebrow}</p> : null}
-        <h1 className={`spark-title ${titleClassName}`.trim()}>{title}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className={`spark-title ${titleClassName}`.trim()}>{title}</h1>
+          {infoTip ? <SparkInfoTip note={infoTip} /> : null}
+        </div>
         {/* The one-line explanation is helpful on a desk, noise on a phone. */}
         {support ? (
           <p className="spark-support hidden sm:block">{support}</p>

@@ -111,34 +111,24 @@ function PublicLinkMenuItem({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Pill-group toggle (lime fill on active, mono label). */
+/** Recessed 8px segmented toggle (Admin / Client preview). */
 const PillGroup: React.FC<{
   options: { value: string; label: string; icon?: string }[];
   value: string;
   onChange: (v: string) => void;
 }> = ({ options, value, onChange }) => (
-  <div className="inline-flex items-center bg-base-300/40 border border-base-300 rounded-full p-0.5">
+  <div className="pill-group">
     {options.map((o) => {
       const on = o.value === value;
       return (
         <button
           key={o.value}
+          type="button"
           onClick={() => onChange(o.value)}
-          className={[
-            "px-3 py-1 rounded-full text-xs transition flex items-center gap-1.5 active:scale-[0.98]",
-            on ? "font-semibold" : "hover:opacity-100",
-          ].join(" ")}
-          style={
-            on
-              ? {
-                  background: "var(--color-primary)",
-                  color: "var(--color-primary-content)",
-                }
-              : { color: "var(--spark-text-secondary)" }
-          }
+          className={`pill-btn flex items-center gap-1.5 !py-1 !px-2.5 !text-xs ${on ? "on" : ""}`}
         >
           {o.icon && (
-            <span className="mono text-[11px]" aria-hidden>
+            <span className="text-[11px]" aria-hidden>
               {o.icon}
             </span>
           )}
@@ -224,7 +214,15 @@ export const SparkTopbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-base-200/55 backdrop-blur-[20px] border-b border-base-300 px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-3 flex-nowrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)", WebkitBackdropFilter: "saturate(180%) blur(20px)", backdropFilter: "saturate(180%) blur(20px)" }}>
+    <header
+      className="sticky top-0 z-30 min-h-[48px] px-4 sm:px-6 py-1.5 flex items-center justify-between gap-2 sm:gap-3 flex-nowrap"
+      style={{
+        background: "color-mix(in srgb, var(--spark-bg) 92%, transparent)",
+        borderBottom: "1px solid var(--spark-hairline, var(--spark-border))",
+        WebkitBackdropFilter: "saturate(180%) blur(16px)",
+        backdropFilter: "saturate(180%) blur(16px)",
+      }}
+    >
       {/* Left: menu + quiet breadcrumb + (optional) public share-link pill */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
@@ -275,7 +273,7 @@ export const SparkTopbar: React.FC = () => {
 
         {!isClient && clientName ? (
           <span
-            className="inline-flex md:hidden items-center px-2.5 py-1 rounded-full text-xs font-medium truncate max-w-[130px]"
+            className="inline-flex md:hidden items-center px-2.5 py-1 rounded-[6px] text-xs font-medium truncate max-w-[130px]"
             style={{
               color: "var(--spark-text)",
               border: "1px solid var(--spark-border)",
@@ -299,7 +297,7 @@ export const SparkTopbar: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate("/requests/create")}
-          className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition active:scale-[0.98]"
+          className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-[8px] text-xs font-semibold transition hover:opacity-90 active:scale-[0.99]"
           aria-label="Create Request"
           style={{
             background: "var(--spark-lime)",
@@ -320,17 +318,22 @@ export const SparkTopbar: React.FC = () => {
           type="button"
           data-spark-jump
           onClick={(e) => openJump(e.currentTarget)}
-          className="spark-focus-ring flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs transition active:scale-[0.98] hover:text-primary hover:border-primary"
-          style={{ color: "var(--spark-text-secondary)" }}
+          className="spark-focus-ring flex items-center gap-2 px-2.5 py-1.5 rounded-[8px] text-xs transition hover:opacity-100"
+          style={{
+            color: "var(--spark-text-secondary)",
+            border: "1px solid var(--spark-border)",
+            background: "var(--spark-surface)",
+          }}
           aria-label="Jump to a page or recap"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Jump</span>
           <span
-            className="hidden lg:inline ml-3 mono text-[10px] px-1.5 py-0.5 rounded border border-base-300"
+            className="hidden lg:inline ml-2 mono-code text-[10px] px-1.5 py-0.5 rounded-[5px]"
             style={{
-              background: "var(--color-base-300)",
-              color: "var(--spark-text-secondary)",
+              background: "var(--spark-surface-2)",
+              color: "var(--spark-text-meta)",
+              border: "1px solid var(--spark-hairline, var(--spark-border))",
             }}
           >
             ⌘K
@@ -359,17 +362,22 @@ export const SparkTopbar: React.FC = () => {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-label={unseenNews ? "Account menu, what's new" : "Account menu"}
-            className="spark-focus-ring relative w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center"
+            className="spark-focus-ring relative w-8 h-8 rounded-[8px] text-xs font-semibold flex items-center justify-center transition"
+            style={{
+              background: "var(--spark-surface-2)",
+              color: "var(--spark-text)",
+              boxShadow: "inset 0 0 0 1px var(--spark-border)",
+            }}
           >
             {initial}
             {unseenNews ? (
               <span
                 aria-hidden
-                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full"
+                className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
                 title="What's new"
                 style={{
-                  background: "#f6f6f2",
-                  boxShadow: "0 0 0 2px #ef5a2a",
+                  background: "var(--spark-orange)",
+                  boxShadow: "0 0 0 2px var(--spark-bg)",
                 }}
               />
             ) : null}

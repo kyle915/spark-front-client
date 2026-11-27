@@ -2135,12 +2135,7 @@ export default function MasterTracker() {
         <SparkPageHeader
           className="spark-tracker-header"
           titleClassName="text-3xl md:text-4xl font-bold"
-          title={isClient ? "My requests." : "Master tracker."}
-          support={
-            isClient
-              ? "Every request you've submitted, with live status updates from your RMM."
-              : "Every event, every status, every recap link."
-          }
+          title={isClient ? "My requests" : "Master tracker"}
           action={
             <>
             <div className="relative">

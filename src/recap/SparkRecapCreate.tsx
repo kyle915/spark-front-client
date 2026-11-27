@@ -758,7 +758,7 @@ export default function SparkRecapCreate() {
           NEW RECAP
         </p>
         <h1 className="display text-3xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
-          Tell us how it went.
+          Tell us how it went
         </h1>
         <p className="text-sm mt-2" style={{ color: "var(--spark-text-secondary)" }}>
           {isAdmin

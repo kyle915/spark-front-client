@@ -436,7 +436,7 @@ export default function SparkWeeklySummaries() {
       <div className="spark-scale max-w-3xl flex flex-col gap-5">
         <SparkPageHeader
           title="Client summaries"
-          support="A short summary of each brand's week, an email draft for each month, and store recommendations and alerts for each brand's dashboard. Written from approved recaps. Use Send to email the branded HTML to brand recipients."
+          infoTip="Weekly briefs, monthly email drafts, and store recommendations written from approved recaps."
         />
         <p className="text-xs sm:hidden" style={META}>
           Written from approved recaps. Use Send to email the branded summary to the brand.

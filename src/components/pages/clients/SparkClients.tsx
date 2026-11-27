@@ -60,9 +60,8 @@ const Inner: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl spark-fade-in">
       <SparkPageHeader
-        eyebrow={`CLIENTS · ${clients.length}`}
-        title="Brands you serve."
-        support="Every client organization in this workspace. Tap a row to see the brand's program performance, insights & field team."
+        eyebrow={`Clients · ${clients.length}`}
+        title="Brands you serve"
         action={
           <SparkPrimaryButton onClick={() => navigate("/clients/new")}>
             + New client

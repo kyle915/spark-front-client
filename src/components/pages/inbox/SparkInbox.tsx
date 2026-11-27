@@ -437,9 +437,9 @@ const Inner: React.FC = () => {
   return (
     <div className="space-y-5 max-w-4xl spark-fade-in">
       <SparkPageHeader
-        eyebrow={`${items.length} ITEMS · ACTION REQUIRED`}
-        title="What needs you."
-        support="Workflow items pulled from your live request queue — triaged by urgency. Dismissing an item hides it just for you; the underlying request stays put."
+        eyebrow={`${items.length} items · action required`}
+        title="What needs you"
+        infoTip="Dismissing an item hides it just for you; the underlying request stays unchanged."
         action={
           <>
             <LinkedSheetChip />
@@ -565,7 +565,6 @@ const Inner: React.FC = () => {
                       className="w-1 self-stretch rounded-full shrink-0"
                       style={{
                         background: meta.tone,
-                        boxShadow: `0 0 8px ${meta.tone}`,
                       }}
                     />
                     <div

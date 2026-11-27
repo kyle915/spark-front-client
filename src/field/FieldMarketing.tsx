@@ -673,9 +673,9 @@ export default function FieldMarketing() {
     <Layout>
       <div className="space-y-5 max-w-[1400px] spark-fade-in">
         <SparkPageHeader
-          eyebrow="TORCH THC · PLANS"
-          title="Plans."
-          support="All field marketing plans for Torch — filter by market/RMM or month, see projected results, and push rows to Ignite to execute. Retail sampling stays on Master Tracker."
+          eyebrow="Torch THC · Plans"
+          title="Plans"
+          infoTip="Filter by market, RMM, or month and push rows to Ignite to execute. Retail sampling stays on Master Tracker."
         />
         <ProgramSwitch active="field" />
 

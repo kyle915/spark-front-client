@@ -12,6 +12,7 @@
  */
 
 import ClientProgramSnapshot from "./ClientProgramSnapshot";
+import ClientFieldProofStrip from "./ClientFieldProofStrip";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
@@ -244,37 +245,28 @@ const WeekAheadPanel: React.FC<{
             Coming up in the next {horizonDays} days ·{" "}
             <CountReel value={totalThisWeek} /> {totalThisWeek === 1 ? "event" : "events"}
           </p>
-          <div className="flex items-center gap-1">
-            {([7, 30, 90] as AheadHorizon[]).map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => onHorizonDays(d)}
-                className="text-[12px] px-2 py-1 rounded-lg"
-                style={{
-                  color:
-                    horizonDays === d
-                      ? "var(--spark-selected-ink)"
-                      : "rgba(var(--spark-ink-rgb),0.55)",
-                  background:
-                    horizonDays === d
-                      ? "var(--spark-selected-bg)"
-                      : "transparent",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                {d} days
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="pill-group" role="group" aria-label="Schedule horizon">
+              {([7, 30, 90] as AheadHorizon[]).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => onHorizonDays(d)}
+                  className={`pill-btn !py-1 !px-2.5 !text-xs ${horizonDays === d ? "on" : ""}`}
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               onClick={() =>
                 navigate(`/requests/list?when=${trackerWhen}`)
               }
-              className="text-[12px] px-2 py-1 rounded-lg ml-1"
+              className="text-xs font-medium px-2.5 py-1.5 rounded-[8px] transition"
               style={{
-                color: "var(--spark-lime)",
-                border: "1px solid rgba(var(--spark-accent-rgb),0.35)",
+                color: "var(--spark-text-secondary)",
+                border: "1px solid var(--spark-border)",
                 background: "transparent",
               }}
             >
@@ -382,18 +374,15 @@ const WeekAheadPanel: React.FC<{
                     {row.name}
                   </span>
                   <span
-                    className="mono text-[10px] px-2 py-1 rounded-full shrink-0 whitespace-nowrap"
+                    className="tab-num text-xs font-medium px-2 py-0.5 rounded-[6px] shrink-0 whitespace-nowrap"
                     style={{
-                      letterSpacing: "0.14em",
                       color: row.quiet
-                        ? "rgba(var(--spark-ink-rgb),0.45)"
-                        : "var(--spark-lime)",
+                        ? "var(--spark-text-meta)"
+                        : "var(--spark-text)",
                       background: row.quiet
                         ? "transparent"
-                        : "rgba(var(--spark-accent-rgb),0.08)",
-                      border: row.quiet
-                        ? "1px solid rgba(var(--spark-ink-rgb),0.12)"
-                        : "1px solid rgba(var(--spark-accent-rgb),0.25)",
+                        : "var(--spark-surface-2)",
+                      border: "1px solid var(--spark-hairline, var(--spark-border))",
                     }}
                   >
                     {row.count} {row.count === 1 ? "event" : "events"}
@@ -462,9 +451,8 @@ const ClientInner: React.FC = () => {
         />
         <div className="min-w-0 flex-1">
           <SparkPageHeader
-            eyebrow="YOUR PROGRAM"
+            eyebrow="Your program"
             title="Home"
-            support="What happened in the last 30 days, and what's coming up."
             action={
               <Suspense fallback={<AskAiButton tenantId={tenantId} chat />}>
                 <ActiveTenantAskAi chat />
@@ -479,16 +467,11 @@ const ClientInner: React.FC = () => {
         <BrandComparePanel tenantId={tenantId} canManageAccess={false} />
       ) : (<>
 
-      {/* Tab bar — Overview / Approvals / Account Map. The latter two
-          tabs reuse the existing /approvals and /account-map pages by
-          embedding their Layout-less bodies. Active tab is reflected
-          in the URL hash so /client-dashboard#approvals deep-links
-          straight to that view. */}
+      {/* Flush underline hub tabs — Overview / Performance / Approvals / Account map. */}
       <div
         role="tablist"
         aria-label="Dashboard views"
-        className="flex items-center gap-1 border-b"
-        style={{ borderColor: "var(--spark-border)" }}
+        className="spark-hub-tabs max-w-full overflow-x-auto spark-scroll-fade"
       >
         {(
           [
@@ -505,18 +488,11 @@ const ClientInner: React.FC = () => {
           return (
             <button
               key={t.key}
+              type="button"
               role="tab"
               aria-selected={active}
               onClick={() => switchTab(t.key)}
-              className="px-4 py-2.5 text-sm font-semibold transition relative -mb-px"
-              style={{
-                color: active
-                  ? "var(--spark-text)"
-                  : "rgba(var(--spark-ink-rgb),0.55)",
-                borderBottom: active
-                  ? "2px solid var(--spark-orange)"
-                  : "2px solid transparent",
-              }}
+              className={`spark-hub-tab whitespace-nowrap ${active ? "is-active" : ""}`}
             >
               {t.label}
             </button>
@@ -573,6 +549,14 @@ const ClientInner: React.FC = () => {
             </div>
           ) : null}
         </div>
+
+        {tenantId ? (
+          <ErrorBoundary fallback={null}>
+            <Suspense fallback={null}>
+              <ClientFieldProofStrip tenantId={tenantId} />
+            </Suspense>
+          </ErrorBoundary>
+        ) : null}
 
         {tenantId ? (
           <div className="spark-card p-5 sm:p-6">

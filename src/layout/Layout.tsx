@@ -43,7 +43,7 @@ function LayoutChromeInner({ children }: LayoutProps) {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-[100dvh] bg-base-200 text-base-content spark-mesh">
+    <div className="spark-app-shell flex min-h-[100dvh] md:h-[100dvh] md:overflow-hidden text-base-content spark-mesh">
       <UpdateBanner />
       <CommandPalette />
       <StoreSheet />
@@ -57,12 +57,12 @@ function LayoutChromeInner({ children }: LayoutProps) {
       ) : null}
       <SparkSidebar />
 
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="spark-studio-frame flex flex-col flex-1 min-w-0">
         <SparkTopbar />
 
         <main className="flex-1 bg-base-200 overflow-y-auto">
           <PageTransition>
-            <div className="min-h-full p-6 lg:p-10">
+            <div className="min-h-full p-5 sm:p-6 lg:p-9">
               <ErrorBoundary key={location.pathname}>
                 {children || (
                   <h1 className="text-lg font-semibold">Dashboard</h1>

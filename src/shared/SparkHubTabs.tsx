@@ -30,7 +30,7 @@ export const SparkHubTabs: React.FC<{
   return (
     <nav
       aria-label={ariaLabel}
-      className="pill-group max-w-full overflow-x-auto spark-scroll-fade print:hidden"
+      className="spark-hub-tabs max-w-full overflow-x-auto spark-scroll-fade print:hidden"
     >
       {visible.map((tab) => {
         const active = isTabActive(tab);
@@ -39,7 +39,7 @@ export const SparkHubTabs: React.FC<{
             key={tab.to}
             to={tab.to}
             aria-current={active ? "page" : undefined}
-            className={`pill-btn whitespace-nowrap no-underline ${active ? "on" : ""}`}
+            className={`spark-hub-tab whitespace-nowrap no-underline ${active ? "is-active" : ""}`}
           >
             {tab.label}
           </Link>

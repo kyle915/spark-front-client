@@ -1837,9 +1837,8 @@ export default function SparkPeople() {
     <Layout>
       <div className="space-y-6 max-w-7xl spark-fade-in">
         <SparkPageHeader
-          eyebrow="PEOPLE · WORKSPACE"
-          title="Team."
-          support="Everyone in the workspace — admins, clients, ambassadors. Invite new people directly."
+          eyebrow="People · Workspace"
+          title="Team"
         />
         <Suspense
           fallback={

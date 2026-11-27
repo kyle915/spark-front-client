@@ -61,7 +61,7 @@ const TodaysSnapshot: React.FC = () => {
   if (opsClear && counts.tracker === 0 && counts.upcoming === 0 && counts.alertsUnread === 0) {
     return (
       <div
-        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-xs font-medium"
         style={{
           background: "var(--spark-ok-bg)",
           color: "var(--spark-ok-ink)",
@@ -75,12 +75,18 @@ const TodaysSnapshot: React.FC = () => {
   }
 
   return (
-    <div className="spark-card spark-stat-band">
+    <div
+      className="py-3.5"
+      style={{
+        borderTop: "1px solid var(--spark-hairline, var(--spark-border))",
+        borderBottom: "1px solid var(--spark-hairline, var(--spark-border))",
+      }}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <p className="spark-kpi-label">Needs you</p>
         {opsClear ? (
           <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-xs font-medium"
             style={{
               background: "var(--spark-ok-bg)",
               color: "var(--spark-ok-ink)",
@@ -138,7 +144,6 @@ function DashboardInner() {
       <div className="spark-dash-top space-y-5 lg:space-y-6">
       <SparkPageHeader
         title="Dashboard"
-        support="Due recaps, clock, what needs you — then program performance."
         action={
           <div className="flex items-center gap-2 flex-wrap">
             <Suspense
@@ -159,7 +164,7 @@ function DashboardInner() {
                 href={linkedSheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-[8px] text-sm font-semibold inline-flex items-center gap-1.5"
                 style={{
                   background: "rgba(95,184,239,0.10)",
                   color: "var(--spark-sky)",
@@ -175,7 +180,7 @@ function DashboardInner() {
             {comparing ? null : (
               <a
                 href="#performance"
-                className="px-3 py-2 rounded-xl text-sm font-medium inline-flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-[8px] text-sm font-medium inline-flex items-center gap-1.5"
                 style={{
                   background: "transparent",
                   color: "var(--spark-text-secondary)",

@@ -28,6 +28,7 @@ import {
 } from "@/lib/kpiExplain";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import { CountReel } from "@/motion/CountReel";
+import SparkInfoTip from "@/shared/SparkInfoTip";
 import { inkRgba } from "@/theme/chartInk";
 import { useAppearance } from "@/theme/appearance";
 
@@ -430,32 +431,36 @@ const TenantKpiCharts: React.FC<{
   return (
     <div
       className={chromeless ? undefined : "spark-card p-6 lg:p-8"}
-      style={chromeless ? undefined : { borderRadius: 22 }}
     >
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-        <h2 className="display text-lg lg:text-xl font-bold">
-          Program KPIs
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="display text-lg lg:text-xl font-bold">
+            Program KPIs
+          </h2>
+          {scopeNote ? (
+            <SparkInfoTip note={scopeNote} label="Program KPI scope" />
+          ) : null}
+        </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <p
-            className="display text-[12px]"
-            style={{ color: "var(--spark-text-meta)" }}
-          >
-            {scopeNote
-              ? scopeNote
-              : kpis.events > 0
+          {!scopeNote ? (
+            <p
+              className="display text-[12px]"
+              style={{ color: "var(--spark-text-meta)" }}
+            >
+              {kpis.events > 0
                 ? `${fmt(kpis.events)} with recaps · ${fmt(kpis.recaps)} recaps`
                 : selectedYear === null
                   ? "All time"
                   : `${selectedYear}`}
-          </p>
+            </p>
+          ) : null}
           {/* Compact year dropdown — drives the $year query variable above, so
               selecting a year refetches the KPI rollup. Default = This year. */}
           <select
             aria-label="KPI time range"
             value={yearValue}
             onChange={(e) => setYearValue(e.target.value)}
-            className="display text-[12px] rounded-lg px-2.5 py-1.5 cursor-pointer"
+            className="display text-[12px] rounded-[8px] px-2.5 py-1.5 cursor-pointer"
             style={{
               background: inkRgba(0.04),
               border: "1px solid var(--spark-border)",

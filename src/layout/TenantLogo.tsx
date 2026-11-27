@@ -41,14 +41,21 @@ export function TenantLogo({
 
   if (variant === "header") {
     if (!src) {
+      const headerInitials = tenantInitials(input.name);
       return (
         <span
-          className="text-sm font-medium truncate max-w-[9rem]"
+          className="h-9 min-w-[2.25rem] px-2.5 rounded-[8px] text-xs font-semibold inline-flex items-center justify-center shrink-0"
           style={{
-            color: tone === "light" ? "#57534e" : "rgba(var(--spark-ink-rgb),0.7)",
+            background: tone === "light" ? "#f5f5f0" : "var(--spark-surface-2)",
+            color: tone === "light" ? "#1c1917" : "var(--spark-text)",
+            boxShadow:
+              tone === "light"
+                ? "inset 0 0 0 1px rgba(28, 25, 23, 0.14)"
+                : "inset 0 0 0 1px var(--spark-border)",
           }}
+          title={label}
         >
-          {label}
+          {headerInitials || label}
         </span>
       );
     }
@@ -56,9 +63,12 @@ export function TenantLogo({
     return (
       <span
         className={[
-          "h-9 max-w-[10rem] px-2 rounded-md overflow-hidden shrink-0 flex items-center justify-center",
+          "h-9 max-w-[10rem] px-2 rounded-[8px] overflow-hidden shrink-0 flex items-center justify-center",
           plate === "dark" ? "bg-black" : "bg-white",
         ].join(" ")}
+        style={{
+          boxShadow: "inset 0 0 0 1px rgba(var(--spark-ink-rgb, 20, 22, 15), 0.12)",
+        }}
       >
         <img
           src={src}
@@ -76,11 +86,14 @@ export function TenantLogo({
     return (
       <span
         className={[
-          "w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0",
+          "w-5 h-5 rounded-[6px] text-[10px] font-semibold flex items-center justify-center shrink-0",
           active
-            ? "bg-primary/30 text-primary"
-            : "bg-base-300 text-base-content/55",
+            ? "bg-primary/25 text-primary"
+            : "bg-base-300 text-base-content/65",
         ].join(" ")}
+        style={{
+          boxShadow: "inset 0 0 0 1px rgba(var(--spark-ink-rgb, 255, 255, 255), 0.14)",
+        }}
         aria-hidden
       >
         {initials}
@@ -91,9 +104,12 @@ export function TenantLogo({
   return (
     <span
       className={[
-        "w-5 h-5 rounded-sm overflow-hidden shrink-0 flex items-center justify-center",
+        "w-5 h-5 rounded-[6px] overflow-hidden shrink-0 flex items-center justify-center",
         plate === "dark" ? "bg-black" : "bg-white/95",
       ].join(" ")}
+      style={{
+        boxShadow: "inset 0 0 0 1px rgba(var(--spark-ink-rgb, 255, 255, 255), 0.14)",
+      }}
     >
       <img
         src={src}

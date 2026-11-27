@@ -313,7 +313,6 @@ const Inner: React.FC = () => {
                           width: 8,
                           height: 8,
                           background: color,
-                          boxShadow: `0 0 8px ${color}`,
                         }}
                       />
                     )}

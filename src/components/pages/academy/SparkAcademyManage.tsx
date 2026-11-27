@@ -242,7 +242,7 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="display text-4xl font-bold mt-2"
             style={{ letterSpacing: "-0.04em" }}
           >
-            Mobile library.
+            Mobile library
           </h1>
           <p
             className="mt-2 text-sm"

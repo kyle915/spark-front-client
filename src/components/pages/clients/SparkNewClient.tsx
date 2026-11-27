@@ -363,7 +363,7 @@ export default function SparkNewClient() {
             ONBOARDING · NEW BRAND
           </p>
           <h1 className="display text-4xl font-bold mt-2" style={{ letterSpacing: "-0.04em" }}>
-            Launch a client.
+            Launch a client
           </h1>
           <p className="mt-2" style={{ color: "var(--spark-text-meta)" }}>
             The Drink Lyft pattern, codified: brand basics, a cloned recap

@@ -2040,16 +2040,7 @@ export const ApprovalsBody: React.FC = () => {
         <SparkPageHeader
           eyebrow="Pending approvals"
           title="Review & approve"
-          support={
-            <>
-              External requests route to a mapped client user. Logged-in
-              submissions auto-approve. Approvals queue a job in{" "}
-              <span style={{ color: "var(--spark-gold)" }}>
-                Queue for Ignite
-              </span>
-              .
-            </>
-          }
+          infoTip="External requests route to a mapped client user; logged-in submissions auto-approve and queue for Ignite."
           action={
             <>
               <LinkedSheetChip />

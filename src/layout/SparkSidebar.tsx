@@ -643,17 +643,18 @@ export const SparkSidebar: React.FC = () => {
 
   const tenantFallback = (
     <div
-      className="flex items-center gap-2 px-3 py-2 rounded-md"
+      className="flex items-center gap-2 px-3 py-2 rounded-[8px]"
       style={{
         background: "rgba(var(--spark-ink-rgb),0.025)",
         border: "1px solid var(--spark-border)",
       }}
     >
       <span
-        className="w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0"
+        className="w-5 h-5 rounded-[6px] text-[10px] font-semibold flex items-center justify-center shrink-0"
         style={{
-          background: "rgba(var(--spark-accent-rgb),0.15)",
+          background: "rgba(var(--spark-accent-rgb),0.12)",
           color: "var(--spark-lime)",
+          boxShadow: "inset 0 0 0 1px rgba(var(--spark-ink-rgb),0.16)",
         }}
       >
         {tenantDisplay.slice(0, 2).toUpperCase()}
@@ -804,10 +805,10 @@ export const SparkSidebar: React.FC = () => {
             {user?.firstName ?? user?.email ?? "User"}
           </p>
           <p
-            className="mono text-[10px] truncate"
-            style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
+            className="text-xs truncate"
+            style={{ color: "var(--spark-text-meta)" }}
           >
-            {isClient ? "CLIENT VIEW" : "IGNITE PRODUCTIONS"}
+            {isClient ? "Client view" : "Ignite Productions"}
           </p>
         </div>
       </div>

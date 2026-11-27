@@ -622,7 +622,7 @@ export default function SparkReports() {
         <SparkPageHeader
           eyebrow={`Reports · ${range.label}`}
           title="Program report"
-          support="Numbers, photos and consumer feedback for the dates you pick. Consumers counted are sampled — not reach or samples handed out."
+          infoTip="Approved recap metrics, photos, and consumer feedback for the selected window. Consumers counted are sampled — not reach or total samples handed out."
           action={
             <>
             {/* Staff only: a first draft of a client recap for any dates. */}
