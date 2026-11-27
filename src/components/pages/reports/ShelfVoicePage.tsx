@@ -79,6 +79,9 @@ function shelfStatusBadge(status: string): {
   if (status === "not_found" || status === "no") {
     return { label: "Not found", style: WARN_PILL };
   }
+  if (status === "pending") {
+    return { label: "Awaiting audit", style: MUTED_PILL };
+  }
   return { label: "Unclear", style: MUTED_PILL };
 }
 
@@ -210,8 +213,10 @@ const ShelfVoiceBody: React.FC<{
         title="Shelf & Voice Intelligence"
         support={
           <span className="tab-num">
-            {effectiveStart} → {effectiveEnd} ·{" "}
-            <strong>{hub.auditedVisits}</strong> audited shelf{" "}
+            {effectiveStart && effectiveEnd
+              ? `${effectiveStart} → ${effectiveEnd}`
+              : "All time"}{" "}
+            · <strong>{hub.auditedVisits}</strong> audited shelf{" "}
             {hub.auditedVisits === 1 ? "visit" : "visits"}
             {hub.unreadVisits > 0 ? ` · ${hub.unreadVisits} awaiting audit` : ""}
           </span>
