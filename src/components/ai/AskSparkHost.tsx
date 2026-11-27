@@ -7,7 +7,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { ASK_SPARK_EVENT, type OpenAskSparkDetail } from "@/lib/askSparkEvent";
 import { askAiSubjectFromTenant } from "./askAiSubjectName";
 import { routeAskSparkPrompts } from "./routeAskSparkPrompts";
-import { LivePulseDot, SparkEmblem } from "./AskSparkPopoverFrame";
+import { SparkEmblem } from "./AskSparkPopoverFrame";
 import BrandChatPanel from "./BrandChatPanel";
 import { AskAiModal } from "./AskAiButton";
 
@@ -110,7 +110,7 @@ export default function AskSparkHost() {
 
   // Lift launcher cleanly above the /chat message composer so it never blocks Send.
   const onChatPage = location.pathname === "/chat" || location.pathname.startsWith("/chat/");
-  const launcherBottomClass = onChatPage ? "bottom-20" : "bottom-5";
+  const launcherBottomClass = onChatPage ? "bottom-20" : "bottom-6";
 
   const canRenderPopup = Boolean(activeTenantId) || isAdmin;
 
@@ -125,36 +125,40 @@ export default function AskSparkHost() {
             initial={{ opacity: 0, y: 12, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.94 }}
-            whileHover={{ y: -2, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2, scale: 1.015 }}
+            whileTap={{ scale: 0.975 }}
             transition={{ type: "spring", stiffness: 420, damping: 28 }}
             aria-label="Open Ask Spark (⌘J)"
             title="Ask Spark — program data & product help (⌘J)"
             style={{
-              background: "var(--spark-lime)",
-              color: "var(--spark-on-accent)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "color-mix(in srgb, var(--spark-surface) 94%, transparent)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
               boxShadow:
-                "0 14px 34px -10px rgba(15,18,12,0.34), 0 4px 12px -4px rgba(15,18,12,0.16), inset 0 1px 0 rgba(255,255,255,0.18)",
+                "0 12px 30px -8px rgba(20,22,15,0.16), 0 2px 8px -2px rgba(20,22,15,0.07), inset 0 1px 0 rgba(255,255,255,0.12)",
             }}
-            className={`hidden md:inline-flex print:hidden fixed right-5 ${launcherBottomClass} z-40 items-center gap-2.5 pl-3.5 pr-3 h-11 rounded-full text-[13.5px] font-semibold tracking-tight cursor-pointer select-none`}
+            className={`group hidden md:inline-flex print:hidden fixed right-6 ${launcherBottomClass} z-40 items-center gap-2.5 pl-1.5 pr-3 h-11 rounded-full text-[13.5px] font-semibold tracking-[-0.015em] cursor-pointer select-none transition-colors`}
           >
-            <span className="relative inline-flex items-center justify-center">
-              <SparkEmblem size={15} />
-              <span
-                className="absolute -top-1 -right-1 rounded-full p-[1.5px]"
-                style={{ background: "var(--spark-lime)" }}
-              >
-                <LivePulseDot />
-              </span>
-            </span>
-            <span>Ask Spark</span>
-            <kbd
-              className="ml-0.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10.5px] font-mono font-medium leading-none"
+            <span
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform duration-300 ease-out group-hover:rotate-12 group-hover:scale-105"
               style={{
-                background: "rgba(128,128,128,0.22)",
+                background: "var(--spark-lime)",
                 color: "var(--spark-on-accent)",
-                opacity: 0.85,
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
+              }}
+            >
+              <SparkEmblem size={15} />
+            </span>
+            <span className="leading-none">Ask Spark</span>
+            <kbd
+              className="inline-flex items-center rounded-md px-1.5 py-[3px] text-[10.5px] font-mono font-medium leading-none tracking-tight"
+              style={{
+                background: "var(--spark-surface-2)",
+                color: "var(--spark-text-meta)",
+                border: "1px solid var(--spark-border)",
+                boxShadow: "0 1px 0 rgba(20,22,15,0.05)",
               }}
             >
               ⌘J

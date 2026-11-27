@@ -23,7 +23,7 @@ describe("Floating bottom-right Ask Spark pop-up (Client & Admin)", () => {
     const hostSrc = readFileSync(resolve(__dirname, "./AskSparkHost.tsx"), "utf8");
     expect(hostSrc).toContain("ask-spark-launcher");
     expect(hostSrc).toContain('e.key.toLowerCase() === "j"');
-    expect(hostSrc).toContain("fixed right-5");
+    expect(hostSrc).toContain("fixed right-6");
     expect(hostSrc).toContain("bottom-20"); // lifts cleanly above /chat composer
     expect(hostSrc).toContain("BrandChatPanel");
     expect(hostSrc).toContain("AskAiModal");
@@ -35,7 +35,7 @@ describe("Floating bottom-right Ask Spark pop-up (Client & Admin)", () => {
       "utf8",
     );
     expect(frameSrc).toContain('transformOrigin: "bottom right"');
-    expect(frameSrc).toContain("md:right-5 md:bottom-5");
+    expect(frameSrc).toContain("md:right-6 md:bottom-6");
     expect(frameSrc).toContain('aria-modal="false"');
     expect(frameSrc).toContain("Expand pop-up");
 

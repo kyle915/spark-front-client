@@ -3,11 +3,11 @@ import { motion } from "framer-motion";
 import { Maximize2, Minimize2, X } from "lucide-react";
 
 /**
- * Crisp 4-point Spark emblem — custom geometric SVG primitive (no emojis,
- * matches Spark's warm-stone & ink Studio aesthetic).
+ * Crisp 4-point Spark emblem — optically balanced geometric star + subtle
+ * secondary glint (no emojis, never obstructed by overlay badges).
  */
 export const SparkEmblem: React.FC<{ size?: number; className?: string }> = memo(
-  function SparkEmblem({ size = 15, className }) {
+  function SparkEmblem({ size = 16, className }) {
     return (
       <svg
         width={size}
@@ -17,36 +17,15 @@ export const SparkEmblem: React.FC<{ size?: number; className?: string }> = memo
         aria-hidden="true"
         className={className}
       >
-        <path d="M12 1.75c.45 4.85 3.4 7.8 8.25 8.25-4.85.45-7.8 3.4-8.25 8.25-.45-4.85-3.4-7.8-8.25-8.25 4.85-.45 7.8-3.4 8.25-8.25Z" />
+        <path d="M10.5 2.25c.55 4.7 3.05 7.2 7.75 7.75-4.7.55-7.2 3.05-7.75 7.75-.55-4.7-3.05-7.2-7.75-7.75 4.7-.55 7.2-3.05 7.75-7.75Z" />
         <path
-          d="M19.25 15.25c.22 1.68 1.22 2.68 2.9 2.9-1.68.22-2.68 1.22-2.9 2.9-.22-1.68-1.22-2.68-2.9-2.9 1.68-.22 2.68-1.22 2.9-2.9Z"
+          d="M18.75 15.25c.24 1.65 1.1 2.51 2.75 2.75-1.65.24-2.51 1.1-2.75 2.75-.24-1.65-1.1-2.51-2.75-2.75 1.65-.24 2.51-1.1 2.75-2.75Z"
           opacity={0.78}
         />
       </svg>
     );
   },
 );
-
-/**
- * Isolated subtle live status pulse dot so perpetual motion never triggers
- * re-renders in the parent popover tree.
- */
-export const LivePulseDot: React.FC<{ className?: string }> = memo(function LivePulseDot({
-  className = "",
-}) {
-  return (
-    <span className={`relative inline-flex h-2 w-2 ${className}`} aria-hidden="true">
-      <span
-        className="absolute inline-flex h-full w-full rounded-full opacity-65 animate-ping"
-        style={{ background: "#22c55e", animationDuration: "2.6s" }}
-      />
-      <span
-        className="relative inline-flex rounded-full h-2 w-2"
-        style={{ background: "#16a34a" }}
-      />
-    </span>
-  );
-});
 
 /**
  * Animated three-dot thinking indicator (replaces generic spinners).
@@ -144,7 +123,7 @@ export default function AskSparkPopoverFrame({
         boxShadow:
           "0 26px 68px -18px rgba(15,18,12,0.28), 0 6px 20px -6px rgba(15,18,12,0.12), inset 0 1px 0 rgba(255,255,255,0.14)",
       }}
-      className={`fixed z-40 print:hidden left-3 right-3 bottom-[70px] h-[min(74dvh,580px)] md:left-auto md:right-5 md:bottom-5 ${widthClass} max-w-[calc(100vw-1.5rem)] md:max-w-[calc(100vw-2.5rem)] rounded-2xl overflow-hidden flex flex-col`}
+      className={`fixed z-40 print:hidden left-3 right-3 bottom-[70px] h-[min(74dvh,580px)] md:left-auto md:right-6 md:bottom-6 ${widthClass} max-w-[calc(100vw-1.5rem)] md:max-w-[calc(100vw-2.5rem)] rounded-2xl overflow-hidden flex flex-col`}
     >
       {/* Header strip */}
       <header
@@ -158,20 +137,14 @@ export default function AskSparkPopoverFrame({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <span
-              className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
               style={{
                 background: "var(--spark-lime)",
                 color: "var(--spark-on-accent)",
-                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)",
               }}
             >
-              <SparkEmblem size={15} />
-              <span
-                className="absolute -bottom-0.5 -right-0.5 rounded-full p-[1.5px]"
-                style={{ background: "var(--spark-surface)" }}
-              >
-                <LivePulseDot />
-              </span>
+              <SparkEmblem size={16} />
             </span>
 
             <div className="min-w-0">
