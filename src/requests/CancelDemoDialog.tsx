@@ -229,7 +229,7 @@ export default function CancelDemoDialog({
         <>
           <label className="block mt-4">
             <span
-              className="spark-overlay-kicker"
+              className="spark-overlay-kicker block"
               style={{ color: "var(--spark-text-meta)" }}
             >
               Request
@@ -246,7 +246,14 @@ export default function CancelDemoDialog({
                 setError(null);
               }}
               placeholder="Store name, or REQ-…"
-              className="spark-filter-search w-full"
+              className="w-full text-sm mt-1"
+              style={{
+                background: "var(--spark-bg)",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+                borderRadius: 12,
+                padding: "0.6rem 0.75rem",
+              }}
               autoFocus
             />
           </label>
@@ -316,7 +323,7 @@ export default function CancelDemoDialog({
       )}
       <label className="block mt-4">
         <span
-          className="spark-overlay-kicker"
+          className="spark-overlay-kicker block"
           style={{ color: "var(--spark-text-meta)" }}
         >
           Cancellation reason / comments (sent in confirmation email)
@@ -330,9 +337,9 @@ export default function CancelDemoDialog({
           rows={3}
           placeholder="e.g., Store manager asked to reschedule for next week."
           autoFocus={Boolean(requestId)}
-          className="w-full text-sm mt-1.5"
+          className="w-full text-sm mt-1"
           style={{
-            background: "transparent",
+            background: "var(--spark-bg)",
             color: "var(--spark-text)",
             border: "1px solid var(--spark-border)",
             borderRadius: 12,
@@ -342,7 +349,7 @@ export default function CancelDemoDialog({
         />
       </label>
       {error ? (
-        <p className="mt-3 text-sm" style={{ color: "var(--spark-orange)" }}>
+        <p className="mt-3 text-sm" style={{ color: "var(--spark-flag-ink)" }}>
           {error}
         </p>
       ) : null}
@@ -351,12 +358,7 @@ export default function CancelDemoDialog({
           type="button"
           onClick={submit}
           disabled={busy}
-          className="spark-overlay-action spark-overlay-action-primary"
-          style={{
-            background: "var(--spark-orange)",
-            borderColor: "var(--spark-orange)",
-            color: "var(--spark-on-accent)",
-          }}
+          className="spark-overlay-action spark-overlay-action-danger"
         >
           {busy ? "Cancelling…" : "Cancel event"}
         </button>
