@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
+
+vi.mock("@/hooks/useSparkRole", () => ({
+  default: () => ({ isClient: false, isAdmin: true, role: "admin", canToggleRole: true }),
+}));
+
 import SparkPageHeader from "./SparkPageHeader";
 import SparkInfoTip from "./SparkInfoTip";
 import SparkHubTabs from "./SparkHubTabs";
