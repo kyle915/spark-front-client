@@ -32,6 +32,7 @@ export interface SetupGuideTrack {
   steps: SetupGuideStep[];
   tips?: string[];
   snippets?: SetupGuideSnippet[];
+  adminOnly?: boolean;
   adminOnlyNote?: {
     title: string;
     body: string;
@@ -43,25 +44,26 @@ export const SETUP_GUIDE_TRACKS: readonly SetupGuideTrack[] = [
   {
     id: "sandbox",
     category: "brand",
-    eyebrow: "Start Here · Safe Walkthrough",
-    title: "Interactive Sample Brand Sandbox",
+    eyebrow: "Admin Preview · Fictional Demo Workspace",
+    title: "Interactive Sample Brand Sandbox (Admin Only)",
     summary:
-      "Tour Program Reports, StoreSheet, Shelf & Voice, Photo Wall, Ask Spark, and Buyer QBR Decks using Solstice Botanical Sparkling — completely read-only with zero risk to live data.",
+      "Internal Ignite-admin preview of Program Reports, StoreSheet, Shelf & Voice, Photo Wall, Ask Spark, and Buyer QBR Decks using fictional brand Meadowlark Botanicals and made-up store data — staged for a future public launch.",
     estimatedMinutes: 3,
     primaryTo: "/sandbox",
-    primaryLabel: "Open Sample Brand Sandbox",
+    primaryLabel: "Open Admin Sandbox Preview",
+    adminOnly: true,
     steps: [
       {
-        title: "Open the read-only sandbox (works logged in or logged out)",
+        title: "Open the admin-only sandbox preview",
         detail:
-          "Share /sandbox with prospective CPG founders, new regional managers, or brokers who want to explore Spark before connecting live activations.",
+          "Launch /sandbox while signed in as an Ignite admin to preview the fictional Meadowlark Botanicals workspace before we open it publicly.",
         to: "/sandbox",
         ctaLabel: "Launch /sandbox",
       },
       {
         title: "Test live filtering, StoreSheet, and Target MSRP drift",
         detail:
-          "Click the 'Texas Whole Foods · Last 90d' saved-view pill, click any door to open its StoreSheet drawer, and type a new Target MSRP in Shelf & Voice to watch drift badges recalculate.",
+          "Click the 'Texas Greenway · Last 90d' saved-view pill, click any made-up door to open its StoreSheet drawer, and type a new Target MSRP in Shelf & Voice to watch drift badges recalculate.",
       },
       {
         title: "Try Ask Spark & export a real 16:9 PowerPoint (.pptx)",
@@ -70,7 +72,7 @@ export const SETUP_GUIDE_TRACKS: readonly SetupGuideTrack[] = [
       },
     ],
     tips: [
-      "The sandbox link is also surfaced directly on the /login and /onboarding pages so new prospects can click around before creating a free workspace.",
+      "Both /sandbox and its API endpoint are currently locked to Ignite admins and use 100% fictional brand, competitor, retailer, and store data.",
     ],
   },
   {
@@ -222,11 +224,11 @@ export const SETUP_GUIDE_TRACKS: readonly SetupGuideTrack[] = [
   "event": "shelf.oos_detected",
   "createdAt": "2026-11-27T18:12:04Z",
   "tenantUuid": "0195c1e0-...",
-  "tenantName": "Solstice Botanical Sparkling",
+  "tenantName": "Meadowlark Botanicals",
   "data": {
     "fileId": "48291",
     "recapUuid": "0195c210-...",
-    "storeName": "Whole Foods Market — Park Lane",
+    "storeName": "Greenway Market — Northgate #119",
     "eventDate": "2026-11-27",
     "productOnShelf": "no",
     "outOfStockGap": "yes",

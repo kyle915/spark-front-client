@@ -222,6 +222,10 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBeFalsy();
     }
     expect(WHATS_NEW[0]?.id).toBe("2026-11-27sg");
+    // Admin-only Sandbox preview stays hidden from brand clients
+    expect(clientIds.has("2026-11-27sb")).toBe(false);
+    expect(staffIds.has("2026-11-27sb")).toBe(true);
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-27sb")?.staffOnly).toBe(true);
   });
 
   it("tracks unseen state per audience so staff and client tips stay independent", () => {

@@ -4,6 +4,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import LinkedSheetIntegrationPanel from "@/components/integrations/LinkedSheetIntegrationPanel";
 import { MyPreferencesQuery } from "@/api/queries/MyPreferencesQuery";
@@ -170,6 +171,7 @@ const LinkedSheetRow: React.FC = () => {
 
 export default function SparkSettings() {
   const { tenantMeta } = useAuthStore();
+  const { isAdmin } = useSparkRole();
   const showAlert = useAlertStore((s) => s.showAlert);
 
   // Backend is the source of truth for per-user prefs. Load once, then
@@ -417,34 +419,38 @@ export default function SparkSettings() {
             </Link>
           </div>
 
-          <div
-            className="flex items-center gap-3 py-3 px-3 rounded-xl"
-            style={{
-              background: "rgba(var(--spark-ink-rgb),0.025)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            <div className="flex-1">
-              <p className="text-sm font-medium">Sample Brand Sandbox</p>
-              <p
-                className="text-xs"
-                style={{ color: "var(--spark-text-meta)" }}
-              >
-                Read-only sample beverage brand for demos, onboarding walkthroughs, and testing Buyer QBR decks safely.
-              </p>
-            </div>
-            <Link
-              to="/sandbox"
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          {isAdmin ? (
+            <div
+              className="flex items-center gap-3 py-3 px-3 rounded-xl"
               style={{
-                background: "transparent",
-                color: "var(--spark-text)",
+                background: "rgba(var(--spark-ink-rgb),0.025)",
                 border: "1px solid var(--spark-border)",
               }}
             >
-              Open Sandbox →
-            </Link>
-          </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  Sample Brand Sandbox (Admin Preview)
+                </p>
+                <p
+                  className="text-xs"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  Internal admin-only preview using fictional brand and store data ahead of future public launch.
+                </p>
+              </div>
+              <Link
+                to="/sandbox"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                Open Sandbox →
+              </Link>
+            </div>
+          ) : null}
 
           {/* Google Sheet append observability — last sync, errors, REQ link */}
           <Suspense

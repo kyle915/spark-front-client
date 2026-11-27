@@ -12,8 +12,8 @@ import { buildBuyerDeckPptxZip } from "@/public/pitch/buyerDeckPptx";
 
 const SAMPLE_PAYLOAD: SandboxPayload = {
   brand: {
-    name: "Solstice Botanical Sparkling",
-    tagline: "Botanical Sparkling Water · Zero Stevia",
+    name: "Meadowlark Botanicals",
+    tagline: "Botanical Sparkling Tonic · Zero Stevia",
     category: "Better-for-You Beverage",
     targetMsrp: "2.49",
     skus: ["Yuzu Ginger 12oz", "Blood Orange Hibiscus 12oz"],
@@ -39,12 +39,12 @@ const SAMPLE_PAYLOAD: SandboxPayload = {
   },
   stores: [
     {
-      storeKey: "sandbox:wfm-austin",
-      storeName: "Whole Foods Market — Lamar",
-      retailerBanner: "Whole Foods Market",
+      storeKey: "sandbox:greenway-austin-barton",
+      storeName: "Greenway Market — Barton Creek #104",
+      retailerBanner: "Greenway Market",
       market: "Austin, TX",
       stateCode: "TX",
-      address: "525 N Lamar Blvd, Austin, TX",
+      address: "410 Meadowbrook Pkwy, Austin, TX 78704",
       visits: 6,
       consumersSampled: 612,
       unitsSold: 224,
@@ -66,12 +66,12 @@ const SAMPLE_PAYLOAD: SandboxPayload = {
       quotes: ["Crisp citrus finish!"],
     },
     {
-      storeKey: "sandbox:wfm-dallas",
-      storeName: "Whole Foods Market — Park Lane",
-      retailerBanner: "Whole Foods Market",
+      storeKey: "sandbox:greenway-dallas-northgate",
+      storeName: "Greenway Market — Northgate #119",
+      retailerBanner: "Greenway Market",
       market: "Dallas, TX",
       stateCode: "TX",
-      address: "8190 Park Ln, Dallas, TX",
+      address: "7220 Briarwood Ln, Dallas, TX 75214",
       visits: 4,
       consumersSampled: 390,
       unitsSold: 118,
@@ -87,7 +87,7 @@ const SAMPLE_PAYLOAD: SandboxPayload = {
       demoCost: 900,
       costPerSample: 2.31,
       stockoutSignal: "Missing from cold box",
-      competitorPromo: "Poppi 2/$4",
+      competitorPromo: "Zestify Soda 2/$4",
       latestDate: "2026-11-21",
       topSku: "Blood Orange Hibiscus 12oz",
       quotes: ["Cooler was empty."],
@@ -96,8 +96,8 @@ const SAMPLE_PAYLOAD: SandboxPayload = {
   shelfPhotos: [
     {
       fileId: "p1",
-      storeKey: "sandbox:wfm-austin",
-      storeName: "Whole Foods Market — Lamar",
+      storeKey: "sandbox:greenway-austin-barton",
+      storeName: "Greenway Market — Barton Creek #104",
       market: "Austin, TX",
       stateCode: "TX",
       eventDate: "2026-11-24",
@@ -115,18 +115,18 @@ const SAMPLE_PAYLOAD: SandboxPayload = {
     {
       market: "Houston, TX",
       stateCode: "TX",
-      competitorBrand: "Poppi",
+      competitorBrand: "Zestify Soda",
       mentionCount: 9,
       priorMentionCount: 4,
       delta: 5,
       trend: "rising",
-      sampleQuote: "Poppi 2/$4 nearby.",
-      sampleStoreKey: "sandbox:wfm-dallas",
-      sampleStoreName: "Whole Foods Market — Park Lane",
+      sampleQuote: "Zestify Soda 2/$4 nearby.",
+      sampleStoreKey: "sandbox:greenway-dallas-northgate",
+      sampleStoreName: "Greenway Market — Northgate #119",
     },
   ],
   competitorSummary: [
-    { brand: "Poppi", prefersOurs: 7, onlyMentioned: 5, prefersTheirs: 2 },
+    { brand: "Zestify Soda", prefersOurs: 7, onlyMentioned: 5, prefersTheirs: 2 },
   ],
   footprint: [
     { stateCode: "TX", activations: 10, consumers: 1002, unitsSold: 342, stores: 2 },
@@ -151,20 +151,30 @@ describe("Interactive Sample Brand Sandbox, Saved Views & Webhooks", () => {
       shelfFilter: "price_drift",
       targetMsrp: 2.49,
     });
-    expect(flagged.map((s) => s.storeKey)).toEqual(["sandbox:wfm-dallas"]);
+    expect(flagged.map((s) => s.storeKey)).toEqual([
+      "sandbox:greenway-dallas-northgate",
+    ]);
 
     const msrpAns = answerSandboxQuestion(
       SAMPLE_PAYLOAD,
       "Which stores have MSRP drift or missing tags?",
     );
     expect(msrpAns.headline).toContain("1 of 2 doors");
-    expect(msrpAns.recommendedStoreKeys).toContain("sandbox:wfm-dallas");
+    expect(msrpAns.recommendedStoreKeys).toContain(
+      "sandbox:greenway-dallas-northgate",
+    );
 
     const compAns = answerSandboxQuestion(
       SAMPLE_PAYLOAD,
       "Which competitors are rising?",
     );
-    expect(compAns.bullets[0]).toContain("Poppi");
+    expect(compAns.bullets[0]).toContain("Zestify Soda");
+
+    const qbrAns = answerSandboxQuestion(
+      SAMPLE_PAYLOAD,
+      "Summarize our QBR story for a Greenway Market buyer meeting.",
+    );
+    expect(qbrAns.bullets[0]).toContain("Greenway Market");
   });
 
   it("adapts Sandbox payload to a valid native Buyer QBR PowerPoint (.pptx)", async () => {
@@ -177,19 +187,20 @@ describe("Interactive Sample Brand Sandbox, Saved Views & Webhooks", () => {
     expect(zip.file("ppt/slides/slide1.xml")).not.toBeNull();
   });
 
-  it("wires /sandbox, Login/Onboarding CTAs, SavedViewsDigestBar, WebhooksPanel, and tenant-keyed pilot pages", () => {
+  it("locks /sandbox to AdminOnly (non-public), removes public CTAs, and keeps SavedViews/Webhooks wired", () => {
     const routes = readFileSync(resolve(__dirname, "../../routes/AppRoutes.tsx"), "utf8");
-    expect(routes).toContain('path: "/sandbox"');
-    expect(routes).toContain("SandboxBrandPage");
+    expect(routes).toMatch(
+      /path:\s*"\/sandbox",\s*component:\s*\(\s*<AdminOnly>\s*<SandboxBrandPage \/>\s*<\/AdminOnly>\s*\),\s*isPublic:\s*false/,
+    );
 
     const login = readFileSync(resolve(__dirname, "../../auth/Login.tsx"), "utf8");
-    expect(login).toContain('to="/sandbox"');
+    expect(login).not.toContain('to="/sandbox"');
 
     const onboarding = readFileSync(
       resolve(__dirname, "../../pilot/SelfServeOnboardingPage.tsx"),
       "utf8",
     );
-    expect(onboarding).toContain('to="/sandbox"');
+    expect(onboarding).not.toContain('to="/sandbox"');
 
     const buyerReport = readFileSync(
       resolve(__dirname, "../../pilot/BuyerReportPage.tsx"),
@@ -214,6 +225,7 @@ describe("Interactive Sample Brand Sandbox, Saved Views & Webhooks", () => {
       "utf8",
     );
     expect(settings).toContain('to="/ai-connector"');
+    expect(settings).toContain("isAdmin ?");
     expect(settings).toContain('to="/sandbox"');
 
     // Verify all 7 pilot pages key their Relay body by tenantId for clean workspace switching

@@ -402,14 +402,19 @@ export const SparkSetupGuide: React.FC = () => {
     return set;
   }, [manualCompleted, liveStatus]);
 
+  const availableTracks = useMemo(
+    () => SETUP_GUIDE_TRACKS.filter((t) => !t.adminOnly || isAdmin),
+    [isAdmin],
+  );
+
   const progress = useMemo(
-    () => computeSetupGuideProgress(SETUP_GUIDE_TRACKS, effectiveCompleted),
-    [effectiveCompleted],
+    () => computeSetupGuideProgress(availableTracks, effectiveCompleted),
+    [availableTracks, effectiveCompleted],
   );
 
   const visibleTracks = useMemo(
-    () => filterSetupGuideTracks(SETUP_GUIDE_TRACKS, category, query),
-    [category, query],
+    () => filterSetupGuideTracks(availableTracks, category, query),
+    [availableTracks, category, query],
   );
 
   const toggleTrack = (id: string) => {
@@ -450,17 +455,23 @@ export const SparkSetupGuide: React.FC = () => {
         <SparkPageHeader
           eyebrow="Workspace Playbook · Interactive Setup Guide"
           title="Set up your Spark stack"
-          support="Step-by-step walkthroughs for Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, Spark MCP, and the Sample Brand Sandbox."
+          support={
+            isAdmin
+              ? "Step-by-step walkthroughs for Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, Spark MCP, and the admin Sandbox preview."
+              : "Step-by-step walkthroughs for Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, and Spark MCP."
+          }
           action={
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                to="/sandbox"
-                className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 no-underline"
-                style={FIELD}
-              >
-                <Sparkles size={13} />
-                Open Sandbox
-              </Link>
+              {isAdmin ? (
+                <Link
+                  to="/sandbox"
+                  className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 no-underline"
+                  style={FIELD}
+                >
+                  <Sparkles size={13} />
+                  Open Sandbox
+                </Link>
+              ) : null}
               <Link
                 to="/help"
                 className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 no-underline"
@@ -542,7 +553,7 @@ export const SparkSetupGuide: React.FC = () => {
 
           {/* Quick-jump TOC pills */}
           <div className="flex flex-wrap gap-1.5">
-            {SETUP_GUIDE_TRACKS.map((t, i) => (
+            {availableTracks.map((t, i) => (
               <a
                 key={t.id}
                 href={`#${t.id}`}

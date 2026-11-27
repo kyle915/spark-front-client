@@ -16,10 +16,18 @@ export const WHATS_NEW: WhatsNewEntry[] = [
   {
     id: "2026-11-27sg",
     date: "November 27, 2026",
-    title: "Built-in Setup Guide & Interactive Sample Brand Sandbox",
+    title: "Built-in Interactive Spark Setup Guide",
     items: [
       "Open Setup Guide (/setup-guide) from the Workspace sidebar or Help page for step-by-step walkthroughs of Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, and Spark MCP — with live readiness status and copyable snippets.",
-      "Share the read-only Sample Brand Sandbox (/sandbox — also linked on Login, Onboarding, and Settings) so prospective CPG founders and new teammates can explore Reports, StoreSheet, Shelf & Voice, Photo Wall, Ask Spark, and PowerPoint exports safely without login.",
+    ],
+  },
+  {
+    id: "2026-11-27sb",
+    date: "November 27, 2026",
+    title: "Admin-only Sample Brand Sandbox preview",
+    staffOnly: true,
+    items: [
+      "Ignite admins can preview the read-only Sample Brand Sandbox (/sandbox — linked from Settings and Setup Guide) powered by fictional brand Meadowlark Botanicals and made-up retailer/store data ahead of a future public launch.",
     ],
   },
   {

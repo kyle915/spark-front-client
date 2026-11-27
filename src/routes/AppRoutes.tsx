@@ -624,11 +624,6 @@ const PublicRoutes = {
       isPublic: true,
     },
     {
-      path: "/sandbox",
-      component: <SandboxBrandPage />,
-      isPublic: true,
-    },
-    {
       path: "/jobs/release/:releaseToken",
       component: <PublicJobBoard />,
       isPublic: true,
@@ -2034,6 +2029,15 @@ const PilotLinks = {
       component: (
         <AdminOnly>
           <PlansAndBillingPage />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/sandbox",
+      component: (
+        <AdminOnly>
+          <SandboxBrandPage />
         </AdminOnly>
       ),
       isPublic: false,

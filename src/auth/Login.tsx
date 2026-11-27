@@ -156,18 +156,10 @@ const Login = () => {
   );
 
   const shiftNote = (
-    <div className="space-y-2.5">
-      <p className="signin-shift">
-        <strong>Working a shift?</strong> You do not need to sign in. Use the check-in
-        link from your text or email.
-      </p>
-      <p className="signin-shift">
-        <strong>Evaluating Spark for your brand?</strong>{" "}
-        <Link to="/sandbox" className="signin-link">
-          Explore Sample Brand Sandbox (no login needed) →
-        </Link>
-      </p>
-    </div>
+    <p className="signin-shift">
+      <strong>Working a shift?</strong> You do not need to sign in. Use the check-in
+      link from your text or email.
+    </p>
   );
 
   return (

@@ -147,7 +147,7 @@ export const SANDBOX_SUGGESTED_QUESTIONS = [
   "Which stores have MSRP price drift, missing tags, or OOS gaps?",
   "What are our top-performing doors by conversion and POS lift?",
   "Which competitors are rising by market right now?",
-  "Summarize our QBR story for a Whole Foods buyer meeting.",
+  "Summarize our QBR story for a Greenway Market buyer meeting.",
 ] as const;
 
 export function computeSandboxMsrpDrift(
@@ -278,9 +278,11 @@ export function answerSandboxQuestion(
 
   if (
     q.includes("competitor") ||
-    q.includes("poppi") ||
-    q.includes("olipop") ||
-    q.includes("spindrift") ||
+    q.includes("zestify") ||
+    q.includes("bramble") ||
+    q.includes("peakwave") ||
+    q.includes("citruscloud") ||
+    q.includes("verbena") ||
     q.includes("promo") ||
     q.includes("rising")
   ) {
@@ -288,7 +290,7 @@ export function answerSandboxQuestion(
       (c) => c.trend === "rising" || c.trend === "new",
     );
     return {
-      headline: `${rising.length} rising or newly appearing competitor signals detected across Texas markets.`,
+      headline: `${rising.length} rising or newly appearing competitor signals detected across key markets.`,
       bullets: rising.map(
         (c) =>
           `${c.competitorBrand} in ${c.market}: ${c.mentionCount} mentions (${c.trend === "new" ? "New" : `+${c.delta} vs prior window`}) — "${c.sampleQuote}"`,
@@ -321,23 +323,28 @@ export function answerSandboxQuestion(
     };
   }
 
-  // Executive QBR / Whole Foods summary default
-  const wfm = payload.stores.filter((s) =>
-    s.retailerBanner.toLowerCase().includes("whole foods"),
+  // Executive QBR / Greenway Market summary default
+  const gw = payload.stores.filter((s) =>
+    s.retailerBanner.toLowerCase().includes("greenway"),
   );
-  const wfmConsumers = wfm.reduce((a, s) => a + s.consumersSampled, 0);
-  const wfmUnits = wfm.reduce((a, s) => a + s.unitsSold, 0);
-  const wfmConv = wfmConsumers
-    ? Math.round((wfmUnits / wfmConsumers) * 1000) / 10
+  const focusStores = gw.length > 0 ? gw : payload.stores;
+  const focusBanner = focusStores[0]?.retailerBanner ?? "Key Retailer";
+  const focusConsumers = focusStores.reduce((a, s) => a + s.consumersSampled, 0);
+  const focusUnits = focusStores.reduce((a, s) => a + s.unitsSold, 0);
+  const focusConv = focusConsumers
+    ? Math.round((focusUnits / focusConsumers) * 1000) / 10
     : payload.kpis.conversionPct;
+  const topFocus = [...focusStores].sort(
+    (a, b) => b.conversionPct - a.conversionPct,
+  )[0];
   return {
     headline: `${payload.brand.name} drove ${payload.kpis.unitsSold.toLocaleString()} units sold across ${payload.kpis.activations} activations (+${payload.kpis.posLiftPct}% POS lift).`,
     bullets: [
-      `Whole Foods Market (${wfm.length} doors): ${wfmConsumers.toLocaleString()} consumers sampled, ${wfmUnits.toLocaleString()} units sold (${wfmConv}% conversion), led by Lamar Flagship at 36.6% conversion.`,
+      `${focusBanner} (${focusStores.length} doors): ${focusConsumers.toLocaleString()} consumers sampled, ${focusUnits.toLocaleString()} units sold (${focusConv}% conversion)${topFocus ? `, led by ${topFocus.storeName} at ${topFocus.conversionPct}% conversion` : ""}.`,
       `Shelf health: ${payload.kpis.osaRatePct}% on-shelf availability, ${payload.kpis.avgFacings} avg front facings, and $${payload.kpis.medianPrice} median retail price.`,
       `Top shopper theme: "${payload.shopperThemes[0]?.theme}" (${payload.shopperThemes[0]?.mentions} mentions) — ready to export as a 16:9 Buyer QBR PowerPoint deck.`,
     ],
-    recommendedStoreKeys: wfm.slice(0, 3).map((s) => s.storeKey),
+    recommendedStoreKeys: focusStores.slice(0, 3).map((s) => s.storeKey),
   };
 }
 
@@ -506,11 +513,23 @@ export function buildSandboxPitchPayload(
 export async function fetchSandboxBrand(): Promise<SandboxPayload> {
   const origin = pitchApiOrigin();
   const url = `${origin}/api/public/sandbox-brand`;
+  let token: string | null = null;
+  try {
+    token = typeof localStorage !== "undefined" ? localStorage.getItem("@token") : null;
+  } catch {
+    token = null;
+  }
   const resp = await fetch(url, {
     method: "GET",
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `JWT ${token}` } : {}),
+    },
   });
   if (!resp.ok) {
+    if (resp.status === 401 || resp.status === 403) {
+      throw new Error("Admin access required to preview the Sample Brand Sandbox.");
+    }
     throw new Error(`Could not load sample brand (${resp.status}).`);
   }
   return (await resp.json()) as SandboxPayload;

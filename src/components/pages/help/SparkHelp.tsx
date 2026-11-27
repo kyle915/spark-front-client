@@ -13,6 +13,7 @@ import { Link } from "react-router";
 import { useMutation } from "react-relay/hooks";
 
 import Layout from "@/layout/Layout";
+import useSparkRole from "@/hooks/useSparkRole";
 import { CreateSupportTicketMutation } from "@/api/mutations/CreateSupportTicketMutation";
 import type { CreateSupportTicketMutation as CreateSupportTicketMutationType } from "@api/mutations/__generated__/CreateSupportTicketMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
@@ -20,6 +21,7 @@ import { useAlertStore } from "@/store/alertStore";
 type FAQItem = {
   q: string;
   a: React.ReactNode;
+  adminOnly?: boolean;
 };
 
 const CATEGORIES: { value: string; label: string }[] = [
@@ -126,15 +128,17 @@ const FAQS: FAQItem[] = [
     ),
   },
   {
-    q: "Can prospects or new teammates explore Spark without touching live data?",
+    q: "Where can Ignite admins preview the upcoming Sample Brand Sandbox?",
+    adminOnly: true,
     a: (
       <>
-        Yes — share the read-only{" "}
+        Open the admin-only{" "}
         <Link to="/sandbox" className="underline font-semibold">
           Sample Brand Sandbox (/sandbox)
         </Link>{" "}
-        to test Program Reports, StoreSheet, Shelf &amp; Voice, Photo Wall, Ask
-        Spark, and Buyer QBR PowerPoint exports with zero login required.
+        preview to test Program Reports, StoreSheet, Shelf &amp; Voice, Photo
+        Wall, Ask Spark, and Buyer QBR PowerPoint exports using fictional brand
+        and store data ahead of our public launch.
       </>
     ),
   },
@@ -290,6 +294,8 @@ const SupportTicketForm: React.FC = () => {
 };
 
 export default function SparkHelp() {
+  const { isAdmin } = useSparkRole();
+  const visibleFaqs = FAQS.filter((f) => !f.adminOnly || isAdmin);
   return (
     <Layout>
       <div className="space-y-6 max-w-4xl">
@@ -333,7 +339,7 @@ export default function SparkHelp() {
             <p className="text-xs sm:text-sm" style={{ color: "var(--spark-text-meta)" }}>
               Step-by-step instructions and copyable snippets for Shelf &amp; Voice,
               Buyer QBR Decks (.pptx), Saved Views &amp; Friday Digests, Outbound
-              Webhooks, Spark MCP, and the Sample Brand Sandbox.
+              Webhooks, and Spark MCP{isAdmin ? ", plus the admin Sandbox preview" : ""}.
             </p>
           </div>
           <Link
@@ -394,7 +400,7 @@ export default function SparkHelp() {
             Frequently asked
           </h2>
           <div className="space-y-3">
-            {FAQS.map((f) => (
+            {visibleFaqs.map((f) => (
               <details
                 key={f.q}
                 className="spark-card p-5"

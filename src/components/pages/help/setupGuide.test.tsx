@@ -20,6 +20,10 @@ describe("In-app Spark Setup Guide (/setup-guide)", () => {
       "ai-connector",
     ]);
 
+    const sandbox = SETUP_GUIDE_TRACKS.find((t) => t.id === "sandbox");
+    expect(sandbox?.adminOnly).toBe(true);
+    expect(sandbox?.summary).toContain("Meadowlark Botanicals");
+
     const webhooks = SETUP_GUIDE_TRACKS.find((t) => t.id === "webhooks");
     expect(webhooks?.snippets?.length).toBeGreaterThanOrEqual(2);
     expect(webhooks?.snippets?.[1]?.code).toContain("createHmac");

@@ -1,11 +1,12 @@
 /**
- * Interactive Self-Serve Sandbox ("Explore Sample Brand" at `/sandbox`).
+ * Admin-Only Interactive Sample Brand Sandbox (`/sandbox`).
  *
- * Read-only, zero-login CPG beverage brand workspace ("Solstice Botanical
- * Sparkling") letting prospective founders test Program Reports, StoreSheet,
- * Shelf & Voice (with live MSRP drift), Photo Wall (with PhotoLightbox),
- * Buyer QBR Decks (with live 16:9 `.pptx` download), Saved Views, and
- * grounded Ask Spark Q&A without touching any live tenant data.
+ * Internal read-only CPG beverage brand workspace ("Meadowlark Botanicals")
+ * using 100% fictional retailer banners, stores, addresses, and competitor
+ * brands so Ignite admins can preview Program Reports, StoreSheet, Shelf &
+ * Voice (with live MSRP drift), Photo Wall (with PhotoLightbox), Buyer QBR
+ * Decks (with live 16:9 `.pptx` download), Saved Views, and grounded Ask
+ * Spark Q&A ahead of a future public launch.
  */
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -249,10 +250,10 @@ export const SandboxBrandPage: React.FC = () => {
       >
         <div className="text-center space-y-2">
           <p className="mono text-xs uppercase tracking-widest" style={META}>
-            Loading Sample Brand Sandbox…
+            Loading Admin Sandbox Preview…
           </p>
           <p className="display text-lg font-semibold">
-            Solstice Botanical Sparkling
+            Meadowlark Botanicals
           </p>
         </div>
       </div>
@@ -266,24 +267,17 @@ export const SandboxBrandPage: React.FC = () => {
         style={{ background: "#f6f6f2", color: "#14160f" }}
       >
         <div className="rounded-xl p-6 max-w-md w-full space-y-3" style={CARD}>
-          <p className="display text-lg font-bold">Sample Sandbox unavailable</p>
+          <p className="display text-lg font-bold">Admin Sandbox unavailable</p>
           <p className="text-sm" style={META}>
             {loadError || "Unable to load sample brand data right now."}
           </p>
           <div className="flex items-center gap-3 pt-1">
             <Link
-              to="/login"
+              to="/"
               className="px-4 py-2 rounded-lg text-xs font-semibold no-underline"
               style={{ background: "#14160f", color: "#ffffff" }}
             >
-              Sign in
-            </Link>
-            <Link
-              to="/onboarding"
-              className="px-4 py-2 rounded-lg text-xs font-semibold no-underline"
-              style={SOFT}
-            >
-              Start free workspace
+              ← Back to Spark
             </Link>
           </div>
         </div>
@@ -305,12 +299,12 @@ export const SandboxBrandPage: React.FC = () => {
               className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mono shrink-0"
               style={{ background: "#2b4c08", color: "#eef6e3" }}
             >
-              Read-Only Sandbox
+              Admin Preview · Sandbox
             </span>
             <span className="text-xs truncate" style={{ color: "#d4d6cc" }}>
-              Exploring sample beverage brand{" "}
+              Fictional sample brand{" "}
               <strong style={{ color: "#ffffff" }}>{payload.brand.name}</strong>{" "}
-              · Zero risk to live data
+              · Internal preview only (not public yet)
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -328,19 +322,11 @@ export const SandboxBrandPage: React.FC = () => {
               Ask Spark
             </button>
             <Link
-              to="/onboarding"
+              to="/"
               className="px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1 no-underline"
               style={{ background: "#f6f6f2", color: "#14160f" }}
             >
-              Start free workspace
-              <ArrowRight size={13} />
-            </Link>
-            <Link
-              to="/login"
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium no-underline"
-              style={{ color: "#d4d6cc" }}
-            >
-              Sign in
+              ← Back to Spark
             </Link>
           </div>
         </div>
@@ -564,7 +550,7 @@ export const SandboxBrandPage: React.FC = () => {
                   style={{ background: "#14160f", color: "#ffffff" }}
                 >
                   <Sparkles size={13} />
-                  Ask Spark a question about Solstice
+                  Ask Spark a question about {payload.brand.name}
                 </button>
               </section>
             </div>
@@ -1472,11 +1458,11 @@ export const SandboxBrandPage: React.FC = () => {
                 <div className="rounded-xl p-4 text-xs space-y-1.5" style={SOFT}>
                   <p className="font-semibold inline-flex items-center gap-1.5">
                     <CheckCircle2 size={14} style={{ color: "#2b4c08" }} />
-                    Grounded strictly in approved Solstice data
+                    Grounded strictly in approved {payload.brand.name} data
                   </p>
                   <p style={META}>
                     Tap any prompt above or type a question about MSRP drift,
-                    OOS stores, Whole Foods conversion, or rising competitors.
+                    OOS stores, Greenway Market conversion, or rising competitors.
                   </p>
                 </div>
               ) : (
