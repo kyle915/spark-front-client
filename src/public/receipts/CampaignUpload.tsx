@@ -292,12 +292,14 @@ const CampaignUpload: React.FC = () => {
     return (
       <Shell>
         <h1
-          className="text-2xl font-bold mb-3"
-          style={{ fontFamily: "Georgia, serif" }}
+          className="display text-2xl font-bold mb-3"
+          style={{ letterSpacing: "-0.025em", color: "#14160f" }}
         >
           This rebate isn't available.
         </h1>
-        <p className="text-sm text-stone-600">{loadErr.message}</p>
+        <p className="text-sm" style={{ color: "rgba(20, 22, 15, 0.74)" }}>
+          {loadErr.message}
+        </p>
       </Shell>
     );
   }
@@ -311,18 +313,18 @@ const CampaignUpload: React.FC = () => {
         heroImageUrl={campaign?.heroImage}
       >
         <p
-          className="text-xs uppercase tracking-[0.2em] mb-2"
-          style={{ color: pick(brandVars, "--color-success", "#3a7e2f") }}
+          className="mono text-[10px] font-semibold uppercase tracking-[0.18em] mb-2"
+          style={{ color: pick(brandVars, "--color-success", "#2b4c08") }}
         >
           Receipt received
         </p>
         <h1
-          className="text-2xl font-bold mb-3"
-          style={{ fontFamily: "Georgia, serif" }}
+          className="display text-2xl font-bold mb-3"
+          style={{ letterSpacing: "-0.025em" }}
         >
-          ✅ Thanks — you're all set!
+          Thanks — you're all set.
         </h1>
-        <p className="text-sm text-stone-600">
+        <p className="text-sm" style={{ opacity: 0.78 }}>
           We've got your receipt. Once it's verified we'll send your reward
           {payoutHandle.trim() ? ` to ${payoutHandle.trim()} via PayPal` : ""}.
           You can safely close this tab.
@@ -352,35 +354,34 @@ const CampaignUpload: React.FC = () => {
       <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex-1">
           <p
-            className="text-xs uppercase tracking-[0.2em] mb-1"
+            className="mono text-[10px] font-semibold uppercase tracking-[0.18em] mb-1"
             style={{
-              color: pick(brandVars, "--color-base-content", "#78716c"),
+              color: pick(brandVars, "--color-base-content", "#4a4e42"),
               opacity: 0.65,
             }}
           >
             {brand ? `${brand} · ` : ""}REBATE
           </p>
           <h1
-            className="text-2xl font-bold mb-1"
-            style={{ fontFamily: "Georgia, serif" }}
+            className="display text-2xl font-bold mb-1"
+            style={{ letterSpacing: "-0.025em" }}
           >
             {headline}
           </h1>
           {description && (
-            <p className="text-sm mb-2" style={{ opacity: 0.75 }}>
+            <p className="text-sm mb-2 leading-relaxed" style={{ opacity: 0.78 }}>
               {description}
             </p>
           )}
 
           {reward && (
             <div
-              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold"
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold tab-num"
               style={{
-                background: pick(brandVars, "--color-primary", "#f2f3ee"),
-                color: pick(brandVars, "--color-primary-content", "#0a0d09"),
+                background: pick(brandVars, "--color-primary", "#14160f"),
+                color: pick(brandVars, "--color-primary-content", "#ffffff"),
               }}
             >
-              <span aria-hidden>💸</span>
               {reward} reward
               {campaign?.product ? ` on ${campaign.product}` : ""}
             </div>
@@ -391,10 +392,10 @@ const CampaignUpload: React.FC = () => {
           <img
             src={campaign.productImage}
             alt={campaign?.product || "Product"}
-            className="w-20 h-20 rounded-2xl object-contain flex-shrink-0"
+            className="w-20 h-20 rounded-xl object-contain flex-shrink-0 p-1"
             style={{
               background: pick(brandVars, "--color-base-100", "#ffffff"),
-              border: `1px solid ${pick(brandVars, "--color-neutral", "#e7e5e4")}`,
+              border: `1px solid ${pick(brandVars, "--color-neutral", "#dcddd5")}`,
             }}
           />
         )}
@@ -411,7 +412,10 @@ const CampaignUpload: React.FC = () => {
         <div>
           <label className={LABEL_CLS}>Receipt photo</label>
           {preview ? (
-            <div className="rounded-2xl overflow-hidden border border-stone-200 bg-stone-50">
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{ border: "1px solid #dcddd5", background: "#f6f6f2" }}
+            >
               <img
                 src={preview}
                 alt="Receipt preview"
@@ -420,11 +424,16 @@ const CampaignUpload: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 py-10 cursor-pointer">
-                <span className="text-sm text-stone-600 font-medium">
+              <label
+                className="flex flex-col items-center justify-center gap-2 rounded-xl py-10 cursor-pointer"
+                style={{ border: "2px dashed #c8cac0", background: "#f6f6f2" }}
+              >
+                <span className="text-sm font-semibold" style={{ color: "#14160f" }}>
                   Choose from photo library
                 </span>
-                <span className="text-xs text-stone-400">JPG · PNG · HEIC</span>
+                <span className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "rgba(20, 22, 15, 0.54)" }}>
+                  JPG · PNG · HEIC
+                </span>
                 <input
                   type="file"
                   accept="image/*"
@@ -432,7 +441,10 @@ const CampaignUpload: React.FC = () => {
                   onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
                 />
               </label>
-              <label className="flex items-center justify-center rounded-2xl border border-stone-300 bg-white py-3 cursor-pointer text-sm font-medium text-stone-700">
+              <label
+                className="flex items-center justify-center rounded-lg py-2.5 cursor-pointer text-sm font-semibold"
+                style={{ border: "1px solid #dcddd5", background: "#ffffff", color: "#14160f" }}
+              >
                 Take photo
                 <input
                   type="file"
@@ -448,7 +460,8 @@ const CampaignUpload: React.FC = () => {
             <button
               type="button"
               onClick={() => onPickFile(null)}
-              className="mt-2 text-sm text-stone-600 underline"
+              className="mt-2 text-sm underline cursor-pointer"
+              style={{ color: "rgba(20, 22, 15, 0.72)" }}
             >
               Choose a different photo
             </button>
@@ -467,7 +480,7 @@ const CampaignUpload: React.FC = () => {
             spellCheck={false}
             className={CONTROL_CLS}
           />
-          <p className="text-xs text-stone-400 mt-1">
+          <p className="text-xs mt-1" style={{ opacity: 0.6 }}>
             We'll send your reward here once your receipt is verified.
           </p>
         </Field>
@@ -501,8 +514,8 @@ const CampaignUpload: React.FC = () => {
           placeholder="What did you buy?"
         />
 
-        <div className="pt-2 border-t border-stone-100">
-          <p className={LABEL_CLS + " mt-3 mb-1"}>Your details (optional)</p>
+        <div className="pt-3" style={{ borderTop: "1px solid #ecece6" }}>
+          <p className={LABEL_CLS + " mt-1 mb-2"}>Your details (optional)</p>
           <div className="space-y-3">
             <TextField
               label="Name"
@@ -534,7 +547,14 @@ const CampaignUpload: React.FC = () => {
         </div>
 
         {submitErr && (
-          <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+          <div
+            className="rounded-xl p-3 text-sm font-medium"
+            style={{
+              background: "rgba(210, 72, 27, 0.08)",
+              border: "1px solid rgba(210, 72, 27, 0.28)",
+              color: "#a8340f",
+            }}
+          >
             {submitErr}
           </div>
         )}
@@ -542,12 +562,11 @@ const CampaignUpload: React.FC = () => {
         <button
           type="submit"
           disabled={submitting || !file || !payoutHandle.trim()}
-          className="w-full px-6 py-3.5 rounded-2xl text-base font-bold transition"
+          className="w-full px-5 py-3 rounded-lg text-sm font-semibold transition cursor-pointer"
           style={{
-            background: pick(brandVars, "--color-primary", "#f2f3ee"),
-            color: pick(brandVars, "--color-primary-content", "#0a0d09"),
-            opacity: submitting || !file || !payoutHandle.trim() ? 0.5 : 1,
-            fontFamily: "Georgia, serif",
+            background: pick(brandVars, "--color-primary", "#14160f"),
+            color: pick(brandVars, "--color-primary-content", "#ffffff"),
+            opacity: submitting || !file || !payoutHandle.trim() ? 0.42 : 1,
           }}
         >
           {submitting
@@ -593,7 +612,7 @@ function formatReward(raw: string | null | undefined): string {
 // ships a site-wide DaisyUI default theme (src/index.css, near-black) that
 // always defines --color-base-200 etc. at :root, so var(--color-x, <literal>)
 // never actually falls through — it silently resolves to Spark's own dark
-// admin-console theme instead of this page's intended neutral cream/white.
+// admin-console theme instead of this page's intended neutral stone/white.
 function pick(
   vars: Record<string, string> | null | undefined,
   key: string,
@@ -603,9 +622,9 @@ function pick(
 }
 
 const LABEL_CLS =
-  "block text-xs uppercase tracking-[0.16em] text-stone-500 mb-2";
+  "block mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#4a4e42] mb-1.5";
 const CONTROL_CLS =
-  "w-full rounded-xl border border-stone-300 p-3 text-base focus:outline-none focus:border-stone-500";
+  "w-full rounded-lg border border-[#dcddd5] bg-white px-3 py-2.5 text-[15px] text-[#14160f] focus:outline-none focus:border-[#14160f]";
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
@@ -634,13 +653,6 @@ const TextField: React.FC<{
   </Field>
 );
 
-// Branded per client — background + card read the tenant's DaisyUI CSS
-// variables, defined on THIS div (not document.documentElement — see the
-// module docstring) via brandVars, falling back to Spark's own neutral
-// cream/white when brandVars is null (no theme fetch yet, or the tenant has
-// configured neither color scheme). A shopper scanning a QR in a store aisle
-// should see the BRAND's page — Spark only gets a small footer credit,
-// mirroring how the per-event receipt upload page stays neutral.
 const Shell: React.FC<{
   children: React.ReactNode;
   logoUrl?: string | null;
@@ -649,15 +661,20 @@ const Shell: React.FC<{
   heroImageUrl?: string | null;
 }> = ({ children, logoUrl, brand, brandVars, heroImageUrl }) => (
   <div
+    data-theme="spark-v2"
+    data-spark-mode="light"
     className="min-h-screen"
-    style={{ background: pick(brandVars, "--color-base-200", "#faf7f1") }}
+    style={{
+      background: pick(brandVars, "--color-base-200", "#f6f6f2"),
+      colorScheme: "light",
+    }}
   >
     <div className="max-w-xl mx-auto px-5 py-10">
       {heroImageUrl && (
         <img
           src={heroImageUrl}
           alt=""
-          className="w-full h-40 sm:h-52 object-cover rounded-3xl mb-6"
+          className="w-full h-40 sm:h-52 object-cover rounded-xl mb-6"
           onError={(e) => {
             e.currentTarget.style.display = "none";
           }}
@@ -675,19 +692,19 @@ const Shell: React.FC<{
           />
         ) : (
           <p
-            className="text-xs uppercase tracking-[0.22em] font-semibold"
-            style={{ color: pick(brandVars, "--color-base-content", "#78716c") }}
+            className="mono text-[11px] uppercase tracking-[0.2em] font-semibold"
+            style={{ color: pick(brandVars, "--color-base-content", "#4a4e42") }}
           >
             {brand || ""}
           </p>
         )}
       </div>
       <div
-        className="rounded-3xl p-6 sm:p-8 shadow-sm"
+        className="rounded-xl p-6 sm:p-8"
         style={{
           background: pick(brandVars, "--color-base-100", "#ffffff"),
-          border: `1px solid ${pick(brandVars, "--color-neutral", "#e7e5e4")}`,
-          color: pick(brandVars, "--color-base-content", "#1c1917"),
+          border: `1px solid ${pick(brandVars, "--color-neutral", "#dcddd5")}`,
+          color: pick(brandVars, "--color-base-content", "#14160f"),
         }}
       >
         {children}
@@ -695,8 +712,8 @@ const Shell: React.FC<{
       <p
         className="mt-6 text-xs text-center"
         style={{
-          color: pick(brandVars, "--color-base-content", "#a8a29e"),
-          opacity: 0.55,
+          color: pick(brandVars, "--color-base-content", "#5c6154"),
+          opacity: 0.68,
         }}
       >
         <a

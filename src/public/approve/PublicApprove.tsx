@@ -70,8 +70,8 @@ function publicApprovalBaseUrl(): string {
   }
 }
 
-const ROW_LABEL_CLS = "text-xs uppercase tracking-[0.18em] text-stone-500";
-const ROW_VALUE_CLS = "text-base text-stone-900 font-medium";
+const ROW_LABEL_CLS = "mono text-[10px] font-semibold uppercase tracking-[0.16em]";
+const ROW_VALUE_CLS = "text-sm font-medium";
 
 const PublicApprove: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -194,11 +194,11 @@ const PublicApprove: React.FC = () => {
   if (err && !data) {
     return (
       <Shell>
-        <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: "Georgia, serif" }}>
+        <h1 className="display text-2xl font-bold mb-3" style={{ letterSpacing: "-0.025em", color: "#14160f" }}>
           {err.error === "expired" ? "This link has expired." : "We couldn't open this link."}
         </h1>
-        <p className="text-sm text-stone-600 mb-6">{err.message}</p>
-        <p className="text-xs text-stone-500">
+        <p className="text-sm mb-6" style={{ color: "rgba(20, 22, 15, 0.74)" }}>{err.message}</p>
+        <p className="text-xs" style={{ color: "rgba(20, 22, 15, 0.58)" }}>
           Ask the requestor or your Ignite contact to resend the approval email.
         </p>
       </Shell>
@@ -214,33 +214,36 @@ const PublicApprove: React.FC = () => {
     return (
       <Shell>
         <p
-          className="text-xs uppercase tracking-[0.2em] mb-2"
-          style={{ color: doneState === "approved" ? "#3a7e2f" : "#a8401b" }}
+          className="mono text-[10px] font-semibold uppercase tracking-[0.18em] mb-2"
+          style={{ color: doneState === "approved" ? "#2b4c08" : "#a8340f" }}
         >
           {doneState === "approved" ? "Request approved" : "Request declined"}
         </p>
         <h1
-          className="text-2xl font-bold mb-3"
-          style={{ fontFamily: "Georgia, serif" }}
+          className="display text-2xl font-bold mb-3"
+          style={{ letterSpacing: "-0.025em", color: "#14160f" }}
         >
           {doneState === "approved"
             ? "You're all set — Ignite is staffing it."
             : "Thanks for the heads-up."}
         </h1>
-        <p className="text-sm text-stone-600 mb-6">
+        <p className="text-sm mb-6 leading-relaxed" style={{ color: "rgba(20, 22, 15, 0.74)" }}>
           {doneState === "approved"
             ? `${req.accountName} on ${req.date} has been marked approved. The requestor and the Ignite team have been notified.`
             : `${req.accountName} on ${req.date} has been declined. The requestor (${req.requestorEmail || "—"}) was notified along with your reason.`}
         </p>
         {req.declineReason && doneState === "declined" && (
-          <div className="rounded-xl bg-stone-50 border border-stone-200 p-4 text-sm text-stone-700">
-            <p className="text-xs uppercase tracking-[0.16em] text-stone-500 mb-1">
+          <div
+            className="rounded-xl p-4 text-sm"
+            style={{ background: "#f6f6f2", border: "1px solid #dcddd5", color: "#14160f" }}
+          >
+            <p className="mono text-[10px] font-semibold uppercase tracking-[0.16em] mb-1" style={{ color: "rgba(20, 22, 15, 0.58)" }}>
               Reason
             </p>
             {req.declineReason}
           </div>
         )}
-        <p className="mt-6 text-xs text-stone-500">
+        <p className="mt-6 text-xs" style={{ color: "rgba(20, 22, 15, 0.58)" }}>
           You can safely close this tab.
         </p>
       </Shell>
@@ -250,25 +253,26 @@ const PublicApprove: React.FC = () => {
   // Live action state — render request details + buttons.
   return (
     <Shell>
-      <p className="text-xs uppercase tracking-[0.2em] text-stone-500 mb-1">
+      <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] mb-1" style={{ color: "rgba(20, 22, 15, 0.58)" }}>
         {req.tenantName ? `${req.tenantName} · ` : ""}NEEDS YOUR APPROVAL
       </p>
       <h1
-        className="text-3xl font-bold mb-1"
-        style={{ fontFamily: "Georgia, serif" }}
+        className="display text-2xl sm:text-3xl font-bold mb-1"
+        style={{ letterSpacing: "-0.025em", color: "#14160f" }}
       >
         {req.accountName || "(no account name)"}
       </h1>
-      <p className="text-sm text-stone-600 mb-6">
+      <p className="text-sm mb-6" style={{ color: "rgba(20, 22, 15, 0.72)" }}>
         Submitted by{" "}
-        <span className="font-semibold">{req.requestorName || "—"}</span>
+        <span className="font-semibold" style={{ color: "#14160f" }}>{req.requestorName || "—"}</span>
         {req.requestorEmail ? (
           <>
             {" "}
             ·{" "}
             <a
               href={`mailto:${req.requestorEmail}`}
-              className="text-stone-700 underline"
+              className="underline"
+              style={{ color: "#14160f" }}
             >
               {req.requestorEmail}
             </a>
@@ -276,7 +280,10 @@ const PublicApprove: React.FC = () => {
         ) : null}
       </p>
 
-      <div className="rounded-2xl border border-stone-200 bg-white divide-y divide-stone-100">
+      <div
+        className="rounded-xl overflow-hidden divide-y"
+        style={{ border: "1px solid #dcddd5", background: "#ffffff", borderColor: "#dcddd5" }}
+      >
         <Row label="Request ID" value={req.displayId} />
         <Row label="Address" value={req.address || "—"} />
         <Row
@@ -308,23 +315,28 @@ const PublicApprove: React.FC = () => {
       </div>
 
       {err && (
-        <div className="mt-4 rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+        <div
+          className="mt-4 rounded-xl p-3 text-sm font-medium"
+          style={{
+            background: "rgba(210, 72, 27, 0.08)",
+            border: "1px solid rgba(210, 72, 27, 0.28)",
+            color: "#a8340f",
+          }}
+        >
           {err.message}
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-3 items-center">
+      <div className="mt-6 flex flex-wrap gap-2.5 items-center">
         <button
           type="button"
           onClick={() => submit("approve")}
           disabled={submitting}
-          className="px-6 py-3 rounded-2xl text-sm font-bold transition"
+          className="px-5 py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer"
           style={{
-            background: "#f2f3ee",
-            color: "#0a0d09",
+            background: "#14160f",
+            color: "#ffffff",
             opacity: submitting ? 0.5 : 1,
-            boxShadow: "0 0 0 1px rgba(10,13,9,0.08)",
-            fontFamily: "Georgia, serif",
           }}
         >
           {submitting ? "Working…" : "Review & approve →"}
@@ -333,13 +345,12 @@ const PublicApprove: React.FC = () => {
           type="button"
           onClick={() => setShowDecline((v) => !v)}
           disabled={submitting}
-          className="px-5 py-3 rounded-2xl text-sm font-bold transition"
+          className="px-4 py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer"
           style={{
             background: "#ffffff",
-            color: "#3b4034",
-            border: "1px solid #d8d4ca",
+            color: "#14160f",
+            border: "1px solid #dcddd5",
             opacity: submitting ? 0.5 : 1,
-            fontFamily: "Georgia, serif",
           }}
         >
           {showDecline ? "Cancel decline" : "Decline"}
@@ -347,8 +358,11 @@ const PublicApprove: React.FC = () => {
       </div>
 
       {showDecline && (
-        <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50 p-4">
-          <label className="block text-xs uppercase tracking-[0.16em] text-stone-500 mb-2">
+        <div
+          className="mt-4 rounded-xl p-4"
+          style={{ border: "1px solid #dcddd5", background: "#f6f6f2" }}
+        >
+          <label className="block mono text-[10px] font-semibold uppercase tracking-[0.16em] mb-2" style={{ color: "rgba(20, 22, 15, 0.62)" }}>
             What's the reason?
           </label>
           <textarea
@@ -356,21 +370,21 @@ const PublicApprove: React.FC = () => {
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             placeholder="e.g. Different store — please use 2401 W Ave instead, same date"
-            className="w-full rounded-xl border border-stone-300 p-3 text-sm focus:outline-none focus:border-stone-500"
+            className="w-full rounded-lg p-3 text-sm focus:outline-none"
+            style={{ background: "#ffffff", border: "1px solid #dcddd5", color: "#14160f" }}
           />
-          <p className="text-xs text-stone-500 mt-2">
+          <p className="text-xs mt-2" style={{ color: "rgba(20, 22, 15, 0.58)" }}>
             This goes back to {req.requestorEmail || "the requestor"} automatically.
           </p>
           <button
             type="button"
             onClick={() => submit("decline")}
             disabled={submitting || !reason.trim()}
-            className="mt-3 px-5 py-2.5 rounded-xl text-sm font-bold transition"
+            className="mt-3 px-4 py-2 rounded-lg text-sm font-semibold transition cursor-pointer"
             style={{
-              background: "#3b4034",
+              background: "#a8340f",
               color: "#ffffff",
               opacity: submitting || !reason.trim() ? 0.4 : 1,
-              fontFamily: "Georgia, serif",
             }}
           >
             {submitting ? "Sending…" : "Send decline"}
@@ -378,7 +392,7 @@ const PublicApprove: React.FC = () => {
         </div>
       )}
 
-      <p className="mt-8 text-xs text-stone-400">
+      <p className="mt-8 text-xs" style={{ color: "rgba(20, 22, 15, 0.5)" }}>
         Spark by Ignite · This link is private to {data.recipientEmail || "you"}.
       </p>
     </Shell>
@@ -386,28 +400,49 @@ const PublicApprove: React.FC = () => {
 };
 
 const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="px-5 py-3 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
-    <span className={ROW_LABEL_CLS + " sm:w-36 shrink-0"}>{label}</span>
-    <span className={ROW_VALUE_CLS}>{value}</span>
+  <div
+    className="px-4 py-3 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4"
+    style={{ borderColor: "#ecece6" }}
+  >
+    <span className={ROW_LABEL_CLS + " sm:w-36 shrink-0"} style={{ color: "rgba(20, 22, 15, 0.56)" }}>
+      {label}
+    </span>
+    <span className={ROW_VALUE_CLS + " tab-num"} style={{ color: "#14160f" }}>
+      {value}
+    </span>
   </div>
 );
 
-// Outer chrome so the page looks like it belongs in the email's lineage —
-// not the dark admin theme, not a blank Tailwind canvas. Light, warm,
-// readable on a phone in a Starbucks.
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="min-h-screen" style={{ background: "#faf7f1" }}>
-    <div className="max-w-2xl mx-auto px-5 py-12">
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
-          Spark by Ignite
-        </p>
+  <div
+    data-theme="spark-v2"
+    data-spark-mode="light"
+    className="min-h-screen"
+    style={{ background: "#f6f6f2", color: "#14160f", colorScheme: "light" }}
+  >
+    <div className="max-w-2xl mx-auto px-5 py-10 sm:py-12">
+      <div className="mb-7">
+        <a href="https://www.igniteproductions.co/" style={{ textDecoration: "none" }}>
+          <img
+            src="/legal/spark-logo.png"
+            alt="Spark by Ignite"
+            style={{ height: 26, width: "auto" }}
+          />
+        </a>
       </div>
-      <div className="bg-white rounded-3xl border border-stone-200 p-8 shadow-sm">
+      <div
+        className="rounded-xl p-6 sm:p-8"
+        style={{ background: "#ffffff", border: "1px solid #dcddd5" }}
+      >
         {children}
       </div>
-      <p className="mt-6 text-center text-xs text-stone-400">
-        Questions? <a className="underline" href="mailto:staffing@igniteproductions.co">
+      <p className="mt-6 text-center text-xs" style={{ color: "rgba(20, 22, 15, 0.52)" }}>
+        Questions?{" "}
+        <a
+          className="underline"
+          href="mailto:staffing@igniteproductions.co"
+          style={{ color: "rgba(20, 22, 15, 0.74)" }}
+        >
           staffing@igniteproductions.co
         </a>
       </p>

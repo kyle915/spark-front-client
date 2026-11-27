@@ -109,5 +109,17 @@ describe("6-part visual & workflow upgrades", () => {
     );
     expect(replaySrc).toContain("useAppearance");
     expect(replaySrc).toContain("LIGHT_MAP_STYLES");
+
+    for (const rel of [
+      "../public/approve/PublicApprove.tsx",
+      "../public/receipts/ReceiptUpload.tsx",
+      "../public/receipts/CampaignUpload.tsx",
+    ]) {
+      const src = readFileSync(resolve(__dirname, rel), "utf8");
+      expect(src, `${rel} should use warm-stone #f6f6f2 ground`).toContain("#f6f6f2");
+      expect(src, `${rel} should drop legacy rounded-3xl`).not.toContain("rounded-3xl");
+      expect(src, `${rel} should drop legacy Georgia serif`).not.toContain("Georgia");
+      expect(src, `${rel} should drop legacy #faf7f1 cream`).not.toContain("#faf7f1");
+    }
   });
 });
