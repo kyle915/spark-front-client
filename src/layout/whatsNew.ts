@@ -27,10 +27,10 @@ export const WHATS_NEW: WhatsNewEntry[] = [
   {
     id: "2026-11-27ah",
     date: "November 27, 2026",
-    title: "Instant Spark guidance inside Ask Spark",
+    title: "Floating Ask Spark Pop-Up & Instant Spark Help",
     items: [
-      "Ask Spark now answers how-to questions about whichever screen you're viewing — including Demo Costs, Shelf & Voice, Buyer Report, Retailer POS, and AI Connector — with direct links to the right page.",
-      "Can't find what you need? Click Not helpful? under any reply to flag it for your Ignite team so our guides keep getting smarter.",
+      "Ask Spark now floats cleanly in the bottom-right corner on every screen (or press ⌘J anytime) so you can keep viewing your dashboard, reports, or map while chatting — with a one-click expand toggle and a Program Data / Spark Help switcher.",
+      "Ask how-to questions about whichever screen you're viewing — including Demo Costs, Shelf & Voice, Buyer Report, Retailer POS, and AI Connector — with direct links to the right page, and click Not helpful? under any reply to flag gaps for your Ignite team.",
     ],
   },
   {
@@ -1066,6 +1066,7 @@ export const SHORTCUTS: { scope: string; keys: [string, string][] }[] = [
     scope: "Anywhere",
     keys: [
       ["⌘K / Ctrl K", "Jump to a page, recap, request or ambassador"],
+      ["⌘J / Ctrl J", "Open or close Ask Spark"],
       ["Esc", "Close a menu or dialog"],
     ],
   },

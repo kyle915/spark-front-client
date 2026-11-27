@@ -3,6 +3,7 @@ export const ASK_SPARK_EVENT = "spark:open-ask-spark";
 export interface OpenAskSparkDetail {
   question?: string;
   tenantId?: string;
+  mode?: "data" | "help";
 }
 
 export function dispatchOpenAskSpark(detail: OpenAskSparkDetail = {}): void {

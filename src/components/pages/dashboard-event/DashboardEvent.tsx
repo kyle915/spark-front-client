@@ -4,8 +4,6 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
-import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
-import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import TodayAttentionPanels, { OnTheSheets } from "@/components/dashboard/TodayAttentionPanels";
 import TodayAttentionStrip from "@/components/dashboard/TodayAttentionStrip";
@@ -146,11 +144,6 @@ function DashboardInner() {
         title="Dashboard"
         action={
           <div className="flex items-center gap-2 flex-wrap">
-            <Suspense
-              fallback={<AskAiButton tenantId={tenantId} variant="text" />}
-            >
-              <ActiveTenantAskAi variant="text" />
-            </Suspense>
             <BrandViewSwitch
               tenantId={tenantId}
               view={view}

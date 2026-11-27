@@ -26,8 +26,6 @@ import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { TenantRequestsRollupQuery } from "@/api/queries/TenantRequestsRollupQuery";
 import type { TenantRequestsRollupQuery as TenantRequestsRollupQueryType } from "@api/queries/__generated__/TenantRequestsRollupQuery.graphql";
 
-import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
-import AskAiButton from "@/components/ai/AskAiButton";
 import WeeklySummaryCard from "@/components/ai/WeeklySummaryCard";
 import StoreInsightsCards from "@/components/ai/StoreInsightsCards";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
@@ -453,11 +451,6 @@ const ClientInner: React.FC = () => {
           <SparkPageHeader
             eyebrow="Your program"
             title="Home"
-            action={
-              <Suspense fallback={<AskAiButton tenantId={tenantId} chat />}>
-                <ActiveTenantAskAi chat />
-              </Suspense>
-            }
           />
         </div>
       </div>

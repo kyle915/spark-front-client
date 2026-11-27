@@ -131,3 +131,39 @@ export function routeSparkHelpPrompts(
         "How do I preview the admin Sample Brand Sandbox?",
       ];
 }
+
+/**
+ * Concise, human-readable page label displayed inside the floating Ask Spark
+ * pop-up header so users immediately see the active context.
+ */
+export function routeContextLabel(pathname: string): string {
+  const clean = (pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
+  if (clean === "/" || clean === "/client-dashboard") return "Dashboard";
+  if (clean === "/shelf-voice") return "Shelf & Voice";
+  if (clean === "/buyer-report") return "Buyer Report";
+  if (clean === "/retailer-pos") return "Retailer POS";
+  if (clean === "/roi-pacing") return "Budget Pacing";
+  if (clean === "/demo-costs") return "Demo Costs";
+  if (clean === "/reports" || clean.startsWith("/reports/")) return "Reports & ROI";
+  if (clean === "/account-map") return "Account Map";
+  if (clean.startsWith("/store/")) return "Store Profile";
+  if (clean === "/upcoming" || clean.startsWith("/upcoming/") || clean === "/calendar") {
+    return "Schedule";
+  }
+  if (clean === "/today") return "Today";
+  if (clean.startsWith("/recaps") || clean.startsWith("/custom-recap") || clean.startsWith("/recap/")) {
+    return "Recaps";
+  }
+  if (clean.startsWith("/photos") || clean === "/photo-wall") return "Photos";
+  if (clean === "/my-approvals" || clean === "/approvals") return "Approvals";
+  if (clean.startsWith("/requests")) return "Requests";
+  if (clean === "/ai-connector") return "AI Connector";
+  if (clean === "/setup-guide") return "Setup Guide";
+  if (clean === "/chat") return "Chat";
+  if (clean === "/help-knowledge") return "Help Knowledge";
+  if (clean === "/finance-queue") return "Finance Queue";
+  if (clean === "/imports") return "Provider Imports";
+  if (clean === "/workspace") return "Workspace";
+  if (clean === "/plans") return "Plans";
+  return "Spark";
+}
