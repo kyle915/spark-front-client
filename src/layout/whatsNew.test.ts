@@ -211,17 +211,19 @@ describe("whatsNewFor", () => {
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
     for (const id of [
+      "2026-11-27ah",
       "2026-11-27sg",
       "2026-11-27sv",
       "2026-11-27sh",
       "2026-11-27qb",
+      "2026-11-27pr",
       "2026-11-27pl",
     ] as const) {
       expect(clientIds.has(id)).toBe(true);
       expect(staffIds.has(id)).toBe(true);
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBeFalsy();
     }
-    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-27sg");
+    expect(whatsNewFor(true)[0]?.id).toBe("2026-11-27ah");
     expect(WHATS_NEW[0]?.id).toBe("2026-11-27hk");
     // Admin-only Help Knowledge & Sandbox preview stay hidden from brand clients
     for (const adminId of ["2026-11-27hk", "2026-11-27sb"] as const) {

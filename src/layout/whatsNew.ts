@@ -16,20 +16,29 @@ export const WHATS_NEW: WhatsNewEntry[] = [
   {
     id: "2026-11-27hk",
     date: "November 27, 2026",
-    title: "Ask Spark Help, Chat AI Drafts & Admin Knowledge Base",
+    title: "Admin Help Knowledge Base, OpenAI Embeddings & Chat AI Assist",
     staffOnly: true,
     items: [
-      "Inside /chat, Ignite admins can click 'Draft AI' to draft BA replies grounded in shift details, brand product knowledge, and Spark SOPs, and click 'Teach Spark' on any reply to distill a PII-scrubbed FAQ into the Knowledge Base.",
-      "Open Help Knowledge (/help-knowledge) from System to manage audience-scoped articles (Admin-only vs. Brand clients), answer logged Knowledge Gaps, sync OpenAI text-embedding-3-small semantic vectors, and preview Client vs. Admin visibility.",
+      "Ask Spark now includes a Program Data / Spark Help (Admin) switcher grounded in built-in docs, internal ops SOPs, and OpenAI semantic embeddings (text-embedding-3-small) — with strict audience isolation so brand clients never see admin-only docs or add knowledge.",
+      "Inside /chat, Ignite admins can click Draft AI to draft BA replies from shift context, brand product knowledge, and Spark SOPs (always editable before sending), and click Teach Spark on any admin reply to distill a PII-scrubbed FAQ straight into Spark Knowledge.",
+      "Open System → Help Knowledge (/help-knowledge) to review unanswered or flagged Knowledge Gaps, publish/edit audience-scoped articles, sync OpenAI embeddings, and test Client vs. Admin visibility side by side.",
+    ],
+  },
+  {
+    id: "2026-11-27ah",
+    date: "November 27, 2026",
+    title: "Route-Aware Spark Help inside Ask Spark",
+    items: [
+      "Ask Spark now answers how-to questions about whichever Spark page you're viewing (such as Demo Costs, Shelf & Voice, Buyer Report, Retailer POS, or AI Connector) with clickable links straight to the right screen.",
+      "Spot a missing answer? Click Not helpful? under any Ask Spark reply to flag it for the Ignite team so our guides keep getting smarter.",
     ],
   },
   {
     id: "2026-11-27sg",
     date: "November 27, 2026",
-    title: "Built-in Interactive Spark Setup Guide & Route-Aware Ask Spark Help",
+    title: "Built-in Interactive Spark Setup Guide",
     items: [
       "Open Setup Guide (/setup-guide) from the Workspace sidebar or Help page for step-by-step walkthroughs of Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, and Spark MCP — with live readiness status and copyable snippets.",
-      "Ask Spark now answers how-to questions about your current Spark page (like Demo Costs, Shelf & Voice, or Retailer POS) with direct navigation links to the exact screen you need.",
     ],
   },
   {
@@ -38,7 +47,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Admin-only Sample Brand Sandbox preview",
     staffOnly: true,
     items: [
-      "Ignite admins can preview the read-only Sample Brand Sandbox (/sandbox — linked from Settings and Setup Guide) powered by fictional brand Meadowlark Botanicals and made-up retailer/store data ahead of a future public launch.",
+      "Ignite admins can preview the read-only Sample Brand Sandbox (/sandbox — linked from Settings and Setup Guide) powered by fictional brand Meadowlark Botanicals and made-up retailer, store, and competitor data ahead of a future public launch.",
     ],
   },
   {
@@ -69,12 +78,21 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-27pr",
+    date: "November 27, 2026",
+    title: "Program Reports comparisons, CSV exports & docked Ask Spark",
+    items: [
+      "Program Reports adds prior-window comparison deltas, metric switchers, expandable chart data tables, a sampling-to-sale campaign funnel, and 1-click CSV and executive brief exports.",
+      "Open the docked Ask Spark side-panel from any screen via Jump (⌘K), the mobile dock, or StoreSheet with route-aware starter prompts, and triage recaps faster with the right-hand Quick-Peek drawer.",
+    ],
+  },
+  {
     id: "2026-11-27pl",
     date: "November 27, 2026",
-    title: "Light Public Request Forms & smoother workspace switching",
+    title: "Light Public Pages, Photo Lightbox, cleaner badges & workspace switching",
     items: [
-      "Public express request forms (/spark-form/:tenantSlug) now render in Spark's clean light studio theme with an aligned Live Activation Summary rail.",
-      "Switching brand workspaces directly on Buyer Report, Retailer POS, Budget Pacing, Demo Costs, Finance Queue, Workspace & Agencies, and Provider Imports now transitions cleanly without error flashes; StoreSheet → Ask Spark handoff and mobile dock highlights are also refined.",
+      "Public express request forms (/spark-form/:tenantSlug), invoices, training pages, email approval cards, and consumer receipt upload pages now share Spark's clean light studio theme.",
+      "Photo Gallery adds full-screen PhotoLightbox navigation, Upcoming switches its replay map to crisp light tiles, Approved and status chip badges drop duplicate dots for cleaner typography, and switching brand workspaces across Buyer Report, Retailer POS, Budget Pacing, Demo Costs, Finance Queue, Workspace & Agencies, and Provider Imports transitions smoothly without error flashes.",
     ],
   },
   {
