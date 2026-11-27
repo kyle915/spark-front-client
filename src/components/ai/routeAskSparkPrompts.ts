@@ -8,6 +8,14 @@ export function routeAskSparkPrompts(
 ): readonly string[] {
   const clean = (pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
 
+  if (clean === "/shelf-voice") {
+    return [
+      "Which stores had missing price tags or MSRP price drift this period?",
+      "Where are competitor mentions or promos rising fastest by market?",
+      "Which doors had out-of-stock shelf readings or low facings?",
+    ];
+  }
+
   if (
     clean === "/reports" ||
     clean.startsWith("/reports/") ||

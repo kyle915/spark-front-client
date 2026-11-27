@@ -65,7 +65,7 @@ const BuyerReportBody: React.FC<{
   setMarketFilter: (v: string) => void;
   providerUuid: string;
   setProviderUuid: (v: string) => void;
-  fetchKey: number;
+  fetchKey: string | number;
   bump: () => void;
 }> = ({
   periodStart,
@@ -92,9 +92,9 @@ const BuyerReportBody: React.FC<{
     },
     { fetchPolicy: "store-and-network", fetchKey },
   );
-  const ws = data.workspaceOverview;
-  const report = data.weeklyBuyerStoreReport;
-  const actions = data.storeRecommendationActions;
+  const ws = data?.workspaceOverview;
+  const report = data?.weeklyBuyerStoreReport;
+  const actions = data?.storeRecommendationActions ?? [];
 
   const [commitRespond] = useMutation<RespondActionType>(
     PilotMutationsRespondStoreActionMutation,
@@ -118,11 +118,38 @@ const BuyerReportBody: React.FC<{
   >({});
   const [banner, setBanner] = useState<string | null>(null);
   const [digestEnabled, setDigestEnabled] = useState(
-    ws.buyerWeeklyDigestEnabled,
+    ws?.buyerWeeklyDigestEnabled ?? false,
   );
   const [digestEmails, setDigestEmails] = useState(
-    ws.buyerDigestRecipientEmails || "",
+    ws?.buyerDigestRecipientEmails || "",
   );
+
+  const reportRows = report?.rows;
+  const retailerBanners = useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of reportRows ?? []) {
+      const b = (r.retailerBanner || "").trim();
+      if (b) seen.add(b);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [reportRows]);
+
+  const reportMarkets = useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of reportRows ?? []) {
+      const m = (r.market || "").trim();
+      if (m) seen.add(m);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [reportRows]);
+
+  if (!ws || !report) {
+    return (
+      <p className="text-sm" style={META}>
+        Loading buyer report…
+      </p>
+    );
+  }
 
   const handleExport = async (format: "csv" | "xlsx") => {
     setExportingFormat(format);
@@ -147,24 +174,6 @@ const BuyerReportBody: React.FC<{
       setExportingFormat(null);
     }
   };
-
-  const retailerBanners = useMemo(() => {
-    const seen = new Set<string>();
-    for (const r of report.rows) {
-      const b = (r.retailerBanner || "").trim();
-      if (b) seen.add(b);
-    }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [report.rows]);
-
-  const reportMarkets = useMemo(() => {
-    const seen = new Set<string>();
-    for (const r of report.rows) {
-      const m = (r.market || "").trim();
-      if (m) seen.add(m);
-    }
-    return Array.from(seen).sort((a, b) => a.localeCompare(b));
-  }, [report.rows]);
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -764,7 +773,7 @@ export const BuyerReportPage: React.FC = () => {
           setMarketFilter={setMarketFilter}
           providerUuid={providerUuid}
           setProviderUuid={setProviderUuid}
-          fetchKey={fetchKey}
+          fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
           bump={() => setFetchKey((k) => k + 1)}
         />
       </Suspense>

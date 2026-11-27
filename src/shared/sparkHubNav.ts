@@ -21,6 +21,7 @@ export const REPORTS_HUB_TABS: readonly HubTabItem[] = [
     to: "/buyer-report",
     matchPaths: ["/buyer-report", "/retailer-pos"],
   },
+  { label: "Shelf & Voice", to: "/shelf-voice" },
   { label: "Field Sampling", to: "/field-sampling-report" },
   {
     label: "Budget & P&L",
@@ -68,6 +69,7 @@ export const HUB_PARENT_BY_PREFIX: ReadonlyArray<{
       "/reports",
       "/buyer-report",
       "/retailer-pos",
+      "/shelf-voice",
       "/field-sampling-report",
       "/roi-pacing",
       "/demo-costs",

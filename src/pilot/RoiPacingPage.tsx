@@ -112,7 +112,7 @@ const PacingBody: React.FC<{
   setMonth: (m: string) => void;
   setGroupBy: (g: string) => void;
   setSortBy: (s: string) => void;
-  fetchKey: number;
+  fetchKey: string | number;
   bump: () => void;
 }> = ({
   month,
@@ -453,7 +453,7 @@ export const RoiPacingPage: React.FC = () => {
             setMonth={setMonth}
             setGroupBy={setGroupBy}
             setSortBy={setSortBy}
-            fetchKey={fetchKey}
+            fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
             bump={() => setFetchKey((k) => k + 1)}
           />
         </Suspense>

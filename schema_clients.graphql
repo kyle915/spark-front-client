@@ -8326,6 +8326,7 @@ type Query {
   baProductQa(tenantId: ID!): BaProductQa
   recapShelfReadings(recapId: ID!): RecapShelfReadings!
   shelfSummary(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfSummary!
+  shelfVoiceHub(tenantId: ID!, startDate: String = null, endDate: String = null): ShelfVoiceHub!
   storePrepKit(eventId: ID!): StorePrepKitPayload!
   accountMapStoreSignals(tenantId: ID = null): [StoreSignalItem!]!
   tenantWhatChanged(tenantId: ID!, startDate: String = null, endDate: String = null): WhatChanged
@@ -10621,6 +10622,107 @@ type ShelfSummary {
   notFoundMore: Int!
 }
 
+type ShelfVoiceBeforeAfterPair {
+  storeKey: String!
+  storeName: String!
+  market: String!
+  stateCode: String!
+  photoCount: Int!
+  beforePhoto: ShelfVoicePhoto!
+  afterPhoto: ShelfVoicePhoto!
+}
+
+type ShelfVoiceCompetitorMarket {
+  market: String!
+  stateCode: String!
+  competitorBrand: String!
+  mentionCount: Int!
+  priorMentionCount: Int!
+  delta: Int!
+  trend: String!
+  sampleQuote: String!
+  sampleStoreKey: String!
+  sampleStoreName: String!
+  sampleRecapUuid: String!
+}
+
+type ShelfVoiceCompetitorPromo {
+  storeKey: String!
+  storeName: String!
+  market: String!
+  stateCode: String!
+  eventDate: String!
+  recapUuid: String!
+  competitorBrand: String!
+  detail: String!
+}
+
+type ShelfVoiceHub {
+  status: String!
+  startDate: String!
+  endDate: String!
+  auditedVisits: Int!
+  unreadVisits: Int!
+  onShelfCount: Int!
+  notFoundCount: Int!
+  unclearCount: Int!
+  osaRatePct: Float
+  priceTagVisibleCount: Int!
+  missingTagCount: Int!
+  priceTagRatePct: Float
+  oosGapsCount: Int!
+  avgFacings: Float
+  medianPrice: String
+  minPrice: String
+  maxPrice: String
+  pricedVisitsCount: Int!
+  stores: [ShelfVoiceStoreRow!]!
+  shelfPhotos: [ShelfVoicePhoto!]!
+  beforeAfterPairs: [ShelfVoiceBeforeAfterPair!]!
+  competitorMarkets: [ShelfVoiceCompetitorMarket!]!
+  competitorPromos: [ShelfVoiceCompetitorPromo!]!
+}
+
+type ShelfVoicePhoto {
+  fileId: String!
+  photoUrl: String!
+  bucketName: String!
+  storeKey: String!
+  storeName: String!
+  market: String!
+  stateCode: String!
+  eventDate: String!
+  recapUuid: String!
+  productOnShelf: String!
+  facings: Int
+  priceTagVisible: String!
+  price: String
+  outOfStockGap: String!
+}
+
+type ShelfVoiceStoreRow {
+  storeKey: String!
+  storeName: String!
+  market: String!
+  stateCode: String!
+  visitCount: Int!
+  latestDate: String!
+  latestRecapUuid: String!
+  latestStatus: String!
+  onShelfVisits: Int!
+  notFoundVisits: Int!
+  osaRatePct: Float
+  missingTagVisits: Int!
+  oosGapVisits: Int!
+  latestFacings: Int
+  avgFacings: Float
+  latestPrice: String
+  priceDriftPct: Float
+  stockoutSignal: String!
+  competitorPromo: String!
+  hasBeforeAfter: Boolean!
+}
+
 type ShiftContext {
   brandName: String
   products: [ShiftProduct!]!
@@ -12910,13 +13012,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
+  email: String!
+  id: ID!
   firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  id: ID!
   lastName: String
-  email: String!
   archived: Boolean!
   verified: Boolean!
 }

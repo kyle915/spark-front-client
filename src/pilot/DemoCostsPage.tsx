@@ -64,7 +64,7 @@ const DemoCostsBody: React.FC<{
   periodStart: string | null;
   periodEnd: string | null;
   periodControls: React.ReactNode;
-  fetchKey: number;
+  fetchKey: string | number;
   bump: () => void;
 }> = ({
   groupBy,
@@ -86,9 +86,9 @@ const DemoCostsBody: React.FC<{
     },
     { fetchPolicy: "store-and-network", fetchKey },
   );
-  const ws = data.workspaceOverview;
-  const dash = data.brandCostDashboard;
-  const visits = data.canonicalVisits;
+  const ws = data?.workspaceOverview;
+  const dash = data?.brandCostDashboard;
+  const visits = data?.canonicalVisits ?? [];
 
   const [commitAgreement, savingAgreement] = useMutation<AgreementMutationType>(
     PilotMutationsUpsertAgreementMutation,
@@ -98,7 +98,7 @@ const DemoCostsBody: React.FC<{
   );
 
   const [agProviderUuid, setAgProviderUuid] = useState(
-    ws.providers[0]?.uuid ?? "",
+    ws?.providers[0]?.uuid ?? "",
   );
   const [agName, setAgName] = useState("Standard Retail Rate Card");
   const [agDemoFee, setAgDemoFee] = useState("225.00");
@@ -111,6 +111,14 @@ const DemoCostsBody: React.FC<{
   const [lineSettlement, setLineSettlement] = useState("invoiced");
   const [lineDesc, setLineDesc] = useState("");
   const [banner, setBanner] = useState<string | null>(null);
+
+  if (!ws || !dash) {
+    return (
+      <p className="text-sm" style={META}>
+        Loading demo costs…
+      </p>
+    );
+  }
 
   const toggleFeeBase = (base: string) => {
     setAgBases((prev) =>
@@ -621,7 +629,7 @@ export const DemoCostsPage: React.FC = () => {
               ariaLabel="Demo cost date window"
             />
           }
-          fetchKey={fetchKey}
+          fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
           bump={() => setFetchKey((k) => k + 1)}
         />
       </Suspense>

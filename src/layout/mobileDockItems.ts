@@ -55,6 +55,7 @@ const REPORT_PATHS = new Set([
   "/reports",
   "/buyer-report",
   "/retailer-pos",
+  "/shelf-voice",
   "/field-sampling-report",
   "/roi-pacing",
   "/demo-costs",

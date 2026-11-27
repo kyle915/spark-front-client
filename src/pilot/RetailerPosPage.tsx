@@ -46,7 +46,7 @@ const PosBody: React.FC<{
   periodStart: string | null;
   periodEnd: string | null;
   periodControls: React.ReactNode;
-  fetchKey: number;
+  fetchKey: string | number;
   bump: () => void;
 }> = ({ periodStart, periodEnd, periodControls, fetchKey, bump }) => {
   const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
@@ -59,14 +59,14 @@ const PosBody: React.FC<{
     },
     { fetchPolicy: "store-and-network", fetchKey },
   );
-  const ws = data.workspaceOverview;
-  const pos = data.retailerPosDashboard;
-  const automation = data.posAutomationWorkspace ?? {
+  const ws = data?.workspaceOverview;
+  const pos = data?.retailerPosDashboard;
+  const automation = data?.posAutomationWorkspace ?? {
     presets: [],
     feeds: [],
     recentDrops: [],
   };
-  const visits = data.canonicalVisits;
+  const visits = data?.canonicalVisits ?? [];
 
   const [commitImport, importing] = useMutation<ImportPosType>(
     PilotMutationsImportPosMutation,
@@ -91,12 +91,12 @@ const PosBody: React.FC<{
   const [csvText, setCsvText] = useState("");
   const [feedNotes, setFeedNotes] = useState("");
   const [contribInput, setContribInput] = useState(
-    ws.defaultContributionPerUnit ?? "",
+    ws?.defaultContributionPerUnit ?? "",
   );
 
   const [crewVisitUuid, setCrewVisitUuid] = useState(visits[0]?.uuid ?? "");
   const [crewProductId, setCrewProductId] = useState(
-    ws.products[0]?.id ? String(ws.products[0].id) : "",
+    ws?.products[0]?.id ? String(ws.products[0].id) : "",
   );
   const [crewUnits, setCrewUnits] = useState("");
   const [crewRef, setCrewRef] = useState("");
@@ -104,6 +104,14 @@ const PosBody: React.FC<{
   const [rowStoreMap, setRowStoreMap] = useState<Record<string, string>>({});
   const [rowProdMap, setRowProdMap] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  if (!ws || !pos) {
+    return (
+      <p className="text-sm" style={META}>
+        Loading POS analytics…
+      </p>
+    );
+  }
 
   const handleFile = async (f: File | null) => {
     if (!f) return;
@@ -839,7 +847,7 @@ export const RetailerPosPage: React.FC = () => {
               ariaLabel="Retailer POS date window"
             />
           }
-          fetchKey={fetchKey}
+          fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
           bump={() => setFetchKey((k) => k + 1)}
         />
       </Suspense>

@@ -11,6 +11,7 @@ import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
 import { MobileNavProvider, useMobileNav } from "./MobileNavContext";
+import { useAuthStore } from "@/store/authStore";
 import { applyAppearance, holdAppearance, readAppearance } from "@/theme/appearance";
 
 /**
@@ -33,6 +34,7 @@ interface LayoutProps {
 
 function LayoutChromeInner({ children }: LayoutProps) {
   const location = useLocation();
+  const tenantId = useAuthStore((s) => s.tenantId);
   const { open, setOpen } = useMobileNav();
 
   // Light mode applies only while the signed-in shell is on screen; public
@@ -66,7 +68,7 @@ function LayoutChromeInner({ children }: LayoutProps) {
         <main className="flex-1 bg-base-200 overflow-y-auto">
           <PageTransition>
             <div className="min-h-full p-5 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-9">
-              <ErrorBoundary key={location.pathname}>
+              <ErrorBoundary key={`${location.pathname}:${tenantId ?? ""}`}>
                 {children || (
                   <h1 className="text-lg font-semibold">Dashboard</h1>
                 )}

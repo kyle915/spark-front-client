@@ -1997,6 +1997,9 @@ const WorkspaceSharePublicPage = lazyDefault(
 );
 const RoiPacingPage = lazyDefault(() => import("@/pilot/RoiPacingPage"));
 const PhotoWallPage = lazyDefault(() => import("@/pilot/PhotoWallPage"));
+const ShelfVoicePage = lazyDefault(
+  () => import("@/components/pages/reports/ShelfVoicePage"),
+);
 
 const PilotLinks = {
   routes: [
@@ -2057,6 +2060,11 @@ const PilotLinks = {
     {
       path: "/photo-wall",
       component: <PhotoWallPage />,
+      isPublic: false,
+    },
+    {
+      path: "/shelf-voice",
+      component: <ShelfVoicePage />,
       isPublic: false,
     },
   ],
