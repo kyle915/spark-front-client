@@ -27,8 +27,17 @@ import {
   type RankedSplit,
 } from "@/lib/consumerBreakdown";
 import type { ChartKind } from "@/lib/dashboardExplain";
-import type { ChartOptions, Plugin, TooltipItem } from "chart.js";
-import { barSeries, chartOptions, lineSeries, valueLabels } from "@/lib/sparkChart";
+import type { ChartDataset, ChartOptions, Plugin, TooltipItem } from "chart.js";
+import {
+  barSeries,
+  chartInk,
+  chartOptions,
+  chartQuiet,
+  chartSurface,
+  lineSeries,
+  valueLabels,
+} from "@/lib/sparkChart";
+import { computeTypicalWeeksScale } from "@/lib/typicalWeeksScale";
 import { useAppearance } from "@/theme/appearance";
 
 const lastValue = valueLabels("last");
@@ -82,7 +91,7 @@ const Guard: React.FC<Window & { title: string; height: number; children: ReactN
 /* ───────────────────────── weekly trend ───────────────────────── */
 
 const WEEKLY_TITLE = "Consumers sampled per week";
-const WEEKLY_HEIGHT = 200;
+const WEEKLY_HEIGHT = 216;
 
 const WeeklyInner: React.FC<Window & { note?: string }> = ({
   tenantId,
@@ -90,87 +99,145 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
   endDate,
   note,
 }) => {
-  useAppearance();
+  const appearance = useAppearance();
   const [focusTypical, setFocusTypical] = useState(false);
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
   const trend = useMemo(() => weeklyTrend(breakdown?.byWeek ?? []), [breakdown]);
 
-  const spikeMeta = useMemo(() => {
-    const pos = trend.values.filter((v) => v > 0).sort((a, b) => a - b);
-    if (pos.length < 3) return null;
-    const max = pos[pos.length - 1];
-    const median = pos[Math.floor(pos.length / 2)];
-    if (median <= 0 || max < median * 4) return null;
-    const nonPeak = pos.filter((v) => v < max);
-    const refMax = nonPeak.length > 0 ? nonPeak[nonPeak.length - 1] : median * 2;
-    const cap = Math.max(10, Math.ceil(refMax * 1.25));
-    if (cap >= max) return null;
-    const peakIdx = trend.values.indexOf(max);
-    return {
-      max,
-      cap,
-      peakLabel: peakIdx >= 0 ? trend.labels[peakIdx] : "Peak week",
-    };
-  }, [trend]);
+  const spikeMeta = useMemo(
+    () => computeTypicalWeeksScale(trend.values, trend.labels),
+    [trend.values, trend.labels],
+  );
 
-  const plottedValues = useMemo(() => {
-    if (!focusTypical || !spikeMeta) return trend.values;
-    return trend.values.map((v) => Math.min(v, spikeMeta.cap));
-  }, [focusTypical, spikeMeta, trend.values]);
+  const datasets = useMemo<ChartDataset<"line", Array<number | null>>[]>(() => {
+    if (!focusTypical || !spikeMeta) {
+      return [lineSeries({ label: "Consumers sampled", data: trend.values })];
+    }
+    const baseMain = lineSeries({
+      label: "Consumers sampled",
+      data: spikeMeta.typicalData,
+    });
+    const lastTypicalIdx = spikeMeta.typicalData.reduce<number>(
+      (acc, val, idx) => (val == null ? acc : idx),
+      -1,
+    );
+    const pointRadii = spikeMeta.typicalData.map((val, idx, arr) => {
+      if (val == null) return 0;
+      if (idx === lastTypicalIdx) return 4;
+      const isolated = arr[idx - 1] == null && arr[idx + 1] == null;
+      return isolated ? 3.5 : 0;
+    });
+
+    const mainDataset: ChartDataset<"line", Array<number | null>> = {
+      ...baseMain,
+      spanGaps: false,
+      pointRadius: pointRadii,
+    };
+
+    const connectorDataset: ChartDataset<"line", Array<number | null>> = {
+      label: "Consumers sampled",
+      data: spikeMeta.connectorData,
+      borderColor: chartQuiet(),
+      backgroundColor: chartQuiet(),
+      borderWidth: 1.5,
+      borderDash: [4, 4],
+      tension: 0,
+      spanGaps: false,
+      fill: false,
+      pointRadius: 0,
+      pointHoverRadius: trend.values.map((v) =>
+        v > spikeMeta.axisMax ? 5 : 0,
+      ),
+    };
+
+    return [mainDataset, connectorDataset];
+  }, [focusTypical, spikeMeta, trend.values, appearance]);
 
   const cappedPeakPlugin = useMemo<Plugin<"line"> | null>(() => {
     if (!focusTypical || !spikeMeta) return null;
     const rawValues = trend.values;
-    const capVal = spikeMeta.cap;
+    const capVal = spikeMeta.axisMax;
     return {
       id: "sparkCappedPeakBadge",
       afterDatasetsDraw(chart) {
-        const meta = chart.getDatasetMeta(0);
+        // Connector dataset (index 1) holds the x/y anchor at each outlier week.
+        const meta = chart.getDatasetMeta(1)?.data?.length
+          ? chart.getDatasetMeta(1)
+          : chart.getDatasetMeta(0);
         if (!meta?.data?.length) return;
-        const { ctx } = chart;
+        const { ctx, chartArea } = chart;
+        const pillBg = chartInk();
+        const pillFg = chartSurface();
         ctx.save();
-        ctx.font = '600 11px "JetBrains Mono", ui-monospace, monospace';
+        ctx.font = "600 11px 'Space Grotesk', system-ui, sans-serif";
         ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
+        ctx.textBaseline = "middle";
+
         meta.data.forEach((pt, idx) => {
           const raw = rawValues[idx] ?? 0;
-          if (raw <= capVal) return;
+          if (raw <= capVal || !pt) return;
+          const text = `↑ ${count(raw)}`;
+          const padX = 8;
+          const pillH = 20;
+          const pillW = Math.ceil(ctx.measureText(text).width + padX * 2);
+          const halfW = pillW / 2;
+          const cx = Math.min(
+            Math.max(pt.x, chartArea.left + halfW + 2),
+            chartArea.right - halfW - 2,
+          );
+          const cy = Math.max(pillH / 2 + 2, chartArea.top - pillH / 2 - 4);
+
+          // Small anchor dot right on the top axis line
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-          ctx.fillStyle = chart.options.color?.toString() || "#111";
+          ctx.arc(pt.x, chartArea.top, 3, 0, Math.PI * 2);
+          ctx.fillStyle = pillBg;
           ctx.fill();
-          ctx.fillText(`${count(raw)} ↑`, pt.x, Math.max(13, pt.y - 6));
+
+          // Rounded pill badge above the axis ceiling
+          ctx.beginPath();
+          ctx.roundRect(cx - halfW, cy - pillH / 2, pillW, pillH, 999);
+          ctx.fillStyle = pillBg;
+          ctx.fill();
+
+          ctx.fillStyle = pillFg;
+          ctx.fillText(text, cx, cy + 0.5);
         });
         ctx.restore();
       },
     };
-  }, [focusTypical, spikeMeta, trend.values]);
+  }, [focusTypical, spikeMeta, trend.values, appearance]);
 
   const lineOptions = useMemo(() => {
     const base = chartOptions<"line">();
     if (!focusTypical || !spikeMeta) return base;
     const tooltip = base.plugins?.tooltip;
+    const baseYTicks =
+      base.scales?.y && "ticks" in base.scales.y ? base.scales.y.ticks : {};
     return {
       ...base,
       layout: {
         ...base.layout,
         padding: {
           ...(typeof base.layout?.padding === "object" ? base.layout.padding : {}),
-          top: 22,
+          top: 28,
         },
       },
       plugins: {
         ...base.plugins,
         tooltip: {
           ...tooltip,
+          filter: (item: TooltipItem<"line">) => {
+            const isOutlier =
+              (trend.values[item.dataIndex] ?? 0) > spikeMeta.axisMax;
+            return isOutlier ? item.datasetIndex === 1 : item.datasetIndex === 0;
+          },
           callbacks: {
             ...tooltip?.callbacks,
             label: (item: TooltipItem<"line">) => {
               const raw = trend.values[item.dataIndex] ?? item.parsed.y ?? 0;
-              const prefix = item.dataset.label ? `${item.dataset.label}: ` : "";
-              return raw > spikeMeta.cap
-                ? `${prefix}${count(raw)} (capped at ${count(spikeMeta.cap)} on Typical weeks)`
-                : `${prefix}${count(raw)}`;
+              return raw > spikeMeta.axisMax
+                ? `${count(raw)} (peak week — above ${count(spikeMeta.axisMax)} scale)`
+                : count(raw);
             },
           },
         },
@@ -179,11 +246,16 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
         ...base.scales,
         y: {
           ...base.scales?.y,
-          max: spikeMeta.cap,
+          min: 0,
+          max: spikeMeta.axisMax,
+          ticks: {
+            ...baseYTicks,
+            stepSize: spikeMeta.stepSize,
+          },
         },
       },
     } as ChartOptions<"line">;
-  }, [focusTypical, spikeMeta, trend.values]);
+  }, [focusTypical, spikeMeta, trend.values, appearance]);
 
   if (!breakdown) {
     return <Nothing title={WEEKLY_TITLE}>This chart could not load.</Nothing>;
@@ -211,7 +283,7 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
                 type="button"
                 onClick={() => setFocusTypical(true)}
                 className={`pill-btn ${focusTypical ? "on" : ""}`}
-                title="Cap event outlier spike so typical weekly volume stays legible"
+                title="Zoom Y-axis to typical weekly volume while marking off-scale peak weeks"
               >
                 Typical weeks
               </button>
@@ -220,10 +292,11 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
         }
       >
         <Line
+          key={`${appearance}-${focusTypical ? "typical" : "full"}`}
           aria-label={`${WEEKLY_TITLE}: ${trend.labels.length} weeks, peak ${count(peakVal)}`}
           data={{
             labels: trend.labels,
-            datasets: [lineSeries({ label: "Consumers sampled", data: plottedValues })],
+            datasets,
           }}
           options={lineOptions}
           plugins={cappedPeakPlugin ? [lastValue, cappedPeakPlugin] : [lastValue]}
@@ -231,8 +304,8 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
       </ChartBlock>
       {focusTypical && spikeMeta ? (
         <p className="text-xs" style={META}>
-          Peak week ({spikeMeta.peakLabel}: {count(spikeMeta.max)}) extends above the{" "}
-          {count(spikeMeta.cap)} axis cap so typical demo weeks stay readable.
+          Y-axis zoomed to {count(spikeMeta.axisMax)} for typical weeks; peak week (
+          {spikeMeta.peakLabel}: {count(spikeMeta.max)}) is badged at the top.
         </p>
       ) : null}
       {note ? (

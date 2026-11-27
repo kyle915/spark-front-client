@@ -52,7 +52,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     items: [
       "Ask AI can now draft an upcoming multi-store demo wave from your historical conversion, volume, and overdue accounts (automatically skipping stores that already have a visit scheduled).",
       "Click Create N-store wave right inside Ask AI to open Account Map's Wave Planner pre-loaded with those stores, dates, recommended weekdays, and peak shift hours — nothing books until you review and confirm.",
-      "Consumers sampled per week in Typical weeks mode now clamps outlier peaks cleanly inside the chart grid with an inline peak callout badge.",
+      "Consumers sampled per week in Typical weeks mode now uses clean round Y-axis steps (instead of awkward unrounded ceilings), dashed off-scale connectors so neighboring weeks stay smooth, and a high-contrast ↑ peak pill badge.",
     ],
   },
   {
