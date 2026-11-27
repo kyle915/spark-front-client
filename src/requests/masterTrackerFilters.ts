@@ -155,8 +155,8 @@ export function buildTrackerUrlParams(
   return next;
 }
 
-/** The queue that needs a person. All stays one click away. */
-export const DEFAULT_TRACKER_STATUS = "pending";
+/** Open Master Tracker / My Requests on Active (pending, queue, approved, scheduled). All stays one click away. */
+export const DEFAULT_TRACKER_STATUS = "active";
 
 const ACTIVE_STATUS_SLUGS = ["pending", "queue", "approved", "scheduled"] as const;
 

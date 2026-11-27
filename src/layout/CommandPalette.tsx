@@ -90,7 +90,7 @@ const ENTRIES: CommandEntry[] = [
   { id: "recaps-missing", label: "Missing recaps", hint: "Events with no recap filed", to: "/recaps/missing", Icon: AlertCircle, keywords: "missing due file recaps due", adminOnly: true },
   { id: "today", label: "Today", hint: "On the ground", to: "/today", Icon: Sun, keywords: "today map live field" },
   { id: "clock", label: "On the clock", hint: "Who's working now", to: "/live-board", Icon: Clock, keywords: "clock timesheet live board", adminOnly: true },
-  { id: "tracker", label: "Master Tracker", hint: "Pending queue. All is one click", to: "/requests/list", Icon: ListChecks, keywords: "events list table due pending" },
+  { id: "tracker", label: "Master Tracker", hint: "Active requests. All is one click", to: "/requests/list", Icon: ListChecks, keywords: "events list table due active pending" },
   { id: "calendar", label: "Calendar", hint: "Shifts board", to: "/calendar", Icon: Calendar, keywords: "schedule shifts" },
   { id: "map", label: "Account Map", hint: "Venues by status", to: "/account-map", Icon: MapPin, keywords: "map accounts retailers" },
   { id: "store-names", label: "Store names", hint: "Combine spellings of one store", to: "/catalogs/store-names", Icon: Store, keywords: "store names retailers duplicates spelling alias combine", adminOnly: true },
