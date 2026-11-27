@@ -55,6 +55,7 @@ import {
   LayoutGrid,
   MailCheck,
   Plug,
+  BookOpen,
 } from "lucide-react";
 
 /**
@@ -246,6 +247,12 @@ const SECTIONS: NavSection[] = [
         Icon: CreditCard,
         to: "/plans-billing",
         adminOnly: true,
+      },
+      {
+        label: "Setup Guide",
+        Icon: BookOpen,
+        to: "/setup-guide",
+        clientLabel: "Setup Guide",
       },
     ],
   },

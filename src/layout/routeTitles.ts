@@ -78,6 +78,7 @@ const ROUTE_TITLES: Record<string, RouteTitle> = {
   "/settings/calendar": { parent: "System", title: "Calendar Sync" },
   "/billing": { parent: "System", title: "Billing" },
   "/help": { parent: "System", title: "Help" },
+  "/setup-guide": { parent: "Workspace", title: "Setup Guide" },
 };
 
 const titleCase = (s: string) =>

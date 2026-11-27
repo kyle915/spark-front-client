@@ -169,14 +169,23 @@ export default function SparkAiConnector() {
   return (
     <Layout>
       <div className="space-y-6 max-w-4xl">
-        <div>
-          <h1 className="display text-4xl font-bold" style={{ letterSpacing: "-0.04em" }}>
-            AI Connector &amp; Webhooks
-          </h1>
-          <p className="mt-2" style={meta}>
-            Connect Claude or ChatGPT via the official Spark MCP server, or push real-time signed
-            webhooks into HubSpot, Klaviyo, Airtable, and Zapier. Strictly scoped to your brand.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="max-w-2xl">
+            <h1 className="display text-4xl font-bold" style={{ letterSpacing: "-0.04em" }}>
+              AI Connector &amp; Webhooks
+            </h1>
+            <p className="mt-2" style={meta}>
+              Connect Claude or ChatGPT via the official Spark MCP server, or push real-time signed
+              webhooks into HubSpot, Klaviyo, Airtable, and Zapier. Strictly scoped to your brand.
+            </p>
+          </div>
+          <Link
+            to="/setup-guide#webhooks"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold border no-underline shrink-0"
+            style={{ borderColor: "var(--spark-border)", color: "var(--spark-text)" }}
+          >
+            Setup guide &amp; HMAC snippets →
+          </Link>
         </div>
 
         <Suspense fallback={<div className="spark-card p-5 text-sm" style={meta}>Loading…</div>}>

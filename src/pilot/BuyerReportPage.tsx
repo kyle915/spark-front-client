@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import environment from "@/api/relay/environment";
@@ -222,6 +222,13 @@ const BuyerReportBody: React.FC<{
               <Download size={14} strokeWidth={1.75} />
               {exportingFormat === "xlsx" ? "Building XLSX…" : "Export Buyer XLSX"}
             </button>
+            <Link
+              to="/setup-guide#saved-views"
+              className="px-3 py-2 rounded-lg text-xs font-semibold no-underline"
+              style={FIELD_STYLE}
+            >
+              Setup guide
+            </Link>
           </div>
         }
       />

@@ -1,4 +1,5 @@
 import React, { Suspense, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Bar } from "react-chartjs-2";
 import {
@@ -256,6 +257,12 @@ const ShelfVoiceBody: React.FC<{
               <Sparkles size={13} strokeWidth={1.85} />
               Ask Spark
             </button>
+            <Link
+              to="/setup-guide#shelf-voice"
+              className="spark-btn-ghost text-xs px-3 py-2 rounded-lg inline-flex items-center no-underline"
+            >
+              Setup guide
+            </Link>
           </div>
         }
       />

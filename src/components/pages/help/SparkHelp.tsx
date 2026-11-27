@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { Link } from "react-router";
 import { useMutation } from "react-relay/hooks";
 
 import Layout from "@/layout/Layout";
@@ -105,6 +106,35 @@ const FAQS: FAQItem[] = [
         custom field sets per request type. v1 stores definitions
         locally in your browser — backend persistence ships in a
         follow-up.
+      </>
+    ),
+  },
+  {
+    q: "How do I schedule Friday distributor emails or connect Zapier/HubSpot webhooks?",
+    a: (
+      <>
+        Save any filtered slice on <strong>Buyer Report</strong> or{" "}
+        <strong>Shelf &amp; Voice</strong> using{" "}
+        <strong>Save current slice</strong> to schedule automated Friday CSV
+        digests. For real-time webhooks (<code>recap.approved</code>,{" "}
+        <code>request.created</code>, <code>shelf.oos_detected</code>) and
+        Claude/ChatGPT MCP setup, follow the{" "}
+        <Link to="/setup-guide" className="underline font-semibold">
+          interactive Setup Guide →
+        </Link>
+      </>
+    ),
+  },
+  {
+    q: "Can prospects or new teammates explore Spark without touching live data?",
+    a: (
+      <>
+        Yes — share the read-only{" "}
+        <Link to="/sandbox" className="underline font-semibold">
+          Sample Brand Sandbox (/sandbox)
+        </Link>{" "}
+        to test Program Reports, StoreSheet, Shelf &amp; Voice, Photo Wall, Ask
+        Spark, and Buyer QBR PowerPoint exports with zero login required.
       </>
     ),
   },
@@ -286,6 +316,36 @@ export default function SparkHelp() {
             Send the Ignite team a support request, browse the FAQs, or
             reach us directly.
           </p>
+        </div>
+
+        {/* Built-in Interactive Setup Guide callout */}
+        <div className="spark-card p-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1 max-w-2xl">
+            <p
+              className="mono text-[10px] uppercase"
+              style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta)" }}
+            >
+              INTERACTIVE PLAYBOOK
+            </p>
+            <h2 className="display text-xl font-bold">
+              Spark Setup &amp; Feature Guide
+            </h2>
+            <p className="text-xs sm:text-sm" style={{ color: "var(--spark-text-meta)" }}>
+              Step-by-step instructions and copyable snippets for Shelf &amp; Voice,
+              Buyer QBR Decks (.pptx), Saved Views &amp; Friday Digests, Outbound
+              Webhooks, Spark MCP, and the Sample Brand Sandbox.
+            </p>
+          </div>
+          <Link
+            to="/setup-guide"
+            className="px-4 py-2.5 rounded-xl text-xs font-semibold no-underline shrink-0"
+            style={{
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+            }}
+          >
+            Open Setup Guide →
+          </Link>
         </div>
 
         {/* Primary support path: open a ticket */}

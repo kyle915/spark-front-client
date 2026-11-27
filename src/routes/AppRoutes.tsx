@@ -399,6 +399,9 @@ const SparkClientDetail = lazyDefault(
 const SparkHelp = lazyDefault(
   () => import("@/components/pages/help/SparkHelp"),
 );
+const SparkSetupGuide = lazyDefault(
+  () => import("@/components/pages/help/SparkSetupGuide"),
+);
 // Connect Claude / ChatGPT through the official Spark MCP connection.
 const SparkAiConnector = lazyDefault(
   () => import("@/components/pages/ai-connector/SparkAiConnector"),
@@ -1209,6 +1212,11 @@ const RequestsLinks = {
     {
       path: "/help",
       component: <SparkHelp />,
+      isPublic: false,
+    },
+    {
+      path: "/setup-guide",
+      component: <SparkSetupGuide />,
       isPublic: false,
     },
     {
