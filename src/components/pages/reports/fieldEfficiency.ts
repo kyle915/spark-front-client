@@ -1,3 +1,5 @@
+import { cleanEventName } from "@/utils/eventLabel";
+
 export type EfficiencyRow = {
   label: string;
   recaps: number;
@@ -7,6 +9,32 @@ export type EfficiencyRow = {
   samplesPerHour?: number | null;
   unitsPerHour?: number | null;
 };
+
+const WALKIN_LEAD_RE = /^\s*\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\s*[-–—:]\s*/;
+const PROGRAM_SUFFIX_RE =
+  /^(?:retail(?:\s+sampling)?|on[- ]premise(?:\s+sampling)?|event(?:\s+activation)?|direct\s+event\s+sampling|guerilla(?:\s+marketing)?|product\s+seeding|merchandising|walk[- ]in\s+event)$/i;
+const TRAILING_PLACE_PAREN_RE = /\(([^()]+)\)\s*$/;
+
+/**
+ * Clean a store row label when an unlinked walk-in event title reaches the UI
+ * (e.g. "10/30/2026 - Symmes Road, Fairfield, OH (Jungle Jim's) · Retail Sampling").
+ */
+export function formatStoreEfficiencyLabel(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const isWalkin = WALKIN_LEAD_RE.test(trimmed);
+  const cleaned = cleanEventName(trimmed);
+  const parts = cleaned
+    .split(" · ")
+    .map((p) => p.trim())
+    .filter((p) => p && !PROGRAM_SUFFIX_RE.test(p));
+  const base = parts.join(" · ") || cleaned || trimmed;
+  if (isWalkin) {
+    const paren = TRAILING_PLACE_PAREN_RE.exec(base);
+    if (paren?.[1]?.trim()) return paren[1].trim();
+  }
+  return base;
+}
 
 const rate = (n: number | null | undefined): string =>
   n == null ? "—" : n.toLocaleString("en-US", { maximumFractionDigits: 1 });

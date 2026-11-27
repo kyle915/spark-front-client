@@ -5,6 +5,7 @@ import type { FieldEfficiencySectionQuery as QueryType } from "./__generated__/F
 import {
   cleanRates,
   efficiencyHeadline,
+  formatStoreEfficiencyLabel,
   samplesPerHourText,
   unitsPerHourText,
   unitsSoldText,
@@ -64,47 +65,88 @@ const Table: React.FC<{
   first: string;
   rows: readonly EfficiencyRow[];
   showSold?: boolean;
-}> = ({ title, first, rows, showSold = false }) => (
-  <section className="spark-card p-5" aria-label={title}>
+  cleanStoreLabels?: boolean;
+}> = ({ title, first, rows, showSold = false, cleanStoreLabels = false }) => (
+  <section className="spark-card p-5 overflow-hidden" aria-label={title}>
     <h4 className="label-mini mb-3">{title}</h4>
-    <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          <th className="text-left font-medium pb-2" style={meta}>
-            {first}
-          </th>
-          <th className="text-right font-medium pb-2" style={meta}>
-            Activations
-          </th>
-          {showSold ? (
-            <th className="text-right font-medium pb-2" style={meta}>
-              Units sold
+    <div className="overflow-x-auto -mx-1 px-1">
+      <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
+            <th
+              className="text-left text-xs font-medium pb-2.5 pr-4 whitespace-nowrap"
+              style={meta}
+            >
+              {first}
             </th>
-          ) : null}
-          <th className="text-right font-medium pb-2" style={meta}>
-            Samples / hr
-          </th>
-          <th className="text-right font-medium pb-2" style={meta}>
-            Sold / hr
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.label} style={{ borderTop: "1px solid var(--spark-hairline)" }}>
-            <td className="py-2 pr-2 truncate" style={{ maxWidth: 220 }} title={r.label}>
-              {r.label}
-            </td>
-            <td className="py-2 text-right tabular-nums">{r.recaps}</td>
+            <th
+              className="text-right text-xs font-medium pb-2.5 pl-4 sm:pl-6 whitespace-nowrap"
+              style={meta}
+            >
+              Activations
+            </th>
             {showSold ? (
-              <td className="py-2 text-right tabular-nums font-semibold">{unitsSoldText(r)}</td>
+              <th
+                className="text-right text-xs font-medium pb-2.5 pl-4 sm:pl-6 whitespace-nowrap"
+                style={meta}
+              >
+                Units sold
+              </th>
             ) : null}
-            <td className="py-2 text-right tabular-nums">{samplesPerHourText(r)}</td>
-            <td className="py-2 text-right tabular-nums font-semibold">{unitsPerHourText(r)}</td>
+            <th
+              className="text-right text-xs font-medium pb-2.5 pl-4 sm:pl-6 whitespace-nowrap"
+              style={meta}
+            >
+              Samples / hr
+            </th>
+            <th
+              className="text-right text-xs font-medium pb-2.5 pl-4 sm:pl-6 whitespace-nowrap"
+              style={meta}
+            >
+              Sold / hr
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((r, idx) => {
+            const displayLabel = cleanStoreLabels
+              ? formatStoreEfficiencyLabel(r.label) || r.label
+              : r.label;
+            return (
+              <tr
+                key={`${idx}-${r.label}`}
+                style={idx > 0 ? { borderTop: "1px solid var(--spark-hairline)" } : undefined}
+              >
+                <td
+                  className={
+                    cleanStoreLabels
+                      ? "py-2.5 pr-4 max-w-[180px] sm:max-w-[320px] md:max-w-[460px] truncate font-medium"
+                      : "py-2.5 pr-4 truncate font-medium"
+                  }
+                  title={displayLabel}
+                >
+                  {displayLabel}
+                </td>
+                <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums whitespace-nowrap">
+                  {r.recaps}
+                </td>
+                {showSold ? (
+                  <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums font-semibold whitespace-nowrap">
+                    {unitsSoldText(r)}
+                  </td>
+                ) : null}
+                <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums whitespace-nowrap">
+                  {samplesPerHourText(r)}
+                </td>
+                <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums font-semibold whitespace-nowrap">
+                  {unitsPerHourText(r)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   </section>
 );
 
@@ -150,17 +192,27 @@ const Body: React.FC<{ tenantId: string; startDate: string; endDate: string }> =
         </div>
         {headline ? <p className="text-sm max-w-md">{headline}</p> : null}
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        {weekdays.length > 0 ? (
-          <Table title="By day of week" first="Day" rows={weekdays} />
-        ) : null}
-        {dayparts.length > 0 ? (
-          <Table title="By time of day" first="Shift start" rows={dayparts} />
-        ) : null}
-        {stores.length > 0 ? (
-          <Table title="Top stores by units sold" first="Store" rows={stores} showSold />
-        ) : null}
-      </div>
+      {weekdays.length > 0 || dayparts.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {weekdays.length > 0 ? (
+            <Table title="By day of week" first="Day" rows={weekdays} />
+          ) : null}
+          {dayparts.length > 0 ? (
+            <Table title="By time of day" first="Shift start" rows={dayparts} />
+          ) : null}
+        </div>
+      ) : null}
+      {stores.length > 0 ? (
+        <div className={weekdays.length > 0 || dayparts.length > 0 ? "mt-4" : undefined}>
+          <Table
+            title="Top stores by units sold"
+            first="Store"
+            rows={stores}
+            showSold
+            cleanStoreLabels
+          />
+        </div>
+      ) : null}
       <p className="text-xs mt-3" style={meta}>
         Hours are clocked ambassador time.
         {eff.recapsWithoutHours > 0

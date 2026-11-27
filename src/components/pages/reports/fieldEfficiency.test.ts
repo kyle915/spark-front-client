@@ -3,6 +3,7 @@ import {
   bestSlice,
   cleanRates,
   efficiencyHeadline,
+  formatStoreEfficiencyLabel,
   samplesPerHourText,
   type EfficiencyRow,
 } from "./fieldEfficiency";
@@ -73,5 +74,21 @@ describe("field efficiency", () => {
         [row("Midday", { unitsPerHour: null, samplesPerHour: 20 })],
       ),
     ).toBe("Fridays sell the most per hour. Midday shifts sample the most per hour.");
+  });
+
+  it("cleans embedded walk-in dates and program suffixes from store labels", () => {
+    expect(
+      formatStoreEfficiencyLabel(
+        "10/30/2026 - Symmes Road, Fairfield, OH 45014 (Jungle Jim's) · Retail Sampling",
+      ),
+    ).toBe("Jungle Jim's");
+    expect(
+      formatStoreEfficiencyLabel(
+        "10/30/2026 - Symmes Road, Fairfield, OH 45014 · Event Activation",
+      ),
+    ).toBe("Symmes Road, Fairfield, OH 45014");
+    expect(formatStoreEfficiencyLabel("Village Keg Wine & Spirit Shoppe")).toBe(
+      "Village Keg Wine & Spirit Shoppe",
+    );
   });
 });
