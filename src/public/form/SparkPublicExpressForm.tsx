@@ -1565,18 +1565,18 @@ function ExpressFormBody() {
           border: "1px solid var(--spark-border, #dcddd5)",
         }}
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
           <p
-            className="mono text-[10px] font-semibold"
+            className="mono text-[10px] font-semibold min-w-0 leading-snug"
             style={{
-              letterSpacing: "0.16em",
+              letterSpacing: "0.12em",
               color: "var(--spark-text-meta, rgba(20, 22, 15, 0.64))",
             }}
           >
             LIVE ACTIVATION SUMMARY
           </p>
           <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0"
             style={{
               background: canSubmit
                 ? "var(--spark-ok-bg, rgba(63, 92, 18, 0.11))"

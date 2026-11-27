@@ -37,10 +37,21 @@ export function SparkSheet({
       onOpenChange={onOpenChange}
       direction={isRight ? "right" : "bottom"}
       shouldScaleBackground={!isRight}
+      handleOnly={isRight}
     >
       <Drawer.Portal>
         <Drawer.Overlay className="spark-sheet-scrim" />
-        <Drawer.Content className={contentClass}>
+        <Drawer.Content
+          className={contentClass}
+          onCloseAutoFocus={(e) => {
+            if (
+              typeof document !== "undefined" &&
+              document.querySelector('[data-vaul-drawer][data-state="open"]')
+            ) {
+              e.preventDefault();
+            }
+          }}
+        >
           {!isRight ? <div className="spark-sheet-handle" aria-hidden /> : null}
           <div
             className={`spark-sheet-header flex items-center gap-3${

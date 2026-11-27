@@ -42,12 +42,23 @@ export function buildMobileDockItems(isClient: boolean): MobileDockItem[] {
   ];
 }
 
+const SCHEDULE_PATHS = new Set([
+  "/upcoming",
+  "/calendar",
+  "/schedule",
+  "/live-board",
+  "/today",
+  "/event-confirmation",
+]);
+
 const REPORT_PATHS = new Set([
   "/reports",
   "/buyer-report",
   "/retailer-pos",
+  "/field-sampling-report",
   "/roi-pacing",
   "/demo-costs",
+  "/pnl",
   "/finance-queue",
   "/provider-imports",
 ]);
@@ -57,13 +68,16 @@ export function activeMobileDockKey(pathname: string): MobileDockKey | null {
   if (clean === "/" || clean === "/dashboard" || clean === "/client-dashboard") {
     return "home";
   }
-  if (clean === "/upcoming" || clean.startsWith("/upcoming/")) {
+  if (SCHEDULE_PATHS.has(clean) || clean.startsWith("/upcoming/")) {
     return "schedule";
   }
   if (
     clean.startsWith("/recaps") ||
     clean.startsWith("/custom-recap") ||
-    clean.startsWith("/recap/")
+    clean.startsWith("/recap/") ||
+    clean === "/photos" ||
+    clean.startsWith("/photos/") ||
+    clean === "/photo-wall"
   ) {
     return "recaps";
   }

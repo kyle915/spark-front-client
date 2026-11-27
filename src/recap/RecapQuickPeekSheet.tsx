@@ -416,7 +416,7 @@ export function RecapQuickPeekSheet({
             borderTop: "1px solid var(--spark-hairline, var(--spark-border))",
           }}
         >
-          {!isClient && !approved && !emptyShell && onApprove ? (
+          {(!isClient || allowClientApprove) && !approved && !emptyShell && onApprove ? (
             <button
               type="button"
               disabled={approving}

@@ -93,11 +93,15 @@ describe("final 5-part studio & UX finishing touches", () => {
     expect(activeMobileDockKey("/")).toBe("home");
     expect(activeMobileDockKey("/client-dashboard")).toBe("home");
     expect(activeMobileDockKey("/upcoming")).toBe("schedule");
+    expect(activeMobileDockKey("/calendar")).toBe("schedule");
     expect(activeMobileDockKey("/recaps/list")).toBe("recaps");
     expect(activeMobileDockKey("/custom-recap/abc")).toBe("recaps");
+    expect(activeMobileDockKey("/photos")).toBe("recaps");
+    expect(activeMobileDockKey("/photo-wall")).toBe("recaps");
     expect(activeMobileDockKey("/reports")).toBe("reports");
     expect(activeMobileDockKey("/buyer-report")).toBe("reports");
     expect(activeMobileDockKey("/retailer-pos")).toBe("reports");
+    expect(activeMobileDockKey("/field-sampling-report")).toBe("reports");
     expect(activeMobileDockKey("/roi-pacing")).toBe("reports");
     expect(activeMobileDockKey("/demo-costs")).toBe("reports");
     expect(activeMobileDockKey("/account-map")).toBeNull();
@@ -163,6 +167,7 @@ describe("final 5-part studio & UX finishing touches", () => {
       "utf8",
     );
     expect(publicFormSrc).toContain('aria-label="Live activation summary"');
+    expect(publicFormSrc).toContain("whitespace-nowrap shrink-0");
     expect(publicFormSrc).toContain('suggestionTheme="light"');
     expect(publicFormSrc).not.toContain("0 0 18px rgba(242,243,238,0.25)");
     expect(publicFormSrc).not.toContain("rgba(255,255,255");

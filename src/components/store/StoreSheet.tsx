@@ -14,8 +14,9 @@ import { buildStoreScheduleHref, isStoreKey, storeHref } from "@/lib/storeProfil
 
 const UnresolvedStoreCard: React.FC<{
   target: StoreSheetTarget;
+  tenantId?: string;
   onClose: () => void;
-}> = ({ target, onClose }) => {
+}> = ({ target, tenantId, onClose }) => {
   const navigate = useNavigate();
   const name = (target.storeName || target.fallbackTitle || "Store").trim();
   const address = (target.address || "").trim();
@@ -67,6 +68,7 @@ const UnresolvedStoreCard: React.FC<{
             onClose();
             dispatchOpenAskSpark({
               question: `Summarize recent conversion, units sold, and shopper feedback at ${name}.`,
+              tenantId,
             });
           }}
           className="spark-btn-ghost text-xs px-3 py-2 rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
@@ -107,7 +109,9 @@ const ResolvedStoreLoader: React.FC<{
   }, [resolvedKey, onResolvedStoreKey]);
 
   if (!resolvedKey) {
-    return <UnresolvedStoreCard target={target} onClose={onClose} />;
+    return (
+      <UnresolvedStoreCard target={target} tenantId={tenantId} onClose={onClose} />
+    );
   }
 
   return (
@@ -198,7 +202,13 @@ export const StoreSheet: React.FC = () => {
       ) : (
         <ErrorBoundary
           key={targetIdentity}
-          fallback={<UnresolvedStoreCard target={target} onClose={closeStoreSheet} />}
+          fallback={
+            <UnresolvedStoreCard
+              target={target}
+              tenantId={tenant}
+              onClose={closeStoreSheet}
+            />
+          }
         >
           <Suspense
             fallback={

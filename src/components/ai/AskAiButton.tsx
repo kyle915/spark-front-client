@@ -17,6 +17,7 @@ import {
 } from "@/motion/opsMotion";
 import SparkSheet from "@/shared/SparkSheet";
 import { askAiModalTitle } from "./askAiSubjectName";
+import { routeAskSparkPrompts } from "./routeAskSparkPrompts";
 import BrandChatPanel from "./BrandChatPanel";
 
 type AiAnswerResult = {
@@ -252,7 +253,20 @@ export const AskAiModal: React.FC<{
         ) : null}
 
         {loading ? (
-          <p className="spark-ops-thinking mt-4">Checking program data…</p>
+          <div className="mt-4 space-y-2">
+            {trimmed ? (
+              <p
+                className="rounded-xl px-3.5 py-2 text-sm leading-relaxed"
+                style={{
+                  background: "rgba(var(--spark-ink-rgb),0.05)",
+                  color: "var(--spark-text)",
+                }}
+              >
+                {trimmed}
+              </p>
+            ) : null}
+            <p className="spark-ops-thinking">Checking program data…</p>
+          </div>
         ) : thoughtFor != null ? (
           <p className="spark-ops-thought mt-4">{thoughtLabel(thoughtFor)}</p>
         ) : null}
@@ -264,7 +278,7 @@ export const AskAiModal: React.FC<{
                 <AiMarkdown>{result.answer}</AiMarkdown>
                 {result.chart ? <AiChartView chart={result.chart} /> : null}
                 <div className="spark-ops-followups">
-                  {copy.followups.map((chipLabel) => (
+                  {starterPrompts.map((chipLabel) => (
                     <button
                       key={chipLabel}
                       type="button"
@@ -362,6 +376,10 @@ const AskAiButton: React.FC<{
         <BrandChatPanel
           tenantId={tenantId}
           origin={origin}
+          routePrompts={routeAskSparkPrompts(
+            typeof window !== "undefined" ? window.location.pathname : "/",
+            true,
+          )}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -374,6 +392,14 @@ const AskAiButton: React.FC<{
           eventId={eventId}
           subjectLabel={subjectLabel}
           origin={origin}
+          routePrompts={
+            scope === "tenant"
+              ? routeAskSparkPrompts(
+                  typeof window !== "undefined" ? window.location.pathname : "/",
+                  false,
+                )
+              : undefined
+          }
           onClose={() => setOpen(false)}
         />
       )}

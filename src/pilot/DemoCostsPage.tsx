@@ -50,6 +50,13 @@ const FEE_BASE_OPTIONS = [
   { key: "travel_parking_tolls", label: "Travel / parking" },
 ] as const;
 
+const GROUP_BY_LABELS: Record<string, string> = {
+  store: "Store",
+  program: "Program",
+  provider: "Provider",
+  month: "Month",
+};
+
 const DemoCostsBody: React.FC<{
   groupBy: string;
   setGroupBy: (g: string) => void;
@@ -179,7 +186,9 @@ const DemoCostsBody: React.FC<{
             <table className="w-full text-left text-xs">
               <thead>
                 <tr style={META}>
-                  <th className="py-2 pr-3 capitalize">{groupBy}</th>
+                  <th className="py-2 pr-3">
+                    {GROUP_BY_LABELS[groupBy] ?? groupBy}
+                  </th>
                   <th className="py-2 pr-3">Visits (Complete / Incomplete)</th>
                   <th className="py-2 pr-3">Total Brand Cost</th>
                   <th className="py-2 pr-3">Supported Cost</th>

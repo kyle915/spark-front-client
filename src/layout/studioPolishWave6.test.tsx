@@ -87,6 +87,33 @@ describe("6-part visual & workflow upgrades", () => {
     expect(clientApprovalsSrc).toContain("RecapQuickPeekSheet");
     expect(clientApprovalsSrc).toContain("allowClientApprove");
 
+    const recapPeekSrc = readFileSync(
+      resolve(__dirname, "../recap/RecapQuickPeekSheet.tsx"),
+      "utf8",
+    );
+    expect(recapPeekSrc).toContain("(!isClient || allowClientApprove) && !approved && !emptyShell && onApprove");
+
+    const sheetSrc = readFileSync(
+      resolve(__dirname, "../shared/SparkSheet.tsx"),
+      "utf8",
+    );
+    expect(sheetSrc).toContain("handleOnly={isRight}");
+    expect(sheetSrc).toContain("onCloseAutoFocus");
+
+    const askHostSrc = readFileSync(
+      resolve(__dirname, "../components/ai/AskSparkHost.tsx"),
+      "utf8",
+    );
+    expect(askHostSrc).toContain("useStoreSheetStore");
+    expect(askHostSrc).toContain("data-vaul-drawer");
+
+    const demoCostsSrc = readFileSync(
+      resolve(__dirname, "../pilot/DemoCostsPage.tsx"),
+      "utf8",
+    );
+    expect(demoCostsSrc).toContain('store: "Store"');
+    expect(demoCostsSrc).toContain("GROUP_BY_LABELS");
+
     const inboxSrc = readFileSync(
       resolve(__dirname, "../components/pages/inbox/SparkInbox.tsx"),
       "utf8",
