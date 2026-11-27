@@ -199,7 +199,7 @@ const Inner: React.FC = () => {
                     </span>
                     <span>
                       <span className={cls}>
-                        ● {(p.status ?? "—").toUpperCase()}
+                        {(p.status ?? "—").toUpperCase()}
                       </span>
                     </span>
                     <span

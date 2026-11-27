@@ -209,7 +209,7 @@ const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
                     </span>
                     <span>
                       <span className={cls}>
-                        ● {(p.status ?? "—").toUpperCase()}
+                        {(p.status ?? "—").toUpperCase()}
                       </span>
                     </span>
                     <span

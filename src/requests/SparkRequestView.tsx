@@ -870,7 +870,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               {reqId}
             </span>
             <span className={chipClass}>
-              ● {(request.status?.name ?? slug).toUpperCase()}
+              {(request.status?.name ?? slug).toUpperCase()}
             </span>
             {request.requestType?.name && (
               <span className="chip chip-sky">
@@ -1889,7 +1889,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                 <span
                   className={`absolute top-2 right-2 chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
                 >
-                  ● {recap.approved ? "APPROVED" : "DRAFT"}
+                  {recap.approved ? "APPROVED" : "DRAFT"}
                 </span>
                 {fileCount > 0 && (
                   <span

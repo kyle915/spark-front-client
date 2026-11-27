@@ -516,7 +516,7 @@ const CampaignCard: React.FC<{
             campaign.isActive ? "chip chip-lime shrink-0" : "chip chip-gold shrink-0"
           }
         >
-          ● {campaign.isActive ? "ACTIVE" : "PAUSED"}
+          {campaign.isActive ? "ACTIVE" : "PAUSED"}
         </span>
       </div>
 
@@ -1071,7 +1071,7 @@ const ReceiptCard: React.FC<{
               </p>
             </div>
             <div className="flex flex-col items-end gap-1.5 shrink-0">
-              <span className={chip.cls}>● {chip.label}</span>
+              <span className={chip.cls}>{chip.label}</span>
               {receipt.isFlagged && (
                 <span
                   className="mono inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"

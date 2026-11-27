@@ -258,7 +258,7 @@ export function RecapQuickPeekSheet({
                     : "chip-muted"
               }`}
             >
-              ● <StatusMorph value={status.text} />
+              <StatusMorph value={status.text} />
             </span>
             <span className="chip chip-muted">
               {recapActivationFilterLabel(recap.recapType)}

@@ -362,7 +362,7 @@ code, kbd, samp, pre, .mono-code {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
-/* Compact 6px rounded-square status badge with a crisp 5px status dot.
+/* Compact 6px rounded-square status badge.
    Pair with chip-lime / chip-orange / chip-sky / chip-muted. */
 .chip {
   display: inline-flex;
@@ -377,14 +377,6 @@ code, kbd, samp, pre, .mono-code {
   font-weight: 600;
   border: 1px solid color-mix(in srgb, currentColor 26%, transparent);
   background: rgba(var(--spark-ink-rgb), 0.04);
-}
-span.chip:not(:has(> svg, > .spark-dot, > span[aria-hidden]))::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: currentColor;
-  flex-shrink: 0;
 }
 .chip-lime    { color: var(--color-primary); background: rgba(var(--spark-accent-rgb), 0.10); }
 .chip-orange  { color: var(--color-warning); background: rgba(255, 138, 76, 0.10); }

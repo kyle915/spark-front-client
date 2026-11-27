@@ -654,7 +654,7 @@ const RecapCard: React.FC<{
                 }
         }
       >
-        ● <StatusMorph value={statusText} />
+        <StatusMorph value={statusText} />
       </span>
       {recap.isThirdParty ? (
         <span className="absolute bottom-2 left-2">

@@ -636,7 +636,7 @@ const InvoiceRow: React.FC<{
         <div className="min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <p className="font-bold text-base">{invoice.number}</p>
-            <span className={chip.cls}>● {chip.label}</span>
+            <span className={chip.cls}>{chip.label}</span>
           </div>
           <p
             className="mono text-[11px] uppercase mt-1"

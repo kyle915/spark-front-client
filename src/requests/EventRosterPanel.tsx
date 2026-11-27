@@ -188,7 +188,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
               color: "var(--spark-lime)",
             }}
           >
-            ● {accepted.length} ACCEPTED
+            {accepted.length} ACCEPTED
           </span>
           {confirmedCount > 0 && (
             <span
@@ -209,7 +209,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                 color: "var(--spark-gold)",
               }}
             >
-              ● {pending.length} PENDING
+              {pending.length} PENDING
             </span>
           )}
         </div>

@@ -696,7 +696,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           </div>
           <div className="flex items-center gap-2 flex-wrap">
           <span className={chipClass}>
-            ● {event.status?.name ?? req?.status?.name ?? "—"}
+            {event.status?.name ?? req?.status?.name ?? "—"}
           </span>
           {eventTypeName !== "—" && (
             <span className="chip chip-sky">{eventTypeName}</span>
@@ -1258,7 +1258,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                     <span
                       className={`absolute top-2 right-2 chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
                     >
-                      ● {recap.approved ? "APPROVED" : "DRAFT"}
+                      {recap.approved ? "APPROVED" : "DRAFT"}
                     </span>
                     {fileCount > 0 && (
                       <span

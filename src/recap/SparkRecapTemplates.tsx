@@ -250,7 +250,7 @@ const Inner: React.FC = () => {
                   >
                     TPL-{t.id.slice(-4).toUpperCase()}
                   </span>
-                  <span className="chip chip-lime">● ACTIVE</span>
+                  <span className="chip chip-lime">ACTIVE</span>
                 </div>
                 <h3
                   className="display text-lg font-bold mb-1"
