@@ -506,6 +506,9 @@ const PublicJobBoard = lazyDefault(() => import("@/public/jobs/PublicJobBoard"))
 // Public, no-login clock in/out. The :token is the link (see timeclock/ in spark-api).
 const PublicClock = lazyDefault(() => import("@/public/clock/PublicClock"));
 const PublicPitch = lazyDefault(() => import("@/public/pitch/PublicPitch"));
+const SandboxBrandPage = lazyDefault(
+  () => import("@/public/sandbox/SandboxBrandPage"),
+);
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ConnectAi = lazyDefault(() => import("@/auth/ConnectAi"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
@@ -615,6 +618,11 @@ const PublicRoutes = {
     {
       path: "/pitch/:token",
       component: <PublicPitch />,
+      isPublic: true,
+    },
+    {
+      path: "/sandbox",
+      component: <SandboxBrandPage />,
       isPublic: true,
     },
     {

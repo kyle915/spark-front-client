@@ -14,6 +14,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 
 import Layout from "@/layout/Layout";
 import SparkConfirm from "@/shared/SparkConfirm";
+import WebhooksPanel from "@/pilot/WebhooksPanel";
 import { MyAiConnectionsQuery } from "@/api/queries/MyAiConnectionsQuery";
 import type { MyAiConnectionsQuery as MyAiConnectionsQueryType } from "@api/queries/__generated__/MyAiConnectionsQuery.graphql";
 import { RevokeAiConnectionMutation } from "@/api/mutations/RevokeAiConnectionMutation";
@@ -167,21 +168,22 @@ function Connections() {
 export default function SparkAiConnector() {
   return (
     <Layout>
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6 max-w-4xl">
         <div>
           <h1 className="display text-4xl font-bold" style={{ letterSpacing: "-0.04em" }}>
-            Connect Claude or ChatGPT
+            AI Connector &amp; Webhooks
           </h1>
           <p className="mt-2" style={meta}>
-            Ask an AI assistant about your program — results, recaps, stores, upcoming events — using
-            your own Spark login. It can read your brand's data and nothing else, and it can't change
-            anything.
+            Connect Claude or ChatGPT via the official Spark MCP server, or push real-time signed
+            webhooks into HubSpot, Klaviyo, Airtable, and Zapier. Strictly scoped to your brand.
           </p>
         </div>
 
         <Suspense fallback={<div className="spark-card p-5 text-sm" style={meta}>Loading…</div>}>
           <Connections />
         </Suspense>
+
+        <WebhooksPanel />
 
         <section className="spark-card p-5 space-y-3">
           <h2 className="text-lg font-semibold">Claude</h2>

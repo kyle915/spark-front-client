@@ -1,5 +1,6 @@
 import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useAuthStore } from "@/store/authStore";
 import {
   exceptionStatusLabel,
   formatHonestMoney,
@@ -44,7 +45,7 @@ const FinanceBody: React.FC<{
   setStatusFilter: (v: string) => void;
   typeFilter: string;
   setTypeFilter: (v: string) => void;
-  fetchKey: number;
+  fetchKey: string | number;
   bump: () => void;
 }> = ({
   statusFilter,
@@ -65,9 +66,9 @@ const FinanceBody: React.FC<{
     },
     { fetchPolicy: "network-only", fetchKey },
   );
-  const ws = data.workspaceOverview;
-  const q = data.financeExceptionQueue;
-  const visits = data.canonicalVisits;
+  const ws = data?.workspaceOverview;
+  const q = data?.financeExceptionQueue;
+  const visits = data?.canonicalVisits ?? [];
 
   const [commitAssign] = useMutation<AssignExcType>(
     PilotMutationsAssignExceptionMutation,
@@ -94,6 +95,10 @@ const FinanceBody: React.FC<{
     Record<string, string>
   >({});
   const [banner, setBanner] = useState<string | null>(null);
+
+  if (!ws || !q) {
+    return <p className="text-sm mono">Loading finance queue…</p>;
+  }
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -557,6 +562,7 @@ const FinanceBody: React.FC<{
 };
 
 export const FinanceQueuePage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [fetchKey, setFetchKey] = useState(0);
@@ -564,11 +570,12 @@ export const FinanceQueuePage: React.FC = () => {
     <div className="p-4 lg:p-8">
       <Suspense fallback={<p className="text-sm mono">Loading finance queue…</p>}>
         <FinanceBody
+          key={tenantId ?? "none"}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
           typeFilter={typeFilter}
           setTypeFilter={setTypeFilter}
-          fetchKey={fetchKey}
+          fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
           bump={() => setFetchKey((k) => k + 1)}
         />
       </Suspense>

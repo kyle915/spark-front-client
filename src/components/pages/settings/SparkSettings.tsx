@@ -388,6 +388,64 @@ export default function SparkSettings() {
             </Link>
           </div>
 
+          <div
+            className="flex items-center gap-3 py-3 px-3 rounded-xl"
+            style={{
+              background: "rgba(var(--spark-ink-rgb),0.025)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium">AI Connector (MCP) &amp; Outbound Webhooks</p>
+              <p
+                className="text-xs"
+                style={{ color: "var(--spark-text-meta)" }}
+              >
+                Connect Claude / ChatGPT and send signed webhooks (recap.approved, request.created, shelf.oos_detected) to HubSpot, Klaviyo, Airtable, or Zapier.
+              </p>
+            </div>
+            <Link
+              to="/ai-connector"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Configure →
+            </Link>
+          </div>
+
+          <div
+            className="flex items-center gap-3 py-3 px-3 rounded-xl"
+            style={{
+              background: "rgba(var(--spark-ink-rgb),0.025)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <div className="flex-1">
+              <p className="text-sm font-medium">Sample Brand Sandbox</p>
+              <p
+                className="text-xs"
+                style={{ color: "var(--spark-text-meta)" }}
+              >
+                Read-only sample beverage brand for demos, onboarding walkthroughs, and testing Buyer QBR decks safely.
+              </p>
+            </div>
+            <Link
+              to="/sandbox"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Open Sandbox →
+            </Link>
+          </div>
+
           {/* Google Sheet append observability — last sync, errors, REQ link */}
           <Suspense
             fallback={

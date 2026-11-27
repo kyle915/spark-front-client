@@ -30,6 +30,7 @@ import type { PilotMutationsVerifyRestockMutation as VerifyRestockType } from "@
 import type { PilotMutationsSetBuyerDigestMutation as SetBuyerDigestType } from "@/api/mutations/__generated__/PilotMutationsSetBuyerDigestMutation.graphql";
 import { Download } from "lucide-react";
 import { BuyerPitchDeckShareCard } from "./BuyerPitchDeckShareCard";
+import { SavedViewsDigestBar } from "./SavedViewsDigestBar";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
@@ -56,6 +57,12 @@ const OK_BANNER_STYLE = {
 } as const;
 
 const BuyerReportBody: React.FC<{
+  range: PilotRangeKey;
+  setRange: (r: PilotRangeKey) => void;
+  customStart: string;
+  setCustomStart: (v: string) => void;
+  customEnd: string;
+  setCustomEnd: (v: string) => void;
   periodStart: string | null;
   periodEnd: string | null;
   periodControls: React.ReactNode;
@@ -68,6 +75,12 @@ const BuyerReportBody: React.FC<{
   fetchKey: string | number;
   bump: () => void;
 }> = ({
+  range,
+  setRange,
+  customStart,
+  setCustomStart,
+  customEnd,
+  setCustomEnd,
   periodStart,
   periodEnd,
   periodControls,
@@ -268,6 +281,27 @@ const BuyerReportBody: React.FC<{
           </select>
         </div>
       </div>
+
+      <SavedViewsDigestBar
+        surface="buyer_report"
+        defaultPlaceholder="Texas Whole Foods · Last 90d"
+        currentFilters={{
+          range,
+          ...(customStart ? { customStart } : {}),
+          ...(customEnd ? { customEnd } : {}),
+          ...(retailerFilter ? { retailerFilter } : {}),
+          ...(marketFilter ? { marketFilter } : {}),
+          ...(providerUuid ? { providerUuid } : {}),
+        }}
+        onApply={(f) => {
+          if (f.range) setRange(f.range as PilotRangeKey);
+          setCustomStart(f.customStart ?? "");
+          setCustomEnd(f.customEnd ?? "");
+          setRetailerFilter(f.retailerFilter ?? "");
+          setMarketFilter(f.marketFilter ?? "");
+          setProviderUuid(f.providerUuid ?? "");
+        }}
+      />
 
       <BuyerPitchDeckShareCard
         brandName={ws.tenantName}
@@ -754,6 +788,12 @@ export const BuyerReportPage: React.FC = () => {
       <Suspense fallback={<p className="text-sm" style={META}>Loading buyer report…</p>}>
         <BuyerReportBody
           key={tenantId ?? "none"}
+          range={range}
+          setRange={setRange}
+          customStart={customStart}
+          setCustomStart={setCustomStart}
+          customEnd={customEnd}
+          setCustomEnd={setCustomEnd}
           periodStart={periodStart}
           periodEnd={periodEnd}
           periodControls={

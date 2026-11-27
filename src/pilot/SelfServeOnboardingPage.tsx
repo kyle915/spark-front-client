@@ -397,6 +397,30 @@ const UnauthenticatedSignupStep: React.FC<{
             </div>
           ))}
         </div>
+        <div
+          className="pt-3 mt-1 space-y-2"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+          <p className="text-xs font-semibold">
+            Want to click around first?
+          </p>
+          <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+            Tour our read-only sample beverage brand (Reports, StoreSheet, Shelf
+            &amp; Voice, Photo Wall, Ask Spark &amp; Buyer QBR Deck) with zero
+            signup.
+          </p>
+          <Link
+            to="/sandbox"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold no-underline"
+            style={{
+              background: "var(--spark-surface-2)",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            Explore Sample Brand Sandbox →
+          </Link>
+        </div>
       </aside>
     </div>
   );

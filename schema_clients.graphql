@@ -7157,6 +7157,14 @@ type Mutation {
   approveVolumeBandOrOverage(agreedVolumeBandVisits: Int = null, overageAgreementApproved: Boolean! = false, overageUnitPriceUsd: String = null): PilotMutationOutcome!
   provisionProPilotWorkspace(tenantUuid: String!, pilotFeeUsd: String! = "1500.00", durationDays: Int! = 60, includedVisitsMonthly: Int! = 100): PilotMutationOutcome!
   runBillingTestCheck(tenantUuid: String = null): BillingTestCheckOutcome!
+  upsertSavedReportView(name: String!, surface: String! = "buyer_report", filtersJson: String! = "{}", scheduleEnabled: Boolean! = false, scheduleCadence: String! = "weekly", scheduleDayOfWeek: Int! = 4, exportFormat: String! = "csv", recipientEmails: String! = "", viewUuid: String = null, tenantId: ID = null): SavedReportViewOutcome!
+  deleteSavedReportView(viewUuid: String!, tenantId: ID = null): PilotMutationOutcome!
+  sendSavedReportViewNow(viewUuid: String!, testEmail: String = null, tenantId: ID = null): SavedReportViewSendOutcome!
+  createWebhookEndpoint(name: String!, url: String!, events: [String!]!, description: String! = "", tenantId: ID = null): WebhookEndpointMutationOutcome!
+  updateWebhookEndpoint(endpointUuid: String!, name: String = null, url: String = null, events: [String!] = null, description: String = null, isActive: Boolean = null, tenantId: ID = null): WebhookEndpointMutationOutcome!
+  rotateWebhookSecret(endpointUuid: String!, tenantId: ID = null): WebhookEndpointMutationOutcome!
+  deleteWebhookEndpoint(endpointUuid: String!, tenantId: ID = null): PilotMutationOutcome!
+  sendTestWebhook(endpointUuid: String!, tenantId: ID = null): WebhookTestOutcome!
 }
 
 type MutationNormalOutput {
@@ -8554,6 +8562,8 @@ type Query {
   plansAndBillingOverview: PlansAndBillingView!
   previewSubscriptionPlanChange(targetPlanCode: String!): SubscriptionChangePreview!
   billingReadiness: BillingReadinessView!
+  savedReportViews(surface: String = null, tenantId: ID = null): [SavedReportViewItem!]!
+  workspaceWebhooks(tenantId: ID = null): WebhooksWorkspaceView!
 }
 
 """
@@ -10312,6 +10322,39 @@ type SavedImportMappingItem {
   presetKey: String!
   columnMapJson: String!
   isDefault: Boolean!
+}
+
+type SavedReportViewItem {
+  uuid: String!
+  name: String!
+  surface: String!
+  filtersJson: String!
+  filterSummary: String!
+  scheduleEnabled: Boolean!
+  scheduleCadence: String!
+  scheduleDayOfWeek: Int!
+  scheduleDayLabel: String!
+  exportFormat: String!
+  recipientEmails: String!
+  lastSentAt: String
+  lastSendStatus: String!
+  lastSendError: String!
+  createdAt: String!
+}
+
+type SavedReportViewOutcome {
+  ok: Boolean!
+  error: String
+  view: SavedReportViewItem
+}
+
+type SavedReportViewSendOutcome {
+  ok: Boolean!
+  status: String!
+  recipients: [String!]!
+  rowCount: Int!
+  periodLabel: String!
+  error: String
 }
 
 input SendChatMessageInput {
@@ -13012,13 +13055,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  email: String!
-  id: ID!
-  firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  firstName: String
+  id: ID!
   lastName: String
+  email: String!
   archived: Boolean!
   verified: Boolean!
 }
@@ -13107,6 +13150,61 @@ input WaveRequestItemInput {
   timezoneId: ID = null
   timezoneCode: String = null
   name: String = null
+}
+
+type WebhookCatalogEventItem {
+  event: String!
+  label: String!
+  description: String!
+}
+
+type WebhookDeliveryItem {
+  uuid: String!
+  eventType: String!
+  eventId: String!
+  status: String!
+  httpStatus: Int
+  durationMs: Int
+  responseExcerpt: String!
+  errorMessage: String!
+  createdAt: String!
+}
+
+type WebhookEndpointItem {
+  uuid: String!
+  name: String!
+  url: String!
+  description: String!
+  events: [String!]!
+  signingSecretPreview: String!
+  isActive: Boolean!
+  consecutiveFailures: Int!
+  lastDeliveryAt: String
+  lastStatusCode: Int
+  createdAt: String!
+  recentDeliveries: [WebhookDeliveryItem!]!
+}
+
+type WebhookEndpointMutationOutcome {
+  ok: Boolean!
+  error: String
+  endpointUuid: String
+  signingSecret: String
+}
+
+type WebhookTestOutcome {
+  ok: Boolean!
+  status: String!
+  httpStatus: Int
+  durationMs: Int
+  error: String
+}
+
+type WebhooksWorkspaceView {
+  tenantName: String!
+  canManage: Boolean!
+  supportedEvents: [WebhookCatalogEventItem!]!
+  endpoints: [WebhookEndpointItem!]!
 }
 
 type WeeklyBuyerReport {

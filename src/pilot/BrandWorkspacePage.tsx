@@ -1,5 +1,6 @@
 import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useAuthStore } from "@/store/authStore";
 import { checkinUrl, providerSubmitUrl } from "@/utils/publicHosts";
 import { workspaceRoleLabel } from "./pilotHelpers";
 import { PilotQueriesWorkspaceOverviewQuery } from "@/api/queries/PilotQueries";
@@ -39,7 +40,7 @@ const OK_BANNER_STYLE = {
   border: "1px solid var(--spark-ok-border)",
 } as const;
 
-const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
+const WorkspaceBody: React.FC<{ fetchKey: string | number; bump: () => void }> = ({
   fetchKey,
   bump,
 }) => {
@@ -48,7 +49,7 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     {},
     { fetchPolicy: "network-only", fetchKey },
   );
-  const ws = data.workspaceOverview;
+  const ws = data?.workspaceOverview;
 
   const [commitRegister, registering] =
     useMutation<RegisterProviderType>(PilotMutationsRegisterProviderMutation);
@@ -98,6 +99,10 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       window.open(url, "_blank", "noopener,noreferrer");
     }
   };
+
+  if (!ws) {
+    return <p className="text-sm mono">Loading workspace…</p>;
+  }
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -710,12 +715,14 @@ const WorkspaceBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
 };
 
 export const BrandWorkspacePage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
   const [fetchKey, setFetchKey] = useState(0);
   return (
     <div className="p-4 lg:p-8">
       <Suspense fallback={<p className="text-sm mono">Loading workspace…</p>}>
         <WorkspaceBody
-          fetchKey={fetchKey}
+          key={tenantId ?? "none"}
+          fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
           bump={() => setFetchKey((k) => k + 1)}
         />
       </Suspense>

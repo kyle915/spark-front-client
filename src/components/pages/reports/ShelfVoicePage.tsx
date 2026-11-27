@@ -25,6 +25,7 @@ import { thumbUrl } from "@/utils/thumb";
 import ChartBlock from "@/components/charts/ChartBlock";
 import { CompetitorMentions } from "@/components/charts/CommentInsights";
 import PilotPeriodBar from "@/pilot/PilotPeriodBar";
+import { SavedViewsDigestBar } from "@/pilot/SavedViewsDigestBar";
 import { resolvePilotPeriod, type PilotRangeKey } from "@/pilot/pilotPeriodFilter";
 import { ShelfVoiceHubQuery } from "@/api/queries/ShelfVoiceHubQuery";
 import type { ShelfVoiceHubQuery as ShelfVoiceHubQueryType } from "@api/queries/__generated__/ShelfVoiceHubQuery.graphql";
@@ -87,10 +88,27 @@ function shelfStatusBadge(status: string): {
 
 const ShelfVoiceBody: React.FC<{
   tenantId: string;
+  range: PilotRangeKey;
+  setRange: (r: PilotRangeKey) => void;
+  customStart: string;
+  setCustomStart: (v: string) => void;
+  customEnd: string;
+  setCustomEnd: (v: string) => void;
   periodStart: string | null;
   periodEnd: string | null;
   periodControls: React.ReactNode;
-}> = ({ tenantId, periodStart, periodEnd, periodControls }) => {
+}> = ({
+  tenantId,
+  range,
+  setRange,
+  customStart,
+  setCustomStart,
+  customEnd,
+  setCustomEnd,
+  periodStart,
+  periodEnd,
+  periodControls,
+}) => {
   useAppearance();
   const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
 
@@ -240,6 +258,27 @@ const ShelfVoiceBody: React.FC<{
             </button>
           </div>
         }
+      />
+
+      <SavedViewsDigestBar
+        surface="shelf_voice"
+        defaultPlaceholder="Shelf OOS & MSRP Drift · Last 90d"
+        currentFilters={{
+          range,
+          ...(customStart ? { customStart } : {}),
+          ...(customEnd ? { customEnd } : {}),
+          ...(storeFilter !== "all" ? { storeFilter } : {}),
+          ...(storeQuery ? { storeQuery } : {}),
+          ...(msrpInput.trim() ? { targetMsrp: msrpInput.trim() } : {}),
+        }}
+        onApply={(f) => {
+          if (f.range) setRange(f.range as PilotRangeKey);
+          setCustomStart(f.customStart ?? "");
+          setCustomEnd(f.customEnd ?? "");
+          setStoreFilter((f.storeFilter as ShelfStoreFilter) || "all");
+          setStoreQuery(f.storeQuery ?? "");
+          setMsrpInput(f.targetMsrp ?? "");
+        }}
       />
 
       {/* 1. Executive Compliance & MSRP Strip */}
@@ -1056,6 +1095,12 @@ export const ShelfVoicePage: React.FC = () => {
           <ShelfVoiceBody
             key={tenantId}
             tenantId={String(tenantId)}
+            range={range}
+            setRange={setRange}
+            customStart={customStart}
+            setCustomStart={setCustomStart}
+            customEnd={customEnd}
+            setCustomEnd={setCustomEnd}
             periodStart={periodStart}
             periodEnd={periodEnd}
             periodControls={

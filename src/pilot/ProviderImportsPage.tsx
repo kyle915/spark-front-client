@@ -1,5 +1,6 @@
 import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useAuthStore } from "@/store/authStore";
 import { PilotQueriesImportsPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsCommitCsvImportMutation,
@@ -48,7 +49,7 @@ const OK_BANNER_STYLE = {
 
 type PreviewPayload = PreviewDataType["previewProviderCsvImport"];
 
-const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
+const ImportsBody: React.FC<{ fetchKey: string | number; bump: () => void }> = ({
   fetchKey,
   bump,
 }) => {
@@ -57,8 +58,8 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     {},
     { fetchPolicy: "network-only", fetchKey },
   );
-  const ws = data.workspaceOverview;
-  const imp = data.providerImportWorkspace;
+  const ws = data?.workspaceOverview;
+  const imp = data?.providerImportWorkspace;
 
   const [commitPreview, previewing] = useMutation<PreviewMutationType>(
     PilotMutationsPreviewCsvImportMutation,
@@ -71,7 +72,7 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   );
 
   const [providerUuid, setProviderUuid] = useState(
-    ws.viewerProviderUuid ?? ws.providers[0]?.uuid ?? "",
+    ws?.viewerProviderUuid ?? ws?.providers[0]?.uuid ?? "",
   );
   const [presetKey, setPresetKey] = useState("agency_fieldpulse");
   const [savedMappingUuid, setSavedMappingUuid] = useState("");
@@ -105,6 +106,10 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     setCsvText(text);
     dropPreview();
   };
+
+  if (!ws || !imp) {
+    return <p className="text-sm mono">Loading CSV importer…</p>;
+  }
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -574,12 +579,14 @@ const ImportsBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
 };
 
 export const ProviderImportsPage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
   const [fetchKey, setFetchKey] = useState(0);
   return (
     <div className="p-4 lg:p-8">
       <Suspense fallback={<p className="text-sm mono">Loading CSV importer…</p>}>
         <ImportsBody
-          fetchKey={fetchKey}
+          key={tenantId ?? "none"}
+          fetchKey={`${tenantId ?? "none"}:${fetchKey}`}
           bump={() => setFetchKey((k) => k + 1)}
         />
       </Suspense>
