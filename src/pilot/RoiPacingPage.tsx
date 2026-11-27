@@ -23,6 +23,17 @@ const PRIMARY_BTN_STYLE = {
   border: "1px solid var(--spark-lime)",
 } as const;
 
+const GROUP_OPTIONS = [
+  { key: "retailer", label: "Retailer" },
+  { key: "market", label: "Market" },
+  { key: "sku", label: "SKU" },
+] as const;
+
+const SORT_OPTIONS = [
+  { key: "units_per_dollar", label: "Units / $" },
+  { key: "revenue_per_dollar", label: "Revenue / $" },
+] as const;
+
 const money = (raw: string | null | undefined): string => {
   if (raw == null || raw === "") return "—";
   const n = Number(raw);
@@ -115,7 +126,7 @@ const PacingBody: React.FC<{
   const data = useLazyLoadQuery<PacingQueryType>(
     RoiPacingPageQuery,
     { month, groupBy, sortBy },
-    { fetchPolicy: "network-only", fetchKey },
+    { fetchPolicy: "store-and-network", fetchKey },
   );
   const pacing = data?.demoBudgetPacingAndLeaderboard ?? null;
   const [commitUpsert, saving] = useMutation<UpsertMutationType>(
@@ -124,8 +135,6 @@ const PacingBody: React.FC<{
   const [amount, setAmount] = useState(pacing?.targetAmount ?? "");
   const [banner, setBanner] = useState<string | null>(null);
 
-  // When the selected month (or its server target) changes, resync the
-  // editor so Save cannot write last month's figure into the new month.
   useEffect(() => {
     setAmount(
       syncedTargetEditorAmount({
@@ -156,8 +165,8 @@ const PacingBody: React.FC<{
         targetAmount: amount || "0",
         month,
         scopeType: "workspace",
-        scopeKey: "",
         scopeLabel: "Workspace",
+        scopeKey: "",
         notes: "",
       },
       onCompleted: (res) => {
@@ -173,54 +182,57 @@ const PacingBody: React.FC<{
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-7xl">
       <SparkPageHeader
         eyebrow="Demo budget · Spend vs pace"
         title="Budget pacing & ROI leaderboard"
         support="Spent and committed demo dollars against your monthly target, plus retailers, markets, or SKUs ranked by units or register sales per demo dollar."
       />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="inline-flex items-center gap-2 text-xs font-medium">
           <span style={META}>Month</span>
           <input
             type="month"
-            className="block mt-1 rounded px-3 py-2"
+            className="rounded-lg px-3 py-1.5 text-xs tab-num"
             style={FIELD_STYLE}
             value={monthInputValue(month)}
             onChange={(e) => setMonth(e.target.value)}
           />
         </label>
-        <label className="text-sm">
-          <span style={META}>Group by</span>
-          <select
-            className="block mt-1 rounded px-3 py-2"
-            style={FIELD_STYLE}
-            value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value)}
-          >
-            <option value="retailer">Retailer</option>
-            <option value="market">Market</option>
-            <option value="sku">SKU</option>
-          </select>
-        </label>
-        <label className="text-sm">
-          <span style={META}>Sort</span>
-          <select
-            className="block mt-1 rounded px-3 py-2"
-            style={FIELD_STYLE}
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-          >
-            <option value="units_per_dollar">Units / $</option>
-            <option value="revenue_per_dollar">Revenue / $</option>
-          </select>
-        </label>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="pill-group" role="group" aria-label="Group leaderboard by">
+            {GROUP_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setGroupBy(opt.key)}
+                className={`pill-btn ${groupBy === opt.key ? "on" : ""}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="pill-group" role="group" aria-label="Sort leaderboard by">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setSortBy(opt.key)}
+                className={`pill-btn ${sortBy === opt.key ? "on" : ""}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {banner ? (
         <p
-          className="text-sm rounded px-3 py-2"
+          className="text-xs font-medium rounded-lg px-3 py-2"
           style={{
             background: "var(--spark-ok-bg, #e6f4ea)",
             color: "var(--spark-ok-ink, #14532d)",
@@ -235,7 +247,7 @@ const PacingBody: React.FC<{
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="spark-panel-title">Monthly pacing</h2>
           <span
-            className="text-xs px-2 py-1 rounded"
+            className="text-xs font-semibold px-2.5 py-1 rounded-md"
             style={statusStyle(pacing.paceStatus)}
           >
             {statusLabel(pacing.paceStatus)}
@@ -260,8 +272,8 @@ const PacingBody: React.FC<{
                 {label}
               </p>
               <p
-                className="text-xl font-semibold mono mt-1"
-                style={{ color: "var(--spark-text)" }}
+                className="display text-2xl font-bold tab-num mt-1"
+                style={{ color: "var(--spark-text)", letterSpacing: "-0.025em" }}
               >
                 {value}
               </p>
@@ -269,7 +281,10 @@ const PacingBody: React.FC<{
           ))}
         </div>
 
-        <div className="relative h-3 rounded overflow-hidden" style={{ background: "var(--spark-surface-2, #e8e8e8)" }}>
+        <div
+          className="relative h-2.5 rounded-md overflow-hidden"
+          style={{ background: "var(--spark-surface-2, #e8e8e8)" }}
+        >
           <div
             className="absolute inset-y-0 left-0"
             style={{
@@ -287,7 +302,7 @@ const PacingBody: React.FC<{
             title={`Elapsed ${Math.round(elapsedPct * 100)}% of month`}
           />
         </div>
-        <p className="text-xs" style={META}>
+        <p className="text-xs tab-num" style={META}>
           Bar = spent + committed vs target. Tick = elapsed month (
           {pacing.elapsedDays}/{pacing.daysInMonth} days). Visits counted:{" "}
           {pacing.visitCount}.
@@ -295,10 +310,10 @@ const PacingBody: React.FC<{
 
         {pacing.canEditBudget ? (
           <div className="flex flex-wrap items-end gap-3 pt-2">
-            <label className="text-sm">
+            <label className="text-xs font-medium">
               <span style={META}>Workspace monthly target</span>
               <input
-                className="block mt-1 rounded px-3 py-2 w-40 mono"
+                className="block mt-1 rounded-lg px-3 py-2 w-40 tab-num text-sm"
                 style={FIELD_STYLE}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -307,7 +322,7 @@ const PacingBody: React.FC<{
             </label>
             <button
               type="button"
-              className="rounded px-4 py-2 text-sm font-medium"
+              className="rounded-lg px-4 py-2 text-xs font-semibold"
               style={PRIMARY_BTN_STYLE}
               disabled={saving}
               onClick={saveTarget}
@@ -365,11 +380,11 @@ const PacingBody: React.FC<{
                             {displayGroup}
                           </div>
                           <div
-                            className="mt-1 h-1.5 rounded-full overflow-hidden max-w-[160px]"
+                            className="mt-1 h-1.5 rounded-sm overflow-hidden max-w-[160px]"
                             style={{ background: "rgba(var(--spark-ink-rgb),0.07)" }}
                           >
                             <div
-                              className="h-full rounded-full"
+                              className="h-full rounded-sm"
                               style={{
                                 width: `${visitSharePct}%`,
                                 background: "var(--spark-lime)",
@@ -382,20 +397,20 @@ const PacingBody: React.FC<{
                             </div>
                           ) : null}
                         </td>
-                        <td className="text-right mono py-2">{row.visitCount}</td>
-                        <td className="text-right mono py-2">
+                        <td className="text-right tab-num py-2">{row.visitCount}</td>
+                        <td className="text-right tab-num py-2">
                           {money(row.demoDollars)}
                         </td>
-                        <td className="text-right mono py-2">
+                        <td className="text-right tab-num py-2">
                           {row.units ?? "—"}
                         </td>
-                        <td className="text-right mono py-2">
+                        <td className="text-right tab-num py-2">
                           {money(row.salesDollars)}
                         </td>
-                        <td className="text-right mono py-2">
+                        <td className="text-right tab-num py-2">
                           {rate(row.unitsPerDollar)}
                         </td>
-                        <td className="text-right mono py-2">
+                        <td className="text-right tab-num py-2">
                           {rate(row.revenuePerDollar)}
                         </td>
                       </tr>
@@ -427,7 +442,7 @@ export const RoiPacingPage: React.FC = () => {
         <SparkHubTabs tabs={BUDGET_PNL_SUBTABS} ariaLabel="Budget & P&L views" />
       </div>
       <ErrorBoundary>
-        <Suspense fallback={<p style={META}>Loading pacing…</p>}>
+        <Suspense fallback={<p className="text-sm" style={META}>Loading pacing…</p>}>
           <PacingBody
             month={month}
             groupBy={groupBy}

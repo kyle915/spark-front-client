@@ -1,17 +1,16 @@
 import { Suspense, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { Sparkles } from "lucide-react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SparkSheet from "@/shared/SparkSheet";
+import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import { useAuthStore } from "@/store/authStore";
 import { useStoreSheetStore, type StoreSheetTarget } from "@/store/storeSheetStore";
 import { ResolveStoreKeyQuery } from "@/api/queries/ResolveStoreKeyQuery";
 import type { ResolveStoreKeyQuery as ResolveStoreKeyQueryType } from "@api/queries/__generated__/ResolveStoreKeyQuery.graphql";
-import {
-  buildStoreScheduleHref,
-  StoreProfileContent,
-} from "@/components/pages/store/SparkStoreProfile";
-import { isStoreKey, storeHref } from "@/lib/storeProfile";
+import { StoreProfileContent } from "@/components/pages/store/SparkStoreProfile";
+import { buildStoreScheduleHref, isStoreKey, storeHref } from "@/lib/storeProfile";
 
 const UnresolvedStoreCard: React.FC<{
   target: StoreSheetTarget;
@@ -46,7 +45,7 @@ const UnresolvedStoreCard: React.FC<{
             onClose();
             navigate(scheduleHref);
           }}
-          className="px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+          className="px-3.5 py-2 rounded-lg text-xs font-semibold cursor-pointer"
           style={{
             background: "var(--spark-lime)",
             color: "var(--spark-on-accent)",
@@ -58,10 +57,23 @@ const UnresolvedStoreCard: React.FC<{
         <Link
           to={mapHref}
           onClick={onClose}
-          className="spark-btn-ghost text-xs px-3 py-2 rounded-xl no-underline"
+          className="spark-btn-ghost text-xs px-3 py-2 rounded-lg no-underline"
         >
           View on Account Map
         </Link>
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            dispatchOpenAskSpark({
+              question: `Summarize recent conversion, units sold, and shopper feedback at ${name}.`,
+            });
+          }}
+          className="spark-btn-ghost text-xs px-3 py-2 rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+        >
+          <Sparkles size={13} strokeWidth={1.85} />
+          Ask Spark
+        </button>
       </div>
     </div>
   );

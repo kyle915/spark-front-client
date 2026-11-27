@@ -1,10 +1,13 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { formatCoveragePercent, formatHonestMoney } from "./pilotHelpers";
 import { PlanGateCallout } from "./PlanGateCallout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
+import PilotPeriodBar from "./PilotPeriodBar";
+import { resolvePilotPeriod, type PilotRangeKey } from "./pilotPeriodFilter";
 import { PilotQueriesRetailerPosPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsImportPosMutation,
@@ -38,18 +41,22 @@ const OK_BANNER_STYLE = {
   border: "1px solid var(--spark-ok-border)",
 } as const;
 
-const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
-  fetchKey,
-  bump,
-}) => {
+const PosBody: React.FC<{
+  periodStart: string | null;
+  periodEnd: string | null;
+  periodControls: React.ReactNode;
+  fetchKey: number;
+  bump: () => void;
+}> = ({ periodStart, periodEnd, periodControls, fetchKey, bump }) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const data = useLazyLoadQuery<PosQueryType>(
     PilotQueriesRetailerPosPageQuery,
     {
-      periodStart: null,
-      periodEnd: null,
+      periodStart,
+      periodEnd,
       contributionPerUnit: null,
     },
-    { fetchPolicy: "network-only", fetchKey },
+    { fetchPolicy: "store-and-network", fetchKey },
   );
   const ws = data.workspaceOverview;
   const pos = data.retailerPosDashboard;
@@ -76,9 +83,6 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     PilotMutationsUpsertPosFeedMutation,
   );
 
-  // POS upload state
-  // Empty until the user types a banner or picks a portal preset
-  // (preset defaultBanner only applies when the field is still blank).
   const [bannerName, setBannerName] = useState("");
   const [presetKey, setPresetKey] = useState("");
   const [feedCompleteness, setFeedCompleteness] = useState("complete");
@@ -89,7 +93,6 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
     ws.defaultContributionPerUnit ?? "",
   );
 
-  // Crew purchase linker state
   const [crewVisitUuid, setCrewVisitUuid] = useState(visits[0]?.uuid ?? "");
   const [crewProductId, setCrewProductId] = useState(
     ws.products[0]?.id ? String(ws.products[0].id) : "",
@@ -97,7 +100,6 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   const [crewUnits, setCrewUnits] = useState("");
   const [crewRef, setCrewRef] = useState("");
 
-  // Unmatched row picker state
   const [rowStoreMap, setRowStoreMap] = useState<Record<string, string>>({});
   const [rowProdMap, setRowProdMap] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -109,11 +111,12 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-7xl">
       <SparkPageHeader
         eyebrow={`Permissioned store × SKU × week sales · ${ws.tenantName}`}
         title="Retailer POS sales, lift & ROI"
         support="Deduplicates multiple demos in the same store-week, subtracts linked crew product purchases in adjusted views, and withholds lift/ROI until baseline and cost coverage hold."
+        action={periodControls}
       />
 
       {pos.planGated ? (
@@ -126,7 +129,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
 
       {feedback && (
         <div
-          className="p-3 rounded-xl text-xs font-medium"
+          className="p-3 rounded-lg text-xs font-medium"
           style={OK_BANNER_STYLE}
         >
           {feedback}
@@ -140,7 +143,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
           style={{ border: "1px solid var(--spark-border)" }}
         >
           <p
-            className="text-xs uppercase mono font-semibold"
+            className="text-xs uppercase font-semibold tracking-wider"
             style={{ color: "var(--spark-warn-badge-ink)" }}
           >
             Retailer sales unavailable
@@ -155,12 +158,12 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       ) : (
         <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="spark-card p-4">
-            <p className="text-xs" style={META}>
+            <p className="text-xs font-medium" style={META}>
               Feed Coverage
             </p>
             <p
-              className="text-xl font-bold mono mt-1"
-              style={{ color: "var(--spark-ok-ink)" }}
+              className="display text-xl font-bold tab-num mt-1"
+              style={{ color: "var(--spark-ok-ink)", letterSpacing: "-0.025em" }}
             >
               {pos.matchedStoreSkuWeeks}/{pos.eligibleStoreSkuWeeks} (
               {formatCoveragePercent(pos.coverageRatio)})
@@ -171,22 +174,28 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
           </div>
 
           <div className="spark-card p-4">
-            <p className="text-xs" style={META}>
+            <p className="text-xs font-medium" style={META}>
               Rep-Observed vs Raw POS
             </p>
-            <p className="text-xl font-bold mono mt-1">
+            <p
+              className="display text-xl font-bold tab-num mt-1"
+              style={{ letterSpacing: "-0.025em" }}
+            >
               {pos.repObservedUnits} vs {pos.registerUnits ?? "—"}
             </p>
-            <p className="text-[11px] mt-1" style={META}>
+            <p className="text-[11px] mt-1 tab-num" style={META}>
               Crew bought: -{pos.crewPurchasedUnits} units
             </p>
           </div>
 
           <div className="spark-card p-4">
-            <p className="text-xs" style={META}>
+            <p className="text-xs font-medium" style={META}>
               Adjusted POS Units
             </p>
-            <p className="text-xl font-bold mono mt-1">
+            <p
+              className="display text-xl font-bold tab-num mt-1"
+              style={{ letterSpacing: "-0.025em" }}
+            >
               {pos.adjustedRegisterUnits ?? "—"}
             </p>
             <p className="text-[11px] mt-1" style={META}>
@@ -195,31 +204,34 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
           </div>
 
           <div className="spark-card p-4">
-            <p className="text-xs" style={META}>
+            <p className="text-xs font-medium" style={META}>
               Incremental Lift
             </p>
-            <p className="text-xl font-bold mono mt-1">
+            <p
+              className="display text-xl font-bold tab-num mt-1"
+              style={{ letterSpacing: "-0.025em" }}
+            >
               {pos.incrementalLiftUnits
                 ? `${pos.incrementalLiftUnits} units`
                 : "Withheld"}
             </p>
-            <p className="text-[11px] mt-1" style={META}>
+            <p className="text-[11px] mt-1 tab-num" style={META}>
               {pos.liftWithheldReason ??
                 `Observed diff: ${pos.observedVsBaselineDiff ?? "—"}`}
             </p>
           </div>
 
           <div className="spark-card p-4">
-            <p className="text-xs" style={META}>
+            <p className="text-xs font-medium" style={META}>
               Contribution & ROI
             </p>
             <p
-              className="text-xl font-bold mono mt-1"
-              style={{ color: "var(--spark-ok-ink)" }}
+              className="display text-xl font-bold tab-num mt-1"
+              style={{ color: "var(--spark-ok-ink)", letterSpacing: "-0.025em" }}
             >
               {pos.roi != null ? `${pos.roi}x` : "Withheld"}
             </p>
-            <p className="text-[11px] mt-1" style={META}>
+            <p className="text-[11px] mt-1 tab-num" style={META}>
               {pos.roiWithheldReason ??
                 `Contribution: ${formatHonestMoney(pos.incrementalContribution)}`}
             </p>
@@ -269,13 +281,13 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={bannerName}
                 onChange={(e) => setBannerName(e.target.value)}
                 placeholder="Retailer banner (e.g. FreshMart)"
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               />
               <select
                 value={feedCompleteness}
                 onChange={(e) => setFeedCompleteness(e.target.value)}
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               >
                 <option value="complete">Complete weekly feed</option>
@@ -294,7 +306,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                       setBannerName(preset.defaultBanner);
                     }
                   }}
-                  className="w-full px-3 py-2 rounded-xl"
+                  className="w-full px-3 py-2 rounded-lg"
                   style={FIELD_STYLE}
                 >
                   <option value="">Auto-detect headers</option>
@@ -318,13 +330,13 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
               placeholder="retailer,store_id,store_name,city,state,sku,week_start,units_sold,baseline_units"
-              className="w-full p-2.5 rounded-xl text-xs mono"
+              className="w-full p-2.5 rounded-lg text-xs mono"
               style={FIELD_STYLE}
             />
             <button
               type="submit"
               disabled={importing || !csvText.trim()}
-              className="px-4 py-2 rounded-xl text-xs font-bold"
+              className="px-4 py-2 rounded-lg text-xs font-bold"
               style={PRIMARY_BTN_STYLE}
             >
               {importing ? "Importing POS…" : "Import Retailer POS"}
@@ -370,7 +382,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 <select
                   value={crewVisitUuid}
                   onChange={(e) => setCrewVisitUuid(e.target.value)}
-                  className="col-span-2 px-3 py-2 rounded-xl"
+                  className="col-span-2 px-3 py-2 rounded-lg"
                   style={FIELD_STYLE}
                 >
                   <option value="">Select visit…</option>
@@ -383,7 +395,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 <select
                   value={crewProductId}
                   onChange={(e) => setCrewProductId(e.target.value)}
-                  className="px-3 py-2 rounded-xl"
+                  className="px-3 py-2 rounded-lg"
                   style={FIELD_STYLE}
                 >
                   <option value="">Select SKU…</option>
@@ -399,14 +411,14 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                   value={crewUnits}
                   onChange={(e) => setCrewUnits(e.target.value)}
                   placeholder="Units bought at register"
-                  className="px-3 py-2 rounded-xl mono"
+                  className="px-3 py-2 rounded-lg tab-num"
                   style={FIELD_STYLE}
                 />
               </div>
               <button
                 type="submit"
                 disabled={linkingCrew}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold"
+                className="px-3 py-1.5 rounded-lg text-xs font-bold"
                 style={PRIMARY_BTN_STYLE}
               >
                 Link Crew Purchase
@@ -436,12 +448,12 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={contribInput}
                 onChange={(e) => setContribInput(e.target.value)}
                 placeholder="2.40"
-                className="w-28 px-3 py-1.5 rounded-xl mono"
+                className="w-28 px-3 py-1.5 rounded-lg tab-num"
                 style={FIELD_STYLE}
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 rounded-xl font-semibold"
+                className="px-3 py-1.5 rounded-lg font-semibold"
                 style={FIELD_STYLE}
               >
                 Save Margin
@@ -500,14 +512,14 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                 value={feedNotes}
                 onChange={(e) => setFeedNotes(e.target.value)}
                 placeholder="e.g. UNFI Clearview Monday export"
-                className="w-full px-3 py-2 rounded-xl"
+                className="w-full px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               />
             </label>
             <button
               type="submit"
               disabled={savingFeed || !bannerName.trim()}
-              className="px-4 py-2 rounded-xl text-xs font-bold"
+              className="px-4 py-2 rounded-lg text-xs font-bold"
               style={PRIMARY_BTN_STYLE}
             >
               {savingFeed ? "Saving…" : "Enable automated feed"}
@@ -534,7 +546,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                       <td className="py-2 pr-3 mono break-all">
                         {f.dropUrlPath || "—"}
                       </td>
-                      <td className="py-2 pr-3 mono">
+                      <td className="py-2 pr-3 tab-num">
                         {f.lastIngestedAt?.slice(0, 16) ?? "—"}
                       </td>
                       <td className="py-2">
@@ -555,10 +567,11 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               <ul className="mt-2 space-y-1.5 text-xs">
                 {automation.recentDrops.slice(0, 8).map((d) => (
                   <li key={d.uuid} className="flex flex-wrap gap-x-3 gap-y-1">
-                    <span className="mono">{d.receivedAt.slice(0, 16)}</span>
+                    <span className="tab-num">{d.receivedAt.slice(0, 16)}</span>
                     <span className="font-medium">{d.retailerBanner}</span>
                     <span>{d.filename}</span>
                     <span
+                      className="tab-num"
                       style={{
                         color:
                           d.status === "processed"
@@ -602,23 +615,23 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
               <tbody>
                 {pos.imports.map((imp) => (
                   <tr key={imp.uuid} style={BORDER}>
-                    <td className="py-2 pr-3 mono">
+                    <td className="py-2 pr-3 tab-num">
                       {imp.createdAt.slice(0, 16)}
                     </td>
                     <td className="py-2 pr-3">
                       {imp.retailerBanner}
                       {imp.isActiveVersion ? "" : " (superseded)"}
                     </td>
-                    <td className="py-2 pr-3 mono">
+                    <td className="py-2 pr-3 tab-num">
                       {imp.periodStart} → {imp.periodEnd}
                     </td>
                     <td className="py-2 pr-3">
                       {imp.filename} · v{imp.version} · {imp.feedCompleteness}
                     </td>
-                    <td className="py-2 pr-3 text-right mono">
+                    <td className="py-2 pr-3 text-right tab-num">
                       {imp.matchedRows}/{imp.totalRows}
                     </td>
-                    <td className="py-2 text-right mono">{imp.unmatchedRows}</td>
+                    <td className="py-2 text-right tab-num">{imp.unmatchedRows}</td>
                   </tr>
                 ))}
               </tbody>
@@ -631,7 +644,7 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
       {pos.unmatchedRows.length > 0 && (
         <section className="spark-card p-5 space-y-3">
           <h2
-            className="display text-base font-bold"
+            className="display text-base font-bold tab-num"
             style={{ color: "var(--spark-warn-badge-ink)" }}
           >
             Unmatched POS Store / SKU Rows ({pos.unmatchedRows.length})
@@ -744,25 +757,40 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
                     key={`${sw.storeKey}:${sw.weekStart}`}
                     style={{ borderTop: "1px solid var(--spark-border)" }}
                   >
-                    <td className="py-2.5 pr-3 font-semibold">{sw.storeLabel}</td>
-                    <td className="py-2.5 pr-3 mono">{sw.weekStart}</td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openStoreSheet({
+                            storeKey: sw.storeKey,
+                            storeName: sw.storeLabel,
+                            fallbackTitle: sw.storeLabel,
+                          })
+                        }
+                        className="font-semibold text-left hover:underline cursor-pointer"
+                        style={{ color: "var(--spark-text)" }}
+                      >
+                        {sw.storeLabel}
+                      </button>
+                    </td>
+                    <td className="py-2.5 pr-3 tab-num">{sw.weekStart}</td>
+                    <td className="py-2.5 pr-3 tab-num">
                       {sw.demoCount}
                       {sw.sharedStoreWeek ? " (deduped)" : ""}
                     </td>
-                    <td className="py-2.5 pr-3 mono">{sw.repObservedUnits}</td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3 tab-num">{sw.repObservedUnits}</td>
+                    <td className="py-2.5 pr-3 tab-num">
                       {sw.registerUnits != null ? sw.registerUnits : "Missing"}
                     </td>
-                    <td className="py-2.5 pr-3 mono font-semibold">
+                    <td className="py-2.5 pr-3 tab-num font-semibold">
                       {sw.adjustedRegisterUnits != null
                         ? sw.adjustedRegisterUnits
                         : "Missing"}
                     </td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3 tab-num">
                       {sw.incrementalLiftUnits ?? "Withheld"}
                     </td>
-                    <td className="py-2.5 text-right mono">
+                    <td className="py-2.5 text-right tab-num">
                       {sw.roi != null ? `${sw.roi}x` : "Withheld"}
                     </td>
                   </tr>
@@ -777,15 +805,37 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
 };
 
 export const RetailerPosPage: React.FC = () => {
+  const [range, setRange] = useState<PilotRangeKey>("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [fetchKey, setFetchKey] = useState(0);
+
+  const { periodStart, periodEnd } = useMemo(
+    () => resolvePilotPeriod(range, customStart, customEnd),
+    [range, customStart, customEnd],
+  );
+
   return (
     <div className="space-y-5 max-w-7xl spark-scale">
       <div className="flex flex-wrap items-center gap-2">
         <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
         <SparkHubTabs tabs={STORE_BUYER_SUBTABS} ariaLabel="Store & buyer views" />
       </div>
-      <Suspense fallback={<p className="text-sm mono">Loading POS analytics…</p>}>
+      <Suspense fallback={<p className="text-sm" style={META}>Loading POS analytics…</p>}>
         <PosBody
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          periodControls={
+            <PilotPeriodBar
+              range={range}
+              onRangeChange={setRange}
+              customStart={customStart}
+              onCustomStartChange={setCustomStart}
+              customEnd={customEnd}
+              onCustomEndChange={setCustomEnd}
+              ariaLabel="Retailer POS date window"
+            />
+          }
           fetchKey={fetchKey}
           bump={() => setFetchKey((k) => k + 1)}
         />

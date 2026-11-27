@@ -695,11 +695,28 @@ function ExpressFormBody() {
     }
   };
 
+  const selectedTimezoneName = useMemo(
+    () =>
+      timeZones.find((tz) => String(tz.id) === String(timezoneId))?.name ?? "",
+    [timeZones, timezoneId],
+  );
+  const selectedProductLabels = useMemo(
+    () =>
+      productIds.map(
+        (id) =>
+          productNameById[id] ||
+          products.find((p) => p.id === id)?.name ||
+          "Selected SKU",
+      ),
+    [productIds, productNameById, products],
+  );
+
   return (
     <>
+      <div className="w-full max-w-5xl mx-auto px-1 sm:px-0 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6 lg:items-start">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-2xl mx-auto px-1 sm:px-0 space-y-3"
+        className="w-full min-w-0 space-y-3.5"
       >
         {/* Header */}
         <div className="py-2">
@@ -756,7 +773,7 @@ function ExpressFormBody() {
             <button
               type="button"
               onClick={resumeDraft}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
               style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
             >
               Resume
@@ -764,7 +781,7 @@ function ExpressFormBody() {
             <button
               type="button"
               onClick={discardDraft}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
               style={{
                 background: "transparent",
                 color: "var(--spark-text, #f2f3ee)",
@@ -1169,9 +1186,9 @@ function ExpressFormBody() {
           {showBaCount && !multiDateEvent && (
           <Field label="Brand Ambassadors Needed">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setBaCount(Math.max(1, baCount - 1))} className="w-10 h-10 rounded-xl text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>−</button>
-              <span className="display text-2xl font-bold" style={{ minWidth: 40, textAlign: "center" }}>{baCount}</span>
-              <button type="button" onClick={() => setBaCount(Math.min(20, baCount + 1))} className="w-10 h-10 rounded-xl text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>+</button>
+              <button type="button" onClick={() => setBaCount(Math.max(1, baCount - 1))} className="w-10 h-10 rounded-lg text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>−</button>
+              <span className="display text-2xl font-bold tab-num" style={{ minWidth: 40, textAlign: "center" }}>{baCount}</span>
+              <button type="button" onClick={() => setBaCount(Math.min(20, baCount + 1))} className="w-10 h-10 rounded-lg text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>+</button>
               <span className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>BAs</span>
             </div>
           </Field>
@@ -1181,13 +1198,13 @@ function ExpressFormBody() {
         {/* Products */}
         <Card title="PRODUCTS *">
           {productTypes.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-2">
+            <div className="flex gap-1.5 flex-wrap mb-2">
               <button
                 type="button"
                 onClick={() => setSelectedProductTypeId(null)}
-                className="mono text-[10px] px-3 py-1.5 rounded-full"
+                className="mono text-[10px] px-2.5 py-1.5 rounded-md transition"
                 style={{
-                  letterSpacing: "0.18em",
+                  letterSpacing: "0.16em",
                   background: selectedProductTypeId === null ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
                   color: selectedProductTypeId === null ? "#0a0d09" : "rgba(255,255,255,0.7)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -1200,9 +1217,9 @@ function ExpressFormBody() {
                   key={pt.id}
                   type="button"
                   onClick={() => setSelectedProductTypeId(pt.id)}
-                  className="mono text-[10px] px-3 py-1.5 rounded-full"
+                  className="mono text-[10px] px-2.5 py-1.5 rounded-md transition"
                   style={{
-                    letterSpacing: "0.18em",
+                    letterSpacing: "0.16em",
                     background: selectedProductTypeId === pt.id ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
                     color: selectedProductTypeId === pt.id ? "#0a0d09" : "rgba(255,255,255,0.7)",
                     border: "1px solid rgba(255,255,255,0.1)",
@@ -1221,14 +1238,25 @@ function ExpressFormBody() {
                   type="button"
                   key={p.id}
                   onClick={() => toggleProduct(p.id)}
-                  className="rounded-2xl overflow-hidden text-left transition"
+                  className="rounded-xl overflow-hidden text-left transition"
                   style={{
-                    background: selected ? "rgba(242,243,238,0.1)" : "var(--spark-surface-2, #161a12)",
+                    background: selected ? "rgba(242,243,238,0.09)" : "var(--spark-surface-2, #161a12)",
                     border: selected ? "2px solid var(--spark-lime, #f2f3ee)" : "1px solid var(--spark-border, #1f2418)",
-                    boxShadow: selected ? "0 0 18px rgba(242,243,238,0.25)" : "none",
                   }}
                 >
                   <div className="relative w-full aspect-square" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    {selected ? (
+                      <span
+                        aria-hidden
+                        className="absolute top-2 right-2 z-10 w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold"
+                        style={{
+                          background: "var(--spark-lime, #f2f3ee)",
+                          color: "#0a0d09",
+                        }}
+                      >
+                        ✓
+                      </span>
+                    ) : null}
                     {p.image && !brokenProductImages.includes(p.id) ? (
                       <img
                         src={p.image}
@@ -1259,7 +1287,7 @@ function ExpressFormBody() {
             <button
               type="button"
               onClick={loadMore}
-              className="mono text-[10px] px-3 py-2 rounded-xl mt-2"
+              className="mono text-[10px] px-3 py-2 rounded-lg mt-2"
               style={{ letterSpacing: "0.18em", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               LOAD MORE
@@ -1460,7 +1488,7 @@ function ExpressFormBody() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="px-5 py-3 rounded-xl text-sm font-semibold"
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold"
             style={{
               background: "var(--spark-lime, #f2f3ee)",
               color: "#0a0d09",
@@ -1471,6 +1499,156 @@ function ExpressFormBody() {
           </button>
         </div>
       </form>
+
+      {/* Desktop sticky live activation summary rail */}
+      <aside
+        aria-label="Live activation summary"
+        className="hidden lg:block sticky top-24 rounded-xl p-5 space-y-4"
+        style={{
+          background: "rgba(17,20,14,0.82)",
+          border: "1px solid var(--spark-border, #1f2418)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime, #f2f3ee)",
+            }}
+          >
+            LIVE ACTIVATION SUMMARY
+          </p>
+          <span
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
+            style={{
+              background: canSubmit
+                ? "rgba(242,243,238,0.14)"
+                : "rgba(255,255,255,0.06)",
+              color: canSubmit ? "#f2f3ee" : "rgba(255,255,255,0.65)",
+              border: "1px solid rgba(255,255,255,0.12)",
+            }}
+          >
+            {canSubmit ? "Ready" : submitBlocker ? `Needs ${submitBlocker}` : "Draft"}
+          </span>
+        </div>
+
+        <div className="space-y-3 text-xs">
+          <div
+            className="pb-3 space-y-1"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Venue & address
+            </p>
+            <p className="font-semibold text-sm" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+              {venue.trim() || "Select or enter a venue"}
+            </p>
+            <p className="leading-snug" style={{ color: "rgba(255,255,255,0.68)" }}>
+              {address.trim() || "Full street, city, state & 5-digit ZIP"}
+            </p>
+            {address.trim() ? (
+              <p
+                className="text-[11px] font-medium pt-0.5"
+                style={{
+                  color: addressComplete
+                    ? "var(--spark-lime, #f2f3ee)"
+                    : "var(--spark-orange, #ef5a2a)",
+                }}
+              >
+                {addressComplete
+                  ? "✓ 5-digit ZIP verified"
+                  : "Include 5-digit ZIP code"}
+              </p>
+            ) : null}
+          </div>
+
+          <div
+            className="pb-3 space-y-1"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Schedule & timezone
+            </p>
+            <p className="font-semibold tab-num" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+              {multiDateEvent
+                ? listedVisits > 0
+                  ? `${listedVisits} activation date${listedVisits === 1 ? "" : "s"}`
+                  : "Add activation date(s)"
+                : allDates.length > 1
+                  ? `${allDates.length} dates (${allDates[0]} +${allDates.length - 1})`
+                  : date || "Pick visit date"}
+            </p>
+            {!multiDateEvent && startTime && endTime ? (
+              <p className="tab-num" style={{ color: "rgba(255,255,255,0.68)" }}>
+                {startTime} – {endTime}
+              </p>
+            ) : null}
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+              {selectedTimezoneName || "Timezone auto-detects from address"}
+            </p>
+          </div>
+
+          <div
+            className="pb-3 space-y-1"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Format & staffing
+            </p>
+            <p className="font-semibold" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+              {selectedRequestTypeName || "Choose request format"}
+            </p>
+            <p className="tab-num" style={{ color: "rgba(255,255,255,0.68)" }}>
+              {showBaCount ? `${baCount} brand ambassador${baCount === 1 ? "" : "s"}` : "Standard team"}
+              {schedulingStatus
+                ? schedulingStatus === "scheduled"
+                  ? " · Booked with store"
+                  : " · Ignite books store"
+                : ""}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+                Selected SKUs
+              </p>
+              <span className="tab-num font-semibold" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+                {productIds.length}
+              </span>
+            </div>
+            {selectedProductLabels.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {selectedProductLabels.slice(0, 6).map((name, idx) => (
+                  <span
+                    key={`${name}-${idx}`}
+                    className="px-2 py-0.5 rounded-md text-[11px] font-medium truncate max-w-full"
+                    style={{
+                      background: "rgba(242,243,238,0.08)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "var(--spark-text, #f2f3ee)",
+                    }}
+                  >
+                    {name}
+                  </span>
+                ))}
+                {selectedProductLabels.length > 6 ? (
+                  <span className="text-[11px] tab-num" style={{ color: "rgba(255,255,255,0.55)" }}>
+                    +{selectedProductLabels.length - 6} more
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <p style={{ color: "rgba(255,255,255,0.55)" }}>
+                Pick at least 1 product to sample
+              </p>
+            )}
+          </div>
+        </div>
+      </aside>
+      </div>
 
       {/* Submission-success modal. Routed-to RMM name pulled from the
           createRequestByUrl response. */}
@@ -1485,20 +1663,19 @@ function ExpressFormBody() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl overflow-hidden"
+            className="w-full max-w-md rounded-xl overflow-hidden"
             style={{
               background: "#11140e",
               border: "1px solid var(--spark-border, #1f2418)",
-              boxShadow:
-                "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(242,243,238,0.15), 0 0 80px rgba(242,243,238,0.10)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
             }}
           >
-            {/* Lime status band */}
+            {/* Status band */}
             <div
               style={{
                 padding: "14px 22px",
-                background: "rgba(242,243,238,0.10)",
-                borderBottom: "1px solid rgba(242,243,238,0.25)",
+                background: "rgba(242,243,238,0.08)",
+                borderBottom: "1px solid rgba(242,243,238,0.18)",
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
@@ -1510,8 +1687,6 @@ function ExpressFormBody() {
                   height: 8,
                   borderRadius: 999,
                   background: "#f2f3ee",
-                  boxShadow: "0 0 12px #f2f3ee",
-                  animation: "spk-pulse 1.6s infinite",
                 }}
               />
               <span

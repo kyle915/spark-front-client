@@ -5,7 +5,7 @@ import {
   programIdsForSave,
   resourcesFromApi,
   resourcesToInput,
-} from "./standingCheckinStudio";
+} from "./standingCheckinHelpers";
 
 describe("standingCheckinStudio helpers", () => {
   it("normalizes flat and program-keyed bucket configs", () => {

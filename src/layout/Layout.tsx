@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import { PageTransition } from "./PageTransition";
 import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
+import SparkMobileDock from "./SparkMobileDock";
 import CommandPalette from "./CommandPalette";
 import StoreSheet from "@/components/store/StoreSheet";
 import AskSparkHost from "@/components/ai/AskSparkHost";
@@ -64,7 +65,7 @@ function LayoutChromeInner({ children }: LayoutProps) {
 
         <main className="flex-1 bg-base-200 overflow-y-auto">
           <PageTransition>
-            <div className="min-h-full p-5 sm:p-6 lg:p-9">
+            <div className="min-h-full p-5 pb-24 sm:p-6 sm:pb-24 md:pb-6 lg:p-9">
               <ErrorBoundary key={location.pathname}>
                 {children || (
                   <h1 className="text-lg font-semibold">Dashboard</h1>
@@ -74,6 +75,7 @@ function LayoutChromeInner({ children }: LayoutProps) {
           </PageTransition>
         </main>
       </div>
+      <SparkMobileDock />
     </div>
   );
 }

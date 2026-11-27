@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import environment from "@/api/relay/environment";
@@ -31,6 +31,9 @@ import { BuyerPitchDeckShareCard } from "./BuyerPitchDeckShareCard";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
+import PilotPeriodBar from "./PilotPeriodBar";
+import { resolvePilotPeriod, type PilotRangeKey } from "./pilotPeriodFilter";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -51,6 +54,9 @@ const OK_BANNER_STYLE = {
 } as const;
 
 const BuyerReportBody: React.FC<{
+  periodStart: string | null;
+  periodEnd: string | null;
+  periodControls: React.ReactNode;
   retailerFilter: string;
   setRetailerFilter: (v: string) => void;
   marketFilter: string;
@@ -60,6 +66,9 @@ const BuyerReportBody: React.FC<{
   fetchKey: number;
   bump: () => void;
 }> = ({
+  periodStart,
+  periodEnd,
+  periodControls,
   retailerFilter,
   setRetailerFilter,
   marketFilter,
@@ -69,16 +78,17 @@ const BuyerReportBody: React.FC<{
   fetchKey,
   bump,
 }) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const data = useLazyLoadQuery<BuyerQueryType>(
     PilotQueriesBuyerReportPageQuery,
     {
-      periodStart: null,
-      periodEnd: null,
+      periodStart,
+      periodEnd,
       retailerFilter: retailerFilter || null,
       marketFilter: marketFilter || null,
       providerUuid: providerUuid || null,
     },
-    { fetchPolicy: "network-only", fetchKey },
+    { fetchPolicy: "store-and-network", fetchKey },
   );
   const ws = data.workspaceOverview;
   const report = data.weeklyBuyerStoreReport;
@@ -120,8 +130,8 @@ const BuyerReportBody: React.FC<{
         PilotQueriesExportBuyerReportQuery,
         {
           format,
-          periodStart: null,
-          periodEnd: null,
+          periodStart,
+          periodEnd,
           retailerFilter: retailerFilter || null,
           marketFilter: marketFilter || null,
           providerUuid: providerUuid || null,
@@ -137,25 +147,24 @@ const BuyerReportBody: React.FC<{
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-7xl">
       <SparkPageHeader
         eyebrow={`Weekly buyer & budget view · ${ws.tenantName}`}
         title="Store performance, recommendations & actions"
         support={
-          <>
+          <span className="tab-num">
             Period {report.periodStart} → {report.periodEnd} ·{" "}
-            <strong className="mono">{report.totalVisits}</strong> visits ·
-            Supported spend{" "}
-            <strong className="mono">${report.totalSupportedCost}</strong>
-          </>
+            <strong>{report.totalVisits}</strong> visits · Supported spend{" "}
+            <strong>${report.totalSupportedCost}</strong>
+          </span>
         }
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               disabled={exportingFormat !== null || report.planGated}
               onClick={() => void handleExport("csv")}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+              className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
               style={FIELD_STYLE}
             >
               <Download size={14} strokeWidth={1.75} />
@@ -165,7 +174,7 @@ const BuyerReportBody: React.FC<{
               type="button"
               disabled={exportingFormat !== null || report.planGated}
               onClick={() => void handleExport("xlsx")}
-              className="px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
               style={PRIMARY_BTN_STYLE}
             >
               <Download size={14} strokeWidth={1.75} />
@@ -185,42 +194,50 @@ const BuyerReportBody: React.FC<{
 
       {banner && (
         <div
-          className="p-3 rounded-xl text-xs"
+          className="p-3 rounded-lg text-xs font-medium"
           style={OK_BANNER_STYLE}
         >
           {banner}
         </div>
       )}
 
-      {/* Filters */}
-      <div className="spark-card p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-        <input
-          value={retailerFilter}
-          onChange={(e) => setRetailerFilter(e.target.value)}
-          placeholder="Filter by retailer banner…"
-          className="px-3 py-2 rounded-xl"
-          style={FIELD_STYLE}
-        />
-        <input
-          value={marketFilter}
-          onChange={(e) => setMarketFilter(e.target.value)}
-          placeholder="Filter by market / city / state…"
-          className="px-3 py-2 rounded-xl"
-          style={FIELD_STYLE}
-        />
-        <select
-          value={providerUuid}
-          onChange={(e) => setProviderUuid(e.target.value)}
-          className="px-3 py-2 rounded-xl"
-          style={FIELD_STYLE}
-        >
-          <option value="">All field providers</option>
-          {ws.providers.map((p) => (
-            <option key={p.uuid} value={p.uuid}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+      {/* Period & Filters */}
+      <div className="spark-card p-4 space-y-3 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-medium" style={META}>
+            Date window & store filters
+          </span>
+          {periodControls}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input
+            value={retailerFilter}
+            onChange={(e) => setRetailerFilter(e.target.value)}
+            placeholder="Filter by retailer banner…"
+            className="px-3 py-2 rounded-lg"
+            style={FIELD_STYLE}
+          />
+          <input
+            value={marketFilter}
+            onChange={(e) => setMarketFilter(e.target.value)}
+            placeholder="Filter by market / city / state…"
+            className="px-3 py-2 rounded-lg"
+            style={FIELD_STYLE}
+          />
+          <select
+            value={providerUuid}
+            onChange={(e) => setProviderUuid(e.target.value)}
+            className="px-3 py-2 rounded-lg"
+            style={FIELD_STYLE}
+          >
+            <option value="">All field providers</option>
+            {ws.providers.map((p) => (
+              <option key={p.uuid} value={p.uuid}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <BuyerPitchDeckShareCard
@@ -298,7 +315,7 @@ const BuyerReportBody: React.FC<{
                 value={digestEmails}
                 onChange={(e) => setDigestEmails(e.target.value)}
                 placeholder="buyer@brand.com, finance@brand.com"
-                className="flex-1 min-w-[16rem] px-3 py-2 rounded-xl"
+                className="flex-1 min-w-[16rem] px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               />
               <button
@@ -323,7 +340,7 @@ const BuyerReportBody: React.FC<{
                     },
                   });
                 }}
-                className="px-3 py-2 rounded-xl text-xs font-semibold"
+                className="px-3 py-2 rounded-lg text-xs font-semibold"
                 style={FIELD_STYLE}
               >
                 Save recipients
@@ -335,7 +352,7 @@ const BuyerReportBody: React.FC<{
 
       {/* Store Table */}
       <section className="spark-card p-5 space-y-3">
-        <h2 className="display text-lg font-bold">
+        <h2 className="display text-lg font-bold tab-num">
           Store-by-Store Buyer Summary ({report.rows.length})
         </h2>
         {report.rows.length === 0 ? (
@@ -364,7 +381,20 @@ const BuyerReportBody: React.FC<{
                     style={{ borderTop: "1px solid var(--spark-border)" }}
                   >
                     <td className="py-2.5 pr-3">
-                      <div className="font-semibold">{r.storeLabel}</div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openStoreSheet({
+                            storeKey: r.storeKey,
+                            storeName: r.storeLabel,
+                            fallbackTitle: r.storeLabel,
+                          })
+                        }
+                        className="font-semibold text-left hover:underline cursor-pointer"
+                        style={{ color: "var(--spark-text)" }}
+                      >
+                        {r.storeLabel}
+                      </button>
                       <div style={META}>
                         {r.retailerBanner} · {r.market || "—"}
                       </div>
@@ -372,15 +402,15 @@ const BuyerReportBody: React.FC<{
                     <td className="py-2.5 pr-3">
                       {r.providers.length > 0 ? r.providers.join(", ") : "—"}
                     </td>
-                    <td className="py-2.5 pr-3 mono">{r.visitCount}</td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3 tab-num">{r.visitCount}</td>
+                    <td className="py-2.5 pr-3 tab-num">
                       {formatHonestMoney(r.supportedBrandCost, {
                         isConfirmedZero: true,
                         incomplete: r.hasIncompleteCost,
                       })}
                     </td>
-                    <td className="py-2.5 pr-3 mono">{r.repObservedUnits}</td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3 tab-num">{r.repObservedUnits}</td>
+                    <td className="py-2.5 pr-3 tab-num">
                       <div>
                         {r.adjustedRegisterUnits != null
                           ? `${r.adjustedRegisterUnits} units`
@@ -399,7 +429,7 @@ const BuyerReportBody: React.FC<{
                       {r.currentActionType ? (
                         <div>
                           <span
-                            className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                            className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
                             style={OK_BANNER_STYLE}
                           >
                             {storeActionLabel(
@@ -427,7 +457,7 @@ const BuyerReportBody: React.FC<{
 
       {/* Active Recommendation Actions Lifecycle */}
       <section className="spark-card p-5 space-y-3">
-        <h2 className="display text-lg font-bold">
+        <h2 className="display text-lg font-bold tab-num">
           Recommendation Action Decisions & Closed-Loop Verification ({actions.length})
         </h2>
         {actions.length === 0 ? (
@@ -439,18 +469,31 @@ const BuyerReportBody: React.FC<{
             {actions.map((act) => (
               <div
                 key={act.uuid}
-                className="p-4 rounded-2xl space-y-2 text-xs"
+                className="p-4 rounded-xl space-y-2 text-xs"
                 style={BORDER}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span
-                      className="px-2.5 py-0.5 rounded-full font-bold mr-2"
+                      className="px-2.5 py-0.5 rounded-md font-bold mr-2"
                       style={OK_BANNER_STYLE}
                     >
                       {storeActionLabel(act.actionType as StoreActionTypeKind)}
                     </span>
-                    <strong className="text-sm">{act.storeLabel}</strong>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openStoreSheet({
+                          storeKey: act.storeKey,
+                          storeName: act.storeLabel,
+                          fallbackTitle: act.storeLabel,
+                        })
+                      }
+                      className="font-bold text-sm hover:underline cursor-pointer"
+                      style={{ color: "var(--spark-text)" }}
+                    >
+                      {act.storeLabel}
+                    </button>
                     <span className="ml-2 mono" style={META}>
                       {act.status} · {act.findingId}
                     </span>
@@ -483,10 +526,10 @@ const BuyerReportBody: React.FC<{
                       Owner: <strong className="mono">{act.ownerEmail}</strong>
                     </span>
                   )}
-                  {act.targetDate && <span>Target: {act.targetDate}</span>}
+                  {act.targetDate && <span className="tab-num">Target: {act.targetDate}</span>}
                   {act.holdReason && <span>Hold reason: {act.holdReason}</span>}
                   {act.nextReviewDate && (
-                    <span>Next review: {act.nextReviewDate}</span>
+                    <span className="tab-num">Next review: {act.nextReviewDate}</span>
                   )}
                 </div>
 
@@ -640,18 +683,40 @@ const BuyerReportBody: React.FC<{
 };
 
 export const BuyerReportPage: React.FC = () => {
+  const [range, setRange] = useState<PilotRangeKey>("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("");
   const [marketFilter, setMarketFilter] = useState("");
   const [providerUuid, setProviderUuid] = useState("");
   const [fetchKey, setFetchKey] = useState(0);
+
+  const { periodStart, periodEnd } = useMemo(
+    () => resolvePilotPeriod(range, customStart, customEnd),
+    [range, customStart, customEnd],
+  );
+
   return (
     <div className="space-y-5 max-w-7xl spark-scale">
       <div className="flex flex-wrap items-center gap-2">
         <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
         <SparkHubTabs tabs={STORE_BUYER_SUBTABS} ariaLabel="Store & buyer views" />
       </div>
-      <Suspense fallback={<p className="text-sm mono">Loading buyer report…</p>}>
+      <Suspense fallback={<p className="text-sm" style={META}>Loading buyer report…</p>}>
         <BuyerReportBody
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          periodControls={
+            <PilotPeriodBar
+              range={range}
+              onRangeChange={setRange}
+              customStart={customStart}
+              onCustomStartChange={setCustomStart}
+              customEnd={customEnd}
+              onCustomEndChange={setCustomEnd}
+              ariaLabel="Buyer report date window"
+            />
+          }
           retailerFilter={retailerFilter}
           setRetailerFilter={setRetailerFilter}
           marketFilter={marketFilter}

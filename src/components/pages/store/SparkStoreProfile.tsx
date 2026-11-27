@@ -9,12 +9,14 @@ import {
 import { Link, useNavigate, useParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Bar } from "react-chartjs-2";
+import { Sparkles } from "lucide-react";
 import "@/lib/sparkChartRegister";
 import Layout from "@/layout/Layout";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ChartBlock from "@/components/charts/ChartBlock";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import useSparkRole from "@/hooks/useSparkRole";
+import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { StoreProfileQuery } from "@/api/queries/StoreProfileQuery";
@@ -27,6 +29,7 @@ import { barSeries, chartOptions } from "@/lib/sparkChart";
 import { useAppearance } from "@/theme/appearance";
 import {
   activationLabel,
+  buildStoreScheduleHref,
   count,
   dayLabel,
   isStoreKey,
@@ -109,22 +112,6 @@ function formatSavedTimestamp(iso: string | null | undefined): string {
     day: "numeric",
     year: "numeric",
   });
-}
-
-export function buildStoreScheduleHref(store: {
-  name: string;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-}): string {
-  const market = [store.city, store.state].filter(Boolean).join(", ");
-  const params = new URLSearchParams({
-    venue: store.name || "Store",
-  });
-  const addr = (store.address || market || "").trim();
-  if (addr) params.set("address", addr);
-  if (store.state) params.set("state", store.state);
-  return `/requests/create?${params.toString()}`;
 }
 
 export const StoreProfileContent: React.FC<{
@@ -261,7 +248,7 @@ export const StoreProfileContent: React.FC<{
       <button
         type="button"
         onClick={handleScheduleVisit}
-        className="px-3.5 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
+        className="px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer"
         style={{
           background: "var(--spark-lime)",
           color: "var(--spark-on-accent)",
@@ -278,7 +265,7 @@ export const StoreProfileContent: React.FC<{
               value={selectedUpcomingEventId}
               onChange={(e) => setSelectedUpcomingEventId(e.target.value)}
               aria-label="Target upcoming shift for rebook"
-              className="text-xs rounded-xl px-2.5 py-2"
+              className="text-xs rounded-lg px-2.5 py-2"
               style={{
                 background: "rgba(var(--spark-ink-rgb),0.04)",
                 border: RULE,
@@ -307,7 +294,7 @@ export const StoreProfileContent: React.FC<{
                       ) || "the upcoming shift"
                     }`
             }
-            className="spark-btn-ghost text-xs px-3 py-2 rounded-xl disabled:opacity-50"
+            className="spark-btn-ghost text-xs px-3 py-2 rounded-lg disabled:opacity-50"
           >
             {rebooking ? "Rebooking…" : "Rebook last crew"}
           </button>
@@ -317,10 +304,25 @@ export const StoreProfileContent: React.FC<{
       <Link
         to={mapHref}
         onClick={onNavigateAway}
-        className="spark-btn-ghost text-xs px-3 py-2 rounded-xl no-underline"
+        className="spark-btn-ghost text-xs px-3 py-2 rounded-lg no-underline"
       >
         View on map
       </Link>
+
+      <button
+        type="button"
+        onClick={() => {
+          onNavigateAway?.();
+          dispatchOpenAskSpark({
+            question: `Summarize recent conversion, units sold, and shopper feedback at ${store.name || "this store"}.`,
+            tenantId,
+          });
+        }}
+        className="spark-btn-ghost text-xs px-3 py-2 rounded-lg inline-flex items-center gap-1.5 cursor-pointer"
+      >
+        <Sparkles size={13} strokeWidth={1.85} />
+        Ask Spark
+      </button>
     </div>
   );
 
@@ -451,7 +453,16 @@ export const StoreProfileContent: React.FC<{
         </dl>
         {series.values.length > 0 ? (
           <div className="mt-5">
-            <ChartBlock title="Consumers sampled per visit" height={180}>
+            <ChartBlock
+              title="Consumers sampled per visit"
+              height={180}
+              categoryHeader="Visit"
+              valueHeader="Consumers sampled"
+              tableRows={series.labels.map((label, idx) => ({
+                label,
+                value: series.values[idx] ?? 0,
+              }))}
+            >
               <Bar
                 data={{
                   labels: series.labels,

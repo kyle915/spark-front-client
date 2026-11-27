@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { RecapKpiStrip, type RecapKpiItem } from "@/recap/RecapDetailShell";
 import { PhotoLightbox, type PhotoLightboxItem } from "@/shared/PhotoLightbox";
 
 function apiOrigin(): string {
@@ -52,14 +53,20 @@ type PitchPayload = {
   message?: string;
 };
 
-const muted = "var(--recap-muted, #3f4636)";
-const ink = "var(--recap-ink, #1a1f14)";
-const accent = "var(--recap-accent, #1f5c3a)";
+const muted = "var(--recap-muted, #5c6154)";
+const ink = "var(--recap-text, #14160f)";
+const border = "var(--recap-border, #e2e4d8)";
 
 function fmtNum(v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "number") return v.toLocaleString();
   return String(v);
+}
+
+function fmtPct(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  const raw = fmtNum(v);
+  return raw.endsWith("%") ? raw : `${raw}%`;
 }
 
 /**
@@ -180,17 +187,22 @@ const PublicPitch: React.FC = () => {
     );
   }
 
+  const brandDisplayName = data?.brandName || data?.brand?.name || null;
+
   if (data?.locked || (data?.requiresPasscode && !data.kpis)) {
     return (
-      <RecapDocument page>
+      <RecapDocument page brandName={brandDisplayName} status="Buyer deck">
         <main className="recap-doc-body max-w-md mx-auto space-y-4">
           <p
-            className="text-xs uppercase tracking-wider"
+            className="text-xs font-semibold uppercase tracking-wider"
             style={{ color: muted }}
           >
-            {data.brandName || data.brand?.name || "Brand"} · Buyer Pitch Deck
+            {brandDisplayName || "Brand"} · Buyer Pitch Deck
           </p>
-          <h1 className="text-2xl font-bold" style={{ color: ink }}>
+          <h1
+            className="display text-2xl font-bold"
+            style={{ color: ink, letterSpacing: "-0.025em" }}
+          >
             {data.title || "Buyer Pitch Deck"}
           </h1>
           {data.subtitle ? (
@@ -201,7 +213,7 @@ const PublicPitch: React.FC = () => {
             contact to view the numbers and store photos.
           </p>
           {error ? (
-            <p className="text-sm" style={{ color: "#8b2e1a" }}>
+            <p className="text-sm font-medium" style={{ color: "#9c2d14" }}>
               {error}
             </p>
           ) : null}
@@ -218,22 +230,22 @@ const PublicPitch: React.FC = () => {
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
               placeholder="Passcode"
-              className="w-full px-3 py-2 rounded-lg border text-sm"
+              className="w-full px-3 py-2.5 rounded-lg border text-sm"
               style={{
-                borderColor: "#c5cbb8",
+                borderColor: border,
                 color: ink,
-                background: "#fff",
+                background: "#ffffff",
               }}
               autoComplete="current-password"
             />
             <button
               type="submit"
               disabled={unlocking || passcode.trim().length < 4}
-              className="w-full px-4 py-2.5 rounded-lg text-sm font-semibold"
+              className="w-full px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50"
               style={{
-                background: accent,
-                color: "#f7faf5",
-                border: `1px solid ${accent}`,
+                background: ink,
+                color: "#ffffff",
+                border: `1px solid ${ink}`,
               }}
             >
               {unlocking ? "Unlocking…" : "Unlock deck"}
@@ -264,8 +276,6 @@ const PublicPitch: React.FC = () => {
     const store = (p.store || p.retailer || "").trim();
     const secondary = [store, p.category].filter(Boolean).join(" · ");
     const sellCaption = (p.caption || "").trim();
-    // Keep store/category even when a sell-story caption exists — PhotoLightbox
-    // used to drop `name` whenever `caption` was set.
     let caption = sellCaption;
     if (sellCaption && secondary) {
       const alreadyNamesStore =
@@ -283,18 +293,67 @@ const PublicPitch: React.FC = () => {
     };
   });
 
+  const kpiItems: RecapKpiItem[] = [
+    { label: "Visits", value: fmtNum(kpis.totalVisits) },
+    { label: "Stores activated", value: fmtNum(kpis.storesActivated) },
+    { label: "Samples handed out", value: fmtNum(kpis.totalSamplesDistributed) },
+    { label: "Rep-observed units", value: fmtNum(kpis.repObservedUnits), glow: true },
+    { label: "Adjusted register units", value: fmtNum(kpis.adjustedRegisterUnits) },
+    { label: "Sampling lift", value: fmtPct(kpis.samplingLiftPct) },
+  ];
+
+  if (data.includeCosts) {
+    kpiItems.push(
+      {
+        label: "Supported spend",
+        value:
+          kpis.totalSupportedCost != null
+            ? `$${fmtNum(kpis.totalSupportedCost)}`
+            : "—",
+      },
+      {
+        label: "Cost / unit sold",
+        value:
+          kpis.costPerUnitSold != null
+            ? `$${fmtNum(kpis.costPerUnitSold)}`
+            : "—",
+      },
+    );
+  }
+
   return (
-    <RecapDocument page>
+    <RecapDocument
+      page
+      brandName={brandDisplayName}
+      status="Buyer deck"
+      actions={
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="no-print print:hidden px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-85 cursor-pointer"
+          style={{
+            border: `1px solid ${border}`,
+            background: "#ffffff",
+            color: ink,
+          }}
+        >
+          ↓ Save PDF
+        </button>
+      }
+    >
       <main className="recap-doc-body space-y-8">
         <header className="space-y-2">
           <p
-            className="text-xs uppercase tracking-wider"
+            className="text-xs font-semibold uppercase tracking-wider"
             style={{ color: muted }}
           >
-            {data.brand?.name || "Brand"} · Buyer Pitch Deck
-            {data.buyerName ? ` · For ${data.buyerName}` : ""}
+            {brandDisplayName || "Brand"} · Buyer Pitch Deck
+            {data.buyerName ? ` · Prepared for ${data.buyerName}` : ""}
           </p>
-          <h1 className="text-3xl font-bold" style={{ color: ink }}>
+          <h1
+            className="display text-3xl sm:text-4xl font-bold"
+            style={{ color: ink, letterSpacing: "-0.03em", lineHeight: 1.08 }}
+          >
             {data.title}
           </h1>
           {data.subtitle ? (
@@ -302,94 +361,61 @@ const PublicPitch: React.FC = () => {
               {data.subtitle}
             </p>
           ) : null}
-          <p className="text-sm" style={{ color: muted }}>
+          <p className="text-sm tab-num" style={{ color: muted }}>
             {data.periodStart} → {data.periodEnd}
             {data.retailerFilter ? ` · ${data.retailerFilter}` : ""}
             {data.marketFilter ? ` · ${data.marketFilter}` : ""}
           </p>
           {sellStory ? (
-            <p className="text-sm leading-relaxed" style={{ color: ink }}>
+            <p
+              className="text-[15px] leading-relaxed max-w-3xl pt-1"
+              style={{ color: ink }}
+            >
               {sellStory}
             </p>
           ) : null}
         </header>
 
-        <section className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {(
-            [
-              ["Visits", kpis.totalVisits],
-              ["Stores activated", kpis.storesActivated],
-              ["Samples handed out", kpis.totalSamplesDistributed],
-              ["Rep-observed units", kpis.repObservedUnits],
-              ["Adjusted register units", kpis.adjustedRegisterUnits],
-              ["Sampling lift %", kpis.samplingLiftPct],
-            ] as Array<[string, unknown]>
-          ).map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-xl p-3"
-              style={{ border: "1px solid #d5dbc8", background: "#fbfcf7" }}
-            >
-              <p className="text-[11px] uppercase tracking-wider" style={{ color: muted }}>
-                {label}
-              </p>
-              <p className="text-xl font-bold mono mt-1" style={{ color: ink }}>
-                {fmtNum(value)}
-              </p>
-            </div>
-          ))}
-          {data.includeCosts ? (
-            <>
-              <div
-                className="rounded-xl p-3"
-                style={{ border: "1px solid #d5dbc8", background: "#fbfcf7" }}
-              >
-                <p className="text-[11px] uppercase tracking-wider" style={{ color: muted }}>
-                  Supported spend
-                </p>
-                <p className="text-xl font-bold mono mt-1" style={{ color: ink }}>
-                  ${fmtNum(kpis.totalSupportedCost)}
-                </p>
-              </div>
-              <div
-                className="rounded-xl p-3"
-                style={{ border: "1px solid #d5dbc8", background: "#fbfcf7" }}
-              >
-                <p className="text-[11px] uppercase tracking-wider" style={{ color: muted }}>
-                  Cost / unit sold
-                </p>
-                <p className="text-xl font-bold mono mt-1" style={{ color: ink }}>
-                  {kpis.costPerUnitSold != null
-                    ? `$${fmtNum(kpis.costPerUnitSold)}`
-                    : "—"}
-                </p>
-              </div>
-            </>
-          ) : null}
+        <section aria-label="Program headline metrics">
+          <RecapKpiStrip items={kpiItems} />
         </section>
 
         {(data.topStoreWins || []).length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-lg font-bold" style={{ color: ink }}>
+            <h2
+              className="display text-lg font-bold"
+              style={{ color: ink, letterSpacing: "-0.02em" }}
+            >
               Top store wins
             </h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(data.topStoreWins || []).map((row, i) => (
                 <div
                   key={`${row.storeLabel}-${i}`}
-                  className="rounded-xl p-3"
-                  style={{ border: "1px solid #d5dbc8" }}
+                  className="rounded-xl p-4 space-y-1.5"
+                  style={{ border: `1px solid ${border}`, background: "#ffffff" }}
                 >
-                  <p className="font-semibold" style={{ color: ink }}>
-                    {String(row.storeLabel || "Store")}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: muted }}>
-                    {[row.retailerBanner, row.market]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  <p className="text-xs mt-1 mono" style={{ color: muted }}>
-                    {fmtNum(row.visits)} visits ·{" "}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-sm" style={{ color: ink }}>
+                      {String(row.storeLabel || "Store")}
+                    </p>
+                    <span
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0 tab-num"
+                      style={{
+                        background: "#f4f5ef",
+                        color: muted,
+                        border: `1px solid ${border}`,
+                      }}
+                    >
+                      {fmtNum(row.visits)} {Number(row.visits) === 1 ? "visit" : "visits"}
+                    </span>
+                  </div>
+                  {[row.retailerBanner, row.market].filter(Boolean).length > 0 ? (
+                    <p className="text-xs" style={{ color: muted }}>
+                      {[row.retailerBanner, row.market].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
+                  <p className="text-xs pt-0.5 tab-num font-medium" style={{ color: ink }}>
                     {fmtNum(row.samplesDistributed)} samples ·{" "}
                     {fmtNum(row.repObservedUnits)} rep units
                     {row.adjustedRegisterUnits != null
@@ -397,7 +423,7 @@ const PublicPitch: React.FC = () => {
                       : ""}
                   </p>
                   {row.highlight ? (
-                    <p className="text-sm mt-1" style={{ color: ink }}>
+                    <p className="text-sm pt-1 leading-snug" style={{ color: muted }}>
                       {String(row.highlight)}
                     </p>
                   ) : null}
@@ -409,7 +435,10 @@ const PublicPitch: React.FC = () => {
 
         {photos.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-lg font-bold" style={{ color: ink }}>
+            <h2
+              className="display text-lg font-bold"
+              style={{ color: ink, letterSpacing: "-0.02em" }}
+            >
               In-store proof
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -417,8 +446,8 @@ const PublicPitch: React.FC = () => {
                 <button
                   key={p.id || p.url}
                   type="button"
-                  className="rounded-xl overflow-hidden text-left"
-                  style={{ border: "1px solid #d5dbc8" }}
+                  className="rounded-xl overflow-hidden text-left transition hover:opacity-95 cursor-pointer"
+                  style={{ border: `1px solid ${border}`, background: "#ffffff" }}
                   onClick={() => setLightboxIndex(idx)}
                 >
                   <img
@@ -427,7 +456,7 @@ const PublicPitch: React.FC = () => {
                     className="w-full aspect-[4/3] object-cover"
                     loading="lazy"
                   />
-                  <div className="p-2 space-y-0.5">
+                  <div className="p-2.5 space-y-0.5">
                     <p className="text-xs font-semibold" style={{ color: ink }}>
                       {p.store || p.retailer || "Store"}
                     </p>
@@ -436,7 +465,7 @@ const PublicPitch: React.FC = () => {
                         {p.caption}
                       </p>
                     ) : null}
-                    <p className="text-[11px]" style={{ color: muted }}>
+                    <p className="text-[11px] tab-num" style={{ color: muted }}>
                       {[p.market, p.eventDate].filter(Boolean).join(" · ")}
                     </p>
                   </div>

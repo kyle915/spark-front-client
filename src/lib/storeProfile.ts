@@ -128,3 +128,19 @@ export function monthOfDate(iso: string | null | undefined): string {
   const match = ISO_DAY.exec((iso ?? "").trim());
   return match ? `${match[1]}-${match[2]}` : "";
 }
+
+export function buildStoreScheduleHref(store: {
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+}): string {
+  const market = [store.city, store.state].filter(Boolean).join(", ");
+  const params = new URLSearchParams({
+    venue: store.name || "Store",
+  });
+  const addr = (store.address || market || "").trim();
+  if (addr) params.set("address", addr);
+  if (store.state) params.set("state", store.state);
+  return `/requests/create?${params.toString()}`;
+}

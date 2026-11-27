@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import {
@@ -13,6 +13,9 @@ import { PlanGateCallout } from "./PlanGateCallout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { BUDGET_PNL_SUBTABS, REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
+import PilotPeriodBar from "./PilotPeriodBar";
+import { resolvePilotPeriod, type PilotRangeKey } from "./pilotPeriodFilter";
 import { PilotQueriesDemoCostsPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsUpsertAgreementMutation,
@@ -50,18 +53,30 @@ const FEE_BASE_OPTIONS = [
 const DemoCostsBody: React.FC<{
   groupBy: string;
   setGroupBy: (g: string) => void;
+  periodStart: string | null;
+  periodEnd: string | null;
+  periodControls: React.ReactNode;
   fetchKey: number;
   bump: () => void;
-}> = ({ groupBy, setGroupBy, fetchKey, bump }) => {
+}> = ({
+  groupBy,
+  setGroupBy,
+  periodStart,
+  periodEnd,
+  periodControls,
+  fetchKey,
+  bump,
+}) => {
+  const openStoreSheet = useStoreSheetStore((s) => s.openStoreSheet);
   const data = useLazyLoadQuery<CostsQueryType>(
     PilotQueriesDemoCostsPageQuery,
     {
       groupBy,
-      periodStart: null,
-      periodEnd: null,
+      periodStart,
+      periodEnd,
       providerUuid: null,
     },
-    { fetchPolicy: "network-only", fetchKey },
+    { fetchPolicy: "store-and-network", fetchKey },
   );
   const ws = data.workspaceOverview;
   const dash = data.brandCostDashboard;
@@ -74,7 +89,6 @@ const DemoCostsBody: React.FC<{
     PilotMutationsUpsertCostLineMutation,
   );
 
-  // Agreement form state
   const [agProviderUuid, setAgProviderUuid] = useState(
     ws.providers[0]?.uuid ?? "",
   );
@@ -83,7 +97,6 @@ const DemoCostsBody: React.FC<{
   const [agAdminPct, setAgAdminPct] = useState("10.00");
   const [agBases, setAgBases] = useState<string[]>(["product"]);
 
-  // Cost line form state
   const [lineVisitUuid, setLineVisitUuid] = useState(visits[0]?.uuid ?? "");
   const [lineCat, setLineCat] = useState("demo_fee");
   const [lineAmount, setLineAmount] = useState("");
@@ -98,7 +111,7 @@ const DemoCostsBody: React.FC<{
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-7xl">
       <SparkPageHeader
         eyebrow="Brand-visible economics · Never exposes worker pay"
         title="Actual cost per demo & rollups"
@@ -106,7 +119,7 @@ const DemoCostsBody: React.FC<{
         action={
           <Link
             to="/finance-queue"
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
             style={{
               background: "rgba(239,90,42,0.12)",
               color: "var(--spark-flag-ink, #ef5a2a)",
@@ -129,7 +142,7 @@ const DemoCostsBody: React.FC<{
 
       {banner && (
         <div
-          className="p-3 rounded-xl text-xs"
+          className="p-3 rounded-lg text-xs font-medium"
           style={OK_BANNER_STYLE}
         >
           {banner}
@@ -140,18 +153,20 @@ const DemoCostsBody: React.FC<{
       <section className="spark-card p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="display text-lg font-bold">Cost Rollups</h2>
-          <div className="inline-flex rounded-full p-0.5" style={BORDER}>
-            {(["store", "program", "provider", "month"] as const).map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGroupBy(g)}
-                className="px-3 py-1 rounded-full text-xs font-semibold capitalize"
-                style={groupBy === g ? PRIMARY_BTN_STYLE : META}
-              >
-                By {g}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {periodControls}
+            <div className="pill-group" role="group" aria-label="Group demo costs by">
+              {(["store", "program", "provider", "month"] as const).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGroupBy(g)}
+                  className={`pill-btn capitalize ${groupBy === g ? "on" : ""}`}
+                >
+                  By {g}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -179,12 +194,31 @@ const DemoCostsBody: React.FC<{
                     key={r.key}
                     style={{ borderTop: "1px solid var(--spark-border)" }}
                   >
-                    <td className="py-2.5 pr-3 font-semibold">{r.label}</td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3 font-semibold">
+                      {groupBy === "store" ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openStoreSheet({
+                              storeKey: r.key,
+                              storeName: r.label,
+                              fallbackTitle: r.label,
+                            })
+                          }
+                          className="font-semibold text-left hover:underline cursor-pointer"
+                          style={{ color: "var(--spark-text)" }}
+                        >
+                          {r.label}
+                        </button>
+                      ) : (
+                        r.label
+                      )}
+                    </td>
+                    <td className="py-2.5 pr-3 tab-num">
                       {r.visitCount} ({r.completeVisitCount} ok /{" "}
                       {r.incompleteVisitCount} inc)
                     </td>
-                    <td className="py-2.5 pr-3 mono font-semibold">
+                    <td className="py-2.5 pr-3 tab-num font-semibold">
                       {r.totalCost != null
                         ? formatHonestMoney(r.totalCost, {
                             isConfirmedZero: true,
@@ -192,20 +226,20 @@ const DemoCostsBody: React.FC<{
                         : `${formatHonestMoney(r.knownTotalCost, { isConfirmedZero: true })} + Unknown`}
                     </td>
                     <td
-                      className="py-2.5 pr-3 mono font-semibold"
+                      className="py-2.5 pr-3 tab-num font-semibold"
                       style={{ color: "var(--spark-ok-ink)" }}
                     >
                       {formatHonestMoney(r.supportedCost, {
                         isConfirmedZero: true,
                       })}
                     </td>
-                    <td className="py-2.5 pr-3 mono" style={META}>
+                    <td className="py-2.5 pr-3 tab-num" style={META}>
                       ${r.invoicedCost} / ${r.paidCost}
                     </td>
-                    <td className="py-2.5 pr-3 mono">
+                    <td className="py-2.5 pr-3 tab-num">
                       {r.costPerSample ? `$${r.costPerSample}` : "Withheld"}
                     </td>
-                    <td className="py-2.5 text-right mono">
+                    <td className="py-2.5 text-right tab-num">
                       {r.costPerObservedUnit
                         ? `$${r.costPerObservedUnit}`
                         : "Withheld"}
@@ -257,7 +291,7 @@ const DemoCostsBody: React.FC<{
                 required
                 value={agProviderUuid}
                 onChange={(e) => setAgProviderUuid(e.target.value)}
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               >
                 <option value="">Select agency…</option>
@@ -271,7 +305,7 @@ const DemoCostsBody: React.FC<{
                 value={agName}
                 onChange={(e) => setAgName(e.target.value)}
                 placeholder="Agreement name"
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               />
               <label className="space-y-1">
@@ -279,7 +313,7 @@ const DemoCostsBody: React.FC<{
                 <input
                   value={agDemoFee}
                   onChange={(e) => setAgDemoFee(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl mono"
+                  className="w-full px-3 py-2 rounded-lg tab-num"
                   style={FIELD_STYLE}
                 />
               </label>
@@ -288,7 +322,7 @@ const DemoCostsBody: React.FC<{
                 <input
                   value={agAdminPct}
                   onChange={(e) => setAgAdminPct(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl mono"
+                  className="w-full px-3 py-2 rounded-lg tab-num"
                   style={FIELD_STYLE}
                 />
               </label>
@@ -311,7 +345,7 @@ const DemoCostsBody: React.FC<{
             <button
               type="submit"
               disabled={savingAgreement}
-              className="px-4 py-2 rounded-xl text-xs font-bold"
+              className="px-4 py-2 rounded-lg text-xs font-bold"
               style={PRIMARY_BTN_STYLE}
             >
               Save Agreement Rules
@@ -357,7 +391,7 @@ const DemoCostsBody: React.FC<{
                 required
                 value={lineVisitUuid}
                 onChange={(e) => setLineVisitUuid(e.target.value)}
-                className="col-span-2 px-3 py-2 rounded-xl"
+                className="col-span-2 px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               >
                 <option value="">Select visit…</option>
@@ -370,7 +404,7 @@ const DemoCostsBody: React.FC<{
               <select
                 value={lineCat}
                 onChange={(e) => setLineCat(e.target.value)}
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               >
                 <option value="demo_fee">Demo fee</option>
@@ -387,13 +421,13 @@ const DemoCostsBody: React.FC<{
                 value={lineAmount}
                 onChange={(e) => setLineAmount(e.target.value)}
                 placeholder="Amount $ (leave blank if unknown)"
-                className="px-3 py-2 rounded-xl mono"
+                className="px-3 py-2 rounded-lg tab-num"
                 style={FIELD_STYLE}
               />
               <select
                 value={lineSettlement}
                 onChange={(e) => setLineSettlement(e.target.value)}
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               >
                 <option value="estimated">Estimated</option>
@@ -404,14 +438,14 @@ const DemoCostsBody: React.FC<{
                 value={lineDesc}
                 onChange={(e) => setLineDesc(e.target.value)}
                 placeholder="Invoice # or note"
-                className="px-3 py-2 rounded-xl"
+                className="px-3 py-2 rounded-lg"
                 style={FIELD_STYLE}
               />
             </div>
             <button
               type="submit"
               disabled={savingLine}
-              className="px-4 py-2 rounded-xl text-xs font-bold"
+              className="px-4 py-2 rounded-lg text-xs font-bold"
               style={PRIMARY_BTN_STYLE}
             >
               + Add Cost Line
@@ -422,7 +456,7 @@ const DemoCostsBody: React.FC<{
 
       {/* Per-Visit Breakdown */}
       <section className="spark-card p-5 space-y-4">
-        <h2 className="display text-lg font-bold">
+        <h2 className="display text-lg font-bold tab-num">
           Visit-Level Cost Breakdown ({visits.length})
         </h2>
         <div className="space-y-3">
@@ -434,28 +468,41 @@ const DemoCostsBody: React.FC<{
               (v.evidenceStatus as CostEvidenceKind) || "missing",
             );
             return (
-              <div key={v.uuid} className="p-4 rounded-2xl space-y-2" style={BORDER}>
+              <div key={v.uuid} className="p-4 rounded-xl space-y-2" style={BORDER}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <span className="font-bold text-sm">{v.storeLabel}</span>
-                    <span className="text-xs ml-2 mono" style={META}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openStoreSheet({
+                          storeKey: v.storeKey,
+                          storeName: v.storeLabel,
+                          fallbackTitle: v.storeLabel,
+                        })
+                      }
+                      className="font-bold text-sm hover:underline cursor-pointer"
+                      style={{ color: "var(--spark-text)" }}
+                    >
+                      {v.storeLabel}
+                    </button>
+                    <span className="text-xs ml-2 tab-num" style={META}>
                       {v.visitDate} · {v.primaryProviderName ?? "Direct"}
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span
-                      className="px-2.5 py-0.5 rounded-full font-semibold"
+                      className="px-2.5 py-0.5 rounded-md font-semibold"
                       style={{ background: setMeta.bg, color: setMeta.fg }}
                     >
                       {setMeta.label}
                     </span>
                     <span
-                      className="px-2.5 py-0.5 rounded-full font-semibold"
+                      className="px-2.5 py-0.5 rounded-md font-semibold"
                       style={{ background: evMeta.bg, color: evMeta.fg }}
                     >
                       {evMeta.label}
                     </span>
-                    <span className="mono font-bold text-sm">
+                    <span className="tab-num font-bold text-sm">
                       {formatHonestMoney(v.totalCost, {
                         isConfirmedZero: v.totalCost === "0.00",
                         incomplete: v.isCostIncomplete,
@@ -469,7 +516,7 @@ const DemoCostsBody: React.FC<{
                     {v.costLines.map((cl) => (
                       <div
                         key={cl.uuid}
-                        className="px-3 py-2 rounded-xl flex items-center justify-between gap-2"
+                        className="px-3 py-2 rounded-lg flex items-center justify-between gap-2"
                         style={{
                           ...BORDER,
                           background: "var(--spark-surface-2)",
@@ -484,7 +531,7 @@ const DemoCostsBody: React.FC<{
                             {cl.hasUnitemizedProof ? " · unitemized slip" : ""}
                           </div>
                         </div>
-                        <span className="mono font-semibold">
+                        <span className="tab-num font-semibold">
                           {formatHonestMoney(cl.amount, {
                             isConfirmedZero: cl.isConfirmedZero,
                           })}
@@ -494,19 +541,19 @@ const DemoCostsBody: React.FC<{
                   </div>
                 )}
 
-                <div className="text-[11px] flex flex-wrap gap-4 pt-1" style={META}>
+                <div className="text-[11px] flex flex-wrap gap-4 pt-1 tab-num" style={META}>
                   <span>
-                    Supported: <strong className="mono">${v.supportedCost}</strong>
+                    Supported: <strong>${v.supportedCost}</strong>
                   </span>
                   <span>
                     Cost / sample:{" "}
-                    <strong className="mono">
+                    <strong>
                       {v.costPerSample ? `$${v.costPerSample}` : "Withheld"}
                     </strong>
                   </span>
                   <span>
                     Cost / observed unit:{" "}
-                    <strong className="mono">
+                    <strong>
                       {v.costPerObservedUnit
                         ? `$${v.costPerObservedUnit}`
                         : "Withheld"}
@@ -529,17 +576,39 @@ const DemoCostsBody: React.FC<{
 
 export const DemoCostsPage: React.FC = () => {
   const [groupBy, setGroupBy] = useState("store");
+  const [range, setRange] = useState<PilotRangeKey>("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [fetchKey, setFetchKey] = useState(0);
+
+  const { periodStart, periodEnd } = useMemo(
+    () => resolvePilotPeriod(range, customStart, customEnd),
+    [range, customStart, customEnd],
+  );
+
   return (
     <div className="space-y-5 max-w-7xl spark-scale">
       <div className="flex flex-wrap items-center gap-2">
         <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
         <SparkHubTabs tabs={BUDGET_PNL_SUBTABS} ariaLabel="Budget & P&L views" />
       </div>
-      <Suspense fallback={<p className="text-sm mono">Loading demo costs…</p>}>
+      <Suspense fallback={<p className="text-sm" style={META}>Loading demo costs…</p>}>
         <DemoCostsBody
           groupBy={groupBy}
           setGroupBy={setGroupBy}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          periodControls={
+            <PilotPeriodBar
+              range={range}
+              onRangeChange={setRange}
+              customStart={customStart}
+              onCustomStartChange={setCustomStart}
+              customEnd={customEnd}
+              onCustomEndChange={setCustomEnd}
+              ariaLabel="Demo cost date window"
+            />
+          }
           fetchKey={fetchKey}
           bump={() => setFetchKey((k) => k + 1)}
         />

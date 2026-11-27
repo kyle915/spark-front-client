@@ -29,7 +29,7 @@ import {
   type BucketMode,
   type StudioBucket,
   type StudioResource,
-} from "./standingCheckinStudio";
+} from "./standingCheckinHelpers";
 
 const SaveMutation = graphql`
   mutation StandingCheckinStudioSaveMutation($input: UpdateStandingCheckinConfigInput!) {
