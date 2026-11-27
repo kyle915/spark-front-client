@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { commitMutation, fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { BrandChatQuery } from "@/api/queries/BrandChatQuery";
@@ -7,12 +7,15 @@ import type { BrandChatQuery as BrandChatQueryType } from "@api/queries/__genera
 import {
   AskBrandChatMutation,
   ClearBrandChatMutation,
+  ReportBrandChatUnhelpfulMutation,
 } from "@/api/mutations/BrandChatMutations";
 import type { BrandChatMutationsAskMutation } from "@api/mutations/__generated__/BrandChatMutationsAskMutation.graphql";
 import type { BrandChatMutationsClearMutation } from "@api/mutations/__generated__/BrandChatMutationsClearMutation.graphql";
+import type { BrandChatMutationsReportUnhelpfulMutation } from "@api/mutations/__generated__/BrandChatMutationsReportUnhelpfulMutation.graphql";
 import SparkSheet from "@/shared/SparkSheet";
 import type { JumpOrigin } from "@/motion/opsMotion";
 import AiMarkdown from "./AiMarkdown";
+import { routeSparkHelpPrompts } from "./routeAskSparkPrompts";
 
 /**
  * Brand chat: docked "Ask Spark" side-panel over the brand's own data.
@@ -117,7 +120,17 @@ function SourceChips({ turn, onNavigate }: { turn: Turn; onNavigate: () => void 
   );
 }
 
-function TurnView({ turn, onNavigate }: { turn: Turn; onNavigate: () => void }) {
+function TurnView({
+  turn,
+  flagged,
+  onFlagUnhelpful,
+  onNavigate,
+}: {
+  turn: Turn;
+  flagged: boolean;
+  onFlagUnhelpful: (turnId: string) => void;
+  onNavigate: () => void;
+}) {
   const answered = turn.status === "answered";
   return (
     <li className="space-y-2">
@@ -146,6 +159,24 @@ function TurnView({ turn, onNavigate }: { turn: Turn; onNavigate: () => void }) 
           </p>
         ) : null}
         {answered ? <SourceChips turn={turn} onNavigate={onNavigate} /> : null}
+        {answered || turn.status === "not_grounded" ? (
+          <div className="mt-2 flex items-center gap-3">
+            {flagged ? (
+              <span className="text-[11px]" style={META}>
+                Flagged for the Ignite team — thanks for the feedback.
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onFlagUnhelpful(String(turn.id))}
+                className="text-[11px] underline underline-offset-2 transition hover:opacity-80 cursor-pointer"
+                style={{ ...META, background: "transparent", border: "none", padding: 0 }}
+              >
+                Not helpful?
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
     </li>
   );
@@ -163,6 +194,7 @@ export default function BrandChatPanel({
   routePrompts?: readonly string[];
   onClose: () => void;
 }) {
+  const location = useLocation();
   const [view, setView] = useState<View | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -172,6 +204,7 @@ export default function BrandChatPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [left, setLeft] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [flaggedIds, setFlaggedIds] = useState<Record<string, boolean>>({});
   const listEnd = useRef<HTMLDivElement | null>(null);
   const consumedInitialRef = useRef<string | null>(null);
 
@@ -216,7 +249,12 @@ export default function BrandChatPanel({
       setNotice(null);
       commitMutation<BrandChatMutationsAskMutation>(environment, {
         mutation: AskBrandChatMutation,
-        variables: { tenantId, question: q, conversationId },
+        variables: {
+          tenantId,
+          question: q,
+          conversationId,
+          currentPath: location.pathname || "/",
+        },
         onCompleted: (res) => {
           const reply = res.askBrandChat;
           setPending(null);
@@ -236,7 +274,18 @@ export default function BrandChatPanel({
         },
       });
     },
-    [question, pending, tenantId, conversationId],
+    [question, pending, tenantId, conversationId, location.pathname],
+  );
+
+  const flagUnhelpful = useCallback(
+    (turnId: string) => {
+      setFlaggedIds((prev) => ({ ...prev, [turnId]: true }));
+      commitMutation<BrandChatMutationsReportUnhelpfulMutation>(environment, {
+        mutation: ReportBrandChatUnhelpfulMutation,
+        variables: { turnId, currentPath: location.pathname || "/" },
+      });
+    },
+    [location.pathname],
   );
 
   useEffect(() => {
@@ -277,12 +326,14 @@ export default function BrandChatPanel({
   const brand = view?.brandName || "your brand";
   const rawSuggestions = view?.suggestions ?? [];
   const wavePrompt = "Plan next month's 15-store demo wave";
+  const helpStarter = routeSparkHelpPrompts(location.pathname, true)[0];
   const baseSuggestions = rawSuggestions.some((s) => s.toLowerCase().includes("wave"))
     ? rawSuggestions
     : [wavePrompt, ...rawSuggestions.slice(0, 3)];
-  const suggestions = routePrompts?.length
-    ? Array.from(new Set([...routePrompts, ...baseSuggestions])).slice(0, 4)
-    : baseSuggestions;
+  const merged = routePrompts?.length
+    ? [...routePrompts.slice(0, 3), helpStarter, ...baseSuggestions]
+    : [helpStarter, ...baseSuggestions];
+  const suggestions = Array.from(new Set(merged.filter(Boolean))).slice(0, 4);
   const canAsk = Boolean(question.trim()) && !pending && left !== 0 && Boolean(view);
 
   return (
@@ -294,11 +345,11 @@ export default function BrandChatPanel({
       side="right"
       size="lg"
       eyebrow="Ask Spark"
-      title={`Ask about ${brand}'s program`}
+      title={`Ask about ${brand} or Spark Help`}
     >
       <div className="flex flex-col h-full min-h-[70dvh]">
         <p className="text-xs leading-relaxed" style={META}>
-          Grounded strictly in {brand}'s approved recaps, store roster, and POS results — with source links and draft wave previews. Read-only.
+          Grounded in {brand}'s approved recaps, store roster, POS lift, and Spark Help docs — with direct page links and draft wave previews. Read-only.
         </p>
 
         {view ? (
@@ -384,7 +435,13 @@ export default function BrandChatPanel({
               ) : null}
               <ul className="space-y-5">
                 {turns.map((t) => (
-                  <TurnView key={t.id} turn={t} onNavigate={onClose} />
+                  <TurnView
+                    key={t.id}
+                    turn={t}
+                    flagged={Boolean(flaggedIds[String(t.id)])}
+                    onFlagUnhelpful={flagUnhelpful}
+                    onNavigate={onClose}
+                  />
                 ))}
                 {pending ? (
                   <li className="space-y-2">
@@ -431,7 +488,7 @@ export default function BrandChatPanel({
             placeholder={
               left === 0
                 ? "No questions left this hour"
-                : "Ask about stores, conversion, or shopper feedback…"
+                : "Ask about stores, conversion, or how to use Spark…"
             }
             aria-label="Your question"
             className="flex-1 min-w-0 px-3.5 py-2 rounded-lg text-sm transition disabled:opacity-60"

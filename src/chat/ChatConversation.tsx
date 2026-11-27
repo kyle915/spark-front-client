@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { BookOpen, Sparkles, X } from "lucide-react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
+import useSparkRole from "@/hooks/useSparkRole";
 import { ChatThreadQuery } from "@/api/queries/ChatThreadQuery";
 import type { ChatThreadQuery as ChatThreadQueryType } from "@api/queries/__generated__/ChatThreadQuery.graphql";
 import { ChatThreadDeltaQuery } from "@/api/queries/ChatThreadDeltaQuery";
@@ -10,7 +12,11 @@ import { SendChatMessageMutation } from "@/api/mutations/SendChatMessageMutation
 import type { SendChatMessageMutation as SendChatMessageMutationType } from "@api/mutations/__generated__/SendChatMessageMutation.graphql";
 import { MarkChatThreadReadMutation } from "@/api/mutations/MarkChatThreadReadMutation";
 import type { MarkChatThreadReadMutation as MarkChatThreadReadMutationType } from "@api/mutations/__generated__/MarkChatThreadReadMutation.graphql";
+import { DraftChatReplyWithAiMutation } from "@/api/helpKnowledgeApi";
+import type { helpKnowledgeApiDraftChatReplyMutation } from "@api/__generated__/helpKnowledgeApiDraftChatReplyMutation.graphql";
+import { confidenceBadgeMeta } from "@/components/pages/help/helpKnowledgeHelpers";
 import { useAlertStore } from "@/store/alertStore";
+import TeachSparkModal from "./TeachSparkModal";
 import {
   CHAT_ATTACHMENT_ACCEPT,
   humanSize,
@@ -180,16 +186,54 @@ const ChatConversation: React.FC<{
     setNewer([]);
   }, [refreshKey]);
 
+  const { isAdmin } = useSparkRole();
   const [commitSend, isSending] =
     useMutation<SendChatMessageMutationType>(SendChatMessageMutation);
   const [commitMarkRead] = useMutation<MarkChatThreadReadMutationType>(
     MarkChatThreadReadMutation,
   );
+  const [commitDraftAi, draftingAi] =
+    useMutation<helpKnowledgeApiDraftChatReplyMutation>(DraftChatReplyWithAiMutation);
   const [composer, setComposer] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [aiDraftMeta, setAiDraftMeta] = useState<{
+    confidence: string;
+    sources: readonly string[];
+    missingInfo: string;
+  } | null>(null);
+  const [teachMessageUuid, setTeachMessageUuid] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setAiDraftMeta(null);
+    setTeachMessageUuid(null);
+  }, [threadUuid]);
+
+  const draftWithAi = () => {
+    if (!isAdmin || draftingAi) return;
+    commitDraftAi({
+      variables: {
+        threadUuid,
+        instruction: composer.trim() || null,
+      },
+      onCompleted: (res) => {
+        const r = res.draftChatReplyWithAi;
+        if (!r.ok || !r.draft) {
+          showAlert(r.reason || "Could not draft an AI reply right now.", "error");
+          return;
+        }
+        setComposer(r.draft);
+        setAiDraftMeta({
+          confidence: r.confidence,
+          sources: r.sources,
+          missingInfo: r.missingInfo,
+        });
+      },
+      onError: () => showAlert("Could not reach Spark AI right now.", "error"),
+    });
+  };
 
   // Mark-read on first paint when unread > 0. The ref keeps us from
   // firing on every poll refresh.
@@ -440,16 +484,35 @@ const ChatConversation: React.FC<{
                     attachments={m.attachments}
                     mine={mine}
                   />
-                  <p
-                    className="mono text-[9px] mt-1.5"
-                    style={{
-                      letterSpacing: "0.12em",
-                      color: mine ? "rgba(var(--spark-bg-rgb),0.55)" : "rgba(var(--spark-ink-rgb),0.45)",
-                    }}
-                  >
-                    {m.senderIsAmbassador ? m.senderName ?? "BA" : "You"} ·{" "}
-                    {fmtTime(String(m.createdAt))}
-                  </p>
+                  <div className="mt-1.5 flex items-center justify-between gap-3">
+                    <p
+                      className="mono text-[9px]"
+                      style={{
+                        letterSpacing: "0.12em",
+                        color: mine ? "rgba(var(--spark-bg-rgb),0.55)" : "rgba(var(--spark-ink-rgb),0.45)",
+                      }}
+                    >
+                      {m.senderIsAmbassador ? m.senderName ?? "BA" : "You"} ·{" "}
+                      {fmtTime(String(m.createdAt))}
+                    </p>
+                    {mine && isAdmin && m.body ? (
+                      <button
+                        type="button"
+                        onClick={() => setTeachMessageUuid(String(m.uuid))}
+                        title="Distill this answer into Spark Help Knowledge (Admin only)"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold opacity-75 hover:opacity-100 transition cursor-pointer"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          padding: 0,
+                          color: "var(--spark-on-accent)",
+                        }}
+                      >
+                        <BookOpen size={10} />
+                        Teach Spark
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             );
@@ -504,6 +567,59 @@ const ChatConversation: React.FC<{
           </div>
         ) : null}
 
+        {/* Admin-only AI draft provenance banner */}
+        {isAdmin && aiDraftMeta ? (
+          <div
+            className="mb-2 rounded-xl px-3 py-2 text-xs flex items-start justify-between gap-2"
+            style={{
+              background: "var(--spark-surface-2, rgba(var(--spark-ink-rgb),0.04))",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <div className="space-y-0.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-semibold inline-flex items-center gap-1">
+                  <Sparkles size={12} /> AI draft ready — review before sending
+                </span>
+                {(() => {
+                  const meta = confidenceBadgeMeta(aiDraftMeta.confidence);
+                  return (
+                    <span
+                      className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                      style={{
+                        background: meta.bg,
+                        color: meta.color,
+                        border: `1px solid ${meta.border}`,
+                      }}
+                    >
+                      {meta.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              {aiDraftMeta.sources.length > 0 ? (
+                <p className="text-[11px] truncate" style={{ color: "var(--spark-text-meta)" }}>
+                  Sources: {aiDraftMeta.sources.join(" · ")}
+                </p>
+              ) : null}
+              {aiDraftMeta.missingInfo ? (
+                <p className="text-[11px]" style={{ color: "var(--spark-flag-ink, #a8340f)" }}>
+                  Missing SOP noted (logged to Knowledge Gaps): {aiDraftMeta.missingInfo}
+                </p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiDraftMeta(null)}
+              aria-label="Dismiss AI draft note"
+              className="p-1 rounded cursor-pointer"
+              style={{ color: "var(--spark-text-meta)", background: "transparent", border: "none" }}
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ) : null}
+
         <div className="flex items-end gap-2">
           {/* Attach image / PDF */}
           <input
@@ -539,6 +655,26 @@ const ChatConversation: React.FC<{
             {uploading ? "…" : "📎"}
           </button>
 
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={draftWithAi}
+              disabled={draftingAi || isSending}
+              title="Draft a reply with Spark AI using shift details, brand knowledge, and Spark SOPs"
+              aria-label="Draft reply with Spark AI"
+              className="rounded-xl px-3 text-xs font-semibold transition shrink-0 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              style={{
+                height: 42,
+                background: "transparent",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              <Sparkles size={13} />
+              {draftingAi ? "Drafting…" : "Draft AI"}
+            </button>
+          ) : null}
+
           <textarea
             value={composer}
             onChange={(e) => setComposer(e.target.value)}
@@ -547,6 +683,7 @@ const ChatConversation: React.FC<{
               // and most chat conventions.
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
+                setAiDraftMeta(null);
                 send();
               }
             }}
@@ -561,7 +698,10 @@ const ChatConversation: React.FC<{
             }}
           />
           <button
-            onClick={send}
+            onClick={() => {
+              setAiDraftMeta(null);
+              send();
+            }}
             disabled={
               isSending ||
               uploading ||
@@ -583,6 +723,14 @@ const ChatConversation: React.FC<{
           </button>
         </div>
       </div>
+
+      {isAdmin && teachMessageUuid ? (
+        <TeachSparkModal
+          threadUuid={threadUuid}
+          messageUuid={teachMessageUuid}
+          onClose={() => setTeachMessageUuid(null)}
+        />
+      ) : null}
     </div>
   );
 };

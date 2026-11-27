@@ -1,10 +1,11 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { BookOpen, Trash2 } from "lucide-react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import Layout from "@/layout/Layout";
 import SparkConfirm from "@/shared/SparkConfirm";
+import useSparkRole from "@/hooks/useSparkRole";
 import environment from "@/api/relay/environment";
 import { ChatThreadsQuery } from "@/api/queries/ChatThreadsQuery";
 import type { ChatThreadsQuery as ChatThreadsQueryType } from "@api/queries/__generated__/ChatThreadsQuery.graphql";
@@ -212,6 +213,7 @@ const ThreadList: React.FC<{
 /* ─── Page shell ─── */
 
 const SparkChatPage: React.FC = () => {
+  const { isAdmin } = useSparkRole();
   const [searchParams, setSearchParams] = useSearchParams();
   // Deep-link support: `/chat?thread=<uuid>` pre-selects that conversation
   // (used when the admin opens a DM from a job applicant). Seed the
@@ -280,16 +282,32 @@ const SparkChatPage: React.FC = () => {
               place; mobile push notifies them on every reply.
             </p>
           </div>
-          <button
-            onClick={() => setComposerOpen(true)}
-            className="px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition"
-            style={{
-              background: "var(--spark-lime)",
-              color: "var(--spark-on-accent)",
-            }}
-          >
-            ✏️ New message
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {isAdmin ? (
+              <Link
+                to="/help-knowledge"
+                className="px-3.5 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap inline-flex items-center gap-1.5 no-underline transition"
+                style={{
+                  background: "var(--spark-surface)",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                <BookOpen size={14} />
+                Help Knowledge
+              </Link>
+            ) : null}
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition"
+              style={{
+                background: "var(--spark-lime)",
+                color: "var(--spark-on-accent)",
+              }}
+            >
+              ✏️ New message
+            </button>
+          </div>
         </div>
         <div
           className="grid grid-cols-1 md:grid-cols-[340px_1fr] rounded-2xl overflow-hidden"

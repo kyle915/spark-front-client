@@ -1,17 +1,19 @@
 import { graphql } from "react-relay";
 
-/** Ask brand chat one question. Read-only on the server: it can only read
- * the brand's own data. Omit conversationId to start a new chat. */
+/** Ask brand chat one question (program data + client-safe Spark Help).
+ * Read-only on the server: changes nothing except the person's own chat history. */
 export const AskBrandChatMutation = graphql`
   mutation BrandChatMutationsAskMutation(
     $tenantId: ID!
     $question: String!
     $conversationId: ID
+    $currentPath: String
   ) {
     askBrandChat(
       tenantId: $tenantId
       question: $question
       conversationId: $conversationId
+      currentPath: $currentPath
     ) {
       ok
       reason
@@ -47,6 +49,51 @@ export const ClearBrandChatMutation = graphql`
       ok
       reason
       cleared
+    }
+  }
+`;
+
+/** Direct route-aware Spark Help Q&A (hybrid BM25 + OpenAI embeddings). */
+export const AskSparkHelpMutation = graphql`
+  mutation BrandChatMutationsAskHelpMutation(
+    $question: String!
+    $currentPath: String
+    $tenantId: ID
+    $previewAsClient: Boolean!
+  ) {
+    askSparkHelp(
+      question: $question
+      currentPath: $currentPath
+      tenantId: $tenantId
+      previewAsClient: $previewAsClient
+    ) {
+      ok
+      reason
+      answer
+      confidence
+      matchedVia
+      gapLogged
+      isAdminScope
+      sources {
+        title
+        routePath
+        routeLabel
+        audience
+        score
+      }
+    }
+  }
+`;
+
+/** Flag an Ask Spark turn as unhelpful so Ignite admins see it in Knowledge Gaps. */
+export const ReportBrandChatUnhelpfulMutation = graphql`
+  mutation BrandChatMutationsReportUnhelpfulMutation(
+    $turnId: ID!
+    $currentPath: String
+  ) {
+    reportBrandChatUnhelpful(turnId: $turnId, currentPath: $currentPath) {
+      ok
+      reason
     }
   }
 `;

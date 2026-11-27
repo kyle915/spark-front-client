@@ -2011,6 +2011,9 @@ const PhotoWallPage = lazyDefault(() => import("@/pilot/PhotoWallPage"));
 const ShelfVoicePage = lazyDefault(
   () => import("@/components/pages/reports/ShelfVoicePage"),
 );
+const SparkHelpKnowledgePage = lazyDefault(
+  () => import("@/components/pages/help/SparkHelpKnowledgePage"),
+);
 
 const PilotLinks = {
   routes: [
@@ -2038,6 +2041,15 @@ const PilotLinks = {
       component: (
         <AdminOnly>
           <SandboxBrandPage />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/help-knowledge",
+      component: (
+        <AdminOnly>
+          <SparkHelpKnowledgePage />
         </AdminOnly>
       ),
       isPublic: false,

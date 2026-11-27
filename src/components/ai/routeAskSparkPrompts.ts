@@ -74,3 +74,60 @@ export function routeAskSparkPrompts(
         "Which stores should we rebook first based on recent velocity?",
       ];
 }
+
+/**
+ * Route-aware Spark Help starter prompts, cleanly tailored by Client vs. Admin.
+ */
+export function routeSparkHelpPrompts(
+  pathname: string,
+  isClient: boolean,
+): readonly string[] {
+  const clean = (pathname || "/").split("?")[0].replace(/\/+$/, "") || "/";
+
+  if (clean === "/demo-costs" || clean === "/roi-pacing") {
+    return [
+      "How do I set up demo costs and provider rate agreements?",
+      "How does Budget Pacing calculate projected spend?",
+      "How do I connect Claude or ChatGPT via Spark MCP?",
+    ];
+  }
+  if (clean === "/shelf-voice") {
+    return [
+      "How does MSRP price drift and Shelf OSA auditing work?",
+      "How do I save a filter slice and schedule Friday digests?",
+      "How do I set up shelf.oos_detected webhooks?",
+    ];
+  }
+  if (clean === "/buyer-report" || clean === "/retailer-pos") {
+    return [
+      "How do I export a 16:9 Buyer QBR PowerPoint (.pptx) deck?",
+      "How does Retailer POS CSV velocity lift matching work?",
+      "How do I schedule automated Friday broker digest emails?",
+    ];
+  }
+  if (clean === "/ai-connector") {
+    return [
+      "How do I connect Claude or ChatGPT to Spark MCP?",
+      "How do I set up and verify HMAC-SHA256 outbound webhooks?",
+      "What events trigger Spark webhooks?",
+    ];
+  }
+  if (!isClient && (clean === "/chat" || clean === "/payroll" || clean === "/payments")) {
+    return [
+      "How do AI draft replies and Teach Spark work in Chat?",
+      "How do BA payroll hours and Wingspan payouts work?",
+      "How do I configure Cloud Scheduler cron for Saved View digests?",
+    ];
+  }
+  return isClient
+    ? [
+        "How does this page work?",
+        "How do I export a Buyer QBR PowerPoint (.pptx) deck?",
+        "How do I set up Friday broker digests or Zapier webhooks?",
+      ]
+    : [
+        "How does this page work?",
+        "How do I invite a BA to a shift and manage the roster?",
+        "How do BA payroll hours and Wingspan payments work?",
+      ];
+}

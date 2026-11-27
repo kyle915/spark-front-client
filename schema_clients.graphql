@@ -1457,6 +1457,132 @@ type BrandChatView {
   questionsLeftThisHour: Int!
 }
 
+type ChatAiDraftReply {
+  ok: Boolean!
+  reason: String
+  draft: String!
+  confidence: String!
+  sources: [String!]!
+  missingInfo: String!
+}
+
+type ChatTeachSparkPreview {
+  ok: Boolean!
+  reason: String
+  title: String!
+  body: String!
+  category: String!
+  audience: String!
+  tags: [String!]!
+  routePath: String!
+  routeLabel: String!
+}
+
+input ResolveSparkHelpGapInput {
+  gapUuid: String!
+  title: String!
+  body: String!
+  category: String! = "general"
+  audience: String! = "all"
+  routePath: String! = ""
+  routeLabel: String! = ""
+  tags: [String!] = null
+}
+
+type SparkHelpActionResult {
+  ok: Boolean!
+  reason: String
+}
+
+type SparkHelpAnswerResult {
+  ok: Boolean!
+  reason: String
+  answer: String!
+  confidence: String!
+  matchedVia: String!
+  sources: [SparkHelpSourceType!]!
+  gapLogged: Boolean!
+  isAdminScope: Boolean!
+}
+
+type SparkHelpArticleMutationResult {
+  ok: Boolean!
+  reason: String
+  article: SparkHelpArticleType
+}
+
+type SparkHelpArticleType {
+  id: ID!
+  uuid: String!
+  title: String!
+  category: String!
+  audience: String!
+  routePath: String!
+  routeLabel: String!
+  tags: [String!]!
+  body: String!
+  sourceKind: String!
+  hasEmbedding: Boolean!
+  embeddingModel: String!
+  isActive: Boolean!
+  usageCount: Int!
+  updatedAt: String!
+}
+
+type SparkHelpEmbeddingSyncResult {
+  ok: Boolean!
+  reason: String
+  articlesChecked: Int!
+  articlesEmbedded: Int!
+  builtinEmbedded: Int!
+}
+
+type SparkHelpGapType {
+  id: ID!
+  uuid: String!
+  question: String!
+  routePath: String!
+  callerRole: String!
+  sourceSurface: String!
+  reason: String!
+  askedCount: Int!
+  status: String!
+  lastAskedAt: String!
+  resolvedArticleTitle: String
+}
+
+type SparkHelpKnowledgePayload {
+  ok: Boolean!
+  reason: String
+  isAdmin: Boolean!
+  builtinCount: Int!
+  embeddedCount: Int!
+  openGapCount: Int!
+  articles: [SparkHelpArticleType!]!
+  gaps: [SparkHelpGapType!]!
+}
+
+type SparkHelpSourceType {
+  title: String!
+  routePath: String!
+  routeLabel: String!
+  audience: String!
+  score: Float!
+}
+
+input UpsertSparkHelpArticleInput {
+  uuid: String = null
+  title: String!
+  body: String!
+  category: String! = "general"
+  audience: String! = "all"
+  routePath: String! = ""
+  routeLabel: String! = ""
+  tags: [String!] = null
+  sourceKind: String! = "admin_faq"
+  isActive: Boolean! = true
+}
+
 type BrandCompareRow {
   tenantPk: Int!
   name: String!
@@ -6869,8 +6995,15 @@ type Mutation {
   togglePhotoWallPin(photoId: String!, pinned: Boolean = null, note: String = null): PhotoWallPinResult!
   createBuyerPitchDeck(title: String!, subtitle: String = null, buyerName: String = null, introNote: String = null, periodStart: String = null, periodEnd: String = null, retailerFilter: String = null, marketFilter: String = null, providerUuid: String = null, includeCosts: Boolean! = false, passcode: String = null, expiresInDays: Int = null, pinnedPhotoIds: [String!] = null): BuyerPitchDeckCreateResult!
   revokeBuyerPitchDeck(deckUuid: String!): BuyerPitchDeckRevokeResult!
-  askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null): BrandChatReply!
+  askBrandChat(tenantId: ID!, question: String!, conversationId: ID = null, currentPath: String = null): BrandChatReply!
   clearBrandChat(tenantId: ID!, conversationId: ID = null): BrandChatClearResult!
+  askSparkHelp(question: String!, currentPath: String = null, tenantId: ID = null, previewAsClient: Boolean! = false): SparkHelpAnswerResult!
+  reportBrandChatUnhelpful(turnId: ID!, currentPath: String = null): SparkHelpActionResult!
+  upsertSparkHelpArticle(input: UpsertSparkHelpArticleInput!): SparkHelpArticleMutationResult!
+  deleteSparkHelpArticle(uuid: ID!): SparkHelpActionResult!
+  resolveSparkHelpGap(input: ResolveSparkHelpGapInput!): SparkHelpArticleMutationResult!
+  dismissSparkHelpGap(uuid: ID!): SparkHelpActionResult!
+  syncSparkHelpEmbeddings: SparkHelpEmbeddingSyncResult!
   suggestRecapMetricMapping(templateId: ID!): RecapMetricSuggestionResult!
   saveRecapMetricMapping(templateId: ID!, fields: [RecapFieldMetricInput!]!): SaveRecapMetricMappingResult!
   resolveRecapFlag(input: ResolveRecapFlagInput!): ResolveRecapFlagPayload!
@@ -7077,6 +7210,8 @@ type Mutation {
   broadcastChatMessage(input: BroadcastChatMessageInput!): BroadcastChatMessageResult!
   archiveChatThread(input: ArchiveChatThreadInput!): ChatThread!
   markChatThreadRead(input: MarkChatThreadReadInput!): Int!
+  draftChatReplyWithAi(threadUuid: ID!, instruction: String = null): ChatAiDraftReply!
+  distillChatToHelpKnowledge(threadUuid: ID!, messageUuid: ID!): ChatTeachSparkPreview!
   createAnnouncement(input: CreateAnnouncementInput!): AnnouncementResponse!
   deleteAnnouncement(input: DeleteAnnouncementInput!): AnnouncementResponse!
   reviewReceipt(input: ReviewReceiptInput!): ReviewReceiptResponse!
@@ -8370,6 +8505,7 @@ type Query {
   photoWall(startDate: String = null, endDate: String = null, retailer: String = null, market: String = null, sku: String = null, category: String = null, search: String = null, pinnedOnly: Boolean! = false, first: Int! = 60, offset: Int! = 0): PhotoWallResult!
   buyerPitchDecks: [BuyerPitchDeckSummary!]!
   brandChat(tenantId: ID!, conversationId: ID = null): BrandChatView!
+  sparkHelpKnowledge(audience: String = null, search: String = null, gapStatus: String = "open"): SparkHelpKnowledgePayload!
   recapFlagExplanation(recapId: ID!, isCustom: Boolean! = false): RecapFlagExplanation
   recapReceiptAudit(recapId: ID!): RecapReceiptAudit
   recapStaffFlags(tenantId: ID = null, dateFrom: String = null, dateTo: String = null, kind: String = null, unresolvedOnly: Boolean! = true, first: Int! = 200): [RecapStaffFlag!]!

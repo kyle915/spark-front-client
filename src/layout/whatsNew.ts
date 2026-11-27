@@ -14,11 +14,22 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-27hk",
+    date: "November 27, 2026",
+    title: "Ask Spark Help, Chat AI Drafts & Admin Knowledge Base",
+    staffOnly: true,
+    items: [
+      "Inside /chat, Ignite admins can click 'Draft AI' to draft BA replies grounded in shift details, brand product knowledge, and Spark SOPs, and click 'Teach Spark' on any reply to distill a PII-scrubbed FAQ into the Knowledge Base.",
+      "Open Help Knowledge (/help-knowledge) from System to manage audience-scoped articles (Admin-only vs. Brand clients), answer logged Knowledge Gaps, sync OpenAI text-embedding-3-small semantic vectors, and preview Client vs. Admin visibility.",
+    ],
+  },
+  {
     id: "2026-11-27sg",
     date: "November 27, 2026",
-    title: "Built-in Interactive Spark Setup Guide",
+    title: "Built-in Interactive Spark Setup Guide & Route-Aware Ask Spark Help",
     items: [
       "Open Setup Guide (/setup-guide) from the Workspace sidebar or Help page for step-by-step walkthroughs of Shelf & Voice, Buyer QBR Decks, Friday Saved-View Digests, Outbound Webhooks, and Spark MCP — with live readiness status and copyable snippets.",
+      "Ask Spark now answers how-to questions about your current Spark page (like Demo Costs, Shelf & Voice, or Retailer POS) with direct navigation links to the exact screen you need.",
     ],
   },
   {
