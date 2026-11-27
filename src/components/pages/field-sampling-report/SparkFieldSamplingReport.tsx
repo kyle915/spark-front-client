@@ -101,13 +101,6 @@ const dimmer: React.CSSProperties = { color: "var(--spark-text-meta)" };
 const modeLabel = (mode: string): string =>
   mode === "quantity" ? "Units" : mode === "sessions" ? "Sessions (approx.)" : "No data";
 
-const modeColor = (mode: string): string =>
-  mode === "quantity"
-    ? "var(--spark-lime, #f2f3ee)"
-    : mode === "sessions"
-      ? "var(--spark-flag-ink)"
-      : "rgba(var(--spark-ink-rgb),0.4)";
-
 const SkuBreakdownCard: React.FC<{
   title: string;
   subtitle: string;
@@ -118,19 +111,20 @@ const SkuBreakdownCard: React.FC<{
   return (
     <div className="spark-card p-5">
       <div className="flex items-start justify-between gap-3 mb-1">
-        <h3 className="font-bold text-sm">{title}</h3>
+        <h3 className="font-semibold text-sm">{title}</h3>
         <span
-          className="mono text-[9px] px-2 py-0.5 rounded-full"
-          style={{
-            border: `1px solid ${modeColor(mode)}`,
-            color: modeColor(mode),
-            letterSpacing: "0.08em",
-          }}
+          className={`chip ${
+            mode === "quantity"
+              ? "chip-lime"
+              : mode === "sessions"
+                ? "chip-orange"
+                : "chip-muted"
+          }`}
         >
           {modeLabel(mode)}
         </span>
       </div>
-      <p className="mono text-[10px] mb-3" style={dimmer}>
+      <p className="text-xs mb-3" style={dimmer}>
         {subtitle}
       </p>
       {items.length === 0 ? (
@@ -149,24 +143,24 @@ const SkuBreakdownCard: React.FC<{
                   return (
                     <tr
                       key={item.product}
-                      style={{ borderBottom: "1px solid rgba(var(--spark-ink-rgb),0.05)" }}
+                      style={{ borderBottom: "1px solid var(--spark-hairline, rgba(var(--spark-ink-rgb),0.06))" }}
                     >
                       <td className="py-2 pr-3" style={{ color: "var(--spark-text)" }}>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="truncate">{item.product}</span>
-                          <span className="mono text-[10px] shrink-0" style={dim}>
+                          <span className="truncate font-medium">{item.product}</span>
+                          <span className="tab-num text-xs shrink-0" style={dim}>
                             {sharePct}%
                           </span>
                         </div>
                         <div
-                          className="mt-1 h-1.5 rounded-full overflow-hidden"
+                          className="mt-1 h-1.5 rounded-sm overflow-hidden"
                           style={{ background: "rgba(var(--spark-ink-rgb),0.06)" }}
                         >
                           <div
-                            className="h-full rounded-full"
+                            className="h-full rounded-sm"
                             style={{
                               width: `${barPct}%`,
-                              background: "rgba(var(--spark-accent-rgb),0.6)",
+                              background: "rgba(var(--spark-ink-rgb),0.45)",
                             }}
                           />
                         </div>
@@ -183,8 +177,8 @@ const SkuBreakdownCard: React.FC<{
                   Total
                 </td>
                 <td
-                  className="pt-2 text-right tabular-nums font-bold"
-                  style={{ color: modeColor(mode) }}
+                  className="pt-2 text-right tabular-nums font-semibold"
+                  style={{ color: "var(--spark-text)" }}
                 >
                   {fmtNum(total)}
                 </td>

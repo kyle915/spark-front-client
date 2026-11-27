@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { graphql } from "react-relay";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import type { FieldEfficiencySectionQuery as QueryType } from "./__generated__/FieldEfficiencySectionQuery.graphql";
 import {
   cleanRates,
@@ -108,42 +109,87 @@ const Table: React.FC<{
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, idx) => {
-            const displayLabel = cleanStoreLabels
-              ? formatStoreEfficiencyLabel(r.label) || r.label
-              : r.label;
-            return (
-              <tr
-                key={`${idx}-${r.label}`}
-                style={idx > 0 ? { borderTop: "1px solid var(--spark-hairline)" } : undefined}
-              >
-                <td
-                  className={
-                    cleanStoreLabels
-                      ? "py-2.5 pr-4 max-w-[180px] sm:max-w-[320px] md:max-w-[460px] truncate font-medium"
-                      : "py-2.5 pr-4 truncate font-medium"
-                  }
-                  title={displayLabel}
-                >
-                  {displayLabel}
-                </td>
-                <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums whitespace-nowrap">
-                  {r.recaps}
-                </td>
-                {showSold ? (
-                  <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums font-semibold whitespace-nowrap">
-                    {unitsSoldText(r)}
-                  </td>
-                ) : null}
-                <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums whitespace-nowrap">
-                  {samplesPerHourText(r)}
-                </td>
-                <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums font-semibold whitespace-nowrap">
-                  {unitsPerHourText(r)}
-                </td>
-              </tr>
+          {(() => {
+            const maxBarVal = Math.max(
+              1,
+              ...rows.map((r) =>
+                showSold ? r.sold : (r.samplesPerHour ?? 0),
+              ),
             );
-          })}
+            return rows.map((r, idx) => {
+              const displayLabel = cleanStoreLabels
+                ? formatStoreEfficiencyLabel(r.label) || r.label
+                : r.label;
+              const barMetric = showSold ? r.sold : (r.samplesPerHour ?? 0);
+              const barPct =
+                barMetric > 0
+                  ? Math.min(100, Math.max(4, Math.round((barMetric / maxBarVal) * 100)))
+                  : 0;
+              return (
+                <tr
+                  key={`${idx}-${r.label}`}
+                  style={idx > 0 ? { borderTop: "1px solid var(--spark-hairline)" } : undefined}
+                >
+                  <td
+                    className={
+                      cleanStoreLabels
+                        ? "py-2.5 pr-4 max-w-[180px] sm:max-w-[320px] md:max-w-[460px] font-medium"
+                        : "py-2.5 pr-4 font-medium"
+                    }
+                    title={displayLabel}
+                  >
+                    {cleanStoreLabels ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          useStoreSheetStore.getState().openStoreSheet({
+                            storeName: displayLabel,
+                            fallbackTitle: displayLabel,
+                          })
+                        }
+                        className="text-left font-medium underline decoration-[var(--spark-border)] hover:decoration-[var(--spark-text)] underline-offset-2 truncate block max-w-full transition"
+                        style={{ color: "var(--spark-text)" }}
+                        title={`Open store profile for ${displayLabel}`}
+                      >
+                        {displayLabel}
+                      </button>
+                    ) : (
+                      <span className="truncate block">{displayLabel}</span>
+                    )}
+                    {barPct > 0 ? (
+                      <div
+                        className="mt-1 h-1 rounded-sm overflow-hidden max-w-[180px]"
+                        style={{ background: "rgba(var(--spark-ink-rgb),0.06)" }}
+                        aria-hidden
+                      >
+                        <div
+                          className="h-full rounded-sm"
+                          style={{
+                            width: `${barPct}%`,
+                            background: "rgba(var(--spark-ink-rgb),0.32)",
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums whitespace-nowrap align-top">
+                    {r.recaps}
+                  </td>
+                  {showSold ? (
+                    <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums font-semibold whitespace-nowrap align-top">
+                      {unitsSoldText(r)}
+                    </td>
+                  ) : null}
+                  <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums whitespace-nowrap align-top">
+                    {samplesPerHourText(r)}
+                  </td>
+                  <td className="py-2.5 pl-4 sm:pl-6 text-right tabular-nums font-semibold whitespace-nowrap align-top">
+                    {unitsPerHourText(r)}
+                  </td>
+                </tr>
+              );
+            });
+          })()}
         </tbody>
       </table>
     </div>

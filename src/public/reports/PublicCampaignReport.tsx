@@ -54,11 +54,13 @@ function errorCopy(status: number, code: string, serverMessage?: string): string
 
 // Standalone dark chrome for the public surface — mirrors the public form
 // layout's near-black background + Spark mark, but self-contained.
-const Shell: React.FC<{ children: React.ReactNode; actions?: React.ReactNode }> = ({
-  children,
-  actions,
-}) => (
-  <RecapDocument page actions={actions}>
+const Shell: React.FC<{
+  children: React.ReactNode;
+  brandName?: string | null;
+  status?: string | null;
+  actions?: React.ReactNode;
+}> = ({ children, brandName, status, actions }) => (
+  <RecapDocument page brandName={brandName} status={status} actions={actions}>
     <main className="recap-doc-body">{children}</main>
   </RecapDocument>
 );
@@ -165,20 +167,22 @@ const PublicCampaignReport: React.FC = () => {
 
   return (
     <Shell
+      brandName={report.brandName}
+      status="APPROVED"
       actions={
         <a
           href={pdfUrl}
           target="_blank"
           rel="noreferrer"
-          className="px-4 py-2 rounded-xl text-sm font-semibold"
+          className="px-3.5 py-2 rounded-lg text-xs font-semibold transition hover:opacity-90"
           style={{
-            background: "var(--spark-lime, #f2f3ee)",
-            color: "#0a0d09",
+            background: "#14160f",
+            color: "#f6f6f2",
             textDecoration: "none",
           }}
           title="Download this report as a PDF"
         >
-          ⬇ Download PDF
+          ↓ Download PDF
         </a>
       }
     >

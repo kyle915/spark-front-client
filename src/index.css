@@ -2585,6 +2585,11 @@ body { background: var(--spark-bg); }
     border: 1px solid #d1d5db !important;
     box-shadow: none !important;
     page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .spark-print-keep {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   /* All text → near-black for legibility on paper */

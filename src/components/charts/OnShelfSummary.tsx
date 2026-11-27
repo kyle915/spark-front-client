@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { ShelfSummaryQuery } from "@/api/queries/ShelfSummaryQuery";
 import type { ShelfSummaryQuery as ShelfSummaryQueryType } from "@api/queries/__generated__/ShelfSummaryQuery.graphql";
 import {
@@ -75,9 +76,20 @@ const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
                 key={`${store.storeName}|${store.eventDate}|${i}`}
                 className="text-sm flex items-baseline justify-between gap-3"
               >
-                <span className="min-w-0 break-words" style={TEXT}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    useStoreSheetStore.getState().openStoreSheet({
+                      storeName: store.storeName,
+                      fallbackTitle: store.storeName,
+                    })
+                  }
+                  className="min-w-0 break-words text-left font-medium underline decoration-[var(--spark-border)] hover:decoration-[var(--spark-text)] underline-offset-2 transition"
+                  style={TEXT}
+                  title={`Open store profile for ${store.storeName}`}
+                >
                   {store.storeName}
-                </span>
+                </button>
                 <span className="text-[13px] shrink-0 tabular-nums" style={META}>
                   {shelfVisitDay(store.eventDate)}
                 </span>

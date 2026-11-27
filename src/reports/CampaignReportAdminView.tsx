@@ -124,23 +124,18 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
     <div className="spark-card p-5">
       <div>
         <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--spark-text-meta)",
-          }}
+          className="text-xs font-semibold"
+          style={{ color: "var(--spark-text)" }}
         >
-          Ask about this campaign
+          Ask Spark about this campaign
         </p>
-        <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
-          Ask a question about this campaign&apos;s data and get an answer on
-          demand.
+        <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
+          Grounded strictly in this campaign&apos;s approved activations and recaps.
         </p>
       </div>
 
       <form
-        className="mt-4 flex items-center gap-2 flex-wrap"
+        className="mt-3 flex items-center gap-2 flex-wrap"
         onSubmit={(e) => {
           e.preventDefault();
           if (canAsk) void ask();
@@ -152,7 +147,7 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
           onChange={(e) => setQuestion(e.target.value)}
           disabled={loading}
           placeholder="Ask about this campaign's results…"
-          className="flex-1 min-w-[220px] px-4 py-2 rounded-xl text-sm transition disabled:opacity-60"
+          className="flex-1 min-w-[220px] px-3.5 py-2 rounded-lg text-sm transition disabled:opacity-60"
           style={{
             background: "rgba(var(--spark-ink-rgb),0.04)",
             color: "var(--spark-text)",
@@ -162,21 +157,11 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
         <button
           type="submit"
           disabled={!canAsk}
-          className="px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          className="px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
           style={limeBtn}
-          title="Ask a question about this campaign's data"
+          title="Ask Spark about this campaign's data"
         >
-          {loading && (
-            <span
-              aria-hidden
-              className="inline-block w-3.5 h-3.5 rounded-full animate-spin"
-              style={{
-                border: "2px solid rgba(var(--spark-bg-rgb),0.35)",
-                borderTopColor: "#0a0d09",
-              }}
-            />
-          )}
-          {loading ? "Thinking…" : "Ask"}
+          {loading ? "Checking…" : "Ask"}
         </button>
       </form>
 
@@ -277,22 +262,22 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="mono text-[11px]"
-          style={{ letterSpacing: "0.14em", color: "var(--spark-text-meta)" }}
+          className="text-xs font-medium"
+          style={{ color: "var(--spark-text-meta)" }}
         >
-          ← BACK
+          ← Back
         </button>
         <div className="flex gap-2 flex-wrap">
           <button
             type="button"
             onClick={copyLink}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold transition"
             style={
               copied
                 ? {
-                    background: "rgba(95,184,239,0.18)",
-                    color: "var(--spark-sky)",
-                    border: "1px solid rgba(95,184,239,0.5)",
+                    background: "rgba(var(--spark-ok-rgb),0.14)",
+                    color: "var(--spark-ok-ink)",
+                    border: "1px solid rgba(var(--spark-ok-rgb),0.35)",
                   }
                 : ghostBtn
             }
@@ -304,11 +289,11 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
             href={pdfUrl}
             target="_blank"
             rel="noreferrer"
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold transition"
             style={limeBtn}
             title="Download the report as a PDF"
           >
-            ⬇ Download PDF
+            ↓ Download PDF
           </a>
         </div>
       </div>
@@ -316,7 +301,7 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
       {/* On-demand campaign Q&A — admin view only */}
       <AiAnswerCard requestId={report.requestId} />
 
-      <RecapDocument>
+      <RecapDocument brandName={viewData.brandName} status="APPROVED">
         <CampaignReportView report={viewData} />
       </RecapDocument>
     </div>

@@ -5,44 +5,14 @@ import "leaflet/dist/leaflet.css";
 import CampaignPhotoHighlights from "./CampaignPhotoHighlights";
 import { SparkLeafletCluster } from "@/shared/map/SparkLeafletCluster";
 import { OSM_LIGHT_TILE, STATUS_COLOR } from "@/shared/map/sparkMap";
-import { SparkMark } from "@/recap/SparkMark";
+import { RecapKpiStrip, type RecapKpiItem } from "@/recap/RecapDetailShell";
+import {
+  buildCampaignFunnel,
+  computeCampaignConversionPct,
+  type CampaignFunnelInput,
+} from "./campaignFunnel";
 
-/**
- * Shared, presentational campaign-report renderer.
- *
- * Drives BOTH report surfaces from one plain object:
- *   • the authenticated admin view (/report-view/:requestId), fed by the
- *     `campaignReport` GraphQL query, and
- *   • the public shareable page (/report/:token), fed by the no-auth REST
- *     endpoint.
- *
- * It takes a `CampaignReport`-shaped object MINUS `shareToken` (the public
- * payload never includes the token), so both callers map their data into
- * `CampaignReportData` and render the exact same screen. Action buttons
- * (copy link / download PDF) live on the page wrappers, not here — this
- * component stays pure and print/share-clean.
- *
- * Styling uses the spark-v2 dark tokens via inline CSS-var fallbacks so it
- * renders on-brand whether or not the surrounding app has applied the
- * theme class. The map reuses react-leaflet (already a project dep — no new
- * heavy dependency); when no event has usable coordinates it falls back to
- * a plain location list.
- */
-
-// ─── Public data shape (CampaignReport minus shareToken) ───────────────
-export type CampaignReportKpis = {
-  events: number;
-  recaps: number;
-  consumersReached: number;
-  samplesDistributed: number;
-  productsSold: number;
-  cansSold: number;
-  packsSold: number;
-  totalEngagements: number;
-  firstTimeConsumers: number;
-  brandAwareConsumers: number;
-  willingToPurchase: number;
-};
+export type CampaignReportKpis = CampaignFunnelInput;
 
 export type CampaignReportEventRow = {
   id: string;
@@ -76,30 +46,23 @@ export type CampaignReportData = {
   highlights: ReadonlyArray<CampaignReportQuote>;
 };
 
-// ─── Brand tokens (fallbacks so we render on-brand even un-themed) ──────
 const C = {
-  bg: "var(--recap-bg, #f6f6f2)",
   surface: "var(--recap-surface, #ffffff)",
-  surface2: "var(--recap-surface, #ffffff)",
   border: "var(--recap-border, #e2e4d8)",
   text: "var(--recap-text, #14160f)",
-  lime: "var(--recap-heading, #3f5c12)",
-  sky: "var(--spark-sky, #2a7aa8)",
-  gold: "var(--spark-gold, #b8860b)",
-  orange: "var(--spark-orange, #ef5a2a)",
+  accent: "var(--recap-heading, #3f5c12)",
   muted: "var(--recap-muted, #5c6154)",
   faint: "var(--recap-faint, #7a7f70)",
 } as const;
 
 const cardStyle: React.CSSProperties = {
-  background: `linear-gradient(180deg, ${C.surface}, ${C.surface2})`,
+  background: C.surface,
   border: `1px solid ${C.border}`,
-  borderRadius: 20,
+  borderRadius: 12,
 };
 
-// ─── Formatting helpers ─────────────────────────────────────────────────
 const nf = (n: number | null | undefined): string =>
-  typeof n === "number" && Number.isFinite(n) ? n.toLocaleString() : "0";
+  typeof n === "number" && Number.isFinite(n) ? n.toLocaleString("en-US") : "0";
 
 const formatGeneratedAt = (raw: string | null | undefined): string => {
   if (!raw) return "";
@@ -129,7 +92,6 @@ const formatEventDate = (raw: string | null | undefined): string => {
   }
 };
 
-// Parse a "lat,lng" coordinate string into a finite [lat, lng] pair, or null.
 const parseCoords = (
   raw: string | null | undefined,
 ): [number, number] | null => {
@@ -149,7 +111,6 @@ const locationLabel = (e: CampaignReportEventRow): string => {
   return [e.locationName, place].filter(Boolean).join(" · ") || "—";
 };
 
-// ─── Leaflet marker (default icon assets via Vite ?url imports) ─────────
 const escapeHtml = (value: string): string =>
   value
     .replace(/&/g, "&amp;")
@@ -157,53 +118,25 @@ const escapeHtml = (value: string): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
-// ─── Section header ─────────────────────────────────────────────────────
-const SectionLabel: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <p
-    className="mono"
-    style={{
-      fontSize: 10,
-      letterSpacing: "0.18em",
-      textTransform: "uppercase",
-      color: C.faint,
-      margin: 0,
-    }}
-  >
-    {children}
-  </p>
-);
-
-// ─── KPI tile ───────────────────────────────────────────────────────────
-const Kpi: React.FC<{
-  label: string;
-  value: number;
-  tone?: string;
-  hint?: string;
-}> = ({ label, value, tone, hint }) => (
-  <div style={{ ...cardStyle, padding: "1.1rem 1.25rem" }}>
-    <SectionLabel>{label}</SectionLabel>
-    <p
-      className="display tab-num"
-      style={{
-        fontSize: "2rem",
-        fontWeight: 700,
-        lineHeight: 1.05,
-        marginTop: 6,
-        color: tone ?? C.text,
-        letterSpacing: "-0.02em",
-      }}
+const SectionHeading: React.FC<{
+  title: string;
+  subtitle?: string;
+}> = ({ title, subtitle }) => (
+  <div className="mb-3">
+    <h2
+      className="display font-semibold text-base"
+      style={{ letterSpacing: "-0.02em", color: C.text, margin: 0 }}
     >
-      {nf(value)}
-    </p>
-    {hint && (
-      <p style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{hint}</p>
-    )}
+      {title}
+    </h2>
+    {subtitle ? (
+      <p className="text-xs mt-0.5 m-0" style={{ color: C.muted }}>
+        {subtitle}
+      </p>
+    ) : null}
   </div>
 );
 
-// ─── Activation map (reuses react-leaflet; falls back to a list) ────────
 const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }> = ({
   events,
 }) => {
@@ -218,8 +151,6 @@ const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }>
     [events],
   );
 
-  // No usable coordinates anywhere → simple location list fallback. Keeps
-  // the report meaningful without forcing a map render on empty geo data.
   if (points.length === 0) {
     return (
       <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
@@ -253,20 +184,18 @@ const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }>
                     {e.name || e.locationName || "Activation"}
                   </p>
                   <p
-                    className="mono"
                     style={{
                       margin: "2px 0 0",
-                      fontSize: 11,
-                      color: C.faint,
-                      letterSpacing: "0.04em",
+                      fontSize: 12,
+                      color: C.muted,
                     }}
                   >
                     {locationLabel(e)}
                   </p>
                 </div>
                 <span
-                  className="mono"
-                  style={{ fontSize: 11, color: C.faint, whiteSpace: "nowrap" }}
+                  className="tab-num"
+                  style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}
                 >
                   {formatEventDate(e.date)}
                 </span>
@@ -283,19 +212,13 @@ const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }>
     points.length > 1 ? points.map((p) => p.pos) : undefined;
 
   return (
-    <div
-      style={{
-        ...cardStyle,
-        padding: 0,
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
       <MapContainer
         center={center}
         bounds={bounds}
         zoom={points.length > 1 ? undefined : 11}
         scrollWheelZoom={false}
-        style={{ height: 360, width: "100%" }}
+        style={{ height: 340, width: "100%" }}
       >
         <TileLayer
           attribution={OSM_LIGHT_TILE.attribution}
@@ -318,150 +241,148 @@ const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }>
   );
 };
 
-// ─── Main view ──────────────────────────────────────────────────────────
 const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
   report,
 }) => {
   const { kpis } = report;
+  const convPct = computeCampaignConversionPct(kpis);
+  const funnel = useMemo(() => buildCampaignFunnel(kpis), [kpis]);
+
+  const kpiItems = useMemo<RecapKpiItem[]>(() => {
+    const out: RecapKpiItem[] = [
+      { label: "Events run", value: nf(kpis.events) },
+      { label: "Consumers reached", value: nf(kpis.consumersReached), glow: true },
+      { label: "Samples handed out", value: nf(kpis.samplesDistributed) },
+      { label: "Units sold", value: nf(kpis.productsSold) },
+    ];
+    if (convPct) {
+      out.push({ label: "Conversion", value: convPct });
+    } else if (kpis.totalEngagements > 0) {
+      out.push({ label: "Engagements", value: nf(kpis.totalEngagements) });
+    }
+    return out;
+  }, [kpis, convPct]);
+
+  const packSplit = [
+    kpis.cansSold > 0 ? `${nf(kpis.cansSold)} cans sold` : null,
+    kpis.packsSold > 0 ? `${nf(kpis.packsSold)} packs sold` : null,
+    kpis.brandAwareConsumers > 0
+      ? `${nf(kpis.brandAwareConsumers)} already brand-aware`
+      : null,
+  ].filter(Boolean);
 
   return (
-    <div style={{ color: C.text }}>
-      {/* Branded header */}
-      <header style={{ ...cardStyle, padding: "1.75rem 2rem", marginBottom: 24 }}>
-        <SparkMark height={28} />
-        <SectionLabel>Campaign report · {report.brandName}</SectionLabel>
+    <div className="space-y-6" style={{ color: C.text }}>
+      {/* Editorial masthead (RecapDocument above already carries Brand × Spark mark) */}
+      <header className="px-1 pt-1">
+        <p className="text-xs font-medium m-0" style={{ color: C.muted }}>
+          Campaign report
+          {report.brandName ? ` · ${report.brandName}` : ""}
+          {` · ${nf(kpis.recaps)} filed ${kpis.recaps === 1 ? "recap" : "recaps"}`}
+        </p>
         <h1
-          className="display"
+          className="display font-semibold mt-1"
           style={{
-            fontSize: "2.4rem",
-            fontWeight: 700,
-            margin: "0.4rem 0 0",
+            fontSize: "clamp(1.65rem, 3.5vw, 2.25rem)",
+            margin: 0,
             letterSpacing: "-0.03em",
-            lineHeight: 1.05,
+            lineHeight: 1.1,
           }}
         >
           {report.title}
         </h1>
-        <div
-          className="mono"
-          style={{
-            marginTop: 10,
-            fontSize: 12,
-            color: C.muted,
-            letterSpacing: "0.04em",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 12,
-          }}
-        >
-          {report.dateRange && <span>{report.dateRange}</span>}
-          {report.dateRange && <span style={{ color: C.border }}>·</span>}
-          <span>Generated {formatGeneratedAt(report.generatedAt)}</span>
-        </div>
+        <p className="text-xs mt-1.5 m-0 tab-num" style={{ color: C.muted }}>
+          {report.dateRange ? `${report.dateRange} · ` : ""}
+          Generated {formatGeneratedAt(report.generatedAt)}
+        </p>
       </header>
 
-      {/* Headline KPI tiles */}
-      <section style={{ marginBottom: 24 }}>
-        <div
-          style={{
-            display: "grid",
-            gap: 14,
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          }}
-        >
-          <Kpi
-            label="Consumers reached"
-            value={kpis.consumersReached}
-            tone={C.lime}
-          />
-          <Kpi label="Samples distributed" value={kpis.samplesDistributed} />
-          <Kpi label="Products sold" value={kpis.productsSold} />
-          <Kpi label="Cans sold" value={kpis.cansSold} />
-          <Kpi label="Packs sold" value={kpis.packsSold} />
-          <Kpi
-            label="Total engagements"
-            value={kpis.totalEngagements}
-            tone={C.sky}
-          />
-        </div>
-      </section>
+      {/* Connected KPI strip */}
+      <div>
+        <RecapKpiStrip items={kpiItems} />
+        {packSplit.length > 0 ? (
+          <p className="text-xs mt-2 px-1 tab-num" style={{ color: C.muted }}>
+            {packSplit.join(" · ")}
+          </p>
+        ) : null}
+      </div>
 
-      {/* Consumer-sentiment breakdown */}
-      <section style={{ marginBottom: 28 }}>
-        <SectionLabel>Consumer insights</SectionLabel>
-        <div
-          style={{
-            display: "grid",
-            gap: 14,
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            marginTop: 10,
-          }}
+      {/* Visual Trial & Conversion Funnel */}
+      {funnel.length > 1 ? (
+        <section
+          aria-label="Trial and conversion funnel"
+          style={{ ...cardStyle, padding: "1.25rem 1.35rem" }}
+          className="spark-print-keep"
         >
-          <Kpi
-            label="First-time consumers"
-            value={kpis.firstTimeConsumers}
-            tone={C.gold}
+          <SectionHeading
+            title="Shopper trial & conversion funnel"
+            subtitle="Progression from activation reach through sampling, purchase intent, and units sold."
           />
-          <Kpi
-            label="Brand-aware consumers"
-            value={kpis.brandAwareConsumers}
-          />
-          <Kpi
-            label="Willing to purchase"
-            value={kpis.willingToPurchase}
-            tone={C.lime}
-          />
-        </div>
-        <div
-          className="mono"
-          style={{
-            marginTop: 10,
-            fontSize: 11,
-            color: C.faint,
-            letterSpacing: "0.04em",
-          }}
-        >
-          {nf(kpis.events)} EVENT{kpis.events === 1 ? "" : "S"} ·{" "}
-          {nf(kpis.recaps)} RECAP{kpis.recaps === 1 ? "" : "S"} FILED
-        </div>
-      </section>
+          <div className="space-y-3 mt-3">
+            {funnel.map((stage) => (
+              <div key={stage.key} className="space-y-1">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-medium" style={{ color: C.text }}>
+                    {stage.label}
+                  </span>
+                  <span className="tab-num flex items-baseline gap-2">
+                    {stage.rateNote ? (
+                      <span className="text-xs" style={{ color: C.muted }}>
+                        {stage.rateNote}
+                      </span>
+                    ) : null}
+                    <strong className="font-semibold" style={{ color: C.text }}>
+                      {nf(stage.value)}
+                    </strong>
+                  </span>
+                </div>
+                <div
+                  className="h-2 rounded-sm overflow-hidden"
+                  style={{ background: "rgba(20, 22, 15, 0.06)" }}
+                  aria-hidden
+                >
+                  <div
+                    className="h-full rounded-sm"
+                    style={{
+                      width: `${stage.barPct}%`,
+                      background:
+                        stage.key === "sold" ? C.accent : "rgba(20, 22, 15, 0.78)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Event table */}
-      <section style={{ marginBottom: 28 }}>
-        <SectionLabel>Events</SectionLabel>
-        <div
-          style={{
-            ...cardStyle,
-            marginTop: 10,
-            overflow: "hidden",
-          }}
-        >
+      <section className="spark-print-keep">
+        <SectionHeading title="Activations in this report" />
+        <div style={{ ...cardStyle, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
                 fontSize: 14,
-                minWidth: 640,
+                minWidth: 560,
               }}
             >
               <thead>
                 <tr
-                  className="mono"
                   style={{
                     textAlign: "left",
-                    fontSize: 10,
-                    letterSpacing: "0.14em",
-                    color: C.faint,
-                    background: C.surface2,
+                    fontSize: 12,
+                    color: C.muted,
                     borderBottom: `1px solid ${C.border}`,
                   }}
                 >
-                  <th style={{ padding: "0.75rem 1rem" }}>EVENT</th>
-                  <th style={{ padding: "0.75rem 1rem" }}>DATE</th>
-                  <th style={{ padding: "0.75rem 1rem" }}>LOCATION</th>
-                  <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>
-                    RECAPS
+                  <th style={{ padding: "0.7rem 1rem", fontWeight: 500 }}>Event</th>
+                  <th style={{ padding: "0.7rem 1rem", fontWeight: 500 }}>Date</th>
+                  <th style={{ padding: "0.7rem 1rem", fontWeight: 500 }}>Location</th>
+                  <th style={{ padding: "0.7rem 1rem", textAlign: "right", fontWeight: 500 }}>
+                    Recaps
                   </th>
                 </tr>
               </thead>
@@ -471,7 +392,7 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                     <td
                       colSpan={4}
                       style={{
-                        padding: "2.5rem 1rem",
+                        padding: "2rem 1rem",
                         textAlign: "center",
                         color: C.muted,
                       }}
@@ -480,36 +401,35 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                     </td>
                   </tr>
                 ) : (
-                  report.events.map((e) => (
+                  report.events.map((e, idx) => (
                     <tr
                       key={e.id}
-                      style={{ borderBottom: `1px solid ${C.border}` }}
+                      style={idx > 0 ? { borderTop: `1px solid ${C.border}` } : undefined}
                     >
                       <td
                         style={{
-                          padding: "0.75rem 1rem",
-                          fontWeight: 600,
+                          padding: "0.7rem 1rem",
+                          fontWeight: 500,
                           color: C.text,
                         }}
                       >
                         {e.name || "—"}
                       </td>
                       <td
-                        style={{ padding: "0.75rem 1rem", color: C.muted }}
+                        className="tab-num whitespace-nowrap"
+                        style={{ padding: "0.7rem 1rem", color: C.muted }}
                       >
                         {formatEventDate(e.date)}
                       </td>
-                      <td
-                        style={{ padding: "0.75rem 1rem", color: C.muted }}
-                      >
+                      <td style={{ padding: "0.7rem 1rem", color: C.muted }}>
                         {locationLabel(e)}
                       </td>
                       <td
-                        className="tab-num"
+                        className="tab-num font-semibold"
                         style={{
-                          padding: "0.75rem 1rem",
+                          padding: "0.7rem 1rem",
                           textAlign: "right",
-                          color: e.recapCount > 0 ? C.lime : C.faint,
+                          color: e.recapCount > 0 ? C.accent : C.faint,
                         }}
                       >
                         {nf(e.recapCount)}
@@ -523,28 +443,24 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
         </div>
       </section>
 
-      {/* Photo highlights gallery (responsive grid + click-to-enlarge
-          lightbox; renders nothing when there are no photos) */}
+      {/* Photo highlights gallery */}
       <CampaignPhotoHighlights photos={report.photos} />
 
-      {/* Activation map / location list */}
-      <section style={{ marginBottom: 28 }}>
-        <SectionLabel>Activation map</SectionLabel>
-        <div style={{ marginTop: 10 }}>
-          <ActivationMap events={report.events} />
-        </div>
+      {/* Activation map */}
+      <section className="spark-print-keep">
+        <SectionHeading title="Activation map" />
+        <ActivationMap events={report.events} />
       </section>
 
       {/* BA roster */}
       {report.ambassadors.length > 0 && (
-        <section style={{ marginBottom: 28 }}>
-          <SectionLabel>Brand ambassadors</SectionLabel>
+        <section className="spark-print-keep">
+          <SectionHeading title="Brand ambassadors" />
           <div
             style={{
               display: "grid",
               gap: 12,
               gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              marginTop: 10,
             }}
           >
             {report.ambassadors.map((ba, i) => (
@@ -552,7 +468,7 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                 key={`${ba.name}-${i}`}
                 style={{
                   ...cardStyle,
-                  padding: "0.9rem 1.1rem",
+                  padding: "0.85rem 1rem",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -574,35 +490,28 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                     {ba.name}
                   </p>
                   <span
-                    className="chip"
-                    style={{
-                      marginTop: 6,
-                      display: "inline-flex",
-                      color: ba.isExternal ? C.gold : C.lime,
-                      background: ba.isExternal
-                        ? "rgba(255,201,96,0.10)"
-                        : "rgba(242,243,238,0.10)",
-                    }}
+                    className={`chip mt-1.5 ${ba.isExternal ? "chip-muted" : "chip-lime"}`}
                   >
-                    {ba.isExternal ? "EXTERNAL" : "ROSTER"}
+                    {ba.isExternal ? "External" : "Roster"}
                   </span>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <p
-                    className="tab-num"
+                    className="display tab-num"
                     style={{
                       margin: 0,
-                      fontSize: "1.4rem",
-                      fontWeight: 700,
+                      fontSize: "1.35rem",
+                      fontWeight: 600,
+                      letterSpacing: "-0.03em",
                       color: C.text,
                       lineHeight: 1,
                     }}
                   >
                     {nf(ba.eventCount)}
                   </p>
-                  <SectionLabel>
-                    event{ba.eventCount === 1 ? "" : "s"}
-                  </SectionLabel>
+                  <p className="text-xs m-0 mt-0.5" style={{ color: C.muted }}>
+                    {ba.eventCount === 1 ? "event" : "events"}
+                  </p>
                 </div>
               </div>
             ))}
@@ -612,14 +521,13 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
 
       {/* Consumer-quote highlights */}
       {report.highlights.length > 0 && (
-        <section style={{ marginBottom: 8 }}>
-          <SectionLabel>Highlights</SectionLabel>
+        <section className="spark-print-keep">
+          <SectionHeading title="Shopper & field highlights" />
           <div
             style={{
               display: "grid",
               gap: 12,
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              marginTop: 10,
             }}
           >
             {report.highlights.map((q, i) => (
@@ -628,14 +536,14 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                 style={{
                   ...cardStyle,
                   margin: 0,
-                  padding: "1.1rem 1.25rem",
-                  borderLeft: `3px solid ${C.lime}`,
+                  padding: "1rem 1.15rem",
+                  borderLeft: `3px solid ${C.accent}`,
                 }}
               >
                 <p
                   style={{
                     margin: 0,
-                    fontSize: 15,
+                    fontSize: 14,
                     lineHeight: 1.5,
                     color: C.text,
                   }}
@@ -644,12 +552,10 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                 </p>
                 {q.source && (
                   <footer
-                    className="mono"
                     style={{
-                      marginTop: 8,
-                      fontSize: 11,
-                      letterSpacing: "0.06em",
-                      color: C.faint,
+                      marginTop: 6,
+                      fontSize: 12,
+                      color: C.muted,
                     }}
                   >
                     — {q.source}

@@ -118,7 +118,13 @@ const Inner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
 
       {/* One theme is a sentence in the list below, not a one-bar chart. */}
       {bars.length > 1 ? (
-        <ChartBlock title={CHART_TITLE} height={Math.max(96, bars.length * ROW_HEIGHT + 36)}>
+        <ChartBlock
+          title={CHART_TITLE}
+          height={Math.max(96, bars.length * ROW_HEIGHT + 36)}
+          categoryHeader="Theme"
+          valueHeader="Recaps"
+          tableRows={bars.map((b) => ({ label: b.label, value: b.value }))}
+        >
           <Bar
             data={{
               labels: bars.map((b) => shortLabel(b.label)),

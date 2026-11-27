@@ -8,7 +8,7 @@ import AskAboutChart from "@/components/explain/AskAboutChart";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { StoreChartLinks } from "@/components/store/StoreLinks";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
-import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
+import { useConsumerBreakdown, type ConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import { ConsumersPerEventQuery } from "@/api/queries/ConsumersPerEventQuery";
 import type { ConsumersPerEventQuery as ConsumersPerEventQueryType } from "@api/queries/__generated__/ConsumersPerEventQuery.graphql";
 import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
@@ -23,9 +23,16 @@ import {
   perEventSentence,
   productSplit,
   rankedSplit,
-  weeklyTrend,
   type RankedSplit,
 } from "@/lib/consumerBreakdown";
+import {
+  alignPriorWeeklyValues,
+  computePriorDateWindow,
+  metricAxisTitle,
+  transformSplitRowsByMetric,
+  transformWeeklyByMetric,
+  type ReportChartMetric,
+} from "@/components/pages/reports/programReportHelpers";
 import type { ChartKind } from "@/lib/dashboardExplain";
 import type { ChartDataset, ChartOptions, Plugin, TooltipItem } from "chart.js";
 import {
@@ -60,7 +67,13 @@ const Nothing: React.FC<{ title: string; children: ReactNode }> = ({ title, chil
   </figure>
 );
 
-type Window = { tenantId: string; startDate: string; endDate: string };
+type Window = {
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  metric?: ReportChartMetric;
+  comparePrior?: boolean;
+};
 
 /** Keeps one chart's failed or slow query from taking the page with it. */
 const Guard: React.FC<Window & { title: string; height: number; children: ReactNode }> = ({
@@ -71,7 +84,6 @@ const Guard: React.FC<Window & { title: string; height: number; children: ReactN
   startDate,
   endDate,
 }) => (
-  // Keyed on the window so a failed load does not stick after the dates change.
   <ErrorBoundary
     key={`${tenantId}|${startDate}|${endDate}`}
     fallback={<Nothing title={title}>This chart could not load.</Nothing>}
@@ -90,31 +102,73 @@ const Guard: React.FC<Window & { title: string; height: number; children: ReactN
 
 /* ───────────────────────── weekly trend ───────────────────────── */
 
-const WEEKLY_TITLE = "Consumers sampled per week";
-const WEEKLY_HEIGHT = 216;
+const WEEKLY_HEIGHT = 224;
 
-const WeeklyInner: React.FC<Window & { note?: string }> = ({
+const WeeklyPlot: React.FC<{
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  breakdown: ConsumerBreakdown | null;
+  priorBreakdown?: ConsumerBreakdown | null;
+  priorShortLabel?: string;
+  metric: ReportChartMetric;
+  note?: string;
+}> = ({
   tenantId,
   startDate,
   endDate,
+  breakdown,
+  priorBreakdown = null,
+  priorShortLabel = "prior window",
+  metric,
   note,
 }) => {
   const appearance = useAppearance();
   const [focusTypical, setFocusTypical] = useState(false);
-  const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
-  const trend = useMemo(() => weeklyTrend(breakdown?.byWeek ?? []), [breakdown]);
+  const axisCopy = metricAxisTitle("week", metric);
+
+  const trend = useMemo(
+    () => transformWeeklyByMetric(breakdown?.byWeek ?? [], metric),
+    [breakdown, metric],
+  );
+
+  const alignedPrior = useMemo(() => {
+    if (!priorBreakdown) return null;
+    const vals = alignPriorWeeklyValues(
+      trend.values.length,
+      priorBreakdown.byWeek ?? [],
+      metric,
+    );
+    return vals.some((v) => v != null && v > 0) ? vals : null;
+  }, [priorBreakdown, trend.values.length, metric]);
 
   const spikeMeta = useMemo(
-    () => computeTypicalWeeksScale(trend.values, trend.labels),
-    [trend.values, trend.labels],
+    () =>
+      metric === "sampled" && !alignedPrior
+        ? computeTypicalWeeksScale(trend.values, trend.labels)
+        : null,
+    [trend.values, trend.labels, metric, alignedPrior],
   );
 
   const datasets = useMemo<ChartDataset<"line", Array<number | null>>[]>(() => {
     if (!focusTypical || !spikeMeta) {
-      return [lineSeries({ label: "Consumers sampled", data: trend.values })];
+      const main = lineSeries({
+        label: alignedPrior ? "Selected window" : axisCopy.measure,
+        data: trend.values,
+      });
+      if (!alignedPrior) return [main];
+      const ghost: ChartDataset<"line", Array<number | null>> = {
+        ...lineSeries({
+          label: `Prior (${priorShortLabel})`,
+          data: alignedPrior,
+          quiet: true,
+        }),
+        borderDash: [4, 4],
+      };
+      return [main, ghost];
     }
     const baseMain = lineSeries({
-      label: "Consumers sampled",
+      label: axisCopy.measure,
       data: spikeMeta.typicalData,
     });
     const lastTypicalIdx = spikeMeta.typicalData.reduce<number>(
@@ -135,7 +189,7 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
     };
 
     const connectorDataset: ChartDataset<"line", Array<number | null>> = {
-      label: "Consumers sampled",
+      label: axisCopy.measure,
       data: spikeMeta.connectorData,
       borderColor: chartQuiet(),
       backgroundColor: chartQuiet(),
@@ -151,7 +205,15 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
     };
 
     return [mainDataset, connectorDataset];
-  }, [focusTypical, spikeMeta, trend.values, appearance]);
+  }, [
+    focusTypical,
+    spikeMeta,
+    trend.values,
+    alignedPrior,
+    priorShortLabel,
+    axisCopy.measure,
+    appearance,
+  ]);
 
   const cappedPeakPlugin = useMemo<Plugin<"line"> | null>(() => {
     if (!focusTypical || !spikeMeta) return null;
@@ -160,7 +222,6 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
     return {
       id: "sparkCappedPeakBadge",
       afterDatasetsDraw(chart) {
-        // Connector dataset (index 1) holds the x/y anchor at each outlier week.
         const meta = chart.getDatasetMeta(1)?.data?.length
           ? chart.getDatasetMeta(1)
           : chart.getDatasetMeta(0);
@@ -187,13 +248,11 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
           );
           const cy = Math.max(pillH / 2 + 2, chartArea.top - pillH / 2 - 4);
 
-          // Small anchor dot right on the top axis line
           ctx.beginPath();
           ctx.arc(pt.x, chartArea.top, 3, 0, Math.PI * 2);
           ctx.fillStyle = pillBg;
           ctx.fill();
 
-          // Rounded pill badge above the axis ceiling
           ctx.beginPath();
           ctx.roundRect(cx - halfW, cy - pillH / 2, pillW, pillH, 999);
           ctx.fillStyle = pillBg;
@@ -208,7 +267,7 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
   }, [focusTypical, spikeMeta, trend.values, appearance]);
 
   const lineOptions = useMemo(() => {
-    const base = chartOptions<"line">();
+    const base = chartOptions<"line">({ legend: Boolean(alignedPrior && !focusTypical) });
     if (!focusTypical || !spikeMeta) return base;
     const tooltip = base.plugins?.tooltip;
     const baseYTicks =
@@ -255,20 +314,30 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
         },
       },
     } as ChartOptions<"line">;
-  }, [focusTypical, spikeMeta, trend.values, appearance]);
+  }, [focusTypical, spikeMeta, trend.values, alignedPrior, appearance]);
 
   if (!breakdown) {
-    return <Nothing title={WEEKLY_TITLE}>This chart could not load.</Nothing>;
+    return <Nothing title={axisCopy.title}>This chart could not load.</Nothing>;
   }
   if (!trend.hasData) {
-    return <Nothing title={WEEKLY_TITLE}>No approved recaps in these weeks yet.</Nothing>;
+    return <Nothing title={axisCopy.title}>No approved recaps in these weeks yet.</Nothing>;
   }
   const peakVal = Math.max(0, ...trend.values);
+  const tableRows = trend.labels.map((lbl, idx) => ({
+    label: lbl,
+    value: trend.values[idx] ?? 0,
+    secondary: alignedPrior ? (alignedPrior[idx] ?? "—") : undefined,
+  }));
+
   return (
     <div className="flex flex-col gap-2">
       <ChartBlock
-        title={WEEKLY_TITLE}
+        title={axisCopy.title}
         height={WEEKLY_HEIGHT}
+        categoryHeader="Week"
+        valueHeader={axisCopy.measure}
+        secondaryHeader={alignedPrior ? `Prior (${priorShortLabel})` : undefined}
+        tableRows={tableRows}
         headerAction={
           spikeMeta ? (
             <div className="pill-group" role="group" aria-label="Y-axis scale">
@@ -292,8 +361,8 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
         }
       >
         <Line
-          key={`${appearance}-${focusTypical ? "typical" : "full"}`}
-          aria-label={`${WEEKLY_TITLE}: ${trend.labels.length} weeks, peak ${count(peakVal)}`}
+          key={`${appearance}-${metric}-${Boolean(alignedPrior)}-${focusTypical ? "typical" : "full"}`}
+          aria-label={`${axisCopy.title}: ${trend.labels.length} weeks, peak ${count(peakVal)}`}
           data={{
             labels: trend.labels,
             datasets,
@@ -318,27 +387,90 @@ const WeeklyInner: React.FC<Window & { note?: string }> = ({
         chart="consumers_by_week"
         startDate={startDate}
         endDate={endDate}
-        title={WEEKLY_TITLE}
+        title={axisCopy.title}
       />
     </div>
   );
 };
 
+const WeeklySingle: React.FC<Window & { note?: string }> = ({
+  tenantId,
+  startDate,
+  endDate,
+  metric = "sampled",
+  note,
+}) => {
+  const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
+  return (
+    <WeeklyPlot
+      tenantId={tenantId}
+      startDate={startDate}
+      endDate={endDate}
+      breakdown={breakdown}
+      metric={metric}
+      note={note}
+    />
+  );
+};
+
+const WeeklyCompared: React.FC<
+  Window & { priorStartDate: string; priorEndDate: string; priorShortLabel: string; note?: string }
+> = ({
+  tenantId,
+  startDate,
+  endDate,
+  priorStartDate,
+  priorEndDate,
+  priorShortLabel,
+  metric = "sampled",
+  note,
+}) => {
+  const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
+  const priorBreakdown = useConsumerBreakdown(tenantId, priorStartDate, priorEndDate);
+  return (
+    <WeeklyPlot
+      tenantId={tenantId}
+      startDate={startDate}
+      endDate={endDate}
+      breakdown={breakdown}
+      priorBreakdown={priorBreakdown}
+      priorShortLabel={priorShortLabel}
+      metric={metric}
+      note={note}
+    />
+  );
+};
+
 /** The weekly trend for a window the caller picks (the report's dates). */
-export const ConsumersPerWeek: React.FC<Window & { note?: string }> = (props) => (
-  <Guard title={WEEKLY_TITLE} height={WEEKLY_HEIGHT} tenantId={props.tenantId} startDate={props.startDate} endDate={props.endDate}>
-    <WeeklyInner {...props} />
-  </Guard>
-);
+export const ConsumersPerWeek: React.FC<Window & { note?: string }> = (props) => {
+  const axisCopy = metricAxisTitle("week", props.metric ?? "sampled");
+  const priorWin = props.comparePrior
+    ? computePriorDateWindow(props.startDate, props.endDate)
+    : null;
+  return (
+    <Guard
+      title={axisCopy.title}
+      height={WEEKLY_HEIGHT}
+      tenantId={props.tenantId}
+      startDate={props.startDate}
+      endDate={props.endDate}
+    >
+      {priorWin ? (
+        <WeeklyCompared
+          {...props}
+          priorStartDate={priorWin.startDate}
+          priorEndDate={priorWin.endDate}
+          priorShortLabel={priorWin.shortLabel}
+        />
+      ) : (
+        <WeeklySingle {...props} />
+      )}
+    </Guard>
+  );
+};
 
 const TREND_WEEKS = 12;
 
-/**
- * The weekly trend on a dashboard: always the last twelve finished weeks,
- * whatever range the rest of the page is showing, because a 7- or 30-day
- * window is one to five points and not a trend. The week in progress is
- * left out, so the line does not end on a part week.
- */
 export const ConsumersPerWeekTrend: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const window = useMemo(() => lastWeeksWindow(TREND_WEEKS), []);
   return (
@@ -357,24 +489,27 @@ const splitHeight = (rows: number) => Math.max(96, rows * ROW_HEIGHT + 36);
 
 const RankedSplitChart: React.FC<{
   title: string;
-  /** What a bar measures, for the tooltip. */
   measure: string;
   split: RankedSplit;
-  /** Said when nothing was recorded at all. */
   empty: string;
-  /** "store" / "state" / "product": the noun for the folded tail. */
   noun: string;
-  /** Joins the sentence when one row is the whole split: "at" Costco, "in" CA. */
   where: string;
-  /** Which chart this is, so a question about it can be asked. */
-  ask: Window & { chart: ChartKind };
-  /** Optional click handler when a non-context bar is clicked. */
+  ask: { tenantId: string; startDate: string; endDate: string; chart: ChartKind };
+  showFoldedTailNote?: boolean;
   onBarSelect?: (bar: RankedSplit["bars"][number]) => void;
-}> = ({ title, measure, split, empty, noun, where, ask, onBarSelect }) => {
+}> = ({
+  title,
+  measure,
+  split,
+  empty,
+  noun,
+  where,
+  ask,
+  showFoldedTailNote = true,
+  onBarSelect,
+}) => {
   const { bars, aside } = split;
   const appearance = useAppearance();
-  // The tooltip names the whole row (the axis may cut it) and says when it
-  // is an event venue rather than a store.
   const options = useMemo(() => {
     const base = chartOptions<"bar">({ horizontal: true });
     const tooltip = base.plugins?.tooltip;
@@ -410,7 +545,6 @@ const RankedSplitChart: React.FC<{
     } as ChartOptions<"bar">;
   }, [bars, appearance, onBarSelect]);
   if (bars.length === 0) return <Nothing title={title}>{empty}</Nothing>;
-  // One row is a sentence, not a one-bar chart.
   if (bars.length === 1 && !aside) {
     const only = bars[0];
     return (
@@ -423,13 +557,24 @@ const RankedSplitChart: React.FC<{
       </Nothing>
     );
   }
+  const categoryTitle =
+    noun === "store" ? "Store" : noun === "state" ? "State" : "Product";
   return (
     <div className="flex flex-col gap-2">
-      <ChartBlock title={title} height={splitHeight(bars.length)}>
+      <ChartBlock
+        title={title}
+        height={splitHeight(bars.length)}
+        categoryHeader={categoryTitle}
+        valueHeader={measure}
+        tableRows={bars.map((b) => ({
+          label: barTitle(b),
+          value: b.value,
+        }))}
+      >
         <Bar
           aria-label={`${title}: top ${bars[0]?.label ?? ""} (${count(bars[0]?.value ?? 0)})`}
           data={{
-              labels: bars.map((b) => barLabel(b, b.context ? 28 : 18)),
+            labels: bars.map((b) => barLabel(b, b.context ? 28 : 18)),
             datasets: [
               barSeries({
                 label: measure,
@@ -443,7 +588,7 @@ const RankedSplitChart: React.FC<{
           plugins={labelsEveryRow(bars.length) ? [everyValue] : []}
         />
       </ChartBlock>
-      {aside ? (
+      {aside && showFoldedTailNote ? (
         <p className="text-xs" style={META}>
           {aside.count
             ? `The other ${count(aside.count)} ${noun}${aside.count === 1 ? "" : "s"} add ${count(aside.value)}.`
@@ -465,23 +610,24 @@ const RankedSplitChart: React.FC<{
   );
 };
 
-const STORE_TITLE = "Consumers sampled by store";
-const STATE_TITLE = "Consumers sampled by state";
 const PRODUCT_TITLE = "Samples handed out by product";
 
-const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+const StoreInner: React.FC<Window> = ({
+  tenantId,
+  startDate,
+  endDate,
+  metric = "sampled",
+}) => {
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
+  const axisCopy = metricAxisTitle("store", metric);
   const { split, liftedUnlinked } = useMemo(() => {
-    const rawRows = breakdown?.byStore ?? [];
+    const rawRows = transformSplitRowsByMetric(breakdown?.byStore ?? [], metric);
     const hasNamed = rawRows.some(
       (r) => (r.kind === "named" || r.kind === "venue") && r.consumers > 0,
     );
     const missingTotal = rawRows
       .filter((r) => r.kind === "missing")
       .reduce((s, r) => s + r.consumers, 0);
-    // When named stores exist, lift unlinked ("No store on the event") out of
-    // the horizontal bars so 8,000+ festival/unlinked samples never squash real
-    // retail accounts into tiny slivers.
     const rowsForBars =
       hasNamed && missingTotal > 0
         ? rawRows.filter((r) => r.kind !== "missing")
@@ -491,20 +637,22 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
         missingLabel: "No store on the event",
         namedCount: breakdown?.storeCount,
       }),
-      liftedUnlinked: hasNamed && missingTotal > 0 ? missingTotal : 0,
+      liftedUnlinked:
+        metric === "sampled" && hasNamed && missingTotal > 0 ? missingTotal : 0,
     };
-  }, [breakdown]);
-  if (!breakdown) return <Nothing title={STORE_TITLE}>This chart could not load.</Nothing>;
+  }, [breakdown, metric]);
+  if (!breakdown) return <Nothing title={axisCopy.title}>This chart could not load.</Nothing>;
   return (
     <div className="flex flex-col gap-2">
       <RankedSplitChart
-        title={STORE_TITLE}
-        measure="Consumers sampled"
+        title={axisCopy.title}
+        measure={axisCopy.measure}
         split={split}
         empty="No approved recaps in these dates."
         noun="store"
         ask={{ tenantId, startDate, endDate, chart: "consumers_by_store" }}
         where="at"
+        showFoldedTailNote={metric !== "avg"}
         onBarSelect={(bar) => {
           if (bar.venue) return;
           useStoreSheetStore.getState().openStoreSheet({
@@ -531,27 +679,34 @@ const StoreInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
   );
 };
 
-const StateInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+const StateInner: React.FC<Window> = ({
+  tenantId,
+  startDate,
+  endDate,
+  metric = "sampled",
+}) => {
   const navigate = useNavigate();
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
+  const axisCopy = metricAxisTitle("state", metric);
   const split = useMemo(
     () =>
-      rankedSplit(breakdown?.byState ?? [], {
+      rankedSplit(transformSplitRowsByMetric(breakdown?.byState ?? [], metric), {
         missingLabel: "No state recorded",
         namedCount: breakdown?.stateCount,
       }),
-    [breakdown],
+    [breakdown, metric],
   );
-  if (!breakdown) return <Nothing title={STATE_TITLE}>This chart could not load.</Nothing>;
+  if (!breakdown) return <Nothing title={axisCopy.title}>This chart could not load.</Nothing>;
   return (
     <RankedSplitChart
-      title={STATE_TITLE}
-      measure="Consumers sampled"
+      title={axisCopy.title}
+      measure={axisCopy.measure}
       split={split}
       empty="No approved recaps in these dates."
       noun="state"
       ask={{ tenantId, startDate, endDate, chart: "consumers_by_state" }}
       where="in"
+      showFoldedTailNote={metric !== "avg"}
       onBarSelect={(bar) => {
         navigate(`/account-map?state=${encodeURIComponent(bar.label)}`);
       }}
@@ -584,26 +739,57 @@ const ProductInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
 };
 
 export const ConsumersByStore: React.FC<Window> = (props) => (
-  <Guard title={STORE_TITLE} height={splitHeight(6)} tenantId={props.tenantId} startDate={props.startDate} endDate={props.endDate}>
+  <Guard
+    title={metricAxisTitle("store", props.metric ?? "sampled").title}
+    height={splitHeight(6)}
+    tenantId={props.tenantId}
+    startDate={props.startDate}
+    endDate={props.endDate}
+  >
     <StoreInner {...props} />
   </Guard>
 );
 
 export const ConsumersByState: React.FC<Window> = (props) => (
-  <Guard title={STATE_TITLE} height={splitHeight(6)} tenantId={props.tenantId} startDate={props.startDate} endDate={props.endDate}>
+  <Guard
+    title={metricAxisTitle("state", props.metric ?? "sampled").title}
+    height={splitHeight(6)}
+    tenantId={props.tenantId}
+    startDate={props.startDate}
+    endDate={props.endDate}
+  >
     <StateInner {...props} />
   </Guard>
 );
 
 export const SamplesByProduct: React.FC<Window> = (props) => (
-  <Guard title={PRODUCT_TITLE} height={splitHeight(6)} tenantId={props.tenantId} startDate={props.startDate} endDate={props.endDate}>
+  <Guard
+    title={PRODUCT_TITLE}
+    height={splitHeight(6)}
+    tenantId={props.tenantId}
+    startDate={props.startDate}
+    endDate={props.endDate}
+  >
     <ProductInner {...props} />
   </Guard>
 );
 
-const AddsUpInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
+const AddsUpInner: React.FC<Window> = ({
+  tenantId,
+  startDate,
+  endDate,
+  metric = "sampled",
+}) => {
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
   if (!breakdown || breakdown.total <= 0) return null;
+  if (metric !== "sampled") {
+    return (
+      <p className="text-xs" style={META}>
+        Calculated across {count(breakdown.recaps)} approved{" "}
+        {breakdown.recaps === 1 ? "recap" : "recaps"}, dated by the event.
+      </p>
+    );
+  }
   return (
     <p className="text-xs" style={META}>
       The week, store and state charts each add up to the {count(breakdown.total)} consumers
@@ -612,7 +798,6 @@ const AddsUpInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
   );
 };
 
-/** Says the charts reconcile with the headline, only once they have loaded. */
 export const ConsumersAddUpNote: React.FC<Window> = (props) => (
   <ErrorBoundary key={`${props.tenantId}|${props.startDate}|${props.endDate}`} fallback={null}>
     <Suspense fallback={null}>
@@ -637,9 +822,6 @@ const PerEventInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
       <figcaption className="mb-1 text-[13px] font-medium" style={SECONDARY}>
         {PER_EVENT_TITLE}
       </figcaption>
-      {/* Two elements with real text between them, so a screen reader and
-          a copy read "83 per event. 498 consumers across 6 events…" and
-          never "83498 consumers". */}
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <p className="m-0">
           <span className="tab-num text-2xl font-semibold" style={{ color: "var(--spark-text)" }}>
@@ -655,11 +837,6 @@ const PerEventInner: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
   );
 };
 
-/**
- * One plain figure: consumers sampled divided by the events they were
- * sampled at. Shows nothing when there is nothing to divide or the load
- * fails, so it never prints a zero or a broken number.
- */
 export const ConsumersPerEvent: React.FC<Window> = (props) => (
   <ErrorBoundary key={`${props.tenantId}|${props.startDate}|${props.endDate}`} fallback={null}>
     <Suspense fallback={null}>
@@ -668,11 +845,6 @@ export const ConsumersPerEvent: React.FC<Window> = (props) => (
   </ErrorBoundary>
 );
 
-/**
- * Store, state and product side by side. Store and state split the same
- * consumers-sampled total; product counts samples handed out, which is a
- * different measure and says so in its title.
- */
 export const ConsumerSplits: React.FC<Window> = (props) => (
   <div className="grid gap-x-8 gap-y-6 lg:grid-cols-3">
     <ConsumersByStore {...props} />

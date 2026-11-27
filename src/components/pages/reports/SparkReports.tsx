@@ -20,6 +20,7 @@ import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
+import SparkSheet from "@/shared/SparkSheet";
 import { REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import MonthHighlight from "@/components/explain/MonthHighlight";
 import ProgramBriefCard from "./ProgramBriefCard";
@@ -30,12 +31,19 @@ import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { Suspense, createContext, useContext, useMemo, useState } from "react";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
+import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { TenantRequestsRollupQuery } from "@/api/queries/TenantRequestsRollupQuery";
 import type { TenantRequestsRollupQuery as TenantRequestsRollupQueryType } from "@api/queries/__generated__/TenantRequestsRollupQuery.graphql";
+import { ConsumerBreakdownQuery } from "@/api/queries/ConsumerBreakdownQuery";
+import type { ConsumerBreakdownQuery as ConsumerBreakdownQueryType } from "@api/queries/__generated__/ConsumerBreakdownQuery.graphql";
+import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
+import type { TenantSkuPulseQuery as TenantSkuPulseQueryType } from "@api/queries/__generated__/TenantSkuPulseQuery.graphql";
+import FieldEfficiencySectionQueryNode from "./__generated__/FieldEfficiencySectionQuery.graphql";
+import type { FieldEfficiencySectionQuery as FieldEfficiencySectionQueryType } from "./__generated__/FieldEfficiencySectionQuery.graphql";
 import "@/lib/sparkChartRegister";
 import { Bar } from "react-chartjs-2";
 import { labelsEveryRow, mergeSameLabel, rankRows, sharePercent } from "@/lib/chartRows";
@@ -45,6 +53,8 @@ import { inputColorScheme } from "@/theme/inputColorScheme";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import RecapDecksCard from "@/components/pages/client-recap/RecapDecksCard";
 import useSparkRole from "@/hooks/useSparkRole";
+import { SparkMark } from "@/recap/SparkMark";
+import { askAiSubjectFromTenant } from "@/components/ai/askAiSubjectName";
 import {
   ConsumerSplits,
   ConsumersAddUpNote,
@@ -54,15 +64,22 @@ import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import { ofAsked } from "@/lib/consumerBreakdown";
 import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
 import type { TenantConversionKpisQuery as TenantConversionKpisQueryType } from "@api/queries/__generated__/TenantConversionKpisQuery.graphql";
+import {
+  buildProgramExecutiveBrief,
+  buildProgramReportCsv,
+  computePriorDateWindow,
+  formatPercentDelta,
+  formatPointDelta,
+  type DeltaBadge,
+  type ReportChartMetric,
+} from "./programReportHelpers";
 
 const everyValue = valueLabels("all");
 
-/** One quiet sentence where a chart has nothing to draw. */
 const ChartEmpty: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="spark-chart-empty h-full">{children}</div>
 );
 
-/** A ranked list of thin ink bars, largest first, value at each bar's tip. */
 const RankedBars: React.FC<{
   label: string;
   rows: ReadonlyArray<{ label: string; value: number }>;
@@ -81,8 +98,6 @@ const RankedBars: React.FC<{
 };
 
 const isoWeekKey = (d: Date): string => {
-  // Monday-start week label "MMM D" (week start). Cheap to compute,
-  // easy to read on a 12-bar chart.
   const start = new Date(d);
   start.setHours(0, 0, 0, 0);
   const dow = (start.getDay() + 6) % 7;
@@ -90,9 +105,6 @@ const isoWeekKey = (d: Date): string => {
   return start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-// ---------------------------------------------------------------------------
-// Date range — one window for the KPI strip and every chart on the page.
-// ---------------------------------------------------------------------------
 type RangeKey = "30" | "90" | "180" | "ytd" | "custom";
 type ReportsRange = { start: Date; end: Date; label: string };
 
@@ -146,7 +158,6 @@ function buildReportsRange(
   return { start, end, label: `Last ${days} days` };
 }
 
-/** Contiguous Monday-start week buckets covering the range (4–53 weeks). */
 const weekBuckets = (range: ReportsRange) => {
   const start = new Date(range.start);
   const dow = (start.getDay() + 6) % 7;
@@ -169,10 +180,6 @@ const ReportsRangeContext = createContext<ReportsRange>(
 );
 const useReportsRange = () => useContext(ReportsRangeContext);
 
-/**
- * Server-aggregated request counts by createdAt day and requestType for the
- * active report date range — one query, never truncated at 2,000 rows.
- */
 const useReportsRequestsRollup = () => {
   const { tenantId } = useAuthStore();
   const range = useReportsRange();
@@ -236,11 +243,10 @@ const ActivationMixChart: React.FC = () => {
     return <ChartEmpty>No requests in this date range.</ChartEmpty>;
   }
   const total = mix.reduce((sum, r) => sum + r.value, 0);
-  // One type is a number, not a one-bar chart.
   if (mix.length === 1) {
     return (
       <div className="flex h-full flex-col justify-center gap-1">
-        <p className="tab-num text-3xl font-bold" style={{ color: "var(--spark-text)" }}>
+        <p className="tab-num text-3xl font-semibold" style={{ color: "var(--spark-text)", letterSpacing: "-0.035em" }}>
           {total.toLocaleString()}
         </p>
         <p className="text-sm" style={{ color: "var(--spark-text-secondary)" }}>
@@ -262,31 +268,9 @@ const ActivationMixChart: React.FC = () => {
   );
 };
 
-/**
- * Spark v2 — Reports.
- * Wireframe: spark-demo/index.html lines 2418-2484.
- *
- * The summary comes first, then the charts. One date range (presets or
- * custom) drives both.
- *
- * Consumers sampled has ONE source on this page: `tenantConsumerBreakdown`.
- * The headline figure and the weekly, store and state charts all read that
- * one rollup, so they add up to each other by construction. (They used to
- * come from two places: the headline from `eventDashboard`, the charts from
- * a page of recap rows that the server cuts at 50, so the charts fell short
- * of the headline for any client with more recaps than that.)
- */
-
 const fmtNum = (v: number | null | undefined) =>
   typeof v === "number" ? v.toLocaleString() : "—";
 
-
-/**
- * "From the field" — photos from approved recaps in the range, with a
- * lightbox. Best photos are one frame per store and date. Further frames
- * from that stop are on All photos. Renders nothing when there are no
- * photos at all.
- */
 const FieldPhotos: React.FC = () => {
   const { tenantId } = useAuthStore();
   const range = useReportsRange();
@@ -335,7 +319,6 @@ const FieldPhotos: React.FC = () => {
         .map((e) => e?.node)
         .filter((n): n is NonNullable<typeof n> => Boolean(n))
         .map((n) => ({ n, src: pickFieldPhoto(n.customRecapFiles) }))
-        // Recaps whose only images are receipts / product spend are skipped.
         .filter((x): x is { n: typeof x.n; src: string } => Boolean(x.src))
         .slice(0, 24)
         .map(({ n, src }) => {
@@ -356,11 +339,10 @@ const FieldPhotos: React.FC = () => {
   const extra = picked.rest.filter((frame) => !photos.some((photo) => photo.url === frame.url));
   const allPhotos = [...photos, ...extra];
   if (allPhotos.length === 0 && picked.best.length === 0) return null;
-  // No picks in this range yet: show what the section always showed.
   const hasBest = picked.best.length > 0;
   const shown = hasBest && view === "best" ? picked.best : allPhotos;
   return (
-    <div className="spark-card p-5" id="report-photos">
+    <div className="spark-card p-5 spark-print-keep" id="report-photos">
       {hasBest ? (
         <div
           className="pill-group mb-3 print:hidden"
@@ -397,14 +379,9 @@ const ChartCard: React.FC<{
   empty?: boolean;
   children: React.ReactNode;
 }> = ({ title, subtitle, tall, empty, children }) => (
-  <div className="spark-card p-5">
-    <h3 className="spark-title font-semibold mb-2">
-      {title}
-    </h3>
-    <p
-      className="text-xs mb-3"
-      style={{ color: "var(--spark-text-meta)" }}
-    >
+  <div className="spark-card p-5 spark-print-keep">
+    <h3 className="spark-title font-semibold mb-1">{title}</h3>
+    <p className="text-xs mb-3" style={{ color: "var(--spark-text-meta)" }}>
       {subtitle}
     </p>
     <div
@@ -434,7 +411,6 @@ const ChartCard: React.FC<{
   </div>
 );
 
-/** The two request charts, shown only when the range has requests. */
 const RequestChartsRow: React.FC = () => {
   const rollup = useReportsRequestsRollup();
   if (rollup.totalCount <= 0) return null;
@@ -456,21 +432,38 @@ const RequestChartsRow: React.FC = () => {
 
 /* ───────────────────────── summary ───────────────────────── */
 
+const DeltaPill: React.FC<{ badge: DeltaBadge | null }> = ({ badge }) => {
+  if (!badge) return null;
+  const color =
+    badge.direction === "up"
+      ? "var(--spark-ok-ink)"
+      : badge.direction === "down"
+        ? "var(--spark-orange)"
+        : "var(--spark-text-meta)";
+  return (
+    <span className="block text-xs font-medium tab-num mt-1" style={{ color }}>
+      {badge.text}
+    </span>
+  );
+};
+
 const SummaryItem: React.FC<{
   label: string;
   figure: React.ReactNode;
+  delta?: DeltaBadge | null;
   note?: React.ReactNode;
-}> = ({ label, figure, note }) => (
+}> = ({ label, figure, delta, note }) => (
   <div className="min-w-0">
     <dt className="text-[13px] font-medium" style={{ color: "var(--spark-text-secondary)" }}>
       {label}
     </dt>
     <dd
-      className="tab-num m-0 mt-1 text-3xl font-bold truncate"
-      style={{ color: "var(--spark-text)", letterSpacing: "-0.03em" }}
+      className="display tab-num m-0 mt-1 text-3xl font-semibold truncate"
+      style={{ color: "var(--spark-text)", letterSpacing: "-0.035em" }}
     >
       {figure}
     </dd>
+    <DeltaPill badge={delta ?? null} />
     {note ? (
       <dd className="m-0 mt-1 text-xs" style={{ color: "var(--spark-text-meta)" }}>
         {note}
@@ -479,17 +472,25 @@ const SummaryItem: React.FC<{
   </div>
 );
 
-/**
- * Consumers sampled, from the same rollup the charts below draw, so the
- * headline and the charts cannot disagree.
- */
+const PriorConsumersDelta: React.FC<{
+  tenantId: string;
+  currentTotal: number;
+  priorStartDate: string;
+  priorEndDate: string;
+  priorShortLabel: string;
+}> = ({ tenantId, currentTotal, priorStartDate, priorEndDate, priorShortLabel }) => {
+  const prior = useConsumerBreakdown(tenantId, priorStartDate, priorEndDate);
+  const badge = formatPercentDelta(currentTotal, prior?.total, priorShortLabel);
+  return <DeltaPill badge={badge} />;
+};
+
 const ConsumersSummary: React.FC<{
   tenantId: string;
   startDate: string;
   endDate: string;
-  /** The dashboard's figure, which also counts recaps not yet approved. */
   everyRecap: number | null | undefined;
-}> = ({ tenantId, startDate, endDate, everyRecap }) => {
+  comparePrior: boolean;
+}> = ({ tenantId, startDate, endDate, everyRecap, comparePrior }) => {
   const breakdown = useConsumerBreakdown(tenantId, startDate, endDate);
   const { isAdmin } = useSparkRole();
   if (!breakdown) return <ConsumersUnavailable />;
@@ -497,36 +498,54 @@ const ConsumersSummary: React.FC<{
     isAdmin && typeof everyRecap === "number" && everyRecap > breakdown.total
       ? everyRecap
       : null;
+  const priorWin = comparePrior ? computePriorDateWindow(startDate, endDate) : null;
   return (
-    <SummaryItem
-      label="Consumers sampled"
-      figure={breakdown.total.toLocaleString()}
-      note={
-        <>
-          on {breakdown.recaps.toLocaleString()} approved{" "}
-          {breakdown.recaps === 1 ? "recap" : "recaps"}
-          {waiting !== null ? (
-            <span className="block">
-              {waiting.toLocaleString()} counting every recap filed, approved or not
-            </span>
-          ) : null}
-        </>
-      }
-    />
+    <div className="min-w-0">
+      <dt className="text-[13px] font-medium" style={{ color: "var(--spark-text-secondary)" }}>
+        Consumers sampled
+      </dt>
+      <dd
+        className="display tab-num m-0 mt-1 text-3xl font-semibold truncate"
+        style={{ color: "var(--spark-text)", letterSpacing: "-0.035em" }}
+      >
+        {breakdown.total.toLocaleString()}
+      </dd>
+      {priorWin ? (
+        <ErrorBoundary fallback={null}>
+          <Suspense fallback={null}>
+            <PriorConsumersDelta
+              tenantId={tenantId}
+              currentTotal={breakdown.total}
+              priorStartDate={priorWin.startDate}
+              priorEndDate={priorWin.endDate}
+              priorShortLabel={priorWin.shortLabel}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      ) : null}
+      <dd className="m-0 mt-1 text-xs" style={{ color: "var(--spark-text-meta)" }}>
+        on {breakdown.recaps.toLocaleString()} approved{" "}
+        {breakdown.recaps === 1 ? "recap" : "recaps"}
+        {waiting !== null ? (
+          <span className="block">
+            {waiting.toLocaleString()} counting every recap filed, approved or not
+          </span>
+        ) : null}
+      </dd>
+    </div>
   );
 };
 
-/** No figure is better than one the charts below would not add up to. */
 const ConsumersUnavailable: React.FC = () => (
   <SummaryItem label="Consumers sampled" figure="—" note="This figure could not load." />
 );
 
-/** Sold ÷ sampled for retail and on-premise only. Spark computes the rate. */
-const PeriodConversion: React.FC<{
+const PeriodConversionAndSales: React.FC<{
   tenantId: string;
   startDate: string;
   endDate: string;
-}> = ({ tenantId, startDate, endDate }) => {
+  comparePrior: boolean;
+}> = ({ tenantId, startDate, endDate, comparePrior }) => {
   const data = useLazyLoadQuery<TenantConversionKpisQueryType>(
     TenantConversionKpisQuery,
     { tenantId, startDate, endDate },
@@ -537,24 +556,49 @@ const PeriodConversion: React.FC<{
   const sampled = kpis?.engagements ?? 0;
   const pct = kpis?.pct;
   const figure = conversionFigure(sold, sampled, pct);
+  const priorLabel = kpis?.previousLabel?.trim() || "prior window";
+  const soldDelta = comparePrior
+    ? formatPercentDelta(sold, kpis?.previousSold, priorLabel)
+    : null;
+  const convDelta = comparePrior
+    ? formatPointDelta(pct, kpis?.previousPct, priorLabel)
+    : null;
   const counts =
     sold > 0 || sampled > 0
       ? `${sold.toLocaleString()} sold ÷ ${sampled.toLocaleString()} sampled · `
       : "";
   return (
-    <SummaryItem
-      label="Conversion"
-      figure={figure}
-      note={`${counts}retail and on-premise only`}
-    />
+    <>
+      <SummaryItem
+        label="Units sold"
+        figure={sold > 0 ? sold.toLocaleString() : "—"}
+        delta={soldDelta}
+        note="retail and on-premise recaps"
+      />
+      <SummaryItem
+        label="Conversion"
+        figure={figure}
+        delta={convDelta}
+        note={`${counts}retail and on-premise only`}
+      />
+    </>
   );
 };
 
+const REPORT_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: "program-brief", label: "Brief" },
+  { id: "report-kpis", label: "Headline KPIs" },
+  { id: "report-velocity", label: "Velocity & stores" },
+  { id: "report-efficiency", label: "Hourly ROI" },
+  { id: "report-markets", label: "Markets" },
+  { id: "report-themes", label: "Shopper voice" },
+  { id: "report-photos", label: "Photos & shelf" },
+];
+
 export default function SparkReports() {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isAdmin: isStaffView } = useSparkRole();
-  // The chosen range sticks per client in this browser, so a view someone
-  // set up is still there next time.
+  const environment = useRelayEnvironment();
   const stickyKey = `@spark.view.reports/${tenantId || "all"}`;
   const [rangeKey, setRangeKey] = useStickyState<RangeKey>(
     `${stickyKey}/range`,
@@ -568,6 +612,15 @@ export default function SparkReports() {
     typeof raw === "string" && (raw === "" || /^\d{4}-\d{2}-\d{2}$/.test(raw)) ? raw : null;
   const [customFrom, setCustomFrom] = useStickyState<string>(`${stickyKey}/from`, "", isYmd);
   const [customTo, setCustomTo] = useStickyState<string>(`${stickyKey}/to`, "", isYmd);
+  const [comparePrior, setComparePrior] = useStickyState<boolean>(
+    `${stickyKey}/comparePrior`,
+    false,
+    (raw) => (typeof raw === "boolean" ? raw : null),
+  );
+  const [chartMetric, setChartMetric] = useState<ReportChartMetric>("sampled");
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [exportBusy, setExportBusy] = useState<"csv" | "brief" | null>(null);
+
   const range = useMemo(
     () => buildReportsRange(rangeKey, customFrom, customTo),
     [rangeKey, customFrom, customTo],
@@ -588,8 +641,6 @@ export default function SparkReports() {
   );
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
   const showAlert = useAlertStore((st) => st.showAlert);
-  // Sends ONLY to the signed-in person (server-enforced) — a self-serve copy
-  // of the monthly report without waiting for the scheduled email.
   const [commitEmail, emailing] = useMutation<SendTestClientReportMutationType>(
     SendTestClientReportMutation,
   );
@@ -613,302 +664,572 @@ export default function SparkReports() {
   const m = dashboard.metrics;
   const intent = ofAsked(m.purchaseIntent, m.purchaseIntentBase);
   const awareness = ofAsked(m.brandAwareness, m.brandAwarenessBase);
+  const brandTitle =
+    askAiSubjectFromTenant({
+      name: null,
+      requestUrlName: tenantMeta?.requestUrlName ?? tenantSlug,
+    }) || "Program";
+
+  const collectExportPayload = async () => {
+    if (!tenantId) return null;
+    const [bd, conv, sku, eff] = await Promise.all([
+      fetchQuery<ConsumerBreakdownQueryType>(
+        environment,
+        ConsumerBreakdownQuery,
+        { tenantId, startDate: startYmd, endDate: endYmd },
+        { fetchPolicy: "store-or-network" },
+      )
+        .toPromise()
+        .catch(() => null),
+      fetchQuery<TenantConversionKpisQueryType>(
+        environment,
+        TenantConversionKpisQuery,
+        { tenantId, startDate: startYmd, endDate: endYmd },
+        { fetchPolicy: "store-or-network" },
+      )
+        .toPromise()
+        .catch(() => null),
+      fetchQuery<TenantSkuPulseQueryType>(
+        environment,
+        TenantSkuPulseQuery,
+        { tenantId, startDate: startYmd, endDate: endYmd },
+        { fetchPolicy: "store-or-network" },
+      )
+        .toPromise()
+        .catch(() => null),
+      fetchQuery<FieldEfficiencySectionQueryType>(
+        environment,
+        FieldEfficiencySectionQueryNode,
+        { tenantId, startDate: startYmd, endDate: endYmd },
+        { fetchPolicy: "store-or-network" },
+      )
+        .toPromise()
+        .catch(() => null),
+    ]);
+    const breakdown = bd?.tenantConsumerBreakdown;
+    const convKpis = conv?.tenantConversionKpis;
+    const effData = eff?.tenantFieldEfficiency;
+    return {
+      brandName: brandTitle,
+      rangeLabel: range.label,
+      startDate: startYmd,
+      endDate: endYmd,
+      consumersSampled: breakdown?.total ?? m.consumersSampled ?? 0,
+      approvedRecaps: breakdown?.recaps ?? 0,
+      unitsSold: convKpis?.sold ?? 0,
+      conversionPct: convKpis?.pct ?? null,
+      eventsRun: m.totalEvents ?? 0,
+      samplesPerHour: effData?.total?.samplesPerHour ?? null,
+      unitsPerHour: effData?.total?.unitsPerHour ?? null,
+      byWeek: breakdown?.byWeek ?? [],
+      byStore: breakdown?.byStore ?? [],
+      byState: breakdown?.byState ?? [],
+      skus: sku?.tenantSkuPulse?.items ?? [],
+      topEfficiencyStores: effData?.topStores ?? [],
+    };
+  };
+
+  const handleExportCsv = async () => {
+    if (!tenantId || exportBusy) return;
+    setExportBusy("csv");
+    try {
+      const payload = await collectExportPayload();
+      if (!payload) return;
+      const csv = buildProgramReportCsv(payload);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `spark-program-report-${startYmd}-to-${endYmd}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showAlert("Exported program report CSV.", "success");
+    } catch {
+      showAlert("Couldn't export CSV right now.", "error");
+    } finally {
+      setExportBusy(null);
+    }
+  };
+
+  const handleCopyBrief = async () => {
+    if (!tenantId || exportBusy) return;
+    setExportBusy("brief");
+    try {
+      const payload = await collectExportPayload();
+      if (!payload) return;
+      const text = buildProgramExecutiveBrief(payload);
+      await navigator.clipboard.writeText(text);
+      showAlert("Copied executive brief to clipboard.", "success");
+    } catch {
+      showAlert("Couldn't copy brief to clipboard.", "error");
+    } finally {
+      setExportBusy(null);
+    }
+  };
 
   return (
     <Layout>
       <ReportsRangeContext.Provider value={range}>
-      <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
-        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
-        <SparkPageHeader
-          eyebrow={`Reports · ${range.label}`}
-          title="Program report"
-          infoTip="Approved recap metrics, photos, and consumer feedback for the selected window. Consumers counted are sampled — not reach or total samples handed out."
-          action={
-            <>
-            {/* Staff only: a first draft of a client recap for any dates. */}
-            {isStaffView ? (
-              <SparkGhostLink
-                to={`/reports/client-recap?start=${ymdLocal(range.start)}&end=${ymdLocal(range.end)}`}
-              >
-                Build a recap deck
-              </SparkGhostLink>
-            ) : null}
-            <SparkGhostButton
-              onClick={emailLastMonth}
-              disabled={emailing || !tenantId}
-              title="Email the monthly performance PDF for last month to your own address only"
-            >
-              {emailing ? "Sending…" : "Email me last month's PDF"}
-            </SparkGhostButton>
-            <SparkGhostButton
-              onClick={() => window.print()}
-              title="Save the current view as PDF via the browser print dialog"
-            >
-              Export PDF
-            </SparkGhostButton>
-            </>
-          }
-        />
-
-        {/* Date range */}
-        <div className="flex items-center gap-2 flex-wrap print:hidden">
-          {/* Same segmented control as the Dashboard range picker. */}
-          <div className="pill-group max-w-full overflow-x-auto spark-scroll-fade">
-          {(
-            [
-              ["30", "30 days"],
-              ["90", "90 days"],
-              ["180", "6 months"],
-              ["ytd", "Year to date"],
-              ["custom", "Custom"],
-            ] as [RangeKey, string][]
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setRangeKey(key)}
-              aria-pressed={rangeKey === key}
-              className={`pill-btn whitespace-nowrap shrink-0 ${rangeKey === key ? "on" : ""}`}
-            >
-              {label}
-            </button>
-          ))}
-          </div>
-          {rangeKey === "custom" && (
-            <span className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="date"
-                value={customFrom}
-                max={customTo || undefined}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                aria-label="Range start"
-                className="rounded-lg px-2 py-1"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                  colorScheme: inputColorScheme(),
-                }}
-              />
-              <span style={{ color: "var(--spark-text-meta)" }}>to</span>
-              <input
-                type="date"
-                value={customTo}
-                min={customFrom || undefined}
-                onChange={(e) => setCustomTo(e.target.value)}
-                aria-label="Range end"
-                className="rounded-lg px-2 py-1"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                  colorScheme: inputColorScheme(),
-                }}
-              />
-              {customIncomplete && (
-                <span style={{ color: "var(--spark-text-meta)" }}>
-                  Pick both dates — showing the last 90 days until then.
-                </span>
-              )}
-            </span>
-          )}
-        </div>
-
-        {tenantId ? (
-          <ErrorBoundary
-            key={`brief|${tenantId}|${startYmd}|${endYmd}`}
-            fallback={
-              <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-                The brief could not load.
-              </p>
-            }
+        <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
+          {/* Print-only executive masthead */}
+          <header
+            className="hidden print:flex items-center justify-between pb-4 mb-6"
+            style={{ borderBottom: "1px solid #d1d5db" }}
           >
-            <Suspense fallback={null}>
-              <ProgramBriefCard
-                tenantId={tenantId}
-                startDate={startYmd}
-                endDate={endYmd}
-                preset={customIncomplete ? "90" : rangeKey}
-                staff={isStaffView}
-                canWrite={!customIncomplete}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        ) : null}
+            <div>
+              <p className="text-xs font-medium" style={{ color: "#6b7280" }}>
+                Program performance report · {range.label} ({startYmd} → {endYmd})
+              </p>
+              <h1 className="display text-2xl font-semibold mt-0.5">
+                {brandTitle}
+              </h1>
+              <p className="text-xs mt-0.5" style={{ color: "#6b7280" }}>
+                Compiled from approved recaps on Spark by Ignite Productions
+              </p>
+            </div>
+            <SparkMark height={22} />
+          </header>
 
-        {tenantId ? (
-          <ReportEvidenceStrip tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-        ) : null}
+          <div className="print:hidden">
+            <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+          </div>
 
-        {tenantId ? (
-          <MonthHighlight
-            tenantId={tenantId}
-            month={monthOfDate(endYmd)}
-            className="spark-card p-5 sm:p-6"
-          />
-        ) : null}
+          <div className="print:hidden">
+            <SparkPageHeader
+              eyebrow={`Reports · ${range.label}`}
+              title="Program report"
+              infoTip="Approved recap metrics, photos, and consumer feedback for the selected window. Consumers counted are sampled — not reach or total samples handed out."
+              action={
+                <>
+                  {isStaffView ? (
+                    <SparkGhostLink
+                      to={`/reports/client-recap?start=${ymdLocal(range.start)}&end=${ymdLocal(range.end)}`}
+                    >
+                      Build deck
+                    </SparkGhostLink>
+                  ) : null}
+                  <SparkGhostButton
+                    onClick={() => void handleCopyBrief()}
+                    disabled={Boolean(exportBusy) || !tenantId}
+                    title="Copy a formatted executive summary for the selected date range"
+                  >
+                    {exportBusy === "brief" ? "Copying…" : "Copy brief"}
+                  </SparkGhostButton>
+                  <SparkGhostButton
+                    onClick={() => void handleExportCsv()}
+                    disabled={Boolean(exportBusy) || !tenantId}
+                    title="Download CSV of KPIs, weekly velocity, top stores, states, and SKUs for this date range"
+                  >
+                    {exportBusy === "csv" ? "Exporting…" : "Export CSV"}
+                  </SparkGhostButton>
+                  <SparkGhostButton
+                    onClick={() => window.print()}
+                    title="Save the current view as a print-ready PDF"
+                  >
+                    Export PDF
+                  </SparkGhostButton>
+                  <SparkGhostButton
+                    onClick={() => setShareSheetOpen(true)}
+                    disabled={!tenantId}
+                    title="Share a live public link or manage monthly report emails"
+                  >
+                    Share &amp; schedule
+                  </SparkGhostButton>
+                </>
+              }
+            />
+          </div>
 
-        {/* Headline numbers, under the brief, before any chart. */}
-        <section className="spark-card p-5 sm:p-6" aria-label={`Summary, ${range.label}`}>
-          <dl className="m-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-x-6 gap-y-5">
-            {tenantId ? (
-              <ErrorBoundary
-                key={`${tenantId}|${startYmd}|${endYmd}`}
-                fallback={<ConsumersUnavailable />}
+          {/* Sticky Date Range + Compare Prior + Section Quick-Jump Bar */}
+          <div className="sticky top-0 z-20 spark-insights-range space-y-2.5 print:hidden">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="pill-group max-w-full overflow-x-auto spark-scroll-fade">
+                  {(
+                    [
+                      ["30", "30 days"],
+                      ["90", "90 days"],
+                      ["180", "6 months"],
+                      ["ytd", "Year to date"],
+                      ["custom", "Custom"],
+                    ] as [RangeKey, string][]
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setRangeKey(key)}
+                      aria-pressed={rangeKey === key}
+                      className={`pill-btn whitespace-nowrap shrink-0 ${rangeKey === key ? "on" : ""}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {rangeKey === "custom" && (
+                  <span className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="date"
+                      value={customFrom}
+                      max={customTo || undefined}
+                      onChange={(e) => setCustomFrom(e.target.value)}
+                      aria-label="Range start"
+                      className="rounded-lg px-2 py-1 text-xs"
+                      style={{
+                        background: "transparent",
+                        color: "var(--spark-text)",
+                        border: "1px solid var(--spark-border)",
+                        colorScheme: inputColorScheme(),
+                      }}
+                    />
+                    <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                      to
+                    </span>
+                    <input
+                      type="date"
+                      value={customTo}
+                      min={customFrom || undefined}
+                      onChange={(e) => setCustomTo(e.target.value)}
+                      aria-label="Range end"
+                      className="rounded-lg px-2 py-1 text-xs"
+                      style={{
+                        background: "transparent",
+                        color: "var(--spark-text)",
+                        border: "1px solid var(--spark-border)",
+                        colorScheme: inputColorScheme(),
+                      }}
+                    />
+                    {customIncomplete && (
+                      <span className="text-xs" style={{ color: "var(--spark-text-meta)" }}>
+                        Pick both dates — showing 90 days until then.
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                aria-pressed={comparePrior}
+                onClick={() => setComparePrior(!comparePrior)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5"
+                style={{
+                  background: comparePrior
+                    ? "var(--spark-lime)"
+                    : "rgba(var(--spark-ink-rgb),0.035)",
+                  color: comparePrior
+                    ? "var(--spark-on-accent)"
+                    : "var(--spark-text-secondary)",
+                  border: comparePrior
+                    ? "1px solid var(--spark-lime)"
+                    : "1px solid var(--spark-border)",
+                }}
               >
-                <Suspense fallback={<SummaryItem label="Consumers sampled" figure="…" />}>
-                  <ConsumersSummary
-                    tenantId={tenantId}
-                    startDate={startYmd}
-                    endDate={endYmd}
-                    everyRecap={m.consumersSampled}
-                  />
-                </Suspense>
-              </ErrorBoundary>
-            ) : (
-              <SummaryItem label="Consumers sampled" figure={fmtNum(m.consumersSampled)} />
-            )}
-            {tenantId ? (
-              <ErrorBoundary
-                key={`conv|${tenantId}|${startYmd}|${endYmd}`}
-                fallback={
-                  <SummaryItem label="Conversion" figure="—" note="retail and on-premise only" />
-                }
-              >
-                <Suspense
-                  fallback={
-                    <SummaryItem label="Conversion" figure="…" note="retail and on-premise only" />
-                  }
+                <span>{comparePrior ? "● Comparing prior window" : "Compare prior window"}</span>
+              </button>
+            </div>
+
+            <nav
+              aria-label="Report sections"
+              className="flex items-center gap-4 overflow-x-auto spark-scroll-fade text-xs"
+            >
+              {REPORT_SECTIONS.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  className="whitespace-nowrap font-medium transition hover:underline underline-offset-4"
+                  style={{ color: "var(--spark-text-meta)" }}
                 >
-                  <PeriodConversion tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-                </Suspense>
-              </ErrorBoundary>
-            ) : (
-              <SummaryItem label="Conversion" figure="—" note="retail and on-premise only" />
-            )}
-            <SummaryItem
-              label="Events run"
-              figure={fmtNum(m.totalEvents)}
-              note="events with a recap filed"
+                  {sec.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          {/* Shared Recap Decks (renders nothing when none are published) */}
+          <div className="print:hidden">
+            <RecapDecksCard
+              tenantId={tenantId ? String(tenantId) : null}
+              staffView={isStaffView}
             />
-            <SummaryItem
-              label="Purchase intent"
-              figure={intent ? intent.rate : "—"}
-              note={intent ? (intent.asked ?? undefined) : "not asked on these recaps"}
-            />
-            <SummaryItem
-              label="Brand awareness"
-              figure={awareness ? awareness.rate : "—"}
-              note={awareness ? (awareness.asked ?? undefined) : "not asked on these recaps"}
-            />
-          </dl>
+          </div>
+
           {tenantId ? (
-            <ErrorBoundary fallback={null}>
+            <ErrorBoundary
+              key={`brief|${tenantId}|${startYmd}|${endYmd}`}
+              fallback={
+                <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
+                  The brief could not load.
+                </p>
+              }
+            >
               <Suspense fallback={null}>
-                <SampledQuestionNote
+                <ProgramBriefCard
                   tenantId={tenantId}
                   startDate={startYmd}
                   endDate={endYmd}
+                  preset={customIncomplete ? "90" : rangeKey}
+                  staff={isStaffView}
+                  canWrite={!customIncomplete}
                 />
               </Suspense>
             </ErrorBoundary>
           ) : null}
-        </section>
 
-        <div className="print:hidden">
-          <ReportSubscriptionToggle tenantId={tenantId || null} />
-        </div>
+          {tenantId ? (
+            <ReportEvidenceStrip tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          ) : null}
 
-        <div className="print:hidden">
-          <ProgramShareControl tenantId={tenantId || null} />
-        </div>
+          {tenantId ? (
+            <MonthHighlight
+              tenantId={tenantId}
+              month={monthOfDate(endYmd)}
+              className="spark-card p-5 sm:p-6 spark-print-keep"
+            />
+          ) : null}
 
-        {/* Recap decks Ignite has shared with this brand. Nothing renders
-            until staff mark one ready. */}
-        <div className="print:hidden">
-          <RecapDecksCard
-            tenantId={tenantId ? String(tenantId) : null}
-            staffView={isStaffView}
-          />
-        </div>
-
-        {/* Request charts — hidden when nothing was requested in the range,
-            so two empty boxes don't lead the report. */}
-        <Suspense fallback={null}>
-          <RequestChartsRow />
-        </Suspense>
-
-        {/* Consumers sampled by week, store and state: one rollup, the same
-            one the summary reads, so every chart adds up to the headline. */}
-        {tenantId ? (
-          <section className="spark-card p-5 sm:p-6 space-y-6">
-            <ConsumersPerWeek tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-            <ConsumerSplits tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-            <ConsumersAddUpNote tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          {/* Headline numbers, under the brief, before any chart. */}
+          <section
+            id="report-kpis"
+            className="spark-card p-5 sm:p-6 spark-print-keep"
+            aria-label={`Summary, ${range.label}`}
+          >
+            <dl className="m-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-6 gap-y-5">
+              {tenantId ? (
+                <ErrorBoundary
+                  key={`${tenantId}|${startYmd}|${endYmd}`}
+                  fallback={<ConsumersUnavailable />}
+                >
+                  <Suspense fallback={<SummaryItem label="Consumers sampled" figure="…" />}>
+                    <ConsumersSummary
+                      tenantId={tenantId}
+                      startDate={startYmd}
+                      endDate={endYmd}
+                      everyRecap={m.consumersSampled}
+                      comparePrior={comparePrior}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              ) : (
+                <SummaryItem label="Consumers sampled" figure={fmtNum(m.consumersSampled)} />
+              )}
+              {tenantId ? (
+                <ErrorBoundary
+                  key={`conv|${tenantId}|${startYmd}|${endYmd}`}
+                  fallback={
+                    <>
+                      <SummaryItem label="Units sold" figure="—" note="retail and on-premise recaps" />
+                      <SummaryItem label="Conversion" figure="—" note="retail and on-premise only" />
+                    </>
+                  }
+                >
+                  <Suspense
+                    fallback={
+                      <>
+                        <SummaryItem label="Units sold" figure="…" note="retail and on-premise recaps" />
+                        <SummaryItem label="Conversion" figure="…" note="retail and on-premise only" />
+                      </>
+                    }
+                  >
+                    <PeriodConversionAndSales
+                      tenantId={tenantId}
+                      startDate={startYmd}
+                      endDate={endYmd}
+                      comparePrior={comparePrior}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              ) : (
+                <>
+                  <SummaryItem label="Units sold" figure="—" note="retail and on-premise recaps" />
+                  <SummaryItem label="Conversion" figure="—" note="retail and on-premise only" />
+                </>
+              )}
+              <SummaryItem
+                label="Events run"
+                figure={fmtNum(m.totalEvents)}
+                note="events with a recap filed"
+              />
+              <SummaryItem
+                label="Purchase intent"
+                figure={intent ? intent.rate : "—"}
+                note={intent ? (intent.asked ?? undefined) : "not asked on these recaps"}
+              />
+              <SummaryItem
+                label="Brand awareness"
+                figure={awareness ? awareness.rate : "—"}
+                note={awareness ? (awareness.asked ?? undefined) : "not asked on these recaps"}
+              />
+            </dl>
+            {tenantId ? (
+              <ErrorBoundary fallback={null}>
+                <Suspense fallback={null}>
+                  <SampledQuestionNote
+                    tenantId={tenantId}
+                    startDate={startYmd}
+                    endDate={endYmd}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            ) : null}
           </section>
-        ) : null}
 
-        {/* Everything the recaps collected, beyond the headline KPIs. */}
-        {tenantId ? (
-          <RecapFieldTotalsSection
-            tenantId={tenantId}
-            startDate={startYmd}
-            endDate={endYmd}
-          />
-        ) : null}
+          <Suspense fallback={null}>
+            <RequestChartsRow />
+          </Suspense>
 
-        {/* Which stores, days and times produce the most per staffed hour. */}
-        {tenantId ? (
-          <FieldEfficiencySection
-            tenantId={tenantId}
-            startDate={startYmd}
-            endDate={endYmd}
-          />
-        ) : null}
+          {/* Velocity, Stores, States & SKUs with unified Metric Switcher */}
+          {tenantId ? (
+            <section
+              id="report-velocity"
+              className="spark-card p-5 sm:p-6 space-y-6 spark-print-keep"
+            >
+              <div className="flex items-center justify-between gap-3 flex-wrap pb-3" style={{ borderBottom: "1px solid var(--spark-hairline, var(--spark-border))" }}>
+                <div>
+                  <h3 className="display font-semibold text-base" style={{ letterSpacing: "-0.02em" }}>
+                    Sampling velocity &amp; account breakdown
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
+                    Click any store or state bar to inspect its account profile or market map.
+                  </p>
+                </div>
+                <div
+                  className="pill-group print:hidden"
+                  role="group"
+                  aria-label="Chart metric"
+                >
+                  {(
+                    [
+                      ["sampled", "Total sampled"],
+                      ["avg", "Avg / activation"],
+                      ["activations", "Activations"],
+                    ] as [ReportChartMetric, string][]
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setChartMetric(key)}
+                      aria-pressed={chartMetric === key}
+                      className={`pill-btn whitespace-nowrap ${chartMetric === key ? "on" : ""}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        {/* Where the program ran: states shaded by activity for the range. */}
-        {tenantId ? (
-          <div>
-            <h3 className="display font-bold mb-3" style={{ letterSpacing: "-0.02em" }}>
-              Where we activated
-            </h3>
-            <Suspense fallback={<PanelSkeleton label="Loading the map" />}>
-              <TenantGeoHeatmap
+              <ConsumersPerWeek
                 tenantId={tenantId}
                 startDate={startYmd}
                 endDate={endYmd}
-                rangeLabel={range.label}
+                metric={chartMetric}
+                comparePrior={comparePrior}
               />
-            </Suspense>
-          </div>
-        ) : null}
+              <ConsumerSplits
+                tenantId={tenantId}
+                startDate={startYmd}
+                endDate={endYmd}
+                metric={chartMetric}
+              />
+              <ConsumersAddUpNote
+                tenantId={tenantId}
+                startDate={startYmd}
+                endDate={endYmd}
+                metric={chartMetric}
+              />
+            </section>
+          ) : null}
 
-        {/* Voice before the photo grid: one sentence per theme, then one frame per stop. */}
-        {tenantId ? (
-          <section className="spark-card p-5 sm:p-6" id="report-themes">
-            <FeedbackThemes tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-          </section>
-        ) : null}
-        <Suspense fallback={<PanelSkeleton label="Loading photos" />}>
-          <FieldPhotos />
-        </Suspense>
-        {tenantId ? (
-          <section className="spark-card p-5 sm:p-6" id="report-competitors">
-            <CompetitorMentions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-          </section>
-        ) : null}
-        {tenantId ? (
-          <section className="spark-card p-5 sm:p-6">
-            <ProductRegions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
-          </section>
-        ) : null}
-        {/* Renders its own card, and nothing when there are no shelf photos. */}
-        {tenantId ? (
-          <div id="report-shelf">
-            <OnShelfSummary tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+          {tenantId ? (
+            <RecapFieldTotalsSection
+              tenantId={tenantId}
+              startDate={startYmd}
+              endDate={endYmd}
+            />
+          ) : null}
+
+          {tenantId ? (
+            <div id="report-efficiency" className="spark-print-keep">
+              <FieldEfficiencySection
+                tenantId={tenantId}
+                startDate={startYmd}
+                endDate={endYmd}
+              />
+            </div>
+          ) : null}
+
+          {tenantId ? (
+            <div id="report-markets" className="spark-print-keep">
+              <h3 className="display font-bold mb-3" style={{ letterSpacing: "-0.02em" }}>
+                Where we activated
+              </h3>
+              <Suspense fallback={<PanelSkeleton label="Loading the map" />}>
+                <TenantGeoHeatmap
+                  tenantId={tenantId}
+                  startDate={startYmd}
+                  endDate={endYmd}
+                  rangeLabel={range.label}
+                />
+              </Suspense>
+            </div>
+          ) : null}
+
+          {tenantId ? (
+            <section className="spark-card p-5 sm:p-6 spark-print-keep" id="report-themes">
+              <FeedbackThemes tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+            </section>
+          ) : null}
+          <Suspense fallback={<PanelSkeleton label="Loading photos" />}>
+            <FieldPhotos />
+          </Suspense>
+          {tenantId ? (
+            <section className="spark-card p-5 sm:p-6 spark-print-keep" id="report-competitors">
+              <CompetitorMentions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+            </section>
+          ) : null}
+          {tenantId ? (
+            <section className="spark-card p-5 sm:p-6 spark-print-keep">
+              <ProductRegions tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+            </section>
+          ) : null}
+          {tenantId ? (
+            <div id="report-shelf" className="spark-print-keep">
+              <OnShelfSummary tenantId={tenantId} startDate={startYmd} endDate={endYmd} />
+            </div>
+          ) : null}
+        </div>
+
+        {/* Docked Share & Schedule studio drawer */}
+        <SparkSheet
+          open={shareSheetOpen}
+          onOpenChange={setShareSheetOpen}
+          side="right"
+          eyebrow={`Reports · ${brandTitle}`}
+          title="Share & monthly schedule"
+        >
+          <div className="space-y-5">
+            <ProgramShareControl tenantId={tenantId || null} />
+
+            <div className="spark-card p-4 space-y-3">
+              <div>
+                <h3 className="font-semibold text-sm">Monthly PDF email</h3>
+                <p className="text-xs mt-0.5" style={{ color: "var(--spark-text-meta)" }}>
+                  Delivered automatically on the 1st of each month, or send last month&apos;s report to yourself right now.
+                </p>
+              </div>
+              <ReportSubscriptionToggle tenantId={tenantId || null} />
+              <div className="pt-1">
+                <SparkGhostButton
+                  onClick={emailLastMonth}
+                  disabled={emailing || !tenantId}
+                >
+                  {emailing ? "Sending…" : "Email me last month's PDF"}
+                </SparkGhostButton>
+              </div>
+            </div>
           </div>
-        ) : null}
-      </div>
+        </SparkSheet>
       </ReportsRangeContext.Provider>
     </Layout>
   );
