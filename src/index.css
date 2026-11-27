@@ -782,7 +782,7 @@ body:has(.spark-login-page) {
 
 /* === Form input (Spark v2) — used across public + internal forms === */
 .spark-input {
-  background: var(--spark-bg, #0A0B0D);
+  background: var(--spark-field-bg, var(--spark-bg, #0A0B0D));
   border: 1px solid var(--spark-border, #1f2418);
   color: var(--spark-text, #f2f3ee);
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
@@ -808,8 +808,8 @@ textarea::placeholder {
 .spark-input:hover { border-color: rgba(var(--spark-accent-rgb), 0.35); }
 .spark-input:focus {
   border-color: rgba(var(--spark-accent-rgb), 0.7);
-  box-shadow: 0 0 0 3px rgba(var(--spark-accent-rgb), 0.28);
-  background: rgba(var(--spark-bg-rgb), 0.95);
+  box-shadow: 0 0 0 3px rgba(var(--spark-accent-rgb), 0.16);
+  background: var(--spark-field-bg, rgba(var(--spark-bg-rgb), 0.95));
 }
 .spark-input::selection {
   background: var(--spark-selection-bg, rgba(239, 90, 42, 0.55));

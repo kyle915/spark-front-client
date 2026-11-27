@@ -44,16 +44,16 @@ export default function EventActivationSchedule({
           key={index}
           className="rounded-xl p-3 space-y-3"
           style={{
-            border: "1px solid var(--spark-border)",
-            background: "rgba(255,255,255,0.02)",
+            border: "1px solid var(--spark-border, #dcddd5)",
+            background: "var(--spark-surface-2, #f1f1ec)",
           }}
         >
           <div className="flex items-center justify-between gap-2">
             <span
-              className="mono text-[10px]"
+              className="mono text-[10px] font-semibold"
               style={{
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-text-meta, rgba(20, 22, 15, 0.62))",
               }}
             >
               {slots.length > 1 ? `VISIT ${index + 1}` : "VISIT"}
@@ -62,10 +62,10 @@ export default function EventActivationSchedule({
               <button
                 type="button"
                 onClick={() => onChange(slots.filter((_, i) => i !== index))}
-                className="mono text-[10px]"
+                className="mono text-[10px] font-semibold"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "var(--spark-orange, #ef5a2a)",
+                  color: "var(--spark-flag-ink, #a8340f)",
                 }}
               >
                 Remove
@@ -115,18 +115,18 @@ export default function EventActivationSchedule({
         onClick={() =>
           onChange([...slots, blankVisitSlot(slots[slots.length - 1])])
         }
-        className="mono text-[10px]"
-        style={{ letterSpacing: "0.14em", color: "var(--spark-lime, #f2f3ee)" }}
+        className="mono text-[10px] font-semibold"
+        style={{ letterSpacing: "0.14em", color: "var(--spark-text, #14160f)" }}
       >
         + Add another date
       </button>
       <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
         <span className="label-mini">BAs needed onsite *</span>
         <div
-          className="inline-flex items-center rounded-full"
+          className="inline-flex items-center rounded-lg"
           style={{
-            background: "var(--spark-bg, #0A0B0D)",
-            border: "1px solid var(--spark-border)",
+            background: "var(--spark-surface-2, #f1f1ec)",
+            border: "1px solid var(--spark-border, #dcddd5)",
           }}
         >
           <button
@@ -134,13 +134,13 @@ export default function EventActivationSchedule({
             aria-label="Fewer brand ambassadors"
             onClick={() => onBaCount(clampBaCount(baCount - 1))}
             className="w-9 h-9 grid place-items-center"
-            style={{ color: "var(--spark-text)" }}
+            style={{ color: "var(--spark-text, #14160f)" }}
           >
             −
           </button>
           <span
             className="tab-num px-3 text-base font-semibold"
-            style={{ minWidth: 28, textAlign: "center" }}
+            style={{ minWidth: 28, textAlign: "center", color: "var(--spark-text, #14160f)" }}
           >
             {clampBaCount(baCount)}
           </span>
@@ -150,13 +150,16 @@ export default function EventActivationSchedule({
             onClick={() => onBaCount(clampBaCount(baCount + 1))}
             disabled={baCount >= BA_COUNT_MAX}
             className="w-9 h-9 grid place-items-center disabled:opacity-40"
-            style={{ color: "var(--spark-lime, #f2f3ee)" }}
+            style={{ color: "var(--spark-text, #14160f)" }}
           >
             +
           </button>
         </div>
       </div>
-      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+      <p
+        className="text-xs"
+        style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.6))" }}
+      >
         Each date is its own request at this venue. {BA_COUNT_MIN}–{BA_COUNT_MAX}{" "}
         brand ambassadors.
       </p>

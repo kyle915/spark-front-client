@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
-import SparkFormLayout, { PublicFormTenantContext } from "./layout/FormLayout";
+import SparkFormLayout from "./layout/FormLayout";
+import { PublicFormTenantContext } from "./layout/publicFormTenantContext";
 import {
   usePublicProducts,
   usePublicProductTypes,
@@ -721,23 +722,27 @@ function ExpressFormBody() {
         {/* Header */}
         <div className="py-2">
           <p
-            className="mono text-[10px]"
+            className="mono text-[10px] font-semibold"
             style={{
-              letterSpacing: "0.22em",
-              color: "var(--spark-lime, #f2f3ee)",
+              letterSpacing: "0.2em",
+              color: "var(--spark-text-meta, rgba(20, 22, 15, 0.62))",
             }}
           >
             REQUEST A TEAM
           </p>
           <h1
-            className="display text-2xl font-bold mt-1"
-            style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}
+            className="display text-2xl sm:text-3xl font-bold mt-1"
+            style={{
+              letterSpacing: "-0.025em",
+              lineHeight: 1.1,
+              color: "var(--spark-text, #14160f)",
+            }}
           >
             {FORM_TITLE_OVERRIDES[slug] ?? `${brandName} BA Request Form`}
           </h1>
           <p
             className="text-[13px] mt-2 leading-relaxed"
-            style={{ color: "rgba(255,255,255,0.65)" }}
+            style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.74))" }}
           >
             Tell us where you'd like a sample team.{" "}
             {tenant?.autoApproveRequests
@@ -750,16 +755,17 @@ function ExpressFormBody() {
           <div
             className="rounded-xl p-4 flex flex-wrap items-center gap-3"
             style={{
-              background: "var(--spark-surface, #11140e)",
-              border: "1px solid var(--spark-lime, #f2f3ee)",
+              background: "#ffffff",
+              border: "1px solid var(--spark-border, #dcddd5)",
+              boxShadow: "0 6px 20px rgba(20, 22, 15, 0.06)",
             }}
             role="status"
           >
             <div className="flex-1 min-w-[200px]">
-              <p className="text-sm font-semibold" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+              <p className="text-sm font-semibold" style={{ color: "var(--spark-text, #14160f)" }}>
                 Resume your request?
               </p>
-              <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+              <p className="text-[12px] mt-0.5" style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.7))" }}>
                 We saved your progress on this device
                 {pendingDraft.savedAt
                   ? ` on ${new Date(pendingDraft.savedAt).toLocaleDateString(undefined, {
@@ -774,7 +780,10 @@ function ExpressFormBody() {
               type="button"
               onClick={resumeDraft}
               className="px-4 py-2 rounded-lg text-sm font-semibold"
-              style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
+              style={{
+                background: "var(--spark-lime, #14160f)",
+                color: "var(--spark-on-accent, #ffffff)",
+              }}
             >
               Resume
             </button>
@@ -783,9 +792,9 @@ function ExpressFormBody() {
               onClick={discardDraft}
               className="px-4 py-2 rounded-lg text-sm font-semibold"
               style={{
-                background: "transparent",
-                color: "var(--spark-text, #f2f3ee)",
-                border: "1px solid var(--spark-border, #1f2418)",
+                background: "#ffffff",
+                color: "var(--spark-text, #14160f)",
+                border: "1px solid var(--spark-border, #dcddd5)",
               }}
             >
               Discard
@@ -814,9 +823,9 @@ function ExpressFormBody() {
                   <div
                     className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
                     style={{
-                      background: "var(--spark-surface, #11140e)",
-                      border: "1px solid var(--spark-border, #1f2418)",
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                      background: "#ffffff",
+                      border: "1px solid var(--spark-border, #dcddd5)",
+                      boxShadow: "0 12px 28px rgba(20, 22, 15, 0.12)",
                     }}
                   >
                     {storeMatches.map((s) => (
@@ -827,12 +836,18 @@ function ExpressFormBody() {
                           e.preventDefault();
                           pickStoreAccount(s);
                         }}
-                        className="block w-full text-left px-3 py-2.5"
-                        style={{ color: "var(--spark-text, #f2f3ee)", borderTop: "1px solid rgba(255,255,255,0.04)" }}
+                        className="block w-full text-left px-3 py-2.5 hover:bg-black/[0.03]"
+                        style={{
+                          color: "var(--spark-text, #14160f)",
+                          borderTop: "1px solid var(--spark-hairline, rgba(20, 22, 15, 0.08))",
+                        }}
                       >
                         <div className="text-sm font-semibold">{s.name}</div>
                         {s.address && (
-                          <div className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                          <div
+                            className="text-[12px] mt-0.5"
+                            style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.68))" }}
+                          >
                             {s.address}
                           </div>
                         )}
@@ -843,8 +858,10 @@ function ExpressFormBody() {
                 <p
                   className="mono text-[10px] mt-1"
                   style={{
-                    letterSpacing: "0.16em",
-                    color: retailerId ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.45)",
+                    letterSpacing: "0.14em",
+                    color: retailerId
+                      ? "var(--spark-ok-ink, #2b4c08)"
+                      : "var(--spark-text-meta, rgba(20, 22, 15, 0.58))",
                   }}
                 >
                   {retailerId
@@ -863,6 +880,7 @@ function ExpressFormBody() {
               value={venue}
               onChange={setVenue}
               bias="establishment"
+              suggestionTheme="light"
               onResolved={(p) => {
                 // Set the venue to the canonical retailer name (no
                 // location suffix) so metrics aggregate by chain.
@@ -890,6 +908,7 @@ function ExpressFormBody() {
             <GooglePlacesInput
               value={address}
               onChange={setAddress}
+              suggestionTheme="light"
               onResolved={(p) => {
                 setAddress(p.formattedAddress);
                 // The address is the precise visit location — prefer its
@@ -974,16 +993,18 @@ function ExpressFormBody() {
                       key={p.label}
                       type="button"
                       onClick={() => setDate(iso)}
-                      className="mono text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                      className="mono text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition"
                       style={{
                         letterSpacing: "0.14em",
                         background: selected
-                          ? "var(--spark-lime, #f2f3ee)"
-                          : "rgba(255,255,255,0.04)",
-                        color: selected ? "#0a0d09" : "rgba(255,255,255,0.7)",
+                          ? "var(--spark-lime, #14160f)"
+                          : "var(--spark-surface-2, #f1f1ec)",
+                        color: selected
+                          ? "var(--spark-on-accent, #ffffff)"
+                          : "var(--spark-text-secondary, rgba(20, 22, 15, 0.8))",
                         border: selected
-                          ? "1px solid var(--spark-lime, #f2f3ee)"
-                          : "1px solid rgba(255,255,255,0.1)",
+                          ? "1px solid var(--spark-lime, #14160f)"
+                          : "1px solid var(--spark-border, #dcddd5)",
                       }}
                     >
                       {p.label}
@@ -1009,8 +1030,12 @@ function ExpressFormBody() {
               <button
                 type="button"
                 onClick={() => setExtraDates(extraDates.filter((_, j) => j !== i))}
-                className="px-3 rounded-xl text-sm"
-                style={{ background: "rgba(239,90,42,0.15)", color: "var(--spark-orange, #ef5a2a)", border: "1px solid rgba(239,90,42,0.4)" }}
+                className="px-3 rounded-lg text-sm font-medium"
+                style={{
+                  background: "rgba(210, 72, 27, 0.08)",
+                  color: "var(--spark-flag-ink, #a8340f)",
+                  border: "1px solid rgba(210, 72, 27, 0.28)",
+                }}
               >
                 Remove
               </button>
@@ -1020,8 +1045,13 @@ function ExpressFormBody() {
           <button
             type="button"
             onClick={() => setExtraDates([...extraDates, ""])}
-            className="mono text-[11px] px-3 py-2 rounded-xl"
-            style={{ letterSpacing: "0.18em", background: "rgba(242,243,238,0.1)", color: "var(--spark-lime, #f2f3ee)", border: "1px dashed rgba(242,243,238,0.35)" }}
+            className="mono text-[11px] font-semibold px-3 py-2 rounded-lg"
+            style={{
+              letterSpacing: "0.14em",
+              background: "var(--spark-surface-2, #f1f1ec)",
+              color: "var(--spark-text, #14160f)",
+              border: "1px dashed var(--spark-border, #c8cac0)",
+            }}
           >
             + ANOTHER VISIT AT THIS VENUE
           </button>
@@ -1072,11 +1102,11 @@ function ExpressFormBody() {
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition"
                     style={{
                       background: selected
-                        ? "rgba(242,243,238,0.1)"
-                        : "var(--spark-surface-2, #161a12)",
+                        ? "rgba(20, 22, 15, 0.04)"
+                        : "#ffffff",
                       border: selected
-                        ? "2px solid var(--spark-lime, #f2f3ee)"
-                        : "1px solid var(--spark-border, #1f2418)",
+                        ? "2px solid var(--spark-lime, #14160f)"
+                        : "1px solid var(--spark-border, #dcddd5)",
                     }}
                   >
                     <span
@@ -1085,17 +1115,17 @@ function ExpressFormBody() {
                         width: 16,
                         height: 16,
                         border: selected
-                          ? "5px solid var(--spark-lime, #f2f3ee)"
-                          : "2px solid rgba(255,255,255,0.3)",
-                        background: selected ? "#0a0d09" : "transparent",
+                          ? "5px solid var(--spark-lime, #14160f)"
+                          : "2px solid rgba(20, 22, 15, 0.28)",
+                        background: selected ? "#ffffff" : "transparent",
                       }}
                     />
                     <span
                       className="text-sm font-medium"
                       style={{
                         color: selected
-                          ? "var(--spark-text, #f2f3ee)"
-                          : "rgba(255,255,255,0.75)",
+                          ? "var(--spark-text, #14160f)"
+                          : "var(--spark-text-secondary, rgba(20, 22, 15, 0.82))",
                       }}
                     >
                       {opt.label}
@@ -1186,10 +1216,10 @@ function ExpressFormBody() {
           {showBaCount && !multiDateEvent && (
           <Field label="Brand Ambassadors Needed">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setBaCount(Math.max(1, baCount - 1))} className="w-10 h-10 rounded-lg text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>−</button>
-              <span className="display text-2xl font-bold tab-num" style={{ minWidth: 40, textAlign: "center" }}>{baCount}</span>
-              <button type="button" onClick={() => setBaCount(Math.min(20, baCount + 1))} className="w-10 h-10 rounded-lg text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>+</button>
-              <span className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>BAs</span>
+              <button type="button" onClick={() => setBaCount(Math.max(1, baCount - 1))} className="w-10 h-10 rounded-lg text-lg font-medium" style={{ background: "var(--spark-surface-2, #f1f1ec)", border: "1px solid var(--spark-border, #dcddd5)", color: "var(--spark-text, #14160f)" }}>−</button>
+              <span className="display text-2xl font-bold tab-num" style={{ minWidth: 40, textAlign: "center", color: "var(--spark-text, #14160f)" }}>{baCount}</span>
+              <button type="button" onClick={() => setBaCount(Math.min(20, baCount + 1))} className="w-10 h-10 rounded-lg text-lg font-medium" style={{ background: "var(--spark-surface-2, #f1f1ec)", border: "1px solid var(--spark-border, #dcddd5)", color: "var(--spark-text, #14160f)" }}>+</button>
+              <span className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta, rgba(20, 22, 15, 0.6))" }}>BAs</span>
             </div>
           </Field>
           )}
@@ -1202,12 +1232,12 @@ function ExpressFormBody() {
               <button
                 type="button"
                 onClick={() => setSelectedProductTypeId(null)}
-                className="mono text-[10px] px-2.5 py-1.5 rounded-md transition"
+                className="mono text-[10px] font-semibold px-2.5 py-1.5 rounded-md transition"
                 style={{
                   letterSpacing: "0.16em",
-                  background: selectedProductTypeId === null ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
-                  color: selectedProductTypeId === null ? "#0a0d09" : "rgba(255,255,255,0.7)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: selectedProductTypeId === null ? "var(--spark-lime, #14160f)" : "var(--spark-surface-2, #f1f1ec)",
+                  color: selectedProductTypeId === null ? "var(--spark-on-accent, #ffffff)" : "var(--spark-text-secondary, rgba(20, 22, 15, 0.78))",
+                  border: selectedProductTypeId === null ? "1px solid var(--spark-lime, #14160f)" : "1px solid var(--spark-border, #dcddd5)",
                 }}
               >
                 ALL
@@ -1217,12 +1247,12 @@ function ExpressFormBody() {
                   key={pt.id}
                   type="button"
                   onClick={() => setSelectedProductTypeId(pt.id)}
-                  className="mono text-[10px] px-2.5 py-1.5 rounded-md transition"
+                  className="mono text-[10px] font-semibold px-2.5 py-1.5 rounded-md transition"
                   style={{
                     letterSpacing: "0.16em",
-                    background: selectedProductTypeId === pt.id ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
-                    color: selectedProductTypeId === pt.id ? "#0a0d09" : "rgba(255,255,255,0.7)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: selectedProductTypeId === pt.id ? "var(--spark-lime, #14160f)" : "var(--spark-surface-2, #f1f1ec)",
+                    color: selectedProductTypeId === pt.id ? "var(--spark-on-accent, #ffffff)" : "var(--spark-text-secondary, rgba(20, 22, 15, 0.78))",
+                    border: selectedProductTypeId === pt.id ? "1px solid var(--spark-lime, #14160f)" : "1px solid var(--spark-border, #dcddd5)",
                   }}
                 >
                   {pt.name.toUpperCase()}
@@ -1240,18 +1270,18 @@ function ExpressFormBody() {
                   onClick={() => toggleProduct(p.id)}
                   className="rounded-xl overflow-hidden text-left transition"
                   style={{
-                    background: selected ? "rgba(242,243,238,0.09)" : "var(--spark-surface-2, #161a12)",
-                    border: selected ? "2px solid var(--spark-lime, #f2f3ee)" : "1px solid var(--spark-border, #1f2418)",
+                    background: "#ffffff",
+                    border: selected ? "2px solid var(--spark-lime, #14160f)" : "1px solid var(--spark-border, #dcddd5)",
                   }}
                 >
-                  <div className="relative w-full aspect-square" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  <div className="relative w-full aspect-square" style={{ background: "#f6f6f2" }}>
                     {selected ? (
                       <span
                         aria-hidden
                         className="absolute top-2 right-2 z-10 w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold"
                         style={{
-                          background: "var(--spark-lime, #f2f3ee)",
-                          color: "#0a0d09",
+                          background: "var(--spark-lime, #14160f)",
+                          color: "var(--spark-on-accent, #ffffff)",
                         }}
                       >
                         ✓
@@ -1261,18 +1291,18 @@ function ExpressFormBody() {
                       <img
                         src={p.image}
                         alt={p.name}
-                        className="absolute inset-0 w-full h-full object-contain"
+                        className="absolute inset-0 w-full h-full object-contain p-1.5"
                         onError={() => setBrokenProductImages((cur) => [...cur, p.id])}
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>NO IMAGE</span>
+                        <span className="mono text-[10px]" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.52))" }}>NO IMAGE</span>
                       </div>
                     )}
                   </div>
                   <div className="p-2.5">
-                    <p className="text-xs font-semibold leading-tight">{p.name}</p>
-                    <p className="mono text-[9px] mt-1" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.4)" }}>
+                    <p className="text-xs font-semibold leading-tight" style={{ color: "var(--spark-text, #14160f)" }}>{p.name}</p>
+                    <p className="mono text-[9px] mt-1" style={{ letterSpacing: "0.16em", color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))" }}>
                       {p.productType?.name?.toUpperCase()}
                     </p>
                   </div>
@@ -1281,14 +1311,14 @@ function ExpressFormBody() {
             })}
           </div>
           {productsLoading && (
-            <p className="mono text-[10px] mt-2" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>LOADING…</p>
+            <p className="mono text-[10px] mt-2" style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))" }}>LOADING…</p>
           )}
           {hasMore && !productsLoading && (
             <button
               type="button"
               onClick={loadMore}
-              className="mono text-[10px] px-3 py-2 rounded-lg mt-2"
-              style={{ letterSpacing: "0.18em", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+              className="mono text-[10px] font-semibold px-3 py-2 rounded-lg mt-2"
+              style={{ letterSpacing: "0.16em", background: "var(--spark-surface-2, #f1f1ec)", color: "var(--spark-text, #14160f)", border: "1px solid var(--spark-border, #dcddd5)" }}
             >
               LOAD MORE
             </button>
@@ -1328,11 +1358,11 @@ function ExpressFormBody() {
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition"
                       style={{
                         background: selected
-                          ? "rgba(242,243,238,0.1)"
-                          : "var(--spark-surface-2, #161a12)",
+                          ? "rgba(20, 22, 15, 0.04)"
+                          : "#ffffff",
                         border: selected
-                          ? "2px solid var(--spark-lime, #f2f3ee)"
-                          : "1px solid var(--spark-border, #1f2418)",
+                          ? "2px solid var(--spark-lime, #14160f)"
+                          : "1px solid var(--spark-border, #dcddd5)",
                       }}
                     >
                       <span
@@ -1341,17 +1371,17 @@ function ExpressFormBody() {
                           width: 16,
                           height: 16,
                           border: selected
-                            ? "5px solid var(--spark-lime, #f2f3ee)"
-                            : "2px solid rgba(255,255,255,0.3)",
-                          background: selected ? "#0a0d09" : "transparent",
+                            ? "5px solid var(--spark-lime, #14160f)"
+                            : "2px solid rgba(20, 22, 15, 0.28)",
+                          background: selected ? "#ffffff" : "transparent",
                         }}
                       />
                       <span
                         className="text-sm font-medium"
                         style={{
                           color: selected
-                            ? "var(--spark-text, #f2f3ee)"
-                            : "rgba(255,255,255,0.75)",
+                            ? "var(--spark-text, #14160f)"
+                            : "var(--spark-text-secondary, rgba(20, 22, 15, 0.82))",
                         }}
                       >
                         {opt.label}
@@ -1419,9 +1449,9 @@ function ExpressFormBody() {
                 <div
                   className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
                   style={{
-                    background: "var(--spark-surface, #11140e)",
-                    border: "1px solid var(--spark-border, #1f2418)",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                    background: "#ffffff",
+                    border: "1px solid var(--spark-border, #dcddd5)",
+                    boxShadow: "0 12px 28px rgba(20, 22, 15, 0.12)",
                   }}
                 >
                   {distributorMatches.map((d) => (
@@ -1434,12 +1464,21 @@ function ExpressFormBody() {
                         setDistributorName(d.name);
                         setDistributorQ(d.name);
                       }}
-                      className="block w-full text-left px-3 py-2.5"
-                      style={{ color: "var(--spark-text, #f2f3ee)", borderTop: "1px solid rgba(255,255,255,0.04)" }}
+                      className="block w-full text-left px-3 py-2.5 hover:bg-black/[0.03]"
+                      style={{
+                        color: "var(--spark-text, #14160f)",
+                        borderTop: "1px solid var(--spark-hairline, rgba(20, 22, 15, 0.08))",
+                      }}
                     >
                       <div className="text-sm font-semibold">{d.name}</div>
                       {d.location?.state?.name && (
-                        <div className="mono text-[10px] mt-0.5" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.5)" }}>
+                        <div
+                          className="mono text-[10px] mt-0.5"
+                          style={{
+                            letterSpacing: "0.12em",
+                            color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))",
+                          }}
+                        >
                           {d.location.state.name.toUpperCase()}
                         </div>
                       )}
@@ -1452,7 +1491,10 @@ function ExpressFormBody() {
                 !distributorId && (
                   <p
                     className="mono text-[10px] mt-1"
-                    style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "var(--spark-text-meta, rgba(20, 22, 15, 0.6))",
+                    }}
                   >
                     NO MATCH — we'll save "{distributorQ}" as typed.
                   </p>
@@ -1465,7 +1507,14 @@ function ExpressFormBody() {
         </Card>
 
         {error && (
-          <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(239,90,42,0.1)", border: "1px solid rgba(239,90,42,0.4)", color: "var(--spark-orange, #ef5a2a)" }}>
+          <div
+            className="rounded-xl p-3 text-sm font-medium"
+            style={{
+              background: "rgba(210, 72, 27, 0.08)",
+              border: "1px solid rgba(210, 72, 27, 0.3)",
+              color: "var(--spark-flag-ink, #a8340f)",
+            }}
+          >
             {error}
           </div>
         )}
@@ -1473,13 +1522,20 @@ function ExpressFormBody() {
         <div
           className="sticky bottom-0 -mx-1 sm:mx-0 px-3 pt-3 flex items-center justify-between gap-3 flex-wrap"
           style={{
-            background: "rgba(10,13,9,0.9)",
+            background: "rgba(246, 246, 242, 0.92)",
             backdropFilter: "blur(12px)",
-            borderTop: "1px solid var(--spark-border, #1f2418)",
+            WebkitBackdropFilter: "blur(12px)",
+            borderTop: "1px solid var(--spark-border, #dcddd5)",
             paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
           }}
         >
-          <div className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
+          <div
+            className="mono text-[10px] font-medium"
+            style={{
+              letterSpacing: "0.16em",
+              color: "var(--spark-text-meta, rgba(20, 22, 15, 0.66))",
+            }}
+          >
             {listedVisits > 1 ? `${listedVisits} VISITS · ` : ""}
             {`${productIds.length} PRODUCTS`}
             {showBaCount ? ` · ${baCount} BAs` : ""}
@@ -1488,11 +1544,11 @@ function ExpressFormBody() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="px-5 py-2.5 rounded-lg text-sm font-semibold"
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold transition"
             style={{
-              background: "var(--spark-lime, #f2f3ee)",
-              color: "#0a0d09",
-              opacity: canSubmit ? 1 : 0.5,
+              background: "var(--spark-lime, #14160f)",
+              color: "var(--spark-on-accent, #ffffff)",
+              opacity: canSubmit ? 1 : 0.42,
             }}
           >
             {submitting ? "Submitting…" : listedVisits > 1 ? `Submit ${listedVisits} Requests` : "Submit Request"}
@@ -1505,17 +1561,16 @@ function ExpressFormBody() {
         aria-label="Live activation summary"
         className="hidden lg:block sticky top-24 rounded-xl p-5 space-y-4"
         style={{
-          background: "rgba(17,20,14,0.82)",
-          border: "1px solid var(--spark-border, #1f2418)",
-          backdropFilter: "blur(10px)",
+          background: "#ffffff",
+          border: "1px solid var(--spark-border, #dcddd5)",
         }}
       >
         <div className="flex items-center justify-between gap-2">
           <p
-            className="mono text-[10px]"
+            className="mono text-[10px] font-semibold"
             style={{
-              letterSpacing: "0.18em",
-              color: "var(--spark-lime, #f2f3ee)",
+              letterSpacing: "0.16em",
+              color: "var(--spark-text-meta, rgba(20, 22, 15, 0.64))",
             }}
           >
             LIVE ACTIVATION SUMMARY
@@ -1524,10 +1579,14 @@ function ExpressFormBody() {
             className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
             style={{
               background: canSubmit
-                ? "rgba(242,243,238,0.14)"
-                : "rgba(255,255,255,0.06)",
-              color: canSubmit ? "#f2f3ee" : "rgba(255,255,255,0.65)",
-              border: "1px solid rgba(255,255,255,0.12)",
+                ? "var(--spark-ok-bg, rgba(63, 92, 18, 0.11))"
+                : "var(--spark-surface-2, #f1f1ec)",
+              color: canSubmit
+                ? "var(--spark-ok-ink, #2b4c08)"
+                : "var(--spark-text-secondary, rgba(20, 22, 15, 0.76))",
+              border: canSubmit
+                ? "1px solid var(--spark-ok-border, rgba(63, 92, 18, 0.28))"
+                : "1px solid var(--spark-border, #dcddd5)",
             }}
           >
             {canSubmit ? "Ready" : submitBlocker ? `Needs ${submitBlocker}` : "Draft"}
@@ -1537,15 +1596,15 @@ function ExpressFormBody() {
         <div className="space-y-3 text-xs">
           <div
             className="pb-3 space-y-1"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ borderBottom: "1px solid var(--spark-hairline, rgba(20, 22, 15, 0.09))" }}
           >
-            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <p className="text-[11px]" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))" }}>
               Venue & address
             </p>
-            <p className="font-semibold text-sm" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+            <p className="font-semibold text-sm" style={{ color: "var(--spark-text, #14160f)" }}>
               {venue.trim() || "Select or enter a venue"}
             </p>
-            <p className="leading-snug" style={{ color: "rgba(255,255,255,0.68)" }}>
+            <p className="leading-snug" style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.72))" }}>
               {address.trim() || "Full street, city, state & 5-digit ZIP"}
             </p>
             {address.trim() ? (
@@ -1553,8 +1612,8 @@ function ExpressFormBody() {
                 className="text-[11px] font-medium pt-0.5"
                 style={{
                   color: addressComplete
-                    ? "var(--spark-lime, #f2f3ee)"
-                    : "var(--spark-orange, #ef5a2a)",
+                    ? "var(--spark-ok-ink, #2b4c08)"
+                    : "var(--spark-flag-ink, #a8340f)",
                 }}
               >
                 {addressComplete
@@ -1566,12 +1625,12 @@ function ExpressFormBody() {
 
           <div
             className="pb-3 space-y-1"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ borderBottom: "1px solid var(--spark-hairline, rgba(20, 22, 15, 0.09))" }}
           >
-            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <p className="text-[11px]" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))" }}>
               Schedule & timezone
             </p>
-            <p className="font-semibold tab-num" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+            <p className="font-semibold tab-num" style={{ color: "var(--spark-text, #14160f)" }}>
               {multiDateEvent
                 ? listedVisits > 0
                   ? `${listedVisits} activation date${listedVisits === 1 ? "" : "s"}`
@@ -1581,29 +1640,29 @@ function ExpressFormBody() {
                   : date || "Pick visit date"}
             </p>
             {!multiDateEvent && startTime && endTime ? (
-              <p className="tab-num" style={{ color: "rgba(255,255,255,0.68)" }}>
+              <p className="tab-num" style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.72))" }}>
                 {startTime} – {endTime}
               </p>
             ) : null}
-            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-[11px]" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.6))" }}>
               {selectedTimezoneName || "Timezone auto-detects from address"}
             </p>
           </div>
 
           <div
             className="pb-3 space-y-1"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ borderBottom: "1px solid var(--spark-hairline, rgba(20, 22, 15, 0.09))" }}
           >
-            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <p className="text-[11px]" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))" }}>
               Format & staffing
             </p>
-            <p className="font-semibold" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+            <p className="font-semibold" style={{ color: "var(--spark-text, #14160f)" }}>
               {selectedRequestTypeName || "Choose request format"}
             </p>
-            <p className="tab-num" style={{ color: "rgba(255,255,255,0.68)" }}>
+            <p className="tab-num" style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.72))" }}>
               {showBaCount ? `${baCount} brand ambassador${baCount === 1 ? "" : "s"}` : "Standard team"}
               {schedulingStatus
-                ? schedulingStatus === "scheduled"
+                ? schedulingStatus === "already_scheduled"
                   ? " · Booked with store"
                   : " · Ignite books store"
                 : ""}
@@ -1612,10 +1671,10 @@ function ExpressFormBody() {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <p className="text-[11px]" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))" }}>
                 Selected SKUs
               </p>
-              <span className="tab-num font-semibold" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+              <span className="tab-num font-semibold" style={{ color: "var(--spark-text, #14160f)" }}>
                 {productIds.length}
               </span>
             </div>
@@ -1626,22 +1685,22 @@ function ExpressFormBody() {
                     key={`${name}-${idx}`}
                     className="px-2 py-0.5 rounded-md text-[11px] font-medium truncate max-w-full"
                     style={{
-                      background: "rgba(242,243,238,0.08)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "var(--spark-text, #f2f3ee)",
+                      background: "var(--spark-surface-2, #f1f1ec)",
+                      border: "1px solid var(--spark-border, #dcddd5)",
+                      color: "var(--spark-text, #14160f)",
                     }}
                   >
                     {name}
                   </span>
                 ))}
                 {selectedProductLabels.length > 6 ? (
-                  <span className="text-[11px] tab-num" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  <span className="text-[11px] tab-num" style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.6))" }}>
                     +{selectedProductLabels.length - 6} more
                   </span>
                 ) : null}
               </div>
             ) : (
-              <p style={{ color: "rgba(255,255,255,0.55)" }}>
+              <p style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.6))" }}>
                 Pick at least 1 product to sample
               </p>
             )}
@@ -1657,25 +1716,25 @@ function ExpressFormBody() {
           onClick={() => setConfirmation(null)}
           className="fixed inset-0 z-[60] flex items-center justify-center px-4"
           style={{
-            background: "rgba(10,11,13,0.7)",
-            backdropFilter: "blur(8px)",
+            background: "rgba(20, 22, 15, 0.45)",
+            backdropFilter: "blur(6px)",
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md rounded-xl overflow-hidden"
             style={{
-              background: "#11140e",
-              border: "1px solid var(--spark-border, #1f2418)",
-              boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
+              background: "#ffffff",
+              border: "1px solid var(--spark-border, #dcddd5)",
+              boxShadow: "0 24px 64px rgba(20, 22, 15, 0.18)",
             }}
           >
             {/* Status band */}
             <div
               style={{
                 padding: "14px 22px",
-                background: "rgba(242,243,238,0.08)",
-                borderBottom: "1px solid rgba(242,243,238,0.18)",
+                background: "var(--spark-ok-bg, rgba(63, 92, 18, 0.1))",
+                borderBottom: "1px solid var(--spark-ok-border, rgba(63, 92, 18, 0.24))",
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
@@ -1686,14 +1745,14 @@ function ExpressFormBody() {
                   width: 8,
                   height: 8,
                   borderRadius: 999,
-                  background: "#f2f3ee",
+                  background: "var(--spark-ok-ink, #2b4c08)",
                 }}
               />
               <span
-                className="mono text-[10px]"
+                className="mono text-[10px] font-semibold"
                 style={{
-                  letterSpacing: "0.24em",
-                  color: "#f2f3ee",
+                  letterSpacing: "0.2em",
+                  color: "var(--spark-ok-ink, #2b4c08)",
                 }}
               >
                 {confirmation.approved
@@ -1705,13 +1764,20 @@ function ExpressFormBody() {
             <div className="p-6">
               <h2
                 className="display text-2xl font-bold"
-                style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}
+                style={{
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.1,
+                  color: "var(--spark-text, #14160f)",
+                }}
               >
                 Thanks, {confirmation.requestorName}.
               </h2>
               <p
                 className="text-sm mt-3"
-                style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+                style={{
+                  color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.78))",
+                  lineHeight: 1.55,
+                }}
               >
                 {confirmation.approved ? (
                   confirmation.count === 1 ? (
@@ -1727,7 +1793,7 @@ function ExpressFormBody() {
                     {confirmation.routedTo ? (
                       <>
                         They've been routed to{" "}
-                        <strong style={{ color: "var(--spark-lime, #f2f3ee)" }}>
+                        <strong style={{ color: "var(--spark-text, #14160f)" }}>
                           {confirmation.routedTo}
                         </strong>{" "}
                         for review.
@@ -1742,15 +1808,15 @@ function ExpressFormBody() {
               <div
                 className="mt-5 rounded-xl p-4 space-y-1.5"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "var(--spark-surface-2, #f6f6f2)",
+                  border: "1px solid var(--spark-border, #dcddd5)",
                 }}
               >
                 <p
-                  className="mono text-[10px]"
+                  className="mono text-[10px] font-semibold"
                   style={{
                     letterSpacing: "0.18em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-text-meta, rgba(20, 22, 15, 0.62))",
                   }}
                 >
                   WHAT HAPPENS NEXT
@@ -1759,7 +1825,7 @@ function ExpressFormBody() {
                   className="text-sm space-y-1.5 mt-2"
                   style={{
                     paddingLeft: 18,
-                    color: "rgba(255,255,255,0.8)",
+                    color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.84))",
                     lineHeight: 1.55,
                   }}
                 >
@@ -1785,8 +1851,8 @@ function ExpressFormBody() {
                 <p
                   className="mono text-[10px] mt-4 text-center"
                   style={{
-                    letterSpacing: "0.18em",
-                    color: "rgba(255,255,255,0.45)",
+                    letterSpacing: "0.16em",
+                    color: "var(--spark-text-meta, rgba(20, 22, 15, 0.58))",
                   }}
                 >
                   MOST APPROVALS COME THROUGH WITHIN 24–48 HOURS
@@ -1799,31 +1865,21 @@ function ExpressFormBody() {
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   onClick={() => {
-                    // Same venue, new date. Keep venue, address, store
-                    // contact, store manager, distributor, requestor
-                    // info, products, BA count, request type, timezone.
-                    // Reset only the date(s).
                     setDate("");
                     setExtraDates([]);
                     setConfirmation(null);
                   }}
-                  className="px-4 py-3 rounded-xl text-sm font-semibold"
+                  className="px-4 py-2.5 rounded-lg text-sm font-semibold"
                   style={{
-                    background: "transparent",
-                    color: "var(--spark-lime, #f2f3ee)",
-                    border: "1px solid rgba(242,243,238,0.4)",
+                    background: "#ffffff",
+                    color: "var(--spark-text, #14160f)",
+                    border: "1px solid var(--spark-border, #dcddd5)",
                   }}
                 >
                   + Add another visit (same venue)
                 </button>
                 <button
                   onClick={() => {
-                    // Different venue. Clear venue-specific data but
-                    // keep requestor name/email + distributor since
-                    // those typically span multiple venues for one
-                    // submitter. Drop the captured geocode too so the
-                    // next venue starts unknown rather than inheriting
-                    // this venue's coordinates.
                     setVenue("");
                     setAddress("");
                     clearStoreAccount();
@@ -1843,11 +1899,11 @@ function ExpressFormBody() {
                     setCasesToBeShipped("");
                     setConfirmation(null);
                   }}
-                  className="px-4 py-3 rounded-xl text-sm font-semibold"
+                  className="px-4 py-2.5 rounded-lg text-sm font-semibold"
                   style={{
-                    background: "transparent",
-                    color: "var(--spark-sky, #5fb8ef)",
-                    border: "1px solid rgba(95,184,239,0.4)",
+                    background: "#ffffff",
+                    color: "var(--spark-text, #14160f)",
+                    border: "1px solid var(--spark-border, #dcddd5)",
                   }}
                 >
                   + Schedule a different venue
@@ -1855,10 +1911,10 @@ function ExpressFormBody() {
               </div>
               <button
                 onClick={() => setConfirmation(null)}
-                className="mt-2 w-full px-5 py-3 rounded-xl text-sm font-semibold"
+                className="mt-2 w-full px-5 py-2.5 rounded-lg text-sm font-semibold"
                 style={{
-                  background: "var(--spark-lime, #f2f3ee)",
-                  color: "#0a0d09",
+                  background: "var(--spark-lime, #14160f)",
+                  color: "var(--spark-on-accent, #ffffff)",
                 }}
               >
                 Done — close this
@@ -1917,10 +1973,10 @@ const TimeSlotSelect: React.FC<{
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <label className="block">
     <span
-      className="mono text-[11px] block mb-1"
+      className="mono text-[11px] font-semibold block mb-1"
       style={{
         letterSpacing: "0.14em",
-        color: "rgba(255,255,255,0.82)",
+        color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.78))",
       }}
     >
       {label.toUpperCase()}
@@ -1931,18 +1987,17 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 
 const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div
-    className="rounded-xl px-4 py-3 space-y-2"
+    className="rounded-xl px-4 py-4 space-y-2.5"
     style={{
-      background: "rgba(17,20,14,0.7)",
-      border: "1px solid var(--spark-border, #1f2418)",
-      backdropFilter: "blur(8px)",
+      background: "var(--spark-surface, #ffffff)",
+      border: "1px solid var(--spark-border, #dcddd5)",
     }}
   >
     <p
-      className="mono text-[10px]"
+      className="mono text-[10px] font-semibold"
       style={{
         letterSpacing: "0.18em",
-        color: "var(--spark-lime, #f2f3ee)",
+        color: "var(--spark-text-meta, rgba(20, 22, 15, 0.62))",
       }}
     >
       {title}

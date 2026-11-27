@@ -4,10 +4,16 @@ import type { BrandGroupBrand } from "../hooks/useTenantPublic";
 import type { CoBrandSelection } from "./coBrandPayload";
 
 const pill = (active: boolean) => ({
-  letterSpacing: "0.18em",
-  background: active ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
-  color: active ? "#0a0d09" : "rgba(255,255,255,0.75)",
-  border: "1px solid rgba(255,255,255,0.1)",
+  letterSpacing: "0.16em",
+  background: active
+    ? "var(--spark-lime, #14160f)"
+    : "var(--spark-surface-2, #f1f1ec)",
+  color: active
+    ? "var(--spark-on-accent, #ffffff)"
+    : "var(--spark-text-secondary, rgba(20, 22, 15, 0.78))",
+  border: active
+    ? "1px solid var(--spark-lime, #14160f)"
+    : "1px solid var(--spark-border, #dcddd5)",
 });
 
 export default function CoBrandPicker({
@@ -34,11 +40,14 @@ export default function CoBrandPicker({
 
   return (
     <div className="space-y-3">
-      <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.65)" }}>
+      <p
+        className="text-[13px]"
+        style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.74))" }}
+      >
         Sampling another brand at the same table? Pick it here — each brand
         gets its own SKUs and its own recap numbers.
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {[
           { value: false, label: "NO · ONLY " + hostName.toUpperCase() },
           { value: true, label: "YES · MULTI-BRAND" },
@@ -47,7 +56,7 @@ export default function CoBrandPicker({
             key={String(opt.value)}
             type="button"
             onClick={() => onEnabledChange(opt.value)}
-            className="mono text-[10px] px-3 py-2 rounded-full"
+            className="mono text-[10px] font-semibold px-3 py-2 rounded-md transition"
             style={pill(enabled === opt.value)}
           >
             {opt.label}
@@ -66,7 +75,7 @@ export default function CoBrandPicker({
                   key={key}
                   type="button"
                   onClick={() => toggleBrand(key)}
-                  className="mono text-[10px] px-3 py-2 rounded-full"
+                  className="mono text-[10px] font-semibold px-3 py-2 rounded-md transition"
                   style={pill(active)}
                 >
                   {active ? "✓ " : "+ "}
@@ -111,12 +120,18 @@ function CoBrandSkus({
 
   return (
     <div
-      className="rounded-2xl p-3"
-      style={{ border: "1px solid var(--spark-border, #1f2418)" }}
+      className="rounded-xl p-3"
+      style={{
+        border: "1px solid var(--spark-border, #dcddd5)",
+        background: "var(--spark-surface, #ffffff)",
+      }}
     >
       <p
-        className="mono text-[10px] mb-2"
-        style={{ letterSpacing: "0.22em", color: "rgba(255,255,255,0.6)" }}
+        className="mono text-[10px] font-semibold mb-2"
+        style={{
+          letterSpacing: "0.18em",
+          color: "var(--spark-text-meta, rgba(20, 22, 15, 0.62))",
+        }}
       >
         {brand.name.toUpperCase()} SKUS *
       </p>
@@ -128,17 +143,17 @@ function CoBrandSkus({
               type="button"
               key={p.id}
               onClick={() => toggle(p.id)}
-              className="rounded-2xl overflow-hidden text-left transition"
+              className="rounded-xl overflow-hidden text-left transition"
               style={{
-                background: active ? "rgba(242,243,238,0.1)" : "var(--spark-surface-2, #161a12)",
+                background: "var(--spark-surface, #ffffff)",
                 border: active
-                  ? "2px solid var(--spark-lime, #f2f3ee)"
-                  : "1px solid var(--spark-border, #1f2418)",
+                  ? "2px solid var(--spark-lime, #14160f)"
+                  : "1px solid var(--spark-border, #dcddd5)",
               }}
             >
               <div
                 className="relative w-full aspect-square"
-                style={{ background: "rgba(255,255,255,0.04)" }}
+                style={{ background: "var(--spark-surface-2, #f1f1ec)" }}
               >
                 {p.image && !broken.includes(p.id) ? (
                   <img
@@ -149,21 +164,35 @@ function CoBrandSkus({
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <span
+                      className="mono text-[10px]"
+                      style={{ color: "var(--spark-text-meta, rgba(20, 22, 15, 0.52))" }}
+                    >
                       NO IMAGE
                     </span>
                   </div>
                 )}
               </div>
               <div className="p-2.5">
-                <p className="text-xs font-semibold leading-tight">{p.name}</p>
+                <p
+                  className="text-xs font-semibold leading-tight"
+                  style={{ color: "var(--spark-text, #14160f)" }}
+                >
+                  {p.name}
+                </p>
               </div>
             </button>
           );
         })}
       </div>
       {loading && (
-        <p className="mono text-[10px] mt-2" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}>
+        <p
+          className="mono text-[10px] mt-2"
+          style={{
+            letterSpacing: "0.18em",
+            color: "var(--spark-text-meta, rgba(20, 22, 15, 0.56))",
+          }}
+        >
           LOADING…
         </p>
       )}
@@ -171,8 +200,13 @@ function CoBrandSkus({
         <button
           type="button"
           onClick={loadMore}
-          className="mono text-[10px] px-3 py-2 rounded-xl mt-2"
-          style={{ letterSpacing: "0.18em", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+          className="mono text-[10px] font-semibold px-3 py-2 rounded-lg mt-2"
+          style={{
+            letterSpacing: "0.16em",
+            background: "var(--spark-surface-2, #f1f1ec)",
+            color: "var(--spark-text, #14160f)",
+            border: "1px solid var(--spark-border, #dcddd5)",
+          }}
         >
           LOAD MORE
         </button>

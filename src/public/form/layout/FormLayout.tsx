@@ -1,24 +1,20 @@
-import useTenantPublic, { type TenantPublic } from "../hooks/useTenantPublic";
+import useTenantPublic from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
-import { createContext, useEffect, useState } from "react";
-
-export const PublicFormTenantContext = createContext<TenantPublic | null>(null);
+import { useEffect } from "react";
+import { PublicFormTenantContext } from "./publicFormTenantContext";
 
 const IGNITE_HOME = "https://www.igniteproductions.co/";
 
 /**
- * Spark v2 — public form layout.
+ * Spark v2 — public form layout (light studio paper).
  *
- * Wraps the request form in the Spark brand chrome: Spark mark on the
- * left, tenant logo (API image / logoUrl, then official fallback) on the
- * right. No marketing copy or shouting tenant name in the header. The
- * tenant theme hook still runs for public pages — clients want their
- * brand color on their public request form, unlike the admin shell.
+ * Wraps the external request form in crisp white header chrome on warm-stone
+ * paper (`#f6f6f2`), with the Spark mark on the left and the full-color tenant
+ * mark on the right.
  */
-
 export default function SparkFormLayout({
   children,
   slug,
@@ -26,9 +22,7 @@ export default function SparkFormLayout({
   children: React.ReactNode;
   slug: string;
 }) {
-  const [colorScheme] = useState<TenantColorScheme>(
-    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
-  );
+  const colorScheme: TenantColorScheme = "light";
 
   const { tenant, loading: loadingTenant } = useTenantPublic({ slug });
 
@@ -41,8 +35,23 @@ export default function SparkFormLayout({
   const invalidLink = !loading && (!slug || !tenant);
 
   useEffect(() => {
-    localStorage.setItem("@color-scheme", colorScheme);
-  }, [colorScheme]);
+    const root = document.documentElement;
+    const prevTheme = root.getAttribute("data-theme");
+    const prevMode = root.getAttribute("data-spark-mode");
+    root.setAttribute("data-theme", "spark-v2");
+    root.setAttribute("data-spark-mode", "light");
+    try {
+      localStorage.setItem("@color-scheme", "light");
+    } catch {
+      /* ignore private-mode storage restrictions */
+    }
+    return () => {
+      if (prevTheme) root.setAttribute("data-theme", prevTheme);
+      else root.removeAttribute("data-theme");
+      if (prevMode) root.setAttribute("data-spark-mode", prevMode);
+      else root.removeAttribute("data-spark-mode");
+    };
+  }, []);
 
   if (invalidLink) {
     return (
@@ -57,25 +66,35 @@ export default function SparkFormLayout({
 
   return (
     <div
-      className="min-h-screen flex flex-col spark-mesh"
-      style={{ background: "var(--spark-bg, #0a0d09)" }}
+      data-theme="spark-v2"
+      data-spark-mode="light"
+      className="min-h-screen flex flex-col"
+      style={{
+        background: "var(--spark-bg, #f6f6f2)",
+        color: "var(--spark-text, #14160f)",
+        colorScheme: "light",
+      }}
     >
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(246, 246, 242, 0.72)" }}
+        >
           <span className="loading loading-spinner loading-lg" />
         </div>
       )}
 
       {/* Brand header */}
       <header
-        className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between gap-3 flex-wrap"
+        className="sticky top-0 z-20 px-6 py-3.5 flex items-center justify-between gap-3 flex-wrap"
         style={{
-          background: "rgba(10,13,9,0.85)",
-          borderBottom: "1px solid var(--spark-border, #1f2418)",
+          background: "rgba(255, 255, 255, 0.92)",
+          borderBottom: "1px solid var(--spark-border, #dcddd5)",
           backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
         }}
       >
-        {/* Left: real Spark logo, inverted to white for the dark band */}
+        {/* Left: Spark logo in crisp dark ink */}
         <a
           href={IGNITE_HOME}
           style={{ display: "flex", alignItems: "center" }}
@@ -84,36 +103,35 @@ export default function SparkFormLayout({
             src="/legal/spark-logo.png"
             alt="Spark by Ignite"
             style={{
-              height: 28,
+              height: 26,
               width: "auto",
-              filter: "invert(1) hue-rotate(180deg)",
             }}
           />
           <span
             className="hidden sm:inline mono text-[10px] ml-3"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.4)",
+              color: "var(--spark-text-meta, rgba(20, 22, 15, 0.45))",
             }}
           >
             /
           </span>
           <span
-            className="hidden sm:inline mono text-[10px] ml-2"
+            className="hidden sm:inline mono text-[10px] font-semibold ml-2"
             style={{
               letterSpacing: "0.18em",
-              color: "var(--spark-lime, #f2f3ee)",
+              color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.78))",
             }}
           >
             REQUEST FORM
           </span>
         </a>
 
-        {/* Right: full-color tenant mark. API image / logoUrl first,
-            official fallback second, short name if nothing loads. */}
+        {/* Right: full-color tenant mark */}
         <div className="flex items-center justify-end shrink-0">
           <TenantLogo
             variant="header"
+            tone="light"
             name={tenant?.name}
             requestUrlName={tenant?.requestUrlName ?? slug}
             image={tenant?.image}
@@ -132,16 +150,16 @@ export default function SparkFormLayout({
       <footer
         className="px-6 py-5 mt-auto"
         style={{
-          borderTop: "1px solid var(--spark-border, #1f2418)",
-          background: "rgba(10,13,9,0.6)",
+          borderTop: "1px solid var(--spark-border, #dcddd5)",
+          background: "#ffffff",
         }}
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-2 text-xs">
+        <div className="max-w-5xl mx-auto flex items-center justify-between flex-wrap gap-2 text-xs">
           <span
             className="mono"
             style={{
               letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.4)",
+              color: "var(--spark-text-meta, rgba(20, 22, 15, 0.56))",
             }}
           >
             © {new Date().getFullYear()} IGNITE PRODUCTIONS
@@ -151,7 +169,7 @@ export default function SparkFormLayout({
               href="/privacy-policy"
               target="_blank"
               rel="noreferrer"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.75))" }}
             >
               Privacy
             </a>
@@ -159,7 +177,7 @@ export default function SparkFormLayout({
               href="/terms-of-service"
               target="_blank"
               rel="noreferrer"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-text-secondary, rgba(20, 22, 15, 0.75))" }}
             >
               Terms
             </a>

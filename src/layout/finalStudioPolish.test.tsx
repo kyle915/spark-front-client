@@ -163,7 +163,19 @@ describe("final 5-part studio & UX finishing touches", () => {
       "utf8",
     );
     expect(publicFormSrc).toContain('aria-label="Live activation summary"');
+    expect(publicFormSrc).toContain('suggestionTheme="light"');
     expect(publicFormSrc).not.toContain("0 0 18px rgba(242,243,238,0.25)");
+    expect(publicFormSrc).not.toContain("rgba(255,255,255");
+    expect(publicFormSrc).not.toContain("#0a0d09");
+    expect(publicFormSrc).not.toContain("#11140e");
+
+    const formLayoutSrc = readFileSync(
+      resolve(__dirname, "../public/form/layout/FormLayout.tsx"),
+      "utf8",
+    );
+    expect(formLayoutSrc).toContain('data-spark-mode="light"');
+    expect(formLayoutSrc).not.toContain("invert(1)");
+    expect(formLayoutSrc).not.toContain("rgba(255,255,255");
 
     const storeProfileSrc = readFileSync(
       resolve(__dirname, "../components/pages/store/SparkStoreProfile.tsx"),
