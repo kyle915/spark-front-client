@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { motion } from "framer-motion";
 import {
   ArrowUp,
   ArrowUpRight,
@@ -15,46 +14,26 @@ import { BrandChatQuery } from "@/api/queries/BrandChatQuery";
 import type { BrandChatQuery as BrandChatQueryType } from "@api/queries/__generated__/BrandChatQuery.graphql";
 import {
   AskBrandChatMutation,
-  AskSparkHelpMutation,
   ClearBrandChatMutation,
   ReportBrandChatUnhelpfulMutation,
 } from "@/api/mutations/BrandChatMutations";
 import type { BrandChatMutationsAskMutation } from "@api/mutations/__generated__/BrandChatMutationsAskMutation.graphql";
-import type { BrandChatMutationsAskHelpMutation } from "@api/mutations/__generated__/BrandChatMutationsAskHelpMutation.graphql";
 import type { BrandChatMutationsClearMutation } from "@api/mutations/__generated__/BrandChatMutationsClearMutation.graphql";
 import type { BrandChatMutationsReportUnhelpfulMutation } from "@api/mutations/__generated__/BrandChatMutationsReportUnhelpfulMutation.graphql";
-import { confidenceBadgeMeta } from "@/components/pages/help/helpKnowledgeHelpers";
 import type { JumpOrigin } from "@/motion/opsMotion";
 import AiMarkdown from "./AiMarkdown";
 import AskSparkPopoverFrame, { SparkThinkingDots } from "./AskSparkPopoverFrame";
-import { routeContextLabel, routeSparkHelpPrompts } from "./routeAskSparkPrompts";
+import { routeContextLabel } from "./routeAskSparkPrompts";
 
 /**
  * Client Ask Spark floating bottom-right pop-up.
  *
- * - Program Data: multi-turn read-only chat grounded in the brand's own
- *   approved recaps, store roster, POS lift, and wave planner.
- * - Spark Help: instant route-aware Spark product guidance strictly scoped
- *   to client-safe Spark guides (never admin docs or knowledge authoring).
+ * Read-only multi-turn chat grounded strictly in the brand's own approved
+ * recaps, store roster, POS lift, and wave planner.
  */
 
 type View = NonNullable<BrandChatQueryType["response"]["brandChat"]>;
 type Turn = View["turns"][number];
-
-type HelpTurn = {
-  id: string;
-  question: string;
-  ok: boolean;
-  answer: string;
-  reason?: string | null;
-  confidence: string;
-  sources: ReadonlyArray<{
-    title: string;
-    routePath: string;
-    routeLabel: string;
-    audience: string;
-  }>;
-};
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const TEXT = { color: "var(--spark-text)" } as const;
@@ -214,7 +193,10 @@ function TurnView({
         ) : null}
         {answered ? <SourceChips turn={turn} onNavigate={onNavigate} /> : null}
         {answered || turn.status === "not_grounded" ? (
-          <div className="mt-2.5 pt-2 flex items-center justify-between gap-3" style={{ borderTop: "1px solid var(--spark-hairline, var(--spark-border))" }}>
+          <div
+            className="mt-2.5 pt-2 flex items-center justify-between gap-3"
+            style={{ borderTop: "1px solid var(--spark-hairline, var(--spark-border))" }}
+          >
             {answered && turn.answer ? <CopyReplyButton text={turn.answer} /> : <span />}
             {flagged ? (
               <span className="text-[11px]" style={META}>
@@ -240,33 +222,27 @@ function TurnView({
 export default function BrandChatPanel({
   tenantId,
   initialQuestion,
-  initialMode = "data",
   routePrompts,
   onClose,
 }: {
   tenantId: string;
   origin?: JumpOrigin | null;
   initialQuestion?: string;
-  initialMode?: "data" | "help";
   routePrompts?: readonly string[];
   onClose: () => void;
 }) {
   const location = useLocation();
-  const [mode, setMode] = useState<"data" | "help">(initialMode);
   const [view, setView] = useState<View | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [helpTurns, setHelpTurns] = useState<HelpTurn[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [pending, setPending] = useState<string | null>(null);
-  const [helpPending, setHelpPending] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [left, setLeft] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [flaggedIds, setFlaggedIds] = useState<Record<string, boolean>>({});
   const listEnd = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const consumedInitialRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -299,13 +275,12 @@ export default function BrandChatPanel({
 
   useEffect(() => {
     listEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns.length, helpTurns.length, pending, helpPending, mode]);
+  }, [turns.length, pending]);
 
   const ask = useCallback(
     (raw?: string) => {
       const q = (raw ?? question).trim();
       if (!q || pending) return;
-      setMode("data");
       setPending(q);
       setQuestion("");
       setNotice(null);
@@ -339,58 +314,6 @@ export default function BrandChatPanel({
     [question, pending, tenantId, conversationId, location.pathname],
   );
 
-  const askHelp = useCallback(
-    (raw?: string) => {
-      const q = (raw ?? question).trim();
-      if (!q || helpPending) return;
-      setMode("help");
-      setHelpPending(q);
-      setQuestion("");
-      setNotice(null);
-      commitMutation<BrandChatMutationsAskHelpMutation>(environment, {
-        mutation: AskSparkHelpMutation,
-        variables: {
-          question: q,
-          currentPath: location.pathname || "/",
-          tenantId: tenantId || null,
-          previewAsClient: true,
-        },
-        onCompleted: (res) => {
-          const r = res.askSparkHelp;
-          setHelpPending(null);
-          setHelpTurns((prev) => [
-            ...prev,
-            {
-              id: `help-${Date.now()}-${prev.length}`,
-              question: q,
-              ok: r.ok,
-              answer: r.answer,
-              reason: r.reason,
-              confidence: r.confidence,
-              sources: r.sources,
-            },
-          ]);
-        },
-        onError: () => {
-          setHelpPending(null);
-          setHelpTurns((prev) => [
-            ...prev,
-            {
-              id: `help-err-${Date.now()}`,
-              question: q,
-              ok: false,
-              answer: "",
-              reason: "Couldn't reach Spark Help right now — try again.",
-              confidence: "low",
-              sources: [],
-            },
-          ]);
-        },
-      });
-    },
-    [question, helpPending, location.pathname, tenantId],
-  );
-
   const flagUnhelpful = useCallback(
     (turnId: string) => {
       setFlaggedIds((prev) => ({ ...prev, [turnId]: true }));
@@ -404,16 +327,11 @@ export default function BrandChatPanel({
 
   useEffect(() => {
     const seeded = (initialQuestion ?? "").trim();
-    if (!seeded || consumedInitialRef.current === seeded) return;
-    if (initialMode === "help") {
-      consumedInitialRef.current = seeded;
-      askHelp(seeded);
-      return;
-    }
-    if (!view || pending || left === 0) return;
+    if (!seeded || !view || pending || left === 0) return;
+    if (consumedInitialRef.current === seeded) return;
     consumedInitialRef.current = seeded;
     ask(seeded);
-  }, [initialQuestion, initialMode, view, pending, left, ask, askHelp]);
+  }, [initialQuestion, view, pending, left, ask]);
 
   const newChat = () => {
     setTurns([]);
@@ -446,7 +364,6 @@ export default function BrandChatPanel({
   const pageLabel = routeContextLabel(location.pathname);
   const rawSuggestions = view?.suggestions ?? [];
   const wavePrompt = "Plan next month's 15-store demo wave";
-  const helpPrompts = routeSparkHelpPrompts(location.pathname, true);
   const baseSuggestions = rawSuggestions.some((s) => s.toLowerCase().includes("wave"))
     ? rawSuggestions
     : [wavePrompt, ...rawSuggestions.slice(0, 3)];
@@ -455,62 +372,14 @@ export default function BrandChatPanel({
     : baseSuggestions;
   const dataSuggestions = Array.from(new Set(merged.filter(Boolean))).slice(0, 4);
 
-  const isBusy = mode === "help" ? Boolean(helpPending) : Boolean(pending);
-  const canAsk =
-    mode === "help"
-      ? Boolean(question.trim()) && !helpPending
-      : Boolean(question.trim()) && !pending && left !== 0 && Boolean(view);
+  const canAsk = Boolean(question.trim()) && !pending && left !== 0 && Boolean(view);
 
-  const modeSwitcher = (
-    <div className="flex items-center justify-between gap-2">
-      <div
-        role="tablist"
-        aria-label="Ask Spark mode"
-        className="inline-flex items-center p-0.5 rounded-xl"
-        style={{
-          background: "var(--spark-surface-2)",
-          border: "1px solid var(--spark-border)",
-        }}
-      >
-        {(
-          [
-            { key: "data", label: "Program Data" },
-            { key: "help", label: "Spark Help" },
-          ] as const
-        ).map((tab) => {
-          const active = mode === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => {
-                setMode(tab.key);
-                inputRef.current?.focus();
-              }}
-              className="relative px-3 py-1 rounded-[9px] text-xs font-semibold transition cursor-pointer"
-              style={{
-                color: active ? "var(--spark-on-accent)" : "var(--spark-text-secondary)",
-                background: "transparent",
-                border: "none",
-              }}
-            >
-              {active ? (
-                <motion.span
-                  layoutId="ask-spark-client-mode"
-                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                  className="absolute inset-0 rounded-[9px]"
-                  style={{ background: "var(--spark-lime)" }}
-                />
-              ) : null}
-              <span className="relative z-10">{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {mode === "data" && turns.length > 0 ? (
+  const headerActions =
+    turns.length > 0 ? (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px]" style={META}>
+          {turns.length} {turns.length === 1 ? "message" : "messages"}
+        </span>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -525,7 +394,7 @@ export default function BrandChatPanel({
             title="Start a fresh conversation"
           >
             <RotateCcw size={11} strokeWidth={1.9} />
-            <span>New</span>
+            <span>New chat</span>
           </button>
           {confirmClear ? (
             <span className="inline-flex items-center gap-1.5 text-[11px]" style={META}>
@@ -568,35 +437,15 @@ export default function BrandChatPanel({
             </button>
           )}
         </div>
-      ) : mode === "help" && helpTurns.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => setHelpTurns([])}
-          disabled={Boolean(helpPending)}
-          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition hover:opacity-80 cursor-pointer"
-          style={{
-            background: "transparent",
-            color: "var(--spark-text-meta)",
-            border: "1px solid var(--spark-border)",
-          }}
-        >
-          <RotateCcw size={11} strokeWidth={1.9} />
-          <span>Clear</span>
-        </button>
-      ) : null}
-    </div>
-  );
+      </div>
+    ) : null;
 
   return (
     <AskSparkPopoverFrame
       title="Ask Spark"
       contextLabel={pageLabel}
-      subtitle={
-        mode === "help"
-          ? "Instant how-to answers for your Spark workspace"
-          : `Grounded in ${brand}'s approved program data`
-      }
-      headerExtra={modeSwitcher}
+      subtitle={`Grounded in ${brand}'s approved program data`}
+      headerExtra={headerActions}
       onClose={onClose}
     >
       {/* Scrollable thread */}
@@ -604,104 +453,34 @@ export default function BrandChatPanel({
         className="flex-1 min-h-0 overflow-y-auto px-4 py-3.5 space-y-4"
         aria-live="polite"
       >
-        {mode === "data" ? (
-          loadError ? (
-            <p className="text-sm" style={META}>
-              {loadError}
-            </p>
-          ) : !view ? (
-            <div className="space-y-2.5 pt-2">
-              <SparkThinkingDots label="Loading your program context…" />
-            </div>
-          ) : (
-            <>
-              {turns.length === 0 && !pending ? (
-                <div className="space-y-3">
-                  <p className="text-xs leading-relaxed" style={META}>
-                    Ask about {brand}&apos;s stores, conversion, POS lift, shopper voice, or plan your next demo wave. Read-only.
-                  </p>
-                  <div className="space-y-1.5">
-                    <p
-                      className="text-[11px] font-semibold uppercase tracking-wider"
-                      style={META}
-                    >
-                      Try asking on {pageLabel}
-                    </p>
-                    <div className="flex flex-col gap-1.5">
-                      {dataSuggestions.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => ask(s)}
-                          className="group flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-medium text-left transition hover:opacity-90 active:scale-[0.99] cursor-pointer"
-                          style={chip}
-                        >
-                          <span style={TEXT}>{s}</span>
-                          <ArrowUpRight
-                            size={13}
-                            strokeWidth={1.85}
-                            className="shrink-0 opacity-50 group-hover:opacity-100 transition"
-                            style={TEXT}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {turns.length > 0 || pending ? (
-                <ul className="space-y-4">
-                  {turns.map((t) => (
-                    <TurnView
-                      key={t.id}
-                      turn={t}
-                      flagged={Boolean(flaggedIds[String(t.id)])}
-                      onFlagUnhelpful={flagUnhelpful}
-                      onNavigate={onClose}
-                    />
-                  ))}
-                  {pending ? (
-                    <li className="space-y-2.5">
-                      <div className="flex justify-end">
-                        <p
-                          className="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px]"
-                          style={{
-                            background: "var(--spark-lime)",
-                            color: "var(--spark-on-accent)",
-                          }}
-                        >
-                          {pending}
-                        </p>
-                      </div>
-                      <SparkThinkingDots label="Checking your program data…" />
-                    </li>
-                  ) : null}
-                </ul>
-              ) : null}
-            </>
-          )
+        {loadError ? (
+          <p className="text-sm" style={META}>
+            {loadError}
+          </p>
+        ) : !view ? (
+          <div className="space-y-2.5 pt-2">
+            <SparkThinkingDots label="Loading your program context…" />
+          </div>
         ) : (
-          /* Client Spark Help thread */
           <>
-            {helpTurns.length === 0 && !helpPending ? (
+            {turns.length === 0 && !pending ? (
               <div className="space-y-3">
                 <p className="text-xs leading-relaxed" style={META}>
-                  Ask how any Spark screen, report, export, or integration works — tailored to {pageLabel}.
+                  Ask about {brand}&apos;s stores, conversion, POS lift, shopper voice, or plan your next demo wave. Read-only.
                 </p>
                 <div className="space-y-1.5">
                   <p
                     className="text-[11px] font-semibold uppercase tracking-wider"
                     style={META}
                   >
-                    Quick guides for {pageLabel}
+                    Try asking on {pageLabel}
                   </p>
                   <div className="flex flex-col gap-1.5">
-                    {helpPrompts.map((s) => (
+                    {dataSuggestions.map((s) => (
                       <button
                         key={s}
                         type="button"
-                        onClick={() => askHelp(s)}
+                        onClick={() => ask(s)}
                         className="group flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-medium text-left transition hover:opacity-90 active:scale-[0.99] cursor-pointer"
                         style={chip}
                       >
@@ -717,81 +496,20 @@ export default function BrandChatPanel({
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : null}
+
+            {turns.length > 0 || pending ? (
               <ul className="space-y-4">
-                {helpTurns.map((ht) => {
-                  const meta = confidenceBadgeMeta(ht.confidence);
-                  return (
-                    <li key={ht.id} className="space-y-2.5">
-                      <div className="flex justify-end">
-                        <p
-                          className="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px] leading-relaxed"
-                          style={{
-                            background: "var(--spark-lime)",
-                            color: "var(--spark-on-accent)",
-                          }}
-                        >
-                          {ht.question}
-                        </p>
-                      </div>
-                      <div
-                        className="rounded-2xl rounded-tl-md px-3.5 py-3 text-[13.5px] space-y-2.5"
-                        style={{
-                          background: "rgba(var(--spark-ink-rgb),0.03)",
-                          border: "1px solid var(--spark-hairline, var(--spark-border))",
-                        }}
-                      >
-                        {ht.ok ? (
-                          <>
-                            <span
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold"
-                              style={{
-                                background: meta.bg,
-                                color: meta.color,
-                                border: `1px solid ${meta.border}`,
-                              }}
-                            >
-                              {meta.label}
-                            </span>
-                            <AiMarkdown links={false}>{ht.answer}</AiMarkdown>
-                            {ht.sources.length > 0 ? (
-                              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                {ht.sources.map((s) => (
-                                  <Link
-                                    key={`${s.title}-${s.routePath}`}
-                                    to={s.routePath || "/setup-guide"}
-                                    onClick={onClose}
-                                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11.5px] font-medium no-underline transition hover:opacity-80"
-                                    style={chip}
-                                  >
-                                    <span style={TEXT}>{s.routeLabel || s.title}</span>
-                                    <ArrowUpRight size={11} strokeWidth={1.8} style={META} />
-                                  </Link>
-                                ))}
-                              </div>
-                            ) : null}
-                            {ht.answer ? (
-                              <div
-                                className="pt-2 flex items-center justify-between"
-                                style={{
-                                  borderTop:
-                                    "1px solid var(--spark-hairline, var(--spark-border))",
-                                }}
-                              >
-                                <CopyReplyButton text={ht.answer} />
-                              </div>
-                            ) : null}
-                          </>
-                        ) : (
-                          <p className="text-[13px]" style={META}>
-                            {ht.reason || "Couldn't answer that from Spark Help."}
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-                {helpPending ? (
+                {turns.map((t) => (
+                  <TurnView
+                    key={t.id}
+                    turn={t}
+                    flagged={Boolean(flaggedIds[String(t.id)])}
+                    onFlagUnhelpful={flagUnhelpful}
+                    onNavigate={onClose}
+                  />
+                ))}
+                {pending ? (
                   <li className="space-y-2.5">
                     <div className="flex justify-end">
                       <p
@@ -801,14 +519,14 @@ export default function BrandChatPanel({
                           color: "var(--spark-on-accent)",
                         }}
                       >
-                        {helpPending}
+                        {pending}
                       </p>
                     </div>
-                    <SparkThinkingDots label="Searching Spark guides…" />
+                    <SparkThinkingDots label="Checking your program data…" />
                   </li>
                 ) : null}
               </ul>
-            )}
+            ) : null}
           </>
         )}
         <div ref={listEnd} />
@@ -830,12 +548,7 @@ export default function BrandChatPanel({
         }}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!canAsk) return;
-          if (mode === "help") {
-            askHelp();
-          } else {
-            ask();
-          }
+          if (canAsk) ask();
         }}
       >
         <div
@@ -846,19 +559,16 @@ export default function BrandChatPanel({
           }}
         >
           <input
-            ref={inputRef}
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            disabled={isBusy || (mode === "data" && !view)}
+            disabled={Boolean(pending) || !view}
             maxLength={500}
             autoFocus
             placeholder={
-              mode === "help"
-                ? "Ask how any Spark screen or feature works…"
-                : left === 0
-                  ? "No questions left this hour"
-                  : "Ask about stores, conversion, POS, or next wave…"
+              left === 0
+                ? "No questions left this hour"
+                : "Ask about stores, conversion, POS, or next wave…"
             }
             aria-label="Ask Spark"
             className="flex-1 min-w-0 bg-transparent text-[13.5px] outline-none disabled:opacity-60"
@@ -877,8 +587,8 @@ export default function BrandChatPanel({
         </div>
 
         <div className="mt-1.5 px-0.5 flex items-center justify-between text-[10.5px]" style={META}>
-          <span>{mode === "help" ? "Spark product guides" : "Read-only · Approved data"}</span>
-          {mode === "data" && left != null && view?.questionsPerHour ? (
+          <span>Read-only · Approved program data</span>
+          {left != null && view?.questionsPerHour ? (
             <span className="tab-num">
               {left}/{view.questionsPerHour} left this hr
             </span>

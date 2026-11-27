@@ -1,21 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router";
-import { motion } from "framer-motion";
-import {
-  ArrowUp,
-  ArrowUpRight,
-  Check,
-  Copy,
-  RotateCcw,
-} from "lucide-react";
-import { commitMutation, fetchQuery } from "relay-runtime";
+import { useLocation } from "react-router";
+import { ArrowUp, ArrowUpRight, Check, Copy, RotateCcw } from "lucide-react";
+import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { TenantAiAnswerQuery } from "@/api/queries/TenantAiAnswerQuery";
 import type { TenantAiAnswerQuery as TenantAiAnswerQueryType } from "@api/queries/__generated__/TenantAiAnswerQuery.graphql";
-import { AskSparkHelpMutation } from "@/api/mutations/BrandChatMutations";
-import type { BrandChatMutationsAskHelpMutation } from "@api/mutations/__generated__/BrandChatMutationsAskHelpMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
-import { confidenceBadgeMeta } from "@/components/pages/help/helpKnowledgeHelpers";
 import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import AiMarkdown from "./AiMarkdown";
 import AiChartView, { type AiChart } from "./AiChartView";
@@ -31,10 +21,7 @@ import {
   type JumpOrigin,
 } from "@/motion/opsMotion";
 import { askAiModalTitle } from "./askAiSubjectName";
-import {
-  routeContextLabel,
-  routeSparkHelpPrompts,
-} from "./routeAskSparkPrompts";
+import { routeContextLabel } from "./routeAskSparkPrompts";
 
 type DataTurn = {
   id: string;
@@ -44,25 +31,6 @@ type DataTurn = {
   reason?: string | null;
   chart?: AiChart | null;
   thoughtFor: number | null;
-};
-
-type HelpTurn = {
-  id: string;
-  question: string;
-  ok: boolean;
-  answer: string;
-  reason?: string | null;
-  confidence: string;
-  matchedVia: string;
-  gapLogged: boolean;
-  isAdminScope: boolean;
-  thoughtFor: number | null;
-  sources: ReadonlyArray<{
-    title: string;
-    routePath: string;
-    routeLabel: string;
-    audience: string;
-  }>;
 };
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -174,7 +142,6 @@ export const AskAiModal: React.FC<{
   subjectLabel?: string;
   origin?: JumpOrigin | null;
   initialQuestion?: string;
-  initialMode?: "data" | "help";
   routePrompts?: readonly string[];
   onClose: () => void;
 }> = ({
@@ -185,100 +152,29 @@ export const AskAiModal: React.FC<{
   eventId,
   subjectLabel,
   initialQuestion,
-  initialMode = "data",
   routePrompts,
   onClose,
 }) => {
   const location = useLocation();
   const { isAdmin } = useSparkRole();
-  const [mode, setMode] = useState<"data" | "help">(
-    scope === "tenant" ? (tenantId ? initialMode : "help") : "data",
-  );
   const [question, setQuestion] = useState("");
   const [pendingData, setPendingData] = useState<string | null>(null);
-  const [pendingHelp, setPendingHelp] = useState<string | null>(null);
   const [dataTurns, setDataTurns] = useState<DataTurn[]>([]);
-  const [helpTurns, setHelpTurns] = useState<HelpTurn[]>([]);
   const startedAt = useRef(0);
   const listEnd = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const consumedInitialRef = useRef<string | null>(null);
 
-  const isBusy = mode === "help" ? Boolean(pendingHelp) : Boolean(pendingData);
-  const canAsk =
-    question.trim().length > 0 && !isBusy && (mode === "help" || Boolean(tenantId));
+  const isBusy = Boolean(pendingData);
+  const canAsk = question.trim().length > 0 && !isBusy && Boolean(tenantId);
 
   useEffect(() => {
     listEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [dataTurns.length, helpTurns.length, pendingData, pendingHelp, mode]);
-
-  const askHelp = useCallback(
-    (raw?: string) => {
-      const q = (raw ?? question).trim();
-      if (!q || pendingHelp) return;
-      setMode("help");
-      setQuestion("");
-      setPendingHelp(q);
-      startedAt.current = Date.now();
-      commitMutation<BrandChatMutationsAskHelpMutation>(environment, {
-        mutation: AskSparkHelpMutation,
-        variables: {
-          question: q,
-          currentPath: location.pathname || "/",
-          tenantId: tenantId || null,
-          previewAsClient: !isAdmin,
-        },
-        onCompleted: (res) => {
-          const r = res.askSparkHelp;
-          const elapsed = thoughtSeconds(Date.now() - startedAt.current);
-          setPendingHelp(null);
-          setHelpTurns((prev) => [
-            ...prev,
-            {
-              id: `h-${Date.now()}-${prev.length}`,
-              question: q,
-              ok: r.ok,
-              answer: r.answer,
-              reason: r.reason,
-              confidence: r.confidence,
-              matchedVia: r.matchedVia,
-              gapLogged: r.gapLogged,
-              isAdminScope: r.isAdminScope,
-              thoughtFor: elapsed,
-              sources: r.sources,
-            },
-          ]);
-        },
-        onError: () => {
-          const elapsed = thoughtSeconds(Date.now() - startedAt.current);
-          setPendingHelp(null);
-          setHelpTurns((prev) => [
-            ...prev,
-            {
-              id: `he-${Date.now()}-${prev.length}`,
-              question: q,
-              ok: false,
-              answer: "",
-              reason: "Couldn't reach Spark Help — try again.",
-              confidence: "low",
-              matchedVia: "bm25",
-              gapLogged: false,
-              isAdminScope: isAdmin,
-              thoughtFor: elapsed,
-              sources: [],
-            },
-          ]);
-        },
-      });
-    },
-    [question, pendingHelp, location.pathname, tenantId, isAdmin],
-  );
+  }, [dataTurns.length, pendingData]);
 
   const ask = useCallback(
     async (raw?: string) => {
       const q = (raw ?? question).trim();
       if (!q || !tenantId || pendingData) return;
-      setMode("data");
       setQuestion("");
       setPendingData(q);
       startedAt.current = Date.now();
@@ -340,111 +236,24 @@ export const AskAiModal: React.FC<{
 
   useEffect(() => {
     const seeded = (initialQuestion ?? "").trim();
-    if (!seeded || consumedInitialRef.current === seeded) return;
-    if (initialMode === "help" || !tenantId) {
-      consumedInitialRef.current = seeded;
-      askHelp(seeded);
-      return;
-    }
+    if (!seeded || !tenantId || consumedInitialRef.current === seeded) return;
     consumedInitialRef.current = seeded;
     void ask(seeded);
-  }, [initialQuestion, initialMode, tenantId, ask, askHelp]);
+  }, [initialQuestion, tenantId, ask]);
 
   const copy = scopeCopy(scope, tenantName, subjectLabel);
   const pageLabel = copy.contextBadge || routeContextLabel(location.pathname);
-  const helpPrompts = routeSparkHelpPrompts(location.pathname, !isAdmin);
   const starterPrompts =
-    mode === "help"
-      ? helpPrompts
-      : scope === "tenant" && routePrompts?.length
-        ? Array.from(new Set([...routePrompts, ...copy.followups])).slice(0, 4)
-        : copy.followups.slice(0, 4);
-
-  const activeTurnsCount = mode === "help" ? helpTurns.length : dataTurns.length;
+    scope === "tenant" && routePrompts?.length
+      ? Array.from(new Set([...routePrompts, ...copy.followups])).slice(0, 4)
+      : copy.followups.slice(0, 4);
 
   const headerExtra =
-    scope === "tenant" ? (
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div
-          role="tablist"
-          aria-label="Ask Spark mode"
-          className="inline-flex items-center p-0.5 rounded-xl"
-          style={{
-            background: "var(--spark-surface-2)",
-            border: "1px solid var(--spark-border)",
-          }}
-        >
-          {(
-            [
-              { key: "data", label: "Program Data", disabled: !tenantId },
-              { key: "help", label: "Spark Help", disabled: false },
-            ] as const
-          ).map((tab) => {
-            const active = mode === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                disabled={tab.disabled}
-                onClick={() => {
-                  setMode(tab.key);
-                  inputRef.current?.focus();
-                }}
-                className="relative px-3 py-1 rounded-[9px] text-xs font-semibold transition disabled:opacity-40 cursor-pointer"
-                style={{
-                  color: active ? "var(--spark-on-accent)" : "var(--spark-text-secondary)",
-                  background: "transparent",
-                  border: "none",
-                }}
-              >
-                {active ? (
-                  <motion.span
-                    layoutId="ask-spark-admin-mode"
-                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                    className="absolute inset-0 rounded-[9px]"
-                    style={{ background: "var(--spark-lime)" }}
-                  />
-                ) : null}
-                <span className="relative z-10">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isAdmin && mode === "help" ? (
-            <Link
-              to="/help-knowledge"
-              onClick={onClose}
-              className="inline-flex items-center gap-0.5 text-[11.5px] font-semibold no-underline hover:underline underline-offset-2"
-              style={{ color: "var(--spark-ok-ink, var(--spark-text))" }}
-            >
-              <span>Manage KB</span>
-              <ArrowUpRight size={12} strokeWidth={2} />
-            </Link>
-          ) : null}
-          {activeTurnsCount > 0 ? (
-            <button
-              type="button"
-              onClick={() => (mode === "help" ? setHelpTurns([]) : setDataTurns([]))}
-              disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition hover:opacity-80 disabled:opacity-45 cursor-pointer"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text-meta)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              <RotateCcw size={11} strokeWidth={1.9} />
-              <span>Clear</span>
-            </button>
-          ) : null}
-        </div>
-      </div>
-    ) : activeTurnsCount > 0 ? (
-      <div className="flex items-center justify-end">
+    dataTurns.length > 0 ? (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px]" style={META}>
+          {dataTurns.length} {dataTurns.length === 1 ? "message" : "messages"}
+        </span>
         <button
           type="button"
           onClick={() => setDataTurns([])}
@@ -467,11 +276,7 @@ export const AskAiModal: React.FC<{
       title="Ask Spark"
       contextLabel={pageLabel}
       roleBadge={isAdmin ? "Admin" : null}
-      subtitle={
-        mode === "help"
-          ? "Product guides only — never discusses internal Ignite financials or processes"
-          : copy.title
-      }
+      subtitle={copy.title}
       headerExtra={headerExtra}
       onClose={onClose}
     >
@@ -480,162 +285,7 @@ export const AskAiModal: React.FC<{
         className="flex-1 min-h-0 overflow-y-auto px-4 py-3.5 space-y-4"
         aria-live="polite"
       >
-        {mode === "help" ? (
-          helpTurns.length === 0 && !pendingHelp ? (
-            <div className="space-y-3">
-              <p className="text-xs leading-relaxed" style={META}>
-                {isAdmin
-                  ? `Route-aware Spark product help for ${pageLabel}, backed by OpenAI semantic search. Never discusses internal Ignite financials or processes.`
-                  : `Route-aware Spark product help for ${pageLabel}.`}
-              </p>
-              <div className="space-y-1.5">
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-wider"
-                  style={META}
-                >
-                  Suggested help questions
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {starterPrompts.map((chipLabel) => (
-                    <button
-                      key={chipLabel}
-                      type="button"
-                      onClick={() => askHelp(chipLabel)}
-                      className="group flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-medium text-left transition hover:opacity-90 active:scale-[0.99] cursor-pointer"
-                      style={chipStyle}
-                    >
-                      <span style={TEXT}>{chipLabel}</span>
-                      <ArrowUpRight
-                        size={13}
-                        strokeWidth={1.85}
-                        className="shrink-0 opacity-50 group-hover:opacity-100 transition"
-                        style={TEXT}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <ul className="space-y-4">
-              {helpTurns.map((ht) => {
-                const meta = confidenceBadgeMeta(ht.confidence);
-                return (
-                  <li key={ht.id} className="space-y-2.5">
-                    <div className="flex justify-end">
-                      <p
-                        className="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px] leading-relaxed"
-                        style={limeBtn}
-                      >
-                        {ht.question}
-                      </p>
-                    </div>
-                    <div
-                      className="rounded-2xl rounded-tl-md px-3.5 py-3 text-[13.5px] space-y-2.5"
-                      style={{
-                        background: "rgba(var(--spark-ink-rgb),0.03)",
-                        border: "1px solid var(--spark-hairline, var(--spark-border))",
-                      }}
-                    >
-                      {ht.ok ? (
-                        <>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span
-                              className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold"
-                              style={{
-                                background: meta.bg,
-                                color: meta.color,
-                                border: `1px solid ${meta.border}`,
-                              }}
-                            >
-                              {meta.label}
-                            </span>
-                            <span
-                              className="px-2 py-0.5 rounded-md text-[10.5px] mono"
-                              style={{
-                                background: "var(--spark-surface-2)",
-                                color: "var(--spark-text-meta)",
-                                border: "1px solid var(--spark-border)",
-                              }}
-                            >
-                              {ht.matchedVia === "hybrid"
-                                ? "Semantic + BM25"
-                                : ht.matchedVia === "policy"
-                                  ? "Policy"
-                                  : "BM25"}
-                            </span>
-                            {ht.gapLogged && isAdmin ? (
-                              <Link
-                                to="/help-knowledge"
-                                onClick={onClose}
-                                className="px-2 py-0.5 rounded-md text-[10.5px] font-semibold no-underline"
-                                style={{
-                                  background: "rgba(210,72,27,0.10)",
-                                  color: "var(--spark-flag-ink, #a8340f)",
-                                  border: "1px solid rgba(210,72,27,0.28)",
-                                }}
-                              >
-                                Logged to Gaps →
-                              </Link>
-                            ) : null}
-                          </div>
-                          <AiMarkdown links={false}>{ht.answer}</AiMarkdown>
-                          {ht.sources.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5 pt-0.5">
-                              {ht.sources.map((s) => (
-                                <Link
-                                  key={`${s.title}-${s.routePath}`}
-                                  to={s.routePath || "/setup-guide"}
-                                  onClick={onClose}
-                                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11.5px] font-medium no-underline transition hover:opacity-80"
-                                  style={chipStyle}
-                                >
-                                  <span style={TEXT}>{s.routeLabel || s.title}</span>
-                                  <ArrowUpRight size={11} strokeWidth={1.8} style={META} />
-                                </Link>
-                              ))}
-                            </div>
-                          ) : null}
-                          <div
-                            className="pt-2 flex items-center justify-between text-[11px]"
-                            style={{
-                              ...META,
-                              borderTop:
-                                "1px solid var(--spark-hairline, var(--spark-border))",
-                            }}
-                          >
-                            {ht.answer ? <CopyReplyButton text={ht.answer} /> : <span />}
-                            {ht.thoughtFor != null ? (
-                              <span>{thoughtLabel(ht.thoughtFor)}</span>
-                            ) : null}
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-[13px]" style={META}>
-                          {ht.reason || "Couldn't answer that from Spark Help."}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-              {pendingHelp ? (
-                <li className="space-y-2.5">
-                  <div className="flex justify-end">
-                    <p
-                      className="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px]"
-                      style={limeBtn}
-                    >
-                      {pendingHelp}
-                    </p>
-                  </div>
-                  <SparkThinkingDots label="Searching Spark Knowledge…" />
-                </li>
-              ) : null}
-            </ul>
-          )
-        ) : /* Program Data / Scoped Recap / Scoped Event thread */
-        dataTurns.length === 0 && !pendingData ? (
+        {dataTurns.length === 0 && !pendingData ? (
           <div className="space-y-3">
             <p className="text-xs leading-relaxed" style={META}>
               {copy.blurb}
@@ -740,12 +390,7 @@ export const AskAiModal: React.FC<{
         }}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!canAsk) return;
-          if (mode === "help") {
-            askHelp();
-          } else {
-            void ask();
-          }
+          if (canAsk) void ask();
         }}
       >
         <div
@@ -756,17 +401,12 @@ export const AskAiModal: React.FC<{
           }}
         >
           <input
-            ref={inputRef}
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             disabled={isBusy}
             autoFocus
-            placeholder={
-              mode === "help"
-                ? "Ask how any Spark page or feature works…"
-                : copy.placeholder
-            }
+            placeholder={copy.placeholder}
             aria-label="Ask Spark"
             className="flex-1 min-w-0 bg-transparent text-[13.5px] outline-none disabled:opacity-60"
             style={{ color: "var(--spark-text)" }}
@@ -777,14 +417,14 @@ export const AskAiModal: React.FC<{
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:opacity-90 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
             style={limeBtn}
             aria-label="Send question"
-            title={mode === "help" ? "Search Spark Help" : "Ask Spark"}
+            title="Ask Spark"
           >
             <ArrowUp size={15} strokeWidth={2.2} />
           </button>
         </div>
 
         <div className="mt-1.5 px-0.5 flex items-center justify-between text-[10.5px]" style={META}>
-          <span>{mode === "help" ? "Spark product guides" : "Grounded in Spark data"}</span>
+          <span>Grounded in Spark program data</span>
           <span className="hidden md:inline">⌘J to toggle · Esc to close</span>
         </div>
       </form>

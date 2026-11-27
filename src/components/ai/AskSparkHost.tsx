@@ -20,13 +20,12 @@ import { AskAiModal } from "./AskAiButton";
 export default function AskSparkHost() {
   const location = useLocation();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
-  const { isClient, isAdmin } = useSparkRole();
+  const { isClient } = useSparkRole();
   const handoffTimerRef = useRef<number | null>(null);
   const [state, setState] = useState<{
     open: boolean;
     question?: string;
     overrideTenantId?: string;
-    mode?: "data" | "help";
     requestKey: number;
   }>({ open: false, requestKey: 0 });
 
@@ -46,7 +45,6 @@ export default function AskSparkHost() {
         open: true,
         question: detail.question,
         overrideTenantId: detail.tenantId,
-        mode: detail.mode,
         requestKey: prev.requestKey + 1,
       }));
     };
@@ -91,7 +89,6 @@ export default function AskSparkHost() {
             open: true,
             question: undefined,
             overrideTenantId: undefined,
-            mode: undefined,
             requestKey: prev.requestKey + 1,
           };
         });
@@ -112,7 +109,7 @@ export default function AskSparkHost() {
   const onChatPage = location.pathname === "/chat" || location.pathname.startsWith("/chat/");
   const launcherBottomClass = onChatPage ? "bottom-20" : "bottom-6";
 
-  const canRenderPopup = Boolean(activeTenantId) || isAdmin;
+  const canRenderPopup = Boolean(activeTenantId);
 
   return (
     <>
@@ -129,7 +126,7 @@ export default function AskSparkHost() {
             whileTap={{ scale: 0.975 }}
             transition={{ type: "spring", stiffness: 420, damping: 28 }}
             aria-label="Open Ask Spark (⌘J)"
-            title="Ask Spark — program data & product help (⌘J)"
+            title="Ask Spark about your program (⌘J)"
             style={{
               background: "color-mix(in srgb, var(--spark-surface) 94%, transparent)",
               backdropFilter: "blur(16px)",
@@ -168,27 +165,25 @@ export default function AskSparkHost() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {state.open && canRenderPopup ? (
-          isClient && activeTenantId ? (
+        {state.open && activeTenantId ? (
+          isClient ? (
             <BrandChatPanel
               key={`client-${state.requestKey}`}
               tenantId={activeTenantId}
               initialQuestion={state.question}
-              initialMode={state.mode}
               routePrompts={routePrompts}
               onClose={close}
             />
           ) : (
             <AskAiModal
               key={`admin-${state.requestKey}`}
-              tenantId={activeTenantId || ""}
+              tenantId={activeTenantId}
               tenantName={askAiSubjectFromTenant({
                 name: null,
                 requestUrlName: tenantMeta?.requestUrlName ?? tenantSlug,
               })}
               scope="tenant"
               initialQuestion={state.question}
-              initialMode={state.mode ?? (activeTenantId ? "data" : "help")}
               routePrompts={routePrompts}
               onClose={close}
             />

@@ -19,18 +19,17 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: "Admin Help Knowledge Base, OpenAI Embeddings & Chat AI Assist",
     staffOnly: true,
     items: [
-      "Ask Spark now includes a Program Data / Spark Help (Admin) switcher grounded in Spark product guides and OpenAI semantic embeddings (text-embedding-3-small) — with strict audience isolation (clients cannot see admin guides or add knowledge) and guardrails blocking internal Ignite financials or processes.",
       "Inside /chat, Ignite admins can click Draft AI to draft BA replies from shift context, brand product knowledge, and Spark Help docs (always editable before sending), and click Teach Spark on any admin reply to distill a PII-scrubbed product FAQ into Spark Knowledge.",
-      "Open System → Help Knowledge (/help-knowledge) to review unanswered or flagged Knowledge Gaps, publish/edit audience-scoped articles, sync OpenAI embeddings, and test Client vs. Admin visibility side by side.",
+      "Open System → Help Knowledge (/help-knowledge) to review Knowledge Gaps, publish/edit audience-scoped product articles, sync OpenAI embeddings (text-embedding-3-small), and test Client vs. Admin visibility side by side (internal Ignite financials and processes are strictly blocked).",
     ],
   },
   {
     id: "2026-11-27ah",
     date: "November 27, 2026",
-    title: "Floating Ask Spark Pop-Up & Instant Spark Help",
+    title: "Floating Ask Spark Pop-Up Everywhere",
     items: [
-      "Ask Spark now floats cleanly in the bottom-right corner on every screen (or press ⌘J anytime) so you can keep viewing your dashboard, reports, or map while chatting — with a one-click expand toggle and a Program Data / Spark Help switcher.",
-      "Ask how-to questions about whichever screen you're viewing — including Demo Costs, Shelf & Voice, Buyer Report, Retailer POS, and AI Connector — with direct links to the right page, and click Not helpful? under any reply to flag gaps for your Ignite team.",
+      "Ask Spark now floats cleanly in the bottom-right corner on every screen (or press ⌘J anytime) so you can keep viewing your dashboard, reports, or map while chatting — with a one-click expand toggle and page-aware starter prompts.",
+      "Explore store performance, conversion, POS lift, shopper voice, and draft demo waves from any page, and click Not helpful? under any reply to share feedback with your Ignite team.",
     ],
   },
   {

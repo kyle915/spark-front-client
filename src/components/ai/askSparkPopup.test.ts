@@ -39,19 +39,19 @@ describe("Floating bottom-right Ask Spark pop-up (Client & Admin)", () => {
     expect(frameSrc).toContain('aria-modal="false"');
     expect(frameSrc).toContain("Expand pop-up");
 
-    // Client pop-up has Program Data + client-safe Spark Help tabs, never admin KB links
+    // Client pop-up focuses cleanly on program data (no Spark Help tab, never admin KB links)
     const clientSrc = readFileSync(resolve(__dirname, "./BrandChatPanel.tsx"), "utf8");
     expect(clientSrc).toContain("AskSparkPopoverFrame");
-    expect(clientSrc).toContain("Program Data");
-    expect(clientSrc).toContain("Spark Help");
-    expect(clientSrc).toContain("previewAsClient: true");
+    expect(clientSrc).not.toContain("AskSparkHelpMutation");
+    expect(clientSrc).not.toContain("Spark Help");
     expect(clientSrc).not.toContain("/help-knowledge");
 
-    // Admin pop-up uses floating frame + multi-turn data & help threads
+    // Admin pop-up uses floating frame + multi-turn data threads (no Spark Help tab)
     const adminSrc = readFileSync(resolve(__dirname, "./AskAiButton.tsx"), "utf8");
     expect(adminSrc).toContain("AskSparkPopoverFrame");
     expect(adminSrc).toContain("dataTurns");
-    expect(adminSrc).toContain("helpTurns");
+    expect(adminSrc).not.toContain("AskSparkHelpMutation");
+    expect(adminSrc).not.toContain("Spark Help");
     expect(adminSrc).toContain("dispatchOpenAskSpark");
 
     // Redundant inline Ask Spark buttons removed from Dashboard & Client Home headers
