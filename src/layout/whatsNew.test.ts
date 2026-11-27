@@ -79,10 +79,9 @@ describe("whatsNewFor", () => {
     const clientIds = new Set(whatsNewFor(true).map((e) => e.id));
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
-    // Program brief plus notes already on main: deck captions, field-fill, email ?t=, KPI strip,
-    // Ask AI, Photo Wall / pitch decks, POS + digests, Shifts Board, Famus store sign-off
+    // Program brief plus notes already on main: deck captions, field-fill, email links, KPI strip,
+    // Ask Spark, Photo Wall / pitch decks, POS + digests, Schedule Calendar
     for (const id of [
-      "2026-11-23ae",
       "2026-11-23b",
       "2026-11-23v",
       "2026-11-23ab",
@@ -102,12 +101,13 @@ describe("whatsNewFor", () => {
     expect(staffIds.has("2026-11-23h")).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23h")?.staffOnly).toBeFalsy();
 
-    // Staff-only: operating screens, Check-In Studio, Needs Eyes/CSV, Send, walk-up attach,
-    // nudge-all-overdue, denser attention, route lock, finance queue,
+    // Staff-only: operating screens, brand-specific sign-off, Check-In Studio, Needs Eyes/CSV,
+    // Send, walk-up attach, nudge-all-overdue, denser attention, route lock, finance queue,
     // map-this-store, triage, shelf coach, attention, UTMs
     for (const id of [
       "2026-11-24sb",
       "2026-11-23af",
+      "2026-11-23ae",
       "2026-11-23x",
       "2026-11-23aa",
       "2026-11-23z",
@@ -129,7 +129,7 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);
     }
 
-    // Newest November 23 tips: the queue chrome for staff, the Famus sign-off for clients.
+    // Newest November 23 tips: queue chrome above brand-specific sign-off (both staff-only).
     expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-23af")).toBeLessThan(
       WHATS_NEW.findIndex((e) => e.id === "2026-11-23ae"),
     );
@@ -161,8 +161,66 @@ describe("whatsNewFor", () => {
     expect(WHATS_NEW.findIndex((e) => e.id === "2026-11-24rc")).toBeLessThan(
       WHATS_NEW.findIndex((e) => e.id === "2026-11-24am"),
     );
-    expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBeFalsy();
+    expect(WHATS_NEW.find((e) => e.id === "2026-11-23ae")?.staffOnly).toBe(true);
     expect(WHATS_NEW.find((e) => e.id === "2026-11-23ad")?.staffOnly).toBe(true);
+  });
+
+  it("keeps every client-visible What's New entry strictly client-facing", () => {
+    const clientEntries = whatsNewFor(true);
+    expect(clientEntries.length).toBeGreaterThan(20);
+
+    // BA check-in, payroll, timesheet, client-launch, and brand-specific notes stay staff-only
+    for (const staffId of [
+      "2026-11-23ae",
+      "2026-11-20o",
+      "2026-11-19t",
+      "2026-11-19a",
+      "2026-11-18b-1-2",
+      "2026-11-18b-1-1",
+      "2026-11-18b",
+      "2026-11-18a",
+      "2026-11-17i",
+      "2026-11-17d",
+    ] as const) {
+      expect(clientEntries.some((e) => e.id === staffId)).toBe(false);
+    }
+
+    const forbiddenPatterns: RegExp[] = [
+      /\bStaff:/i,
+      /\bAmbassadors:/i,
+      /\bMaster Tracker\b/i,
+      /\bStaffing Board\b/i,
+      /\bShifts Board\b/i,
+      /\bPayroll\b/i,
+      /\bTimesheet\b/i,
+      /\bWingspan\b/i,
+      /\bWalk-ups?\b/i,
+      /\bStanding codes?\b/i,
+      /\bMissing Recaps\b/i,
+      /\bClean triage\b/i,
+      /\bNeeds Eyes\b/i,
+      /\bSystem Health\b/i,
+      /\bLegal acceptances\b/i,
+      /\bClient summaries\b/i,
+      /\bFamus\b/i,
+      /\bHMAC-SHA256\b/i,
+      /\bDST-accurate\b/i,
+      /\bPhotoLightbox\b/,
+      /\bStoreSheet\b/,
+      /\bSpace Grotesk\b/i,
+      /\bBrandChat\b/,
+      /\bOCR\b/,
+      /Admin\/Client/i,
+      /\b\d+px\b/i,
+      /\/(?:shelf-voice|buyer-report|photo-wall|ai-connector|setup-guide|spark-form|sandbox)\b/i,
+    ];
+
+    for (const entry of clientEntries) {
+      const text = `${entry.title}\n${entry.items.join("\n")}`;
+      for (const pattern of forbiddenPatterns) {
+        expect(text, `Client entry ${entry.id} matched ${pattern}`).not.toMatch(pattern);
+      }
+    }
   });
 
   it("routes the KPI explanation notes: client note on top, template check staff-only", () => {
