@@ -35,7 +35,10 @@ import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import SparkGhostButton from "@/shared/SparkGhostButton";
 import SparkFilterBar from "@/shared/SparkFilterBar";
 import SparkEmptyState from "@/shared/SparkEmptyState";
+import { ArrowUpRight } from "lucide-react";
 import { trackerRowDestination } from "./trackerRowDestination";
+import RequestQuickPeekSheet from "./RequestQuickPeekSheet";
+import { stepQuickPeekIndex, type QuickPeekItem } from "./quickPeekNav";
 import { CountReel } from "@/motion/CountReel";
 import {
   buildTrackerUrlParams,
@@ -426,6 +429,7 @@ const TrackerTable: React.FC<{
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [peekUuid, setPeekUuid] = useState<string | null>(null);
   const colCount = selectionEnabled ? 6 : 5;
 
   // Inline request approval from the Tracker (clients + admins). Backend
@@ -491,6 +495,52 @@ const TrackerTable: React.FC<{
   const openRow = (r: Row) => {
     navigate(trackerRowDestination(r), { state: { from: "/requests/list" } });
   };
+  const peekIndex = useMemo(
+    () => (peekUuid ? rows.findIndex((r) => r.uuid === peekUuid) : -1),
+    [peekUuid, rows],
+  );
+  const peekRow = peekIndex >= 0 ? rows[peekIndex] : null;
+  const peekItem = useMemo<QuickPeekItem | null>(() => {
+    if (!peekRow) return null;
+    const slug = peekRow.statusSlug.toLowerCase();
+    const staffingSummary =
+      peekRow.assignedBa > 0
+        ? peekRow.confirmedBa >= peekRow.assignedBa
+          ? `${peekRow.assignedBa} BA confirmed`
+          : `${peekRow.confirmedBa}/${peekRow.assignedBa} BA confirmed`
+        : slug === "scheduled" || slug === "approved"
+          ? "No BA assigned yet"
+          : null;
+    const recapSummary =
+      peekRow.recapStatus === "submitted"
+        ? `${peekRow.recapCount} recap${peekRow.recapCount === 1 ? "" : "s"}`
+        : peekRow.recapStatus === "due"
+          ? "Recap due"
+          : null;
+    const canEdit = !isClient && (slug === "pending" || slug === "queue" || slug === "approved");
+    return {
+      uuid: peekRow.uuid,
+      id: peekRow.id,
+      reqLabel: `REQ-${reqCodeOf(peekRow.id)}`,
+      venue: peekRow.venue,
+      market: peekRow.market,
+      address: peekRow.address || peekRow.eventAddress,
+      dateLabel: peekRow.dateLabel,
+      timeLabel: peekRow.timeLabel || null,
+      statusLabel: STATUS_LABEL[slug] ?? peekRow.statusSlug,
+      statusSlug: slug,
+      type: peekRow.type,
+      skus: peekRow.skus,
+      requester: peekRow.rmmLabel || null,
+      staffingSummary,
+      recapSummary,
+      statusNote: peekRow.planName ? `Activation plan: ${peekRow.planName}` : null,
+      fullHref: trackerRowDestination(peekRow),
+      editHref: canEdit ? `/requests/edit/${peekRow.uuid}` : null,
+      canApprove: slug === "pending" || slug === "queue",
+      isApprovedOptimistic: approvedIds.has(peekRow.uuid),
+    };
+  }, [peekRow, isClient, approvedIds]);
 
   return (
     <div className="spark-card spark-tracker-shell overflow-hidden">
@@ -690,15 +740,16 @@ const TrackerTable: React.FC<{
               // Every navigation off the Master Tracker stamps
               // `from: "/requests/list"` so the destination's Back link
               // returns HERE, not the legacy "All Events" view.
-              const onClick = () => openRow(r);
+              const onClick = () => setPeekUuid(r.uuid);
               const selected = Boolean(selectedIds?.has(r.id));
+              const isPeeking = peekUuid === r.uuid;
               const zebra = rowIdx % 2 === 1;
               return (
                 <React.Fragment key={r.uuid}>
                 {headerEl}
                 <tr
                   className={
-                    selected
+                    selected || isPeeking
                       ? "spark-row-selected cursor-pointer transition-colors"
                       : zebra
                         ? "cursor-pointer transition-colors spark-zebra spark-row-hover"
@@ -916,19 +967,45 @@ const TrackerTable: React.FC<{
                   </td>
                   <td className="whitespace-nowrap">
                     {isClient ? (
-                      <span className="mono text-[10px] tracking-[0.14em] spark-tracker-cell-muted">
-                        —
-                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRow(r);
+                        }}
+                        className="text-xs font-medium inline-flex items-center gap-1 hover:underline"
+                        style={{ color: "var(--spark-text-secondary)" }}
+                        title="Open full page"
+                      >
+                        Open
+                        <ArrowUpRight size={13} strokeWidth={1.75} />
+                      </button>
                     ) : (
                       // Cap the action cluster's width + allow wrapping so a
-                      // full row of actions (incl. 🗑 DELETE) never pushes the
+                      // full row of actions (incl. DELETE) never pushes the
                       // table wider than the viewport — otherwise the last
                       // action lands in the horizontal-scroll region and you
                       // have to scroll sideways to reach it.
                       <div
                         className="spark-row-actions spark-row-actions--until-hover"
-                        style={{ maxWidth: 300 }}
+                        style={{ maxWidth: 320 }}
                       >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openRow(r);
+                          }}
+                          className="mono text-[10px] inline-flex items-center gap-0.5 transition"
+                          style={{
+                            letterSpacing: "0.1em",
+                            color: "var(--spark-text)",
+                          }}
+                          title="Open full event or request page"
+                        >
+                          OPEN
+                          <ArrowUpRight size={11} strokeWidth={1.75} />
+                        </button>
                         <button
                           onClick={toggleExpand}
                           className="mono text-[10px] transition"
@@ -1041,6 +1118,44 @@ const TrackerTable: React.FC<{
           </tbody>
         </table>
       </div>
+      <RequestQuickPeekSheet
+        open={Boolean(peekItem)}
+        onOpenChange={(open) => {
+          if (!open) setPeekUuid(null);
+        }}
+        item={peekItem}
+        index={peekIndex}
+        total={rows.length}
+        onStep={(delta) => {
+          const nextIdx = stepQuickPeekIndex(peekIndex, rows.length, delta);
+          if (nextIdx >= 0 && rows[nextIdx]) {
+            setPeekUuid(rows[nextIdx].uuid);
+          }
+        }}
+        onOpenFull={(item) => {
+          setPeekUuid(null);
+          navigate(item.fullHref, { state: { from: "/requests/list" } });
+        }}
+        onEdit={(item) => {
+          if (!item.editHref) return;
+          setPeekUuid(null);
+          navigate(item.editHref, { state: { from: "/requests/list" } });
+        }}
+        onApprove={(item) => {
+          const target = rows.find((row) => row.uuid === item.uuid);
+          if (target) void approveRow(target);
+        }}
+        approving={Boolean(peekItem && approvingId === peekItem.uuid)}
+        extraContent={
+          !isClient && peekRow ? (
+            <InternalNotesPanel
+              requestUuid={peekRow.uuid}
+              requestLabel={`${peekRow.venue} · ${peekRow.market}`}
+              mentionables={mentionables}
+            />
+          ) : null
+        }
+      />
     </div>
   );
 };

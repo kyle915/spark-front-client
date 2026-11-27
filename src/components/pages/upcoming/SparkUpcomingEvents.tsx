@@ -3,6 +3,8 @@ import { Suspense, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { SCHEDULE_HUB_TABS } from "@/shared/sparkHubNav";
 import { useAllEventPages } from "@/hooks/useAllEventPages";
 import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
 import { addDaysIso, opsTodayIso, venueDayOf } from "@/utils/venueDay";
@@ -215,7 +217,8 @@ export default function SparkUpcomingEvents() {
   const { isClient } = useSparkRole();
   return (
     <Layout>
-      <div className="space-y-6 max-w-5xl spark-scale">
+      <div className="space-y-5 max-w-7xl spark-scale">
+        <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
         <Suspense
           fallback={
             <>

@@ -125,7 +125,13 @@ import {
   receiptSubmitBlock,
   spendNeedingReceipt,
 } from "./checkinCompleteness";
-import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
+import {
+  PhotoQualityWarnings,
+  RecapCompletenessChecklist,
+  RecapCompletionBar,
+} from "./RecapCompleteness";
+import QuickCountSteppers from "./QuickCountSteppers";
+import { wantsQuickStepper } from "./oneHandedCheckin";
 import { RecapCheckFieldNotes, RecapCheckNotes } from "./RecapCheckNotes";
 import { TallyPhotoCard, TallyProposal } from "./TallyPhotoCard";
 import { isTallyNumberType, shownProposals, type TallyProposals } from "./tallyRead";
@@ -1703,9 +1709,18 @@ export default function RecapForm({
     storeIdentity: Boolean(storeIdentity),
     store,
   });
+  const totalCheckpoints =
+    (storeIdentity ? 1 : 0) +
+    templateFields.filter((f) => f.required && !isPhotoType(f.type) && isFieldShown(f, completenessValues)).length +
+    1 +
+    Math.max(1, buckets.filter((b) => b.min > 0).length);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <RecapCompletionBar
+        totalCheckpoints={totalCheckpoints}
+        items={completenessItems}
+      />
       {/* ── Sticky Sync & Signal Status Bar ── */}
       {(isOffline || uploadingCount > 0 || failedCount > 0) && (
         <div
@@ -2078,13 +2093,19 @@ export default function RecapForm({
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
             {template.products.map((p) => (
               <div key={p.id}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover" }} />
                 ) : null}
-                <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
+                <span style={{ flex: "1 1 120px", fontSize: 14 }}>{p.name}</span>
+                <QuickCountSteppers
+                  compact
+                  value={samples[p.id]}
+                  ariaPrefix={p.name}
+                  onChange={(next) => setSamples((s) => ({ ...s, [p.id]: next }))}
+                />
                 <input
-                  style={{ ...input, width: 88, margin: 0 }}
+                  style={{ ...input, width: 76, margin: 0 }}
                   inputMode="numeric"
                   placeholder="0"
                   value={samples[p.id] ?? ""}
@@ -2113,7 +2134,15 @@ export default function RecapForm({
       <div style={card}>
         {!hideEngagementsInput ? (
           <>
-            <label style={label}>Total engagements</label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+              <label style={{ ...label, margin: 0 }}>Total engagements</label>
+              <QuickCountSteppers
+                compact
+                value={engagements}
+                ariaPrefix="Total engagements"
+                onChange={setEngagements}
+              />
+            </div>
             <input style={input} inputMode="numeric" placeholder="e.g. 120" value={engagements} onChange={(e) => setEngagements(e.target.value)} />
           </>
         ) : null}
@@ -2620,11 +2649,17 @@ function MultiselectFieldInput({
                   }}
                 />
               ) : null}
-              <span style={{ flex: 1, fontSize: 14, minWidth: 0 }} title={option}>
+              <span style={{ flex: "1 1 120px", fontSize: 14, minWidth: 0 }} title={option}>
                 {product.name}
               </span>
+              <QuickCountSteppers
+                compact
+                value={sampleQtys[product.id]}
+                ariaPrefix={`${qtyLabel || qtyUnit} — ${product.name}`}
+                onChange={(next) => onSampleQtyChange?.(product.id, next)}
+              />
               <input
-                style={{ ...input, width: 88, margin: 0 }}
+                style={{ ...input, width: 76, margin: 0 }}
                 inputMode="numeric"
                 placeholder={qtyUnit}
                 aria-label={`${qtyLabel || (qtyUnit === "cases" ? "Cases" : "Cans")} — ${product.name}`}
@@ -2834,12 +2869,31 @@ function FieldInput({
       </div>
     );
   }
+  const showStepper = !isLong && wantsQuickStepper(field.name, isNumber);
   return (
     <div>
-      <label style={label}>
-        {field.name}
-        {req}
-      </label>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        <label style={{ ...label, margin: showStepper ? 0 : label.margin }}>
+          {field.name}
+          {req}
+        </label>
+        {showStepper ? (
+          <QuickCountSteppers
+            compact
+            value={typeof value === "string" ? value : ""}
+            ariaPrefix={field.name}
+            onChange={(next) => onChange(next)}
+          />
+        ) : null}
+      </div>
       {isLong ? (
         <textarea
           style={{ ...input, minHeight: example ? 120 : 84, resize: "vertical" }}

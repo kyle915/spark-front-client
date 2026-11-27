@@ -361,7 +361,7 @@ const StripBody: React.FC = () => {
                     rowRefs.current[index] = el;
                   }}
                   tabIndex={index === focusIndex ? 0 : -1}
-                  className="flex items-center gap-2 px-2 py-1 outline-none focus-visible:ring-1 focus-visible:ring-[var(--spark-accent-strong,#1a5c3a)]"
+                  className="flex items-center gap-2 px-2 py-1 outline-none focus-visible:ring-1 focus-visible:ring-[var(--spark-lime)]"
                   style={{ color: "var(--spark-text)" }}
                   onFocus={() => setFocusIndex(index)}
                 >

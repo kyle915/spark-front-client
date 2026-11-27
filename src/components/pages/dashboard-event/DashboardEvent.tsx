@@ -20,6 +20,7 @@ import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
 import { attentionSnapshotKpis } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { ArrowDown, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
   BrandComparePanel,
@@ -39,19 +40,60 @@ const TodaysSnapshot: React.FC = () => {
   const navigate = useNavigate();
   const counts = useSidebarCounts();
   const { tenantSlug, tenantMeta } = useAuthStore();
-  const tiles = attentionSnapshotKpis({
+  const showMissing = showsMissingRecaps(
+    tenantSlug,
+    tenantMeta?.requestUrlName,
+  );
+  const allTiles = attentionSnapshotKpis({
     ...counts,
-    showMissingRecaps: showsMissingRecaps(
-      tenantSlug,
-      tenantMeta?.requestUrlName,
-    ),
+    showMissingRecaps: showMissing,
   });
-  if (tiles.length === 0) return null;
+  const opsClear =
+    counts.approvals === 0 &&
+    counts.approvalsSlaBreach === 0 &&
+    (!showMissing || counts.recapsDue === 0);
+  const visibleTiles = opsClear
+    ? allTiles.filter((t) => t.label !== "Recaps due")
+    : allTiles;
+
+  if (visibleTiles.length === 0 && !opsClear) return null;
+
+  if (opsClear && counts.tracker === 0 && counts.upcoming === 0 && counts.alertsUnread === 0) {
+    return (
+      <div
+        className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium"
+        style={{
+          background: "var(--spark-ok-bg)",
+          color: "var(--spark-ok-ink)",
+          border: "1px solid var(--spark-ok-border)",
+        }}
+      >
+        <CheckCircle2 size={14} strokeWidth={1.75} />
+        Recaps &amp; approvals clear
+      </div>
+    );
+  }
+
   return (
     <div className="spark-card spark-stat-band">
-      <p className="spark-kpi-label mb-3">Needs you</p>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <p className="spark-kpi-label">Needs you</p>
+        {opsClear ? (
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+            style={{
+              background: "var(--spark-ok-bg)",
+              color: "var(--spark-ok-ink)",
+              border: "1px solid var(--spark-ok-border)",
+            }}
+          >
+            <CheckCircle2 size={13} strokeWidth={1.75} />
+            Recaps &amp; approvals clear
+          </span>
+        ) : null}
+      </div>
       <div className="spark-stat-band-grid">
-        {tiles.map((t) => (
+        {visibleTiles.map((t) => (
           <button
             key={t.label}
             type="button"
@@ -117,7 +159,7 @@ function DashboardInner() {
                 href={linkedSheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
+                className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5"
                 style={{
                   background: "rgba(95,184,239,0.10)",
                   color: "var(--spark-sky)",
@@ -126,13 +168,14 @@ function DashboardInner() {
                 }}
                 title="Open the brand's linked Google Sheet in a new tab"
               >
-                Sheet ↗
+                Sheet
+                <ArrowUpRight size={14} strokeWidth={1.75} />
               </a>
             ) : null}
             {comparing ? null : (
               <a
                 href="#performance"
-                className="px-3 py-2 rounded-xl text-sm font-medium"
+                className="px-3 py-2 rounded-xl text-sm font-medium inline-flex items-center gap-1.5"
                 style={{
                   background: "transparent",
                   color: "var(--spark-text-secondary)",
@@ -140,7 +183,8 @@ function DashboardInner() {
                   textDecoration: "none",
                 }}
               >
-                Performance ↓
+                Performance
+                <ArrowDown size={14} strokeWidth={1.75} />
               </a>
             )}
           </div>

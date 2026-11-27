@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import { useAlertStore } from "@/store/alertStore";
 import { PendingAmbassadorsQuery } from "@/api/queries/PendingAmbassadorsQuery";
 import type { PendingAmbassadorsQuery as PendingAmbassadorsQueryType } from "@api/queries/__generated__/PendingAmbassadorsQuery.graphql";
@@ -98,11 +99,17 @@ const Inner: React.FC = () => {
     });
   };
 
+  const [confirmDisableId, setConfirmDisableId] = useState<string | null>(null);
+
   const disable = (ambassadorId: string) => {
     if (isApproving || isDisabling) return;
-    if (!window.confirm("Disable this signup? They won't be able to sign in.")) {
-      return;
-    }
+    setConfirmDisableId(ambassadorId);
+  };
+
+  const executeDisable = () => {
+    if (!confirmDisableId) return;
+    const ambassadorId = confirmDisableId;
+    setConfirmDisableId(null);
     setPendingId(ambassadorId);
     commitDisable({
       variables: { input: { ambassadorId } },
@@ -289,6 +296,18 @@ const Inner: React.FC = () => {
           })}
         </tbody>
       </table>
+      {confirmDisableId ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Ambassador signup"
+          title="Disable this signup?"
+          body="They won't be able to sign in or claim shifts."
+          confirmLabel="Disable signup"
+          busy={isDisabling}
+          onConfirm={executeDisable}
+          onCancel={() => setConfirmDisableId(null)}
+        />
+      ) : null}
     </div>
   );
 };

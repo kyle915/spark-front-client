@@ -26,6 +26,8 @@ import useBaLabel from "@/hooks/useBaLabel";
 import { SparkBentoTile } from "@/shared/SparkStatBlocks";
 import { todayGroundKpis, todayShowsGroundTiles } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { SCHEDULE_HUB_TABS } from "@/shared/sparkHubNav";
 import TodayMapView, { MapLegend, StatusPin } from "./TodayMapView";
 import {
   STATUS_META,
@@ -527,7 +529,8 @@ export default function SparkToday() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
+      <div className="space-y-5 max-w-7xl spark-fade-in spark-scale">
+        <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
         <SparkPageHeader
           title={isClient ? "Today's activations." : "Today, on the ground."}
           support={

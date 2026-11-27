@@ -14,6 +14,10 @@ import type { RebookLastCrewMutation as RebookLastCrewMutationType } from "@api/
 import InviteBAModal from "@/requests/InviteBAModal";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuthStore } from "@/store/authStore";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { SCHEDULE_HUB_TABS } from "@/shared/sparkHubNav";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import IgniteStaffingQueuePanel from "@/components/staffing/IgniteStaffingQueuePanel";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
 import {
@@ -898,49 +902,48 @@ export default function SparkStaffingBoard() {
   }, [weekStart]);
 
   return (
-    <div className="p-5 md:p-8 spark-scale">
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-        <div>
-          <h1 className="display text-2xl font-bold">Staffing Board</h1>
-          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-            Who's on which shift this week. Tap a slot to assign.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => shift(-1)}
-            aria-label="Previous week"
-            className="px-3 py-2 rounded-xl text-sm font-semibold"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            <span aria-hidden>‹</span>
-            <span className="hidden sm:inline"> Prev</span>
-          </button>
-          <span
-            className="mono text-[12px] px-2 whitespace-nowrap"
-            style={{ letterSpacing: "0.06em", color: "var(--spark-text)" }}
-          >
-            {rangeLabel}
-          </span>
-          <button
-            onClick={() => shift(1)}
-            aria-label="Next week"
-            className="px-3 py-2 rounded-xl text-sm font-semibold"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            <span className="hidden sm:inline">Next </span>
-            <span aria-hidden>›</span>
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5 spark-scale">
+      <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
+      <SparkPageHeader
+        title="Staffing board"
+        support="Who's on which shift this week. Tap a slot to assign."
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => shift(-1)}
+              aria-label="Previous week"
+              className="px-3 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              <ChevronLeft size={15} strokeWidth={1.75} aria-hidden />
+              <span className="hidden sm:inline">Prev</span>
+            </button>
+            <span
+              className="mono text-[12px] px-2 whitespace-nowrap"
+              style={{ color: "var(--spark-text)" }}
+            >
+              {rangeLabel}
+            </span>
+            <button
+              onClick={() => shift(1)}
+              aria-label="Next week"
+              className="px-3 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight size={15} strokeWidth={1.75} aria-hidden />
+            </button>
+          </div>
+        }
+      />
 
       <FindAmbassadors />
 

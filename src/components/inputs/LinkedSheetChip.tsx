@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { ArrowUpRight } from "lucide-react";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 
 /**
@@ -23,15 +24,15 @@ type Props = {
 
 const Inner: React.FC<Props> = ({
   size = "default",
-  label = "Sheet ↗",
+  label = "Sheet",
   title = "Open the brand's linked Google Sheet",
 }) => {
   const { url } = useLinkedSheetUrl();
   if (!url) return null;
   const cls =
     size === "small"
-      ? "px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-2"
-      : "px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2";
+      ? "px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5"
+      : "px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5";
   return (
     <a
       href={url}
@@ -47,6 +48,7 @@ const Inner: React.FC<Props> = ({
       title={title}
     >
       {label}
+      <ArrowUpRight size={14} strokeWidth={1.75} />
     </a>
   );
 };

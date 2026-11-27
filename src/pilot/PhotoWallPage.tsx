@@ -1,7 +1,10 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { PHOTOS_HUB_TABS } from "@/shared/sparkHubNav";
 import environment from "@/api/relay/environment";
 import { PitchDeckQueriesPhotoWallQuery } from "@/api/queries/PitchDeckQueries";
 import type { PitchDeckQueriesPhotoWallQuery as PhotoWallQueryType } from "@/api/queries/__generated__/PitchDeckQueriesPhotoWallQuery.graphql";
@@ -160,28 +163,20 @@ const PhotoWallBody: React.FC<{
   const hasMore = photos.length < total;
 
   return (
-    <div className="space-y-5 max-w-6xl">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider mono" style={META}>
-            Live In-Store Photo Wall
-          </p>
-          <h1
-            className="display text-2xl lg:text-3xl font-bold mt-1"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Curate demo proof for buyer decks
-          </h1>
-          <p className="text-xs mt-1" style={META}>
+    <div className="space-y-5 max-w-6xl spark-scale">
+      <SparkPageHeader
+        title="Curate demo proof for buyer decks"
+        support={
+          <>
             Showing <strong className="mono">{photos.length}</strong> of{" "}
             <strong className="mono">{total}</strong> photos ·{" "}
             <strong className="mono">{pinnedCount}</strong> pinned ·{" "}
             <Link to="/buyer-report" className="underline underline-offset-2">
               Build a Buyer Pitch Deck
             </Link>
-          </p>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {banner && (
         <div
@@ -293,16 +288,30 @@ const PhotoWallBody: React.FC<{
 };
 
 export const PhotoWallPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [retailer, setRetailer] = useState("");
   const [market, setMarket] = useState("");
   const [sku, setSku] = useState("");
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
-  const [pinnedOnly, setPinnedOnly] = useState(false);
+  const [pinnedOnly, setPinnedOnly] = useState(
+    () => searchParams.get("pinned") === "1",
+  );
   const [fetchKey, setFetchKey] = useState(0);
 
+  useEffect(() => {
+    const nextPinned = searchParams.get("pinned") === "1";
+    setPinnedOnly((prev) => {
+      if (prev !== nextPinned) {
+        setFetchKey((k) => k + 1);
+      }
+      return nextPinned;
+    });
+  }, [searchParams]);
+
   return (
-    <div className="p-4 lg:p-6 space-y-4">
+    <div className="space-y-5 max-w-6xl spark-scale">
+      <SparkHubTabs tabs={PHOTOS_HUB_TABS} ariaLabel="Photo views" />
       <div className="spark-card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
         <input
           value={retailer}
@@ -359,7 +368,12 @@ export const PhotoWallPage: React.FC = () => {
             type="checkbox"
             checked={pinnedOnly}
             onChange={(e) => {
-              setPinnedOnly(e.target.checked);
+              const on = e.target.checked;
+              setPinnedOnly(on);
+              const next = new URLSearchParams(searchParams);
+              if (on) next.set("pinned", "1");
+              else next.delete("pinned");
+              setSearchParams(next, { replace: true });
               setFetchKey((k) => k + 1);
             }}
           />

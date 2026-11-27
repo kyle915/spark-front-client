@@ -2,6 +2,9 @@ import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { formatCoveragePercent, formatHonestMoney } from "./pilotHelpers";
 import { PlanGateCallout } from "./PlanGateCallout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
 import { PilotQueriesRetailerPosPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsImportPosMutation,
@@ -107,22 +110,11 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider mono" style={META}>
-            Permissioned Store × SKU × Week Sales · {ws.tenantName}
-          </p>
-          <h1
-            className="display text-2xl lg:text-3xl font-bold mt-1"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Retailer POS Sales, Lift & ROI
-          </h1>
-          <p className="text-xs mt-1" style={META}>
-            Deduplicates multiple demos in the same store-week, subtracts linked crew product purchases in adjusted views, and withholds lift/ROI until baseline & cost coverage hold.
-          </p>
-        </div>
-      </header>
+      <SparkPageHeader
+        eyebrow={`Permissioned store × SKU × week sales · ${ws.tenantName}`}
+        title="Retailer POS sales, lift & ROI"
+        support="Deduplicates multiple demos in the same store-week, subtracts linked crew product purchases in adjusted views, and withholds lift/ROI until baseline and cost coverage hold."
+      />
 
       {pos.planGated ? (
         <PlanGateCallout
@@ -787,7 +779,11 @@ const PosBody: React.FC<{ fetchKey: number; bump: () => void }> = ({
 export const RetailerPosPage: React.FC = () => {
   const [fetchKey, setFetchKey] = useState(0);
   return (
-    <div className="p-4 lg:p-8">
+    <div className="space-y-5 max-w-7xl spark-scale">
+      <div className="flex flex-wrap items-center gap-2">
+        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+        <SparkHubTabs tabs={STORE_BUYER_SUBTABS} ariaLabel="Store & buyer views" />
+      </div>
       <Suspense fallback={<p className="text-sm mono">Loading POS analytics…</p>}>
         <PosBody
           fetchKey={fetchKey}

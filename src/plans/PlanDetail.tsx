@@ -13,6 +13,7 @@ import {
 import { fetchQuery } from "relay-runtime";
 import { AnimatePresence, motion } from "framer-motion";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -249,13 +250,17 @@ const PlanRequestsRoster: React.FC<{
     else setSelected(new Set(rows.map((r) => r.id)));
   };
 
+  const [pendingDetach, setPendingDetach] = useState<{ ids: string[]; label?: string } | null>(null);
+
   const detachIds = (ids: string[], label?: string) => {
     if (ids.length === 0) return;
-    const msg =
-      ids.length === 1
-        ? `Detach “${label ?? "this request"}” from this plan?`
-        : `Detach ${ids.length} requests from this plan?`;
-    if (!window.confirm(msg)) return;
+    setPendingDetach({ ids, label });
+  };
+
+  const executeDetach = () => {
+    if (!pendingDetach) return;
+    const { ids } = pendingDetach;
+    setPendingDetach(null);
     detachCommit({
       variables: { input: { requestIds: ids } },
       onCompleted: (resp) => {
@@ -415,6 +420,22 @@ const PlanRequestsRoster: React.FC<{
           </tbody>
         </table>
       </div>
+      {pendingDetach ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Activation plan"
+          title={
+            pendingDetach.ids.length === 1
+              ? `Detach "${pendingDetach.label ?? "this request"}"?`
+              : `Detach ${pendingDetach.ids.length} requests from this plan?`
+          }
+          body="The requests remain in the Master Tracker as unplanned."
+          confirmLabel="Detach"
+          busy={detaching}
+          onConfirm={executeDetach}
+          onCancel={() => setPendingDetach(null)}
+        />
+      ) : null}
     </div>
   );
 };
@@ -606,6 +627,7 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [markets, setMarkets] = useState((plan?.markets ?? []).join(", "));
   const [ownerId, setOwnerId] = useState(plan?.ownerId ?? "");
   const [showAttach, setShowAttach] = useState(false);
+  const [confirmDeletePlan, setConfirmDeletePlan] = useState(false);
 
   const [commitUpdate, updating] =
     useMutation<UpdateActivationPlanMutationType>(UpdateActivationPlanMutation);
@@ -687,14 +709,8 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     });
   };
 
-  const remove = () => {
-    if (
-      !window.confirm(
-        `Delete plan “${plan.name}”? Requests stay; they are only detached.`,
-      )
-    ) {
-      return;
-    }
+  const executeRemovePlan = () => {
+    setConfirmDeletePlan(false);
     commitDelete({
       variables: { input: { id: plan.id } },
       onCompleted: (resp) => {
@@ -710,6 +726,10 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       },
       onError: (err) => showAlert(err.message, "error"),
     });
+  };
+
+  const remove = () => {
+    setConfirmDeletePlan(true);
   };
 
   return (
@@ -954,6 +974,18 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </Suspense>
         ) : null}
       </div>
+      {confirmDeletePlan ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Delete plan"
+          title={`Delete plan "${plan.name}"?`}
+          body="Requests stay in the tracker; they are only detached from this plan."
+          confirmLabel="Delete plan"
+          busy={deleting}
+          onConfirm={executeRemovePlan}
+          onCancel={() => setConfirmDeletePlan(false)}
+        />
+      ) : null}
     </div>
   );
 };

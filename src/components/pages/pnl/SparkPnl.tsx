@@ -1,6 +1,10 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { AlertTriangle, Download } from "lucide-react";
 import Layout from "@/layout/Layout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { BUDGET_PNL_SUBTABS, REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import { EventPnlQuery } from "@/api/queries/EventPnlQuery";
 import type { EventPnlQuery as EventPnlQueryType } from "@api/queries/__generated__/EventPnlQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -121,30 +125,26 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
           <div
             key={t.label}
             className="spark-card rounded-2xl px-4 py-3"
-            style={{ borderTop: "2px solid var(--spark-lime, #f2f3ee)" }}
           >
             <p
-              className="mono text-[9px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--spark-text-meta)",
-                textTransform: "uppercase",
-              }}
+              className="text-xs font-medium"
+              style={{ color: "var(--spark-text-meta)" }}
             >
               {t.label}
             </p>
-            <p className="text-xl font-bold tab-num">{t.value}</p>
+            <p className="text-xl font-bold tab-num mt-1">{t.value}</p>
           </div>
         ))}
       </div>
       {totals.missing > 0 && (
         <p
-          className="text-xs mb-3"
+          className="text-xs mb-3 inline-flex items-center gap-1.5"
           style={{ color: "var(--spark-flag-ink)" }}
         >
-          ⚠ {totals.missing} booked BA(s) in this range have no booked
-          rate — labor totals are incomplete for their events. Set rates
-          on the gig bookings to close the gap.
+          <AlertTriangle size={14} strokeWidth={1.75} className="shrink-0" />
+          <span>
+            {totals.missing} booked BA(s) in this range have no booked rate — labor totals are incomplete for their events. Set rates on the gig bookings to close the gap.
+          </span>
         </p>
       )}
       <div className="flex justify-end mb-2">
@@ -152,36 +152,36 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
           type="button"
           onClick={exportCsv}
           disabled={rows.length === 0}
-          className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50"
+          className="text-xs px-3 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
           style={{
             background: "var(--spark-lime, #f2f3ee)",
             color: "var(--spark-on-accent)",
           }}
         >
+          <Download size={14} strokeWidth={1.75} />
           Export CSV
         </button>
       </div>
       <div
         className="rounded-xl overflow-x-auto"
-        style={{ border: "1px solid rgba(var(--spark-ink-rgb),0.08)" }}
+        style={{ border: "1px solid var(--spark-border)" }}
       >
         <table className="w-full text-sm">
           <thead>
             <tr
-              className="mono text-[10px]"
+              className="text-xs"
               style={{
                 background: "rgba(var(--spark-ink-rgb),0.04)",
                 color: "var(--spark-text-meta)",
-                letterSpacing: "0.12em",
               }}
             >
-              <th className="text-left px-3 py-2 font-normal">DATE</th>
-              <th className="text-left px-3 py-2 font-normal">EVENT</th>
-              <th className="text-right px-3 py-2 font-normal">BAs</th>
-              <th className="text-right px-3 py-2 font-normal">HOURS</th>
-              <th className="text-right px-3 py-2 font-normal">LABOR</th>
-              <th className="text-right px-3 py-2 font-normal">SPEND</th>
-              <th className="text-right px-3 py-2 font-normal">TOTAL</th>
+              <th className="text-left px-3 py-2 font-medium">Date</th>
+              <th className="text-left px-3 py-2 font-medium">Event</th>
+              <th className="text-right px-3 py-2 font-medium">BAs</th>
+              <th className="text-right px-3 py-2 font-medium">Hours</th>
+              <th className="text-right px-3 py-2 font-medium">Labor</th>
+              <th className="text-right px-3 py-2 font-medium">Spend</th>
+              <th className="text-right px-3 py-2 font-medium">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -264,39 +264,33 @@ const SparkPnl: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.22em",
-            color: "var(--spark-text-meta)",
-          }}
-        >
-          OUTPUTS · COST LENS
-        </p>
-        <h1 className="text-2xl font-bold mt-1 mb-1">P&L</h1>
-        <p
-          className="text-xs mb-4"
-          style={{ color: "var(--spark-text-meta)" }}
-        >
-          Labor (clock-in → clock-out × booked rate) plus expense-receipt
-          spend, per event. Ignite-internal.
-        </p>
-        <div className="flex items-center gap-2 mb-4">
-          <input
-            type="date"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-            style={inputStyle()}
-          />
-          <span style={{ color: "var(--spark-text-meta)" }}>→</span>
-          <input
-            type="date"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-            style={inputStyle()}
-          />
+      <div className="max-w-7xl space-y-5 spark-scale">
+        <div className="flex flex-wrap items-center gap-2">
+          <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+          <SparkHubTabs tabs={BUDGET_PNL_SUBTABS} ariaLabel="Budget & P&L views" />
         </div>
+        <SparkPageHeader
+          eyebrow="Budget & P&L · Internal"
+          title="Event P&L"
+          support="Labor (clock-in to clock-out × booked rate) plus expense-receipt spend, per event."
+          action={
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                style={inputStyle()}
+              />
+              <span style={{ color: "var(--spark-text-meta)" }}>→</span>
+              <input
+                type="date"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                style={inputStyle()}
+              />
+            </div>
+          }
+        />
         {tenantId ? (
           <Suspense
             fallback={

@@ -3,6 +3,8 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { PHOTOS_HUB_TABS } from "@/shared/sparkHubNav";
 import { TenantPhotoGalleryQuery } from "@/api/queries/TenantPhotoGalleryQuery";
 import type { TenantPhotoGalleryQuery as QueryType } from "@api/queries/__generated__/TenantPhotoGalleryQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -378,9 +380,10 @@ const SparkPhotoGallery: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-5">
+      <div className="space-y-5 max-w-7xl spark-scale">
+        <SparkHubTabs tabs={PHOTOS_HUB_TABS} ariaLabel="Photo views" />
         <SparkPageHeader
-          eyebrow="RECAPS"
+          eyebrow="Recaps · Field gallery"
           title="Photos"
           support="Field photos from approved recaps, best photos first. Search in plain words or by what is in the photo, pick the ones you want, then download them or build a photo deck."
         />

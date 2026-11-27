@@ -12,6 +12,7 @@ import React, { Suspense, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
@@ -196,31 +197,31 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     [updateCommit, showAlert],
   );
 
-  const onDelete = useCallback(
-    (m: ModuleRow) => {
-      if (
-        !window.confirm(
-          `Delete "${m.title}"? This removes it from the BA mobile app.`,
-        )
-      )
-        return;
-      deleteCommit({
-        variables: { input: { uuid: m.uuid } },
-        onCompleted: (resp) => {
-          if (resp.deleteAcademyModule.success) {
-            showAlert("Module deleted.", "success");
-          } else {
-            showAlert(
-              resp.deleteAcademyModule.message || "Delete failed.",
-              "error",
-            );
-          }
-        },
-        onError: () => showAlert("Delete failed.", "error"),
-      });
-    },
-    [deleteCommit, showAlert],
-  );
+  const [pendingDelete, setPendingDelete] = useState<ModuleRow | null>(null);
+
+  const onDelete = useCallback((m: ModuleRow) => {
+    setPendingDelete(m);
+  }, []);
+
+  const executeDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    const target = pendingDelete;
+    setPendingDelete(null);
+    deleteCommit({
+      variables: { input: { uuid: target.uuid } },
+      onCompleted: (resp) => {
+        if (resp.deleteAcademyModule.success) {
+          showAlert("Module deleted.", "success");
+        } else {
+          showAlert(
+            resp.deleteAcademyModule.message || "Delete failed.",
+            "error",
+          );
+        }
+      },
+      onError: () => showAlert("Delete failed.", "error"),
+    });
+  }, [pendingDelete, deleteCommit, showAlert]);
 
   const busy = creating || updating || deleting;
 
@@ -508,6 +509,18 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </div>
         </div>
       )}
+      {pendingDelete ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Academy library"
+          title={`Delete "${pendingDelete.title}"?`}
+          body="This removes the module from the Brand Ambassador mobile app."
+          confirmLabel="Delete module"
+          busy={deleting}
+          onConfirm={executeDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { CheckCircle2 } from "lucide-react";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
 import { useRequestAttentionCounts } from "@/components/pages/dashboard-event/AttentionEngine";
@@ -238,6 +239,24 @@ const StaffPanels: React.FC<{ tenantId: string | null }> = ({ tenantId }) => {
   );
 
   if (starts.length === 0 && needs.length === 0) return null;
+  if (needs.length === 0) {
+    return (
+      <div className="space-y-2.5">
+        <div
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+          style={{
+            background: "var(--spark-ok-bg)",
+            color: "var(--spark-ok-ink)",
+            border: "1px solid var(--spark-ok-border)",
+          }}
+        >
+          <CheckCircle2 size={13} strokeWidth={1.75} />
+          Recaps &amp; clock-ins clear
+        </div>
+        <StartsToday rows={starts} />
+      </div>
+    );
+  }
   return (
     <div className="spark-twin">
       <StartsToday rows={starts} />

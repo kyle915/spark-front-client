@@ -26,7 +26,11 @@ import type { PilotMutationsRespondStoreActionMutation as RespondActionType } fr
 import type { PilotMutationsReassignStoreActionMutation as ReassignActionType } from "@/api/mutations/__generated__/PilotMutationsReassignStoreActionMutation.graphql";
 import type { PilotMutationsVerifyRestockMutation as VerifyRestockType } from "@/api/mutations/__generated__/PilotMutationsVerifyRestockMutation.graphql";
 import type { PilotMutationsSetBuyerDigestMutation as SetBuyerDigestType } from "@/api/mutations/__generated__/PilotMutationsSetBuyerDigestMutation.graphql";
+import { Download } from "lucide-react";
 import { BuyerPitchDeckShareCard } from "./BuyerPitchDeckShareCard";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const BORDER = { border: "1px solid var(--spark-border)" } as const;
@@ -134,45 +138,42 @@ const BuyerReportBody: React.FC<{
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider mono" style={META}>
-            Weekly Buyer & Budget-Meeting View · {ws.tenantName}
-          </p>
-          <h1
-            className="display text-2xl lg:text-3xl font-bold mt-1"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Store Performance, Recommendations & Actions
-          </h1>
-          <p className="text-xs mt-1" style={META}>
+      <SparkPageHeader
+        eyebrow={`Weekly buyer & budget view · ${ws.tenantName}`}
+        title="Store performance, recommendations & actions"
+        support={
+          <>
             Period {report.periodStart} → {report.periodEnd} ·{" "}
             <strong className="mono">{report.totalVisits}</strong> visits ·
             Supported spend{" "}
             <strong className="mono">${report.totalSupportedCost}</strong>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={exportingFormat !== null || report.planGated}
-            onClick={() => void handleExport("csv")}
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
-            style={FIELD_STYLE}
-          >
-            {exportingFormat === "csv" ? "Exporting…" : "↓ Export CSV"}
-          </button>
-          <button
-            type="button"
-            disabled={exportingFormat !== null || report.planGated}
-            onClick={() => void handleExport("xlsx")}
-            className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50"
-            style={PRIMARY_BTN_STYLE}
-          >
-            {exportingFormat === "xlsx" ? "Building XLSX…" : "↓ Export Buyer XLSX"}
-          </button>
-        </div>
-      </header>
+          </>
+        }
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={exportingFormat !== null || report.planGated}
+              onClick={() => void handleExport("csv")}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+              style={FIELD_STYLE}
+            >
+              <Download size={14} strokeWidth={1.75} />
+              {exportingFormat === "csv" ? "Exporting…" : "Export CSV"}
+            </button>
+            <button
+              type="button"
+              disabled={exportingFormat !== null || report.planGated}
+              onClick={() => void handleExport("xlsx")}
+              className="px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50"
+              style={PRIMARY_BTN_STYLE}
+            >
+              <Download size={14} strokeWidth={1.75} />
+              {exportingFormat === "xlsx" ? "Building XLSX…" : "Export Buyer XLSX"}
+            </button>
+          </div>
+        }
+      />
 
       {report.planGated ? (
         <PlanGateCallout
@@ -644,7 +645,11 @@ export const BuyerReportPage: React.FC = () => {
   const [providerUuid, setProviderUuid] = useState("");
   const [fetchKey, setFetchKey] = useState(0);
   return (
-    <div className="p-4 lg:p-8">
+    <div className="space-y-5 max-w-7xl spark-scale">
+      <div className="flex flex-wrap items-center gap-2">
+        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+        <SparkHubTabs tabs={STORE_BUYER_SUBTABS} ariaLabel="Store & buyer views" />
+      </div>
       <Suspense fallback={<p className="text-sm mono">Loading buyer report…</p>}>
         <BuyerReportBody
           retailerFilter={retailerFilter}

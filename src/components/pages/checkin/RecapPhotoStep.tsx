@@ -7,6 +7,7 @@ import {
 } from "./photoBuckets";
 import { helperText, label, photoRemove } from "./checkinStyles";
 import type { Photo, PhotoBucket } from "./checkinTypes";
+import { DEFAULT_QUICK_PHOTO_SLOTS, slotActionLabel } from "./oneHandedCheckin";
 
 // Photo step components extracted from SparkCheckin.tsx in the step split —
 // same behaviour, no changes.
@@ -82,26 +83,38 @@ export function PhotoBucketZone({
   // they're done when they aren't.
   const done = photos.filter((p) => p.state === "done").length;
   const hint = bucketCountHint(done, bucket.min);
+  const slotMet = bucket.min > 0 ? done >= bucket.min : done >= 1;
+  const actionLabel = slotActionLabel(bucket.name);
 
   return (
-    <div data-completeness-target={`bucket:${bucket.id}`}>
+    <div
+      data-completeness-target={`bucket:${bucket.id}`}
+      style={{
+        padding: "12px 14px",
+        borderRadius: 14,
+        background: slotMet ? "#f0fdf4" : "#faf7f1",
+        border: slotMet ? "1.5px solid #86efac" : "1px solid rgba(0,0,0,0.1)",
+        transition: "background 160ms ease, border-color 160ms ease",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <label style={{ ...label, marginBottom: 0, flex: 1 }}>{bucket.name}</label>
+        <label style={{ ...label, marginBottom: 0, flex: 1, color: slotMet ? "#14532d" : "#1c1917" }}>
+          {slotMet ? `✓ ${bucket.name}` : bucket.name}
+        </label>
         {hint ? (
           <span
             style={{
               fontSize: 12,
               fontWeight: 700,
-              // Keep "0 of 8 suggested" on one line; the label beside it is
-              // flex:1 and wraps instead.
               whiteSpace: "nowrap",
-              // Muted until the target is reached, green once it is. NEVER the
-              // #EF5A2A this page uses for a required field — see
-              // `bucketCountHint`.
-              ...(hint.met ? { color: "#2E7D32" } : { color: "#44403c" }),
+              ...(hint.met ? { color: "#166534" } : { color: "#44403c" }),
             }}
           >
             {hint.text}
+          </span>
+        ) : slotMet ? (
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#166534", whiteSpace: "nowrap" }}>
+            {done} added
           </span>
         ) : null}
       </div>
@@ -127,6 +140,8 @@ export function PhotoBucketZone({
         }}
         accent={accent}
         allowVideo={Boolean(bucket.accept?.includes("video"))}
+        slotLabel={actionLabel}
+        showQuickSlots={false}
       />
       <PhotoFileInputs
         libraryRef={libraryRef}
@@ -248,6 +263,8 @@ export function PhotoGrid({
   onReplace,
   accent,
   allowVideo = false,
+  slotLabel,
+  showQuickSlots = true,
 }: {
   photos: Photo[];
   onAdd: () => void;
@@ -258,6 +275,8 @@ export function PhotoGrid({
   onReplace?: (id: string) => void;
   accent: string;
   allowVideo?: boolean;
+  slotLabel?: string;
+  showQuickSlots?: boolean;
 }) {
   const tile: CSSProperties = {
     minWidth: 120,
@@ -268,12 +287,70 @@ export function PhotoGrid({
     cursor: "pointer",
     padding: "16px 12px",
   };
-  const done = photos.filter((p) => p.state === "done").length;
+  const donePhotos = photos.filter((p) => p.state === "done");
+  const done = donePhotos.length;
   const atCap = photos.length >= PHOTO_CAP;
   const mediaWord = allowVideo ? "photos/videos" : "photos";
 
   return (
     <div>
+      {showQuickSlots ? (
+        <div
+          role="group"
+          aria-label="Suggested demo photo slots"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 8,
+            margin: "6px 0 10px",
+          }}
+        >
+          {DEFAULT_QUICK_PHOTO_SLOTS.map((slot, idx) => {
+            const matched = donePhotos[idx];
+            const filled = Boolean(matched);
+            return (
+              <button
+                key={slot.key}
+                type="button"
+                onClick={onTake}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  minHeight: 52,
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  border: filled ? "1.5px solid #166534" : "1.5px dashed #a8a29e",
+                  background: filled ? "#f0fdf4" : "#faf7f1",
+                  color: filled ? "#14532d" : "#1c1917",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  touchAction: "manipulation",
+                }}
+              >
+                {matched?.previewUrl && !matched.file.type.startsWith("video/") ? (
+                  <img
+                    src={matched.previewUrl}
+                    alt=""
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      objectFit: "cover",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : null}
+                <span style={{ lineHeight: 1.2 }}>
+                  {filled ? `✓ ${slot.doneLabel}` : slot.addLabel}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <p
         style={{
           color: "#44403c",
@@ -454,7 +531,7 @@ export function PhotoGrid({
                 color: accent,
               }}
             >
-              {allowVideo ? "Upload media" : "Upload photos"}
+              {slotLabel ? `${slotLabel} (Library)` : allowVideo ? "Upload media" : "Upload photos"}
             </button>
             <button
               type="button"
@@ -467,7 +544,7 @@ export function PhotoGrid({
                 opacity: 1,
               }}
             >
-              {allowVideo ? "Take photo/video" : "Take photo"}
+              {slotLabel ? `${slotLabel} (Camera)` : allowVideo ? "Take photo/video" : "Take photo"}
             </button>
           </>
         ) : null}

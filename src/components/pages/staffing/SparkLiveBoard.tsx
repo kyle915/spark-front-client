@@ -9,6 +9,10 @@ import type { NoShowCascadeAlertsQuery as NoShowCascadeAlertsQueryType } from "@
 import { TriggerNoShowCascadeMutation } from "@/api/mutations/TriggerNoShowCascadeMutation";
 import type { TriggerNoShowCascadeMutation as TriggerNoShowCascadeMutationType } from "@api/mutations/__generated__/TriggerNoShowCascadeMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { SCHEDULE_HUB_TABS } from "@/shared/sparkHubNav";
+import { RotateCw } from "lucide-react";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import AdminPunchControls from "@/components/staffing/AdminPunchControls";
@@ -440,32 +444,27 @@ export default function SparkLiveBoard() {
   );
 
   return (
-    <div className="p-5 md:p-8">
-      <p
-        className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
-      >
-        WORKSPACE
-      </p>
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-        <div>
-          <h1 className="display text-2xl font-bold">On the clock</h1>
-          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-            Who's working right now — {today}. Live, refreshes on its own.
-          </p>
-        </div>
-        <button
-          onClick={() => setRefreshKey((k) => k + 1)}
-          className="px-3 py-2 rounded-xl text-sm font-semibold"
-          style={{
-            background: "transparent",
-            color: "var(--spark-text)",
-            border: "1px solid var(--spark-border)",
-          }}
-        >
-          ↻ Refresh
-        </button>
-      </div>
+    <div className="space-y-5 spark-scale">
+      <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
+      <SparkPageHeader
+        title="On the clock"
+        support={`Who's working right now — ${today}. Live, refreshes automatically.`}
+        action={
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="px-3 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-1.5"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <RotateCw size={14} strokeWidth={1.75} aria-hidden />
+            Refresh
+          </button>
+        }
+      />
 
       {!tenantId ? (
         <p

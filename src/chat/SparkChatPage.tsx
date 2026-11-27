@@ -1,8 +1,10 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useSearchParams } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import environment from "@/api/relay/environment";
 import { ChatThreadsQuery } from "@/api/queries/ChatThreadsQuery";
 import type { ChatThreadsQuery as ChatThreadsQueryType } from "@api/queries/__generated__/ChatThreadsQuery.graphql";
@@ -72,13 +74,12 @@ const ThreadList: React.FC<{
   );
   const threads = (data?.chatThreads ?? []).filter(Boolean);
 
-  const onDelete = (uuid: string, name: string) => {
-    if (
-      !window.confirm(
-        `Delete the chat with ${name}? It's removed from your list but recoverable — messages aren't purged.`,
-      )
-    )
-      return;
+  const [pendingDelete, setPendingDelete] = useState<{ uuid: string; name: string } | null>(null);
+
+  const executeDelete = () => {
+    if (!pendingDelete) return;
+    const { uuid } = pendingDelete;
+    setPendingDelete(null);
     commitArchive({
       variables: { input: { threadUuid: uuid, archived: true } },
       onCompleted: (res) => {
@@ -175,22 +176,35 @@ const ThreadList: React.FC<{
             ) : null}
             {/* Trash / delete (soft delete) — appears on row hover. */}
             <button
-              onClick={() => onDelete(String(t.uuid), name)}
+              type="button"
+              onClick={() => setPendingDelete({ uuid: String(t.uuid), name })}
               disabled={isArchiving}
               title="Delete chat"
               aria-label={`Delete chat with ${name}`}
-              className="shrink-0 rounded-lg px-2 py-1 text-xs transition opacity-0 group-hover:opacity-100 focus:opacity-100"
+              className="shrink-0 rounded-lg p-1.5 text-xs transition opacity-0 group-hover:opacity-100 focus:opacity-100"
               style={{
                 background: "transparent",
-                color: "rgba(255,90,42,0.95)",
-                border: "1px solid rgba(255,90,42,0.4)",
+                color: "var(--spark-flag-ink)",
+                border: "1px solid rgba(210,72,27,0.4)",
               }}
             >
-              🗑
+              <Trash2 size={14} strokeWidth={1.75} />
             </button>
           </div>
         );
       })}
+      {pendingDelete ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Chat inbox"
+          title={`Delete chat with ${pendingDelete.name}?`}
+          body="It's removed from your inbox list, though messages remain recoverable."
+          confirmLabel="Delete chat"
+          busy={isArchiving}
+          onConfirm={executeDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </div>
   );
 };

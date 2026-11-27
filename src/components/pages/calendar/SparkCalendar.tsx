@@ -1,5 +1,8 @@
 import { Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { SCHEDULE_HUB_TABS } from "@/shared/sparkHubNav";
 import Layout from "@/layout/Layout";
 import { useAllEventPages } from "@/hooks/useAllEventPages";
 import { venueDayOf } from "@/utils/venueDay";
@@ -683,89 +686,78 @@ export default function SparkCalendar() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--spark-text-meta)",
-              }}
-            >
-              SHIFTS BOARD · {rangeHeading}
-            </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              Every shift, at a glance.
-            </h1>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => stepAnchor(-1)}
-                className="w-9 h-9 rounded-full grid place-items-center transition"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--spark-border)",
-                  color: "var(--spark-text)",
-                }}
-                title={`Previous ${view}`}
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                onClick={() => setAnchor(new Date())}
-                className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => stepAnchor(1)}
-                className="w-9 h-9 rounded-full grid place-items-center transition"
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--spark-border)",
-                  color: "var(--spark-text)",
-                }}
-                title={`Next ${view}`}
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-            <div className="pill-group">
-              {(["day", "week", "month"] as const).map((v) => (
+      <div className="space-y-5 max-w-7xl spark-scale">
+        <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
+        <SparkPageHeader
+          title="Calendar"
+          support={`${rangeHeading} · Click any open slot or + to schedule a demo.`}
+          action={
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1">
                 <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`pill-btn ${v === view ? "on" : ""}`}
+                  onClick={() => stepAnchor(-1)}
+                  className="w-9 h-9 rounded-lg grid place-items-center transition"
+                  style={{
+                    background: "transparent",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                  title={`Previous ${view}`}
+                  aria-label={`Previous ${view}`}
                 >
+                  <ChevronLeft size={16} strokeWidth={1.75} />
+                </button>
+                <button
+                  onClick={() => setAnchor(new Date())}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-text)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => stepAnchor(1)}
+                  className="w-9 h-9 rounded-lg grid place-items-center transition"
+                  style={{
+                    background: "transparent",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                  title={`Next ${view}`}
+                  aria-label={`Next ${view}`}
+                >
+                  <ChevronRight size={16} strokeWidth={1.75} />
+                </button>
+              </div>
+              <div className="pill-group">
+                {(["day", "week", "month"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`pill-btn ${v === view ? "on" : ""}`}
+                  >
                   {v.charAt(0).toUpperCase() + v.slice(1)}
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => navigate(buildScheduleHref(anchor))}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition"
-              style={{
-                background: "var(--spark-text)",
-                color: "var(--spark-surface)",
-              }}
-            >
-              <Plus size={14} />
-              Schedule demo
-            </button>
-          </div>
-        </div>
+              <button
+                type="button"
+                onClick={() => navigate(buildScheduleHref(anchor))}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                style={{
+                  background: "var(--spark-text)",
+                  color: "var(--spark-surface)",
+                }}
+              >
+                <Plus size={14} strokeWidth={1.75} />
+                Schedule demo
+              </button>
+            </div>
+          }
+        />
 
         {/* Stats — hidden until backend exposes shift counts */}
 

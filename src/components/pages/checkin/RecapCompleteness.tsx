@@ -2,6 +2,92 @@ import {
   scrollToCompletenessTarget,
   type CompletenessItem,
 } from "./checkinCompleteness";
+import { computeCompletionSummary } from "./oneHandedCheckin";
+
+export function RecapCompletionBar({
+  totalCheckpoints,
+  items,
+}: {
+  totalCheckpoints: number;
+  items: CompletenessItem[];
+}) {
+  const summary = computeCompletionSummary({
+    totalCheckpoints,
+    remainingItems: items.length,
+  });
+  const done = items.length === 0;
+  const nextItem = items[0] ?? null;
+
+  return (
+    <div
+      role="region"
+      aria-label="Recap completion progress"
+      style={{
+        padding: "10px 14px",
+        borderRadius: 12,
+        background: done ? "#f0fdf4" : "#ffffff",
+        border: done ? "1px solid #86efac" : "1px solid rgba(0,0,0,0.12)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          marginBottom: 6,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: done ? "#166534" : "#1c1917",
+          }}
+        >
+          {summary.label}
+        </span>
+        {nextItem ? (
+          <button
+            type="button"
+            onClick={() => scrollToCompletenessTarget(nextItem.target)}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "#1c1917",
+              fontSize: 12,
+              fontWeight: 600,
+              textDecoration: "underline",
+              cursor: "pointer",
+              padding: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Jump to next
+          </button>
+        ) : null}
+      </div>
+      <div
+        style={{
+          height: 6,
+          borderRadius: 999,
+          background: "rgba(0,0,0,0.08)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${summary.pct}%`,
+            height: "100%",
+            borderRadius: 999,
+            background: done ? "#166534" : "#14160f",
+            transition: "width 180ms ease-out",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 /**
  * Tappable pre-submit checklist on the walk-up recap.

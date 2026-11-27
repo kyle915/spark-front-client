@@ -7,6 +7,7 @@ import type { MergeEventsMutation as MergeEventsMutationType } from "@api/mutati
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import SparkConfirm from "@/shared/SparkConfirm";
 
 /**
  * Duplicate-event finder & merge — the "five identical Albertsons"
@@ -63,23 +64,18 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
     return k;
   });
   const [mergingIdx, setMergingIdx] = useState<number | null>(null);
+  const [confirmIdx, setConfirmIdx] = useState<number | null>(null);
 
   const [commit] = useMutation<MergeEventsMutationType>(MergeEventsMutation);
 
-  const merge = (idx: number) => {
+  const executeMerge = (idx: number) => {
     const cluster = clusters[idx];
     const keepId = keepers[idx];
     if (!cluster || !keepId) return;
     const mergeIds = cluster.events
       .map((e) => e.id)
       .filter((id) => id !== keepId);
-    if (
-      !window.confirm(
-        `Merge ${mergeIds.length} duplicate(s) of “${cluster.events[0]?.name}” into the selected keeper?\n\nRecaps, rosters, attendance, and jobs move to the keeper; the duplicates are deleted. This can't be undone.`,
-      )
-    ) {
-      return;
-    }
+    setConfirmIdx(null);
     setMergingIdx(idx);
     commit({
       variables: {
@@ -131,7 +127,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
               <button
                 type="button"
                 disabled={mergingIdx === idx}
-                onClick={() => merge(idx)}
+                onClick={() => setConfirmIdx(idx)}
                 className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50"
                 style={{
                   background: "var(--spark-lime, #f2f3ee)",
@@ -197,6 +193,18 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
           Done
         </button>
       </div>
+      {confirmIdx !== null && clusters[confirmIdx] ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Merge duplicate events"
+          title={`Merge ${clusters[confirmIdx].events.length - 1} duplicate(s) of "${clusters[confirmIdx].events[0]?.name ?? "event"}"?`}
+          body="Recaps, rosters, attendance, and jobs move to the selected keeper; the duplicates are permanently deleted."
+          confirmLabel="Merge into keeper"
+          busy={mergingIdx !== null}
+          onConfirm={() => executeMerge(confirmIdx)}
+          onCancel={() => setConfirmIdx(null)}
+        />
+      ) : null}
     </div>
   );
 };

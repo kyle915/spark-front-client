@@ -26,4 +26,12 @@ describe("pickActivePath", () => {
     expect(isActive("/", "/plans")).toBe(false);
     expect(pickActivePath(sections, "/nowhere", false)).toBeNull();
   });
+  it("highlights consolidated hub parent item for sibling hub sub-tab URLs", () => {
+    const hubSections = [
+      { items: [{ to: "/upcoming" }, { to: "/photos" }, { to: "/reports" }] },
+    ];
+    expect(pickActivePath(hubSections, "/schedule", false)).toBe("/upcoming");
+    expect(pickActivePath(hubSections, "/photo-wall", false)).toBe("/photos");
+    expect(pickActivePath(hubSections, "/roi-pacing", false)).toBe("/reports");
+  });
 });

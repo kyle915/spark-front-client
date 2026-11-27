@@ -19,6 +19,7 @@ import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
@@ -554,6 +555,11 @@ const SparkRecapInner: React.FC<{
     return date && date !== "—" ? `${venue} · ${date}` : venue;
   }, [recap]);
   useRecapPageCrumb(crumbTitle);
+  const [confirmDeleteRecap, setConfirmDeleteRecap] = useState(false);
+  const [pendingRemoveFile, setPendingRemoveFile] = useState<{
+    fileId: string;
+    label: string;
+  } | null>(null);
 
   if (!recap) {
     // The uuid may belong to a custom-template recap (a separate model the
@@ -984,11 +990,11 @@ const SparkRecapInner: React.FC<{
 
   const deleteRecap = () => {
     if (isDeleting) return;
-    const ok = window.confirm(
-      "Delete this recap? This permanently removes it and frees the event " +
-        "for a new recap. This cannot be undone.",
-    );
-    if (!ok) return;
+    setConfirmDeleteRecap(true);
+  };
+
+  const executeDeleteRecap = () => {
+    setConfirmDeleteRecap(false);
     commitDelete({
       variables: { input: { id: recap.id } },
       onCompleted: (res) => {
@@ -1005,24 +1011,19 @@ const SparkRecapInner: React.FC<{
     });
   };
 
-  // Remove a photo/receipt from the recap. Destructive (deletes the
-  // blob) so we gate behind a confirm. The mutation returns the
-  // refreshed recapFiles so the grid updates from the Relay store.
   const removeFile = (fileId: string, label: string) => {
-    if (
-      !window.confirm(
-        `Remove ${label || "this file"} from the recap? This deletes it permanently.`,
-      )
-    ) {
-      return;
-    }
+    setPendingRemoveFile({ fileId, label });
+  };
+
+  const executeRemoveFile = () => {
+    if (!pendingRemoveFile) return;
+    const { fileId } = pendingRemoveFile;
+    setPendingRemoveFile(null);
     commitRemoveFile({
       variables: { input: { id: fileId } },
       onCompleted: (res) => {
         if (res.removeRecapFile?.success) {
           showAlert("File removed.", "success");
-          // Refetch so the removed photo disappears immediately instead of
-          // lingering until a manual page reload.
           onRefresh();
         } else {
           showAlert(
@@ -2772,6 +2773,29 @@ const SparkRecapInner: React.FC<{
           fileUrl={playingVideo.fileUrl}
           name={playingVideo.name}
           onClose={() => setPlayingVideo(null)}
+        />
+      ) : null}
+      {confirmDeleteRecap ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Delete recap"
+          title="Delete this recap?"
+          body="This permanently removes the recap and frees the event for a new submission. This cannot be undone."
+          confirmLabel="Delete recap"
+          busy={isDeleting}
+          onConfirm={executeDeleteRecap}
+          onCancel={() => setConfirmDeleteRecap(false)}
+        />
+      ) : null}
+      {pendingRemoveFile ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Remove attachment"
+          title={`Remove ${pendingRemoveFile.label || "this file"}?`}
+          body="This deletes the attachment from the recap permanently."
+          confirmLabel="Remove file"
+          onConfirm={executeRemoveFile}
+          onCancel={() => setPendingRemoveFile(null)}
         />
       ) : null}
     </div>

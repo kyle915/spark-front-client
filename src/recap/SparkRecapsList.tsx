@@ -6,6 +6,7 @@ import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/
 import { fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import { thumbUrl } from "@/utils/thumb";
@@ -2975,7 +2976,12 @@ export default function SparkRecapsList() {
   // pages' single-recap mutations sequentially, split by kind: stamps
   // archived_at only, never touches approved, sends no client email.
   // Already-archived rows are skipped by the partition helper.
-  const archiveSelected = async () => {
+  const [confirmArchiveTargets, setConfirmArchiveTargets] = useState<{
+    recapIds: string[];
+    customRecapIds: string[];
+  } | null>(null);
+
+  const archiveSelected = () => {
     if (selectedIds.size === 0 || isBulkArchiving) return;
     const targets = partitionRecapsForBulkArchive(selectedRecaps, selectedIds);
     const total = targets.recapIds.length + targets.customRecapIds.length;
@@ -2983,10 +2989,13 @@ export default function SparkRecapsList() {
       showAlert("Selected recaps are already archived.", "info");
       return;
     }
-    const ok = window.confirm(
-      `Archive ${total} recap${total === 1 ? "" : "s"}? They stay on file as proof, leave Needs review, and are hidden from clients. Approval status is unchanged and no client email is sent.`,
-    );
-    if (!ok) return;
+    setConfirmArchiveTargets(targets);
+  };
+
+  const executeArchiveSelected = async () => {
+    if (!confirmArchiveTargets || isBulkArchiving) return;
+    const targets = confirmArchiveTargets;
+    setConfirmArchiveTargets(null);
     setIsBulkArchiving(true);
     let okCount = 0;
     const failures: string[] = [];
@@ -4444,6 +4453,18 @@ export default function SparkRecapsList() {
           </div>
         </div>
       )}
+      {confirmArchiveTargets ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Bulk archive"
+          title={`Archive ${confirmArchiveTargets.recapIds.length + confirmArchiveTargets.customRecapIds.length} recap${confirmArchiveTargets.recapIds.length + confirmArchiveTargets.customRecapIds.length === 1 ? "" : "s"}?`}
+          body="They stay on file as proof, leave Needs review, and are hidden from clients. Approval status is unchanged and no client email is sent."
+          confirmLabel="Archive recaps"
+          busy={isBulkArchiving}
+          onConfirm={() => void executeArchiveSelected()}
+          onCancel={() => setConfirmArchiveTargets(null)}
+        />
+      ) : null}
     </Layout>
   );
 }

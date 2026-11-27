@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -36,6 +37,26 @@ export const StaffingGlanceCard: React.FC = () => {
   const today = shifts.filter((s) => String(s.date ?? "").slice(0, 10) === startDate);
   const unstaffed = shifts.filter((s) => !s.isStaffed).length;
   const unstaffedToday = today.filter((s) => !s.isStaffed).length;
+
+  if (unstaffed === 0 && unstaffedToday === 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate("/schedule")}
+        className="spark-card px-4 py-3 text-left w-full flex items-center justify-between gap-3 transition"
+        title="Open the Staffing Board"
+      >
+        <span className="inline-flex items-center gap-2 text-xs font-medium" style={{ color: "var(--spark-ok-ink)" }}>
+          <CheckCircle2 size={15} strokeWidth={1.75} className="shrink-0" />
+          <span>
+            All {shifts.length.toLocaleString()} shift{shifts.length === 1 ? "" : "s"} staffed for the next 7 days
+            {today.length > 0 ? ` · ${today.length} today` : ""}
+          </span>
+        </span>
+        <ArrowRight size={14} strokeWidth={1.75} style={{ color: "var(--spark-text-meta)" }} />
+      </button>
+    );
+  }
 
   const tiles: { label: string; value: number; hint: string; warn: boolean }[] = [
     {

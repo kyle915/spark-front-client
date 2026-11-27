@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import WalkupCodePanel from "@/requests/WalkupCodePanel";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
@@ -892,10 +893,15 @@ const GigTemplateRow: React.FC<{
     });
   };
 
+  const [confirmArchive, setConfirmArchive] = useState(false);
+
   const archive = () => {
     if (archiving) return;
-    if (!window.confirm(`Archive “${template.name}”? It’ll drop out of the picker.`))
-      return;
+    setConfirmArchive(true);
+  };
+
+  const executeArchive = () => {
+    setConfirmArchive(false);
     commitArchive({
       variables: { input: { templateId: template.uuid } },
       onCompleted: (res) => {
@@ -1011,6 +1017,18 @@ const GigTemplateRow: React.FC<{
           {archiving ? "Archiving…" : "Archive"}
         </button>
       </div>
+      {confirmArchive ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Gig template"
+          title={`Archive "${template.name}"?`}
+          body="It will drop out of the template picker for future jobs."
+          confirmLabel="Archive template"
+          busy={archiving}
+          onConfirm={executeArchive}
+          onCancel={() => setConfirmArchive(false)}
+        />
+      ) : null}
     </div>
   );
 };

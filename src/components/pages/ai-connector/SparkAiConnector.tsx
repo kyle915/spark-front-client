@@ -13,6 +13,7 @@ import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import { MyAiConnectionsQuery } from "@/api/queries/MyAiConnectionsQuery";
 import type { MyAiConnectionsQuery as MyAiConnectionsQueryType } from "@api/queries/__generated__/MyAiConnectionsQuery.graphql";
 import { RevokeAiConnectionMutation } from "@/api/mutations/RevokeAiConnectionMutation";
@@ -78,10 +79,13 @@ function Connections() {
     { fetchPolicy: "network-only", fetchKey },
   );
   const [revoke, revoking] = useMutation<RevokeAiConnectionMutationType>(RevokeAiConnectionMutation);
+  const [pendingDisconnect, setPendingDisconnect] = useState<{ id: string; appName: string } | null>(null);
   const info = data.myAiConnections;
 
-  const disconnect = (id: string, appName: string) => {
-    if (!window.confirm(`Disconnect ${appName}? It will stop being able to read Spark right away.`)) return;
+  const confirmDisconnect = () => {
+    if (!pendingDisconnect) return;
+    const { id, appName } = pendingDisconnect;
+    setPendingDisconnect(null);
     revoke({
       variables: { id },
       onCompleted: (res) => {
@@ -132,7 +136,7 @@ function Connections() {
                   disabled={revoking}
                   className="px-3 py-1.5 rounded-lg text-sm font-semibold border"
                   style={{ borderColor: "var(--spark-border)" }}
-                  onClick={() => disconnect(String(c.id), c.appName)}
+                  onClick={() => setPendingDisconnect({ id: String(c.id), appName: c.appName })}
                 >
                   Disconnect
                 </button>
@@ -144,6 +148,18 @@ function Connections() {
           Each brand can make {info.dailyCallLimit} AI requests a day across all connected apps.
         </p>
       </section>
+      {pendingDisconnect ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="AI Connector"
+          title={`Disconnect ${pendingDisconnect.appName}?`}
+          body="It will stop being able to read Spark data immediately."
+          confirmLabel="Disconnect"
+          busy={revoking}
+          onConfirm={confirmDisconnect}
+          onCancel={() => setPendingDisconnect(null)}
+        />
+      ) : null}
     </>
   );
 }

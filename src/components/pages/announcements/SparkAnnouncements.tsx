@@ -8,6 +8,7 @@ import { useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import SparkEmptyState from "@/shared/SparkEmptyState";
+import SparkConfirm from "@/shared/SparkConfirm";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -67,6 +68,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [confirmSend, setConfirmSend] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Row | null>(null);
 
   const reset = useCallback(() => {
     setTitle("");
@@ -74,17 +77,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     setComposing(false);
   }, []);
 
-  const send = useCallback(() => {
-    if (!title.trim()) {
-      showAlert("Title is required.", "warning");
-      return;
-    }
-    if (
-      !window.confirm(
-        "Send this announcement to every Brand Ambassador in this tenant? They'll get a push notification.",
-      )
-    )
-      return;
+  const executeSend = useCallback(() => {
+    setConfirmSend(false);
     createCommit({
       variables: {
         input: { title, body, audience: "all_bas", tenantId },
@@ -93,7 +87,6 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         if (resp.createAnnouncement.success) {
           showAlert("Announcement sent to all BAs.", "success");
           reset();
-          // Refetch so the new announcement appears without a refresh.
           setRefreshKey((k) => k + 1);
         } else {
           showAlert(
@@ -106,29 +99,38 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     });
   }, [title, body, tenantId, createCommit, showAlert, reset]);
 
-  const onDelete = useCallback(
-    (r: Row) => {
-      if (!window.confirm(`Delete "${r.title}"? It disappears from the BA feed.`))
-        return;
-      deleteCommit({
-        variables: { input: { uuid: r.uuid } },
-        onCompleted: (resp) => {
-          if (!resp.deleteAnnouncement.success) {
-            showAlert(
-              resp.deleteAnnouncement.message || "Delete failed.",
-              "error",
-            );
-          } else {
-            showAlert("Announcement deleted.", "success");
-            // Refetch so the deleted row drops out without a refresh.
-            setRefreshKey((k) => k + 1);
-          }
-        },
-        onError: () => showAlert("Delete failed.", "error"),
-      });
-    },
-    [deleteCommit, showAlert],
-  );
+  const send = useCallback(() => {
+    if (!title.trim()) {
+      showAlert("Title is required.", "warning");
+      return;
+    }
+    setConfirmSend(true);
+  }, [title, showAlert]);
+
+  const onDelete = useCallback((r: Row) => {
+    setPendingDelete(r);
+  }, []);
+
+  const executeDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    const target = pendingDelete;
+    setPendingDelete(null);
+    deleteCommit({
+      variables: { input: { uuid: target.uuid } },
+      onCompleted: (resp) => {
+        if (!resp.deleteAnnouncement.success) {
+          showAlert(
+            resp.deleteAnnouncement.message || "Delete failed.",
+            "error",
+          );
+        } else {
+          showAlert("Announcement deleted.", "success");
+          setRefreshKey((k) => k + 1);
+        }
+      },
+      onError: () => showAlert("Delete failed.", "error"),
+    });
+  }, [pendingDelete, deleteCommit, showAlert]);
 
   const busy = creating || deleting;
 
@@ -280,6 +282,29 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </div>
         </div>
       )}
+      {confirmSend ? (
+        <SparkConfirm
+          kicker="Broadcast"
+          title="Send announcement to all Brand Ambassadors?"
+          body="Every active Brand Ambassador in this workspace will receive a push notification."
+          confirmLabel="Send to all BAs"
+          busy={creating}
+          onConfirm={executeSend}
+          onCancel={() => setConfirmSend(false)}
+        />
+      ) : null}
+      {pendingDelete ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Announcements"
+          title={`Delete "${pendingDelete.title}"?`}
+          body="It will be removed from the Brand Ambassador feed right away."
+          confirmLabel="Delete announcement"
+          busy={deleting}
+          onConfirm={executeDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      ) : null}
     </div>
   );
 };

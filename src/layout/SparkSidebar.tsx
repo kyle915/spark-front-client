@@ -6,7 +6,7 @@ import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
 import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
-import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
@@ -109,25 +109,53 @@ const SECTIONS: NavSection[] = [
         to: "/",
         clientTo: "/client-dashboard",
       },
-      { label: "Today", Icon: Radio, to: "/today" },
-      { label: "Upcoming", Icon: CalendarRange, to: "/upcoming" },
       {
-        label: "On the Clock",
-        Icon: Clock,
-        to: "/live-board",
+        label: "Schedule",
+        Icon: CalendarRange,
+        to: "/upcoming",
+        clientLabel: "Schedule",
+      },
+      {
+        label: "Account Map",
+        Icon: MapPin,
+        to: "/account-map",
+        clientLabel: "Account Map",
+      },
+    ],
+  },
+  {
+    title: "Requests",
+    items: [
+      {
+        label: "Master Tracker",
+        Icon: ListChecks,
+        to: "/requests/list",
+        clientLabel: "My Requests",
+      },
+      {
+        label: "Approvals",
+        Icon: CheckCircle2,
+        to: "/approvals",
+        clientTo: "/my-approvals",
+        clientLabel: "Approvals",
+      },
+      {
+        label: "All Plans",
+        Icon: Calendar,
+        to: "/plans",
+        clientLabel: "Plans",
+      },
+      {
+        label: "Walk-ups",
+        Icon: QrCode,
+        to: "/walkups",
         adminOnly: true,
       },
       {
-        label: "Staffing Board",
-        Icon: LayoutGrid,
-        to: "/schedule",
-        adminOnly: true,
-      },
-      {
-        label: "Event Confirmation",
-        Icon: MailCheck,
-        to: "/event-confirmation",
-        adminOnly: true,
+        label: "Bulk Upload",
+        Icon: Upload,
+        to: "/requests/bulk-upload",
+        clientLabel: "Bulk Upload",
       },
     ],
   },
@@ -140,7 +168,12 @@ const SECTIONS: NavSection[] = [
         to: "/recaps/list",
         clientLabel: "My Recaps",
       },
-      { label: "Photos", Icon: Images, to: "/photos" },
+      {
+        label: "Photos",
+        Icon: Images,
+        to: "/photos",
+        clientLabel: "Photos",
+      },
       {
         label: "Missing Recaps",
         Icon: FileText,
@@ -162,48 +195,21 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    // Requests and the queues that act on them, kept apart from recap
-    // review so "Recaps" lists only recap work.
-    title: "Requests",
+    title: "Analytics",
     items: [
       {
-        label: "Master Tracker",
-        Icon: ListChecks,
-        to: "/requests/list",
-        // Matches the page title brand users see ("My requests.").
-        clientLabel: "My Requests",
+        label: "Reports & ROI",
+        Icon: BarChart3,
+        to: "/reports",
+        clientLabel: "Reports & ROI",
       },
       {
-        label: "All Plans",
-        Icon: CalendarRange,
-        to: "/plans",
-        clientLabel: "Plans",
-      },
-      {
-        label: "Approvals",
-        Icon: CheckCircle2,
-        to: "/approvals",
-        clientTo: "/my-approvals",
-        clientLabel: "Approvals",
-      },
-      {
-        label: "Walk-ups",
-        Icon: QrCode,
-        to: "/walkups",
+        label: "Client summaries",
+        Icon: FileText,
+        to: "/weekly-summaries",
         adminOnly: true,
       },
-      {
-        label: "Recent submissions",
-        Icon: Inbox,
-        to: "/recent",
-        clientLabel: "Recent Submissions",
-      },
-      {
-        label: "Bulk Upload",
-        Icon: Upload,
-        to: "/requests/bulk-upload",
-        clientLabel: "Bulk Upload",
-      },
+      { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],
   },
   {
@@ -215,21 +221,8 @@ const SECTIONS: NavSection[] = [
         to: "/timesheet",
         adminOnly: true,
       },
-      {
-        label: "Campaign Cost",
-        Icon: DollarSign,
-        to: "/campaign-cost",
-        adminOnly: true,
-      },
       { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },
       { label: "Chat", Icon: MessageCircle, to: "/chat", adminOnly: true },
-      { label: "Calendar", Icon: Calendar, to: "/calendar" },
-      {
-        label: "Account Map",
-        Icon: MapPin,
-        to: "/account-map",
-        clientLabel: "Account Map",
-      },
       {
         label: "Workspace & Agencies",
         Icon: Building2,
@@ -243,37 +236,17 @@ const SECTIONS: NavSection[] = [
         clientLabel: "Provider Imports",
       },
       {
-        label: "Demo Costs",
-        Icon: DollarSign,
-        to: "/demo-costs",
-        clientLabel: "Demo Costs",
-      },
-      {
-        label: "Budget Pacing & ROI",
-        Icon: BarChart3,
-        to: "/roi-pacing",
-        clientLabel: "Budget Pacing & ROI",
-      },
-      {
         label: "Finance Queue",
         Icon: ShieldCheck,
         to: "/finance-queue",
         clientLabel: "Finance Queue",
       },
       {
-        label: "Retailer POS & ROI",
-        Icon: Store,
-        to: "/retailer-pos",
-        clientLabel: "Retailer POS & ROI",
-      },
-      {
         label: "Plans & Billing",
         Icon: CreditCard,
         to: "/plans-billing",
-        // Ignite-admin internal test mode until CLIENT_BILLING_LAUNCHED.
         adminOnly: true,
       },
-      { label: "AI connector", Icon: Plug, to: "/ai-connector" },
     ],
   },
   {
@@ -289,50 +262,11 @@ const SECTIONS: NavSection[] = [
       { label: "Search Talent", Icon: Users, to: "/talent" },
       { label: "Favorites", Icon: Star, to: "/favorites" },
       { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
-      { label: "Manage Library", Icon: GraduationCap, to: "/academy/manage" },
-    ],
-  },
-  {
-    title: "Outputs",
-    items: [
-      { label: "Reports", Icon: BarChart3, to: "/reports" },
-      {
-        label: "Buyer Store Report",
-        Icon: Store,
-        to: "/buyer-report",
-        clientLabel: "Buyer Store Report",
-      },
-      {
-        label: "Live Photo Wall",
-        Icon: Images,
-        to: "/photo-wall",
-        clientLabel: "Live Photo Wall",
-      },
-      // Ignite-internal: each brand's written weekly summary and monthly
-      // email draft, for staff to review and copy. Nothing is sent from it.
-      { label: "Client summaries", Icon: FileText, to: "/weekly-summaries", adminOnly: true },
-      // Ignite-internal cost lens — labor + spend per event.
-      { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
-      // Consolidated samples/hour + SKU + locations + upcoming + call-outs
-      // rollup for guerrilla field-sampling programs (Feel Free). Client-
-      // visible: tenantFieldSamplingReport/generateFieldSamplingCalloutSummary
-      // both resolve the tenant server-side for non-admins (same
-      // resolve_target_tenant_id every other tenant chart in this file
-      // uses), so a client can only ever see their own tenant's data.
-      {
-        label: "Field Sampling Report",
-        Icon: Route,
-        to: "/field-sampling-report",
-      },
     ],
   },
   {
     title: "Communication",
     items: [
-      // Chat moved to the WORKSPACE group above (keeps its /chat route,
-      // unread badge, and MessageCircle icon).
-      // Admin-only: the page itself is an Ignite broadcast tool and shows
-      // "Admin only." to brand users, so don't offer it in their nav.
       { label: "Announcements", Icon: Megaphone, to: "/announcements", adminOnly: true },
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
@@ -355,20 +289,14 @@ const SECTIONS: NavSection[] = [
       { label: "Products", Icon: Package, to: "/products/products-list" },
       { label: "Clients", Icon: Building2, to: "/clients" },
       { label: "Team", Icon: UsersRound, to: "/team" },
-      { label: "New Client", Icon: Plus, to: "/clients/new" },
     ],
   },
   {
-    // The /catalogs/* admin pages (towns, retailers, distributors, and the
-    // type lists) exist + are routed but lost their nav links in the v2
-    // sidebar — so "where do I add a new town?" had no answer. Each links to
-    // the list page, which has the + Create button.
     title: "Catalogs",
     adminOnly: true,
     items: [
       { label: "Locations (Towns)", Icon: MapPin, to: "/catalogs/locations/list" },
       { label: "Retailers", Icon: Store, to: "/catalogs/retailers/list" },
-      // One store typed several ways, combined for reports. Staff only.
       { label: "Store names", Icon: ListChecks, to: "/catalogs/store-names" },
       { label: "Distributors", Icon: Truck, to: "/catalogs/distributors/list" },
       { label: "Event Types", Icon: CalendarRange, to: "/catalogs/event-types/list" },
@@ -381,7 +309,6 @@ const SECTIONS: NavSection[] = [
     adminOnly: true,
     items: [
       { label: "System Health", Icon: Activity, to: "/system-health" },
-      { label: "Legal acceptances", Icon: ListChecks, to: "/legal-acceptances" },
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
       { label: "Billing", Icon: DollarSign, to: "/billing" },
@@ -389,6 +316,13 @@ const SECTIONS: NavSection[] = [
     ],
   },
 ];
+
+void Radio;
+void Inbox;
+void Route;
+void LayoutGrid;
+void MailCheck;
+void Plus;
 
 // Icons referenced for future expansion / future Billing page — kept
 // imported so the linter doesn't strip them before we wire those entries.
@@ -573,6 +507,7 @@ const SidebarNav: React.FC<{
   isClient: boolean;
   onStub: (label: string) => void;
 }> = ({ sections, pathname, isClient, onStub }) => {
+  const { collapsed } = useMobileNav();
   const counts = useSidebarCounts();
   // Chat unread is on its own polled hook (60s) so it can refresh
   // without re-pulling the heavy RequestsQuery that useSidebarCounts
@@ -644,7 +579,8 @@ const SidebarNav: React.FC<{
             section={section}
             activePath={activePath}
             defaultOpen={
-              section.title === "Catalogs" ||
+              collapsed ||
+              (section.title === "Catalogs" ||
               section.title === "Build" ||
               section.title === "System"
                 ? activeInSection
@@ -652,7 +588,8 @@ const SidebarNav: React.FC<{
                   section.title === "Today" ||
                   section.title === "Recaps" ||
                   section.title === "Requests" ||
-                  activeInSection
+                  section.title === "Analytics" ||
+                  activeInSection)
             }
             onStub={onStub}
             isClient={isClient}
@@ -667,7 +604,7 @@ export const SparkSidebar: React.FC = () => {
   const { user, tenantMeta, tenantSlug } = useAuthStore();
   const { pathname } = useLocation();
   const { isClient } = useSparkRole();
-  const { open, setOpen } = useMobileNav();
+  const { open, setOpen, collapsed, toggleCollapsed } = useMobileNav();
   // Filter sections + items by role.
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const missingRecapsOn = showsMissingRecaps(
@@ -747,7 +684,8 @@ export const SparkSidebar: React.FC = () => {
             section={section}
             activePath={activePath}
             defaultOpen={
-              section.title === "Catalogs" ||
+              collapsed ||
+              (section.title === "Catalogs" ||
               section.title === "Build" ||
               section.title === "System"
                 ? activeInSection
@@ -755,7 +693,8 @@ export const SparkSidebar: React.FC = () => {
                   section.title === "Today" ||
                   section.title === "Recaps" ||
                   section.title === "Requests" ||
-                  activeInSection
+                  section.title === "Analytics" ||
+                  activeInSection)
             }
             onStub={onStub}
             isClient={isClient}
@@ -769,6 +708,7 @@ export const SparkSidebar: React.FC = () => {
     <aside
       className={[
         "spark-sidebar shrink-0 flex flex-col h-screen min-h-0 w-64",
+        collapsed ? "md:w-16 is-collapsed" : "md:w-64",
         "fixed inset-y-0 left-0 z-50 transition-[width,transform] duration-200 ease-out md:sticky md:top-0 md:bottom-auto md:translate-x-0 md:z-auto",
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       ].join(" ")}
@@ -782,19 +722,35 @@ export const SparkSidebar: React.FC = () => {
       {/* Brand mark — real Spark logo PNG, inverted to white for the
           dark sidebar (the source logo is black on transparent). */}
       <div
-        className="spark-sidebar-brand flex items-center gap-2 px-5 py-5 justify-between"
+        className={`spark-sidebar-brand flex items-center gap-2 py-4 ${
+          collapsed ? "md:px-2 md:justify-center px-5 justify-between" : "px-5 justify-between"
+        }`}
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
         <img
           src="/legal/spark-logo.png"
           alt="Spark by Ignite"
+          className={collapsed ? "md:hidden block" : "block"}
           style={{
             height: 28,
             width: "auto",
-            display: "block",
             filter: "invert(1) hue-rotate(180deg)",
           }}
         />
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="hidden md:inline-flex items-center justify-center rounded-lg p-2 transition hover:bg-white/10"
+          style={{ color: "rgba(255,255,255,0.75)" }}
+          aria-label={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
+          title={collapsed ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
+        >
+          {collapsed ? (
+            <PanelLeftOpen size={16} strokeWidth={1.75} />
+          ) : (
+            <PanelLeftClose size={16} strokeWidth={1.75} />
+          )}
+        </button>
         <button
           type="button"
           className="md:hidden btn btn-ghost btn-sm btn-square"

@@ -1,11 +1,13 @@
 import React, { Suspense, useEffect, useState } from "react";
-import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { RoiPacingPageQuery } from "@/api/queries/RoiPacingQueries";
 import { UpsertDemoBudgetTargetMutation } from "@/api/mutations/RoiPacingMutations";
 import type { RoiPacingQueriesPageQuery as PacingQueryType } from "@/api/queries/__generated__/RoiPacingQueriesPageQuery.graphql";
 import type { RoiPacingMutationsUpsertDemoBudgetTargetMutation as UpsertMutationType } from "@/api/mutations/__generated__/RoiPacingMutationsUpsertDemoBudgetTargetMutation.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { BUDGET_PNL_SUBTABS, REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import { syncedTargetEditorAmount } from "./roiPacingHelpers";
 
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -16,9 +18,9 @@ const FIELD_STYLE = {
   color: "var(--spark-text)",
 } as const;
 const PRIMARY_BTN_STYLE = {
-  background: "var(--spark-accent-strong, #1a5c3a)",
-  color: "#fff",
-  border: "1px solid var(--spark-accent-strong, #1a5c3a)",
+  background: "var(--spark-lime)",
+  color: "var(--spark-on-accent)",
+  border: "1px solid var(--spark-lime)",
 } as const;
 
 const money = (raw: string | null | undefined): string => {
@@ -172,35 +174,11 @@ const PacingBody: React.FC<{
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider mono" style={META}>
-            Demo budget · Honest spend vs pace
-          </p>
-          <h1
-            className="text-2xl font-semibold mt-1"
-            style={{ color: "var(--spark-text)" }}
-          >
-            Budget pacing & ROI leaderboard
-          </h1>
-          <p className="text-sm mt-2 max-w-2xl" style={META}>
-            Spent and committed demo dollars against your monthly target, plus
-            retailers, markets, or SKUs ranked by units or register sales per
-            demo dollar. Lift is never invented when POS coverage is missing.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/demo-costs" className="underline" style={{ color: "var(--spark-link, var(--spark-text))" }}>
-            Demo costs
-          </Link>
-          <Link to="/retailer-pos" className="underline" style={{ color: "var(--spark-link, var(--spark-text))" }}>
-            Retailer POS
-          </Link>
-          <Link to="/buyer-report" className="underline" style={{ color: "var(--spark-link, var(--spark-text))" }}>
-            Buyer report
-          </Link>
-        </div>
-      </header>
+      <SparkPageHeader
+        eyebrow="Demo budget · Spend vs pace"
+        title="Budget pacing & ROI leaderboard"
+        support="Spent and committed demo dollars against your monthly target, plus retailers, markets, or SKUs ranked by units or register sales per demo dollar."
+      />
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-sm">
@@ -278,7 +256,7 @@ const PacingBody: React.FC<{
             ["Projected", money(pacing.projectedAmount)],
           ].map(([label, value]) => (
             <div key={label}>
-              <p className="text-xs uppercase tracking-wider" style={META}>
+              <p className="text-xs font-medium" style={META}>
                 {label}
               </p>
               <p
@@ -296,7 +274,7 @@ const PacingBody: React.FC<{
             className="absolute inset-y-0 left-0"
             style={{
               width: `${Math.min(spendPct * 100, 100)}%`,
-              background: "var(--spark-accent-strong, #1a5c3a)",
+              background: "var(--spark-lime)",
             }}
             title={`Projected ${money(String(projected))}`}
           />
@@ -394,7 +372,7 @@ const PacingBody: React.FC<{
                               className="h-full rounded-full"
                               style={{
                                 width: `${visitSharePct}%`,
-                                background: "var(--spark-accent-strong, #1a5c3a)",
+                                background: "var(--spark-lime)",
                               }}
                             />
                           </div>
@@ -443,20 +421,26 @@ export const RoiPacingPage: React.FC = () => {
   const [fetchKey, setFetchKey] = useState(0);
 
   return (
-    <ErrorBoundary>
-      <Suspense fallback={<p style={META}>Loading pacing…</p>}>
-        <PacingBody
-          month={month}
-          groupBy={groupBy}
-          sortBy={sortBy}
-          setMonth={setMonth}
-          setGroupBy={setGroupBy}
-          setSortBy={setSortBy}
-          fetchKey={fetchKey}
-          bump={() => setFetchKey((k) => k + 1)}
-        />
-      </Suspense>
-    </ErrorBoundary>
+    <div className="space-y-5 max-w-7xl spark-scale">
+      <div className="flex flex-wrap items-center gap-2">
+        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+        <SparkHubTabs tabs={BUDGET_PNL_SUBTABS} ariaLabel="Budget & P&L views" />
+      </div>
+      <ErrorBoundary>
+        <Suspense fallback={<p style={META}>Loading pacing…</p>}>
+          <PacingBody
+            month={month}
+            groupBy={groupBy}
+            sortBy={sortBy}
+            setMonth={setMonth}
+            setGroupBy={setGroupBy}
+            setSortBy={setSortBy}
+            fetchKey={fetchKey}
+            bump={() => setFetchKey((k) => k + 1)}
+          />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
   );
 };
 

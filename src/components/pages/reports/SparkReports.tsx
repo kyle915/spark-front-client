@@ -19,6 +19,8 @@ import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import MonthHighlight from "@/components/explain/MonthHighlight";
 import ProgramBriefCard from "./ProgramBriefCard";
 import ReportEvidenceStrip from "./ReportEvidenceStrip";
@@ -615,10 +617,11 @@ export default function SparkReports() {
   return (
     <Layout>
       <ReportsRangeContext.Provider value={range}>
-      <div className="space-y-6 max-w-7xl spark-fade-in">
+      <div className="space-y-6 max-w-7xl spark-fade-in spark-scale">
+        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
         <SparkPageHeader
-          eyebrow={`REPORTS · ${range.label.toUpperCase()}`}
-          title="Program report."
+          eyebrow={`Reports · ${range.label}`}
+          title="Program report"
           support="Numbers, photos and consumer feedback for the dates you pick. Consumers counted are sampled — not reach or samples handed out."
           action={
             <>

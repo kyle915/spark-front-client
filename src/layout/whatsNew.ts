@@ -14,6 +14,28 @@ export type WhatsNewEntry = {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    id: "2026-11-26ux",
+    date: "November 26, 2026",
+    title: "Focused navigation hubs, collapsible sidebar rail, and table Quick-Peek",
+    items: [
+      "Schedule, Photos, and Reports & ROI are now organized into focused hubs with top segmented sub-tabs (while keeping every direct URL working), and the desktop sidebar can collapse to a 64px icon rail anytime with the [ key.",
+      "Click any row in the Master Tracker or Approvals queue to open a right-hand Quick-Peek sheet — step through rows with j / k, approve with a, open Store profiles, or jump to the full page without losing your scroll position.",
+      "Dashboard collapses zero-count operational cards into a quiet Recaps & clock-ins clear status pill and combines Weekly Velocity, Top Stores, By State, and SKU Mix into one tabbed analytical stage beside Next Moves.",
+      "Action buttons, palette tokens, headers, and confirmation dialogs are unified onto Spark's warm-stone and ink design system with crisp vector icons.",
+    ],
+  },
+  {
+    id: "2026-11-26oh",
+    date: "November 26, 2026",
+    title: "One-handed demo table controls on Field Check-In",
+    staffOnly: true,
+    items: [
+      "Walk-up check-in recaps now show a live top completion bar (with a one-tap Jump to next link) so BAs can see exactly what's left before packing up.",
+      "Photo buckets and quick photo slots (+ Setup, + Sampling Action, + Receipt) turn crisp green as shots finish uploading.",
+      "Sample, SKU, and engagement count fields add +1, +5, and +10 quick-tap stepper pills for fast one-handed entry at the demo table.",
+    ],
+  },
+  {
     id: "2026-11-26nl",
     date: "November 26, 2026",
     title: "Plain-English bulk scheduling & Account Map Store Signals",

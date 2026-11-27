@@ -11,6 +11,7 @@ import type { ProgramBriefMutationsGenerateMutation } from "@api/mutations/__gen
 import type { ProgramBriefMutationsSaveMutation } from "@api/mutations/__generated__/ProgramBriefMutationsSaveMutation.graphql";
 import type { ProgramBriefMutationsReviewedMutation } from "@api/mutations/__generated__/ProgramBriefMutationsReviewedMutation.graphql";
 import { briefFooter, bulletsToText, textToBullets } from "@/lib/programBrief";
+import SparkConfirm from "@/shared/SparkConfirm";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const TEXT = { color: "var(--spark-text)" } as const;
@@ -51,6 +52,7 @@ const ProgramBriefCard: React.FC<{
   const [bullets, setBullets] = useState("");
   const [quote, setQuote] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
+  const [confirmRewrite, setConfirmRewrite] = useState(false);
 
   const windowKey = `${tenantId}|${startDate}|${endDate}|${preset}`;
   useEffect(() => {
@@ -93,22 +95,23 @@ const ProgramBriefCard: React.FC<{
     setEditing(false);
   };
 
-  const write = () => {
-    if (busy || !canWrite) return;
-    if (
-      brief &&
-      !window.confirm(
-        "Write this again? The current brief, including any edits, will be replaced.",
-      )
-    ) {
-      return;
-    }
+  const runWrite = () => {
+    setConfirmRewrite(false);
     setProblem(null);
     generate({
       variables: { tenantId, startDate, endDate, preset },
       onCompleted: (res) => take(res.generateProgramBrief, "The brief could not be written."),
       onError: () => setProblem("The brief could not be written."),
     });
+  };
+
+  const write = () => {
+    if (busy || !canWrite) return;
+    if (brief) {
+      setConfirmRewrite(true);
+      return;
+    }
+    runWrite();
   };
 
   const saveEdits = () => {
@@ -296,6 +299,18 @@ const ProgramBriefCard: React.FC<{
         <p className="text-sm mt-2" role="status" style={{ color: "var(--spark-orange)" }}>
           {problem}
         </p>
+      ) : null}
+      {confirmRewrite ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Program brief"
+          title="Write this brief again?"
+          body="The current brief, including any manual edits, will be replaced."
+          confirmLabel="Write again"
+          busy={writing}
+          onConfirm={runWrite}
+          onCancel={() => setConfirmRewrite(false)}
+        />
       ) : null}
     </section>
   );

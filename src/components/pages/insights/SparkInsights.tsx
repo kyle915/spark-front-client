@@ -47,9 +47,19 @@ const ConsumersPerWeekTrend = lazy(() =>
     default: m.ConsumersPerWeekTrend,
   })),
 );
-const ConsumerSplits = lazy(() =>
+const ConsumersByStore = lazy(() =>
   import("@/components/charts/ConsumerCharts").then((m) => ({
-    default: m.ConsumerSplits,
+    default: m.ConsumersByStore,
+  })),
+);
+const ConsumersByState = lazy(() =>
+  import("@/components/charts/ConsumerCharts").then((m) => ({
+    default: m.ConsumersByState,
+  })),
+);
+const SamplesByProduct = lazy(() =>
+  import("@/components/charts/ConsumerCharts").then((m) => ({
+    default: m.SamplesByProduct,
   })),
 );
 const ConsumersPerEvent = lazy(() =>
@@ -82,6 +92,14 @@ const MetroBreakdownCard = lazy(
 );
 
 type RangeKey = "7d" | "30d" | "qtd" | "ytd";
+type ChartStageKey = "velocity" | "stores" | "states" | "skus";
+
+const CHART_STAGE_TABS: readonly { key: ChartStageKey; label: string }[] = [
+  { key: "velocity", label: "Weekly Velocity" },
+  { key: "stores", label: "Top Stores" },
+  { key: "states", label: "By State" },
+  { key: "skus", label: "SKU Mix" },
+];
 
 const RANGES: { key: RangeKey; label: string }[] = [
   { key: "7d", label: "7d" },
@@ -526,6 +544,7 @@ export function InsightsBody({
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [range, setRange] = useState<RangeKey>("30d");
+  const [chartStageTab, setChartStageTab] = useState<ChartStageKey>("velocity");
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [copying, setCopying] = useState(false);
@@ -765,18 +784,103 @@ export function InsightsBody({
               />
             </Suspense>
           </div>
-          <div style={{ borderTop: "1px solid var(--spark-border)" }} />
-          <div className="p-5 lg:p-6">
-            <Suspense fallback={null}>
-              <ConsumersPerWeekTrend tenantId={tenantId} />
-            </Suspense>
-          </div>
         </div>
       )}
 
       {tenantId && !omitNarration && <WeeklySummaryCard tenantId={tenantId} />}
 
-      {tenantId && !omitNarration && <StoreInsightsCards tenantId={tenantId} />}
+      {/* Tabbed analytical stage paired alongside Next Moves (StoreInsightsCards) */}
+      {tenantId && (
+        <div
+          className={
+            !omitNarration
+              ? "grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] items-start"
+              : "space-y-6"
+          }
+        >
+          <section
+            className="spark-card p-5 lg:p-6 space-y-5"
+            style={{ borderRadius: 22 }}
+            aria-label="Sampling analytics stage"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p
+                  className="text-xs font-medium"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  Approved recaps ·{" "}
+                  {chartStageTab === "velocity"
+                    ? "12-week trend"
+                    : `${startDate} to ${endDate}`}
+                </p>
+                <h2
+                  className="display text-lg font-semibold mt-0.5"
+                  style={{ color: "var(--spark-text)" }}
+                >
+                  Sampling velocity &amp; mix
+                </h2>
+              </div>
+              <div
+                className="pill-group max-w-full overflow-x-auto"
+                role="tablist"
+                aria-label="Chart views"
+              >
+                {CHART_STAGE_TABS.map((tab) => {
+                  const active = chartStageTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setChartStageTab(tab.key)}
+                      className={`pill-btn whitespace-nowrap ${active ? "on" : ""}`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Suspense fallback={<PanelSkeleton label="Loading chart" />}>
+              {chartStageTab === "velocity" ? (
+                <ConsumersPerWeekTrend tenantId={tenantId} />
+              ) : (
+                <div className="space-y-5">
+                  <ConsumersPerEvent
+                    tenantId={tenantId}
+                    startDate={startDate}
+                    endDate={endDate}
+                  />
+                  {chartStageTab === "stores" ? (
+                    <ConsumersByStore
+                      tenantId={tenantId}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                  ) : chartStageTab === "states" ? (
+                    <ConsumersByState
+                      tenantId={tenantId}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                  ) : (
+                    <SamplesByProduct
+                      tenantId={tenantId}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                  )}
+                </div>
+              )}
+            </Suspense>
+          </section>
+
+          {!omitNarration ? <StoreInsightsCards tenantId={tenantId} /> : null}
+        </div>
+      )}
 
       {/* Pace, markets, year-over-year, AI, geo, and the timeline. Gated on
           state rather than <details> so none of their queries fire until
@@ -792,20 +896,19 @@ export function InsightsBody({
           >
             <span>
               <span
-                className="mono block text-[10px]"
+                className="text-xs font-medium block"
                 style={{
-                  letterSpacing: "0.16em",
                   color: "var(--spark-text-meta)",
                 }}
               >
-                MORE DETAIL
+                More detail
               </span>
-              <span className="block text-sm font-semibold mt-1">
-                Stores, states and products, what consumers said, pace to goal, year-over-year, and timeline
+              <span className="block text-sm font-semibold mt-0.5">
+                What consumers said, competitor mentions, shelf presence, pace to goal, year-over-year, and timeline
               </span>
             </span>
             <span
-              className="mono text-xs"
+              className="text-xs font-medium"
               style={{ color: "var(--spark-text-meta)" }}
             >
               {showDetail ? "Hide" : "Show"}
@@ -816,25 +919,6 @@ export function InsightsBody({
 
       {tenantId && showDetail && (
         <div className="space-y-6 lg:space-y-8">
-          <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
-            <p className="text-xs mb-4" style={{ color: "var(--spark-text-meta)" }}>
-              Where it happened, {startDate} to {endDate}. Approved recaps only.
-            </p>
-            <Suspense fallback={null}>
-              <div className="flex flex-col gap-6">
-                <ConsumersPerEvent
-                  tenantId={tenantId}
-                  startDate={startDate}
-                  endDate={endDate}
-                />
-                <ConsumerSplits
-                  tenantId={tenantId}
-                  startDate={startDate}
-                  endDate={endDate}
-                />
-              </div>
-            </Suspense>
-          </div>
 
           {/* What consumers said in the same dates, grouped into themes.
               Sits behind More detail, so the grouping is only asked for

@@ -180,6 +180,7 @@ describe("whatsNewFor", () => {
     const staffIds = new Set(whatsNewFor(false).map((e) => e.id));
 
     for (const id of [
+      "2026-11-26ux",
       "2026-11-26nl",
       "2026-11-26wp",
       "2026-11-26ha",
@@ -193,7 +194,12 @@ describe("whatsNewFor", () => {
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBeFalsy();
     }
 
-    for (const id of ["2026-11-26sc", "2026-11-26qa", "2026-11-26ops"] as const) {
+    for (const id of [
+      "2026-11-26oh",
+      "2026-11-26sc",
+      "2026-11-26qa",
+      "2026-11-26ops",
+    ] as const) {
       expect(clientIds.has(id)).toBe(false);
       expect(staffIds.has(id)).toBe(true);
       expect(WHATS_NEW.find((e) => e.id === id)?.staffOnly).toBe(true);

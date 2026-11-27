@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkConfirm from "@/shared/SparkConfirm";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
@@ -61,6 +62,7 @@ const BrandSummary: React.FC<{
   const [text, setText] = useState(row.summary?.text ?? "");
   const [problem, setProblem] = useState<string | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
+  const [confirmRewrite, setConfirmRewrite] = useState(false);
 
   const [generate, writing] = useMutation<WeeklyClientSummaryMutationsGenerateMutation>(
     GenerateWeeklyClientSummaryMutation,
@@ -91,17 +93,8 @@ const BrandSummary: React.FC<{
   const dirty = summary ? isEdited(text, summary.text) : false;
   const reviewed = summary?.status === "reviewed";
 
-  const write = () => {
-    if (busy) return;
-    if (
-      summary &&
-      (dirty || summary.editedBody.trim() || reviewed) &&
-      !window.confirm(
-        "Write this again? The current text, including any edits, will be replaced and it goes back to draft.",
-      )
-    ) {
-      return;
-    }
+  const runGenerate = () => {
+    setConfirmRewrite(false);
     generate({
       variables: { tenantId: row.tenantId, weekStart, period },
       onCompleted: (res) => {
@@ -109,6 +102,15 @@ const BrandSummary: React.FC<{
       },
       onError: () => setProblem("The summary could not be written right now."),
     });
+  };
+
+  const write = () => {
+    if (busy) return;
+    if (summary && (dirty || summary.editedBody.trim() || reviewed)) {
+      setConfirmRewrite(true);
+      return;
+    }
+    runGenerate();
   };
 
   const saveEdits = (then?: (saved: Summary) => void) => {
@@ -270,6 +272,19 @@ const BrandSummary: React.FC<{
             setText(next.text);
             setProblem(null);
           }}
+        />
+      ) : null}
+
+      {confirmRewrite ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Rewrite summary"
+          title="Write this summary again?"
+          body="The current text, including any edits, will be replaced and returned to draft status."
+          confirmLabel="Write again"
+          busy={writing}
+          onConfirm={runGenerate}
+          onCancel={() => setConfirmRewrite(false)}
         />
       ) : null}
     </li>

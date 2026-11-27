@@ -1,6 +1,10 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { AlertTriangle } from "lucide-react";
 import Layout from "@/layout/Layout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { EventTypeQuery } from "@/api/queries/EventTypeQuery";
@@ -88,16 +92,14 @@ const inputStyle = (): React.CSSProperties => ({
 });
 
 const eyebrow: React.CSSProperties = {
-  letterSpacing: "0.18em",
   color: "var(--spark-text-meta)",
-  textTransform: "uppercase",
 };
 
 const dim: React.CSSProperties = { color: "var(--spark-text-meta)" };
 const dimmer: React.CSSProperties = { color: "var(--spark-text-meta)" };
 
 const modeLabel = (mode: string): string =>
-  mode === "quantity" ? "UNITS" : mode === "sessions" ? "SESSIONS (approx.)" : "NO DATA";
+  mode === "quantity" ? "Units" : mode === "sessions" ? "Sessions (approx.)" : "No data";
 
 const modeColor = (mode: string): string =>
   mode === "quantity"
@@ -369,12 +371,11 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           <div
             key={t.label}
             className="spark-card rounded-2xl px-4 py-3"
-            style={{ borderTop: "2px solid var(--spark-lime, #f2f3ee)" }}
           >
-            <p className="mono text-[9px]" style={eyebrow}>
+            <p className="text-xs font-medium" style={eyebrow}>
               {t.label}
             </p>
-            <p className="text-xl font-bold tabular-nums">{t.value}</p>
+            <p className="text-xl font-bold tabular-nums mt-1">{t.value}</p>
           </div>
         ))}
       </div>
@@ -384,9 +385,11 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </p>
       ) : null}
       {report.samplesPerHour.estimated && (
-        <p className="text-xs" style={{ color: "var(--spark-flag-ink)" }}>
-          ⚠ At least one shift in this window has no real clock-in/out pair —
-          scheduled duration was used for hours.
+        <p className="text-xs inline-flex items-center gap-1.5" style={{ color: "var(--spark-flag-ink)" }}>
+          <AlertTriangle size={14} strokeWidth={1.75} className="shrink-0" />
+          <span>
+            At least one shift in this window has no real clock-in/out pair — scheduled duration was used for hours.
+          </span>
         </p>
       )}
 
@@ -394,13 +397,13 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SkuBreakdownCard
           title="YTD SKU Breakdown"
-          subtitle={`JAN 1 – TODAY`}
+          subtitle="Jan 1 – Today"
           mode={report.ytdSkuBreakdown.mode}
           items={report.ytdSkuBreakdown.items}
         />
         <SkuBreakdownCard
           title="This Window's SKU Breakdown"
-          subtitle={`${shortDate(startDate).toUpperCase()} – ${shortDate(endDate).toUpperCase()}`}
+          subtitle={`${shortDate(startDate)} – ${shortDate(endDate)}`}
           mode={report.weekSkuBreakdown.mode}
           items={report.weekSkuBreakdown.items}
         />
@@ -409,8 +412,8 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       {/* Locations hit */}
       <div className="spark-card p-5">
         <h3 className="font-bold text-sm mb-1">Locations Hit</h3>
-        <p className="mono text-[10px] mb-3" style={dimmer}>
-          {report.locationsHit.length} STOP{report.locationsHit.length === 1 ? "" : "S"} IN WINDOW
+        <p className="text-xs mb-3" style={dimmer}>
+          {report.locationsHit.length} stop{report.locationsHit.length === 1 ? "" : "s"} in window
         </p>
         {report.locationsHit.length === 0 ? (
           <p className="text-xs py-4 text-center" style={dim}>
@@ -573,18 +576,13 @@ const SparkFieldSamplingReport: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl space-y-6">
-        <div>
-          <p className="mono text-[10px]" style={eyebrow}>
-            OUTPUTS · FIELD SAMPLING
-          </p>
-          <h1 className="text-2xl font-bold mt-1 mb-1">Field Sampling Report</h1>
-          <p className="text-xs" style={dim}>
-            Samples per hour, YTD + weekly SKU breakdowns, locations hit,
-            what's coming up next, and field call-outs — grouped by metro
-            market for guerrilla field-sampling programs.
-          </p>
-        </div>
+      <div className="max-w-7xl space-y-5 spark-scale">
+        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+        <SparkPageHeader
+          eyebrow="Reports & ROI · Field sampling"
+          title="Field sampling report"
+          support="Samples per hour, YTD and weekly SKU breakdowns, locations hit, upcoming shifts, and field call-outs grouped by metro market."
+        />
         {tenantId ? (
           <Suspense
             fallback={

@@ -1,5 +1,9 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { RefreshCw } from "lucide-react";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { SCHEDULE_HUB_TABS } from "@/shared/sparkHubNav";
 import { EventConfirmationFormQuery } from "@/api/queries/EventConfirmationFormQuery";
 import type { EventConfirmationFormQuery as EventConfirmationFormQueryType } from "@api/queries/__generated__/EventConfirmationFormQuery.graphql";
 import { SendEventConfirmationMutation } from "@/api/mutations/SendEventConfirmationMutation";
@@ -35,9 +39,8 @@ const panel: React.CSSProperties = {
 };
 
 const labelMini: React.CSSProperties = {
-  fontSize: 10,
-  letterSpacing: "0.16em",
-  textTransform: "uppercase",
+  fontSize: 12,
+  fontWeight: 500,
   color: "var(--spark-text-meta)",
 };
 
@@ -881,33 +884,28 @@ export default function SparkEventConfirmation() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className="p-5 md:p-8">
-      <p
-        className="mono text-[10px] mb-1"
-        style={{ letterSpacing: "0.18em", color: "var(--spark-text-meta)" }}
-      >
-        WORKSPACE
-      </p>
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-        <div>
-          <h1 className="display text-2xl font-bold">Send event confirmation</h1>
-          <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-            Email a BA their event details, then again 24 hours and 3 hours
-            before the shift.
-          </p>
-        </div>
-        <button
-          onClick={() => setRefreshKey((k) => k + 1)}
-          className="px-3 py-2 rounded-xl text-sm font-semibold"
-          style={{
-            background: "transparent",
-            color: "var(--spark-text)",
-            border: "1px solid var(--spark-border)",
-          }}
-        >
-          ↻ Refresh
-        </button>
-      </div>
+    <div className="p-5 md:p-8 space-y-5 max-w-7xl spark-scale">
+      <SparkHubTabs tabs={SCHEDULE_HUB_TABS} ariaLabel="Schedule views" />
+      <SparkPageHeader
+        eyebrow="Schedule · BA notifications"
+        title="Send event confirmation"
+        support="Email a BA their event details, then again 24 hours and 3 hours before the shift."
+        action={
+          <button
+            type="button"
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="px-3 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <RefreshCw size={14} strokeWidth={1.75} />
+            Refresh
+          </button>
+        }
+      />
 
       {!tenantId ? (
         <p

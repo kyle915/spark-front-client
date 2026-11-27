@@ -1,4 +1,5 @@
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
@@ -1234,38 +1235,42 @@ const RecapCustomViewInner = ({
   // refreshed customRecapFiles list, so Relay merges it by recap id and
   // the gallery re-renders without the removed file (no reload). Admin-
   // only + tenant-scoped server-side.
+  const [confirmDeleteRecap, setConfirmDeleteRecap] = useState(false);
+  const [pendingDeleteFile, setPendingDeleteFile] = useState<{
+    fileId: string;
+    fileName: string | null | undefined;
+  } | null>(null);
+
   const handleDeleteFile = useCallback(
     (fileId: string, fileName: string | null | undefined) => {
-      const ok = window.confirm(
-        `Remove "${fileName || "this file"}" from this recap? ` +
-          "It will no longer appear in the Evidences gallery. " +
-          "This cannot be undone.",
-      );
-      if (!ok) return;
-      setDeletingFileId(fileId);
-      commitDeleteFile({
-        variables: { input: { id: fileId } },
-        onCompleted: (res) => {
-          setDeletingFileId(null);
-          const payload = res.deleteCustomRecapFile;
-          if (payload?.success) {
-            showAlert("File removed.", "success");
-            // Force a refetch so the removed file disappears from the
-            // gallery immediately — without this the card lingers until a
-            // manual reload (same refreshKey pattern the approve flow uses).
-            onRefresh();
-          } else {
-            showAlert(payload?.message ?? "Couldn't remove file.", "error");
-          }
-        },
-        onError: (err) => {
-          setDeletingFileId(null);
-          showAlert(`Couldn't remove file: ${err.message}`, "error");
-        },
-      });
+      setPendingDeleteFile({ fileId, fileName });
     },
-    [commitDeleteFile, showAlert],
+    [],
   );
+
+  const executeDeleteFile = useCallback(() => {
+    if (!pendingDeleteFile) return;
+    const { fileId } = pendingDeleteFile;
+    setPendingDeleteFile(null);
+    setDeletingFileId(fileId);
+    commitDeleteFile({
+      variables: { input: { id: fileId } },
+      onCompleted: (res) => {
+        setDeletingFileId(null);
+        const payload = res.deleteCustomRecapFile;
+        if (payload?.success) {
+          showAlert("File removed.", "success");
+          onRefresh();
+        } else {
+          showAlert(payload?.message ?? "Couldn't remove file.", "error");
+        }
+      },
+      onError: (err) => {
+        setDeletingFileId(null);
+        showAlert(`Couldn't remove file: ${err.message}`, "error");
+      },
+    });
+  }, [pendingDeleteFile, commitDeleteFile, showAlert, onRefresh]);
 
   // Move a file into a different section (FileRecapCategory) so receipts
   // don't clump in with the sampling photos. Send the category NAME (not
@@ -1310,11 +1315,12 @@ const RecapCustomViewInner = ({
 
   const handleDelete = useCallback(() => {
     if (!recap?.id) return;
-    const ok = window.confirm(
-      "Delete this recap? This permanently removes it and frees the event " +
-        "for a new recap. This cannot be undone.",
-    );
-    if (!ok) return;
+    setConfirmDeleteRecap(true);
+  }, [recap?.id]);
+
+  const executeDeleteRecap = useCallback(() => {
+    if (!recap?.id) return;
+    setConfirmDeleteRecap(false);
     commitDelete({
       variables: { input: { id: recap.id as string } },
       onCompleted: (res) => {
@@ -3429,6 +3435,29 @@ const RecapCustomViewInner = ({
           edits={recap.metricEdits ?? []}
         />
       )}
+      {confirmDeleteRecap ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Delete recap"
+          title="Delete this recap?"
+          body="This permanently removes the recap and frees the event for a new submission. This cannot be undone."
+          confirmLabel="Delete recap"
+          onConfirm={executeDeleteRecap}
+          onCancel={() => setConfirmDeleteRecap(false)}
+        />
+      ) : null}
+      {pendingDeleteFile ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Remove attachment"
+          title={`Remove "${pendingDeleteFile.fileName || "this file"}"?`}
+          body="It will no longer appear in the Evidences gallery. This cannot be undone."
+          confirmLabel="Remove file"
+          busy={deletingFileId !== null}
+          onConfirm={executeDeleteFile}
+          onCancel={() => setPendingDeleteFile(null)}
+        />
+      ) : null}
     </>
   );
 

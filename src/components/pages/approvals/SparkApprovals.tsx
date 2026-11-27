@@ -18,6 +18,9 @@ import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkOverlay from "@/shared/SparkOverlay";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { AlertTriangle, ArrowUpRight, Check, X } from "lucide-react";
+import RequestQuickPeekSheet from "@/requests/RequestQuickPeekSheet";
+import { type QuickPeekItem } from "@/requests/quickPeekNav";
 import { CountReel } from "@/motion/CountReel";
 import { decodeReqLabel } from "./decodeReqLabel";
 
@@ -234,9 +237,13 @@ const ApprovalRow: React.FC<{
         {ageChip}
         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           <button
-            onClick={onApprove}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onApprove();
+            }}
             disabled={busy}
-            className={`${actionPad} rounded-lg font-semibold`}
+            className={`${actionPad} rounded-lg font-semibold inline-flex items-center gap-1`}
             style={{
               background: "transparent",
               color: "var(--spark-text)",
@@ -244,12 +251,17 @@ const ApprovalRow: React.FC<{
               opacity: busy ? 0.5 : 1,
             }}
           >
-            ✓ Approve
+            <Check size={13} strokeWidth={1.75} />
+            Approve
           </button>
           <button
-            onClick={onDecline}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDecline();
+            }}
             disabled={busy}
-            className={`${actionPad} rounded-lg transition`}
+            className={`${actionPad} rounded-lg transition inline-flex items-center gap-1`}
             style={{
               background: "transparent",
               color: "var(--spark-orange)",
@@ -257,10 +269,15 @@ const ApprovalRow: React.FC<{
               opacity: busy ? 0.5 : 1,
             }}
           >
-            ✗ Decline
+            <X size={13} strokeWidth={1.75} />
+            Decline
           </button>
           <button
-            onClick={onView}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView();
+            }}
             className={`${actionPad} rounded-lg transition`}
             style={{
               background: "transparent",
@@ -484,6 +501,7 @@ const ApprovalsInner: React.FC = () => {
   const searchRef = useRef<HTMLInputElement | null>(null);
   // Index of the keyboard-focused row (j/k navigation). -1 = no focus.
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  const [peekOpen, setPeekOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const matchesSearch = (r: Row, q: string) => {
     if (!q) return true;
@@ -856,7 +874,10 @@ const ApprovalsInner: React.FC = () => {
           }
           break;
         case "Escape":
-          if (selectedIds.size > 0) {
+          if (peekOpen) {
+            e.preventDefault();
+            setPeekOpen(false);
+          } else if (selectedIds.size > 0) {
             e.preventDefault();
             clearSelection();
           } else if (focusedIdx !== -1) {
@@ -872,6 +893,7 @@ const ApprovalsInner: React.FC = () => {
   }, [
     rows,
     focusedIdx,
+    peekOpen,
     approving,
     declining,
     bulkConfirm,
@@ -882,7 +904,7 @@ const ApprovalsInner: React.FC = () => {
   const StatsGrid = (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <div className="spark-card p-4">
-        <p className="label-mini">PENDING</p>
+        <p className="label-mini">Pending</p>
         <p
           className="tab-num text-3xl font-bold mt-1"
           style={{ color: "var(--spark-orange)" }}
@@ -891,7 +913,7 @@ const ApprovalsInner: React.FC = () => {
         </p>
       </div>
       <div className="spark-card p-4">
-        <p className="label-mini">APPROVED · 30D</p>
+        <p className="label-mini">Approved · 30d</p>
         <p
           className="tab-num text-3xl font-bold mt-1"
           style={{ color: "var(--spark-lime)" }}
@@ -900,7 +922,7 @@ const ApprovalsInner: React.FC = () => {
         </p>
       </div>
       <div className="spark-card p-4">
-        <p className="label-mini">DECLINED · 30D</p>
+        <p className="label-mini">Declined · 30d</p>
         <p
           className="tab-num text-3xl font-bold mt-1"
           style={{ color: "var(--spark-orange)" }}
@@ -909,7 +931,7 @@ const ApprovalsInner: React.FC = () => {
         </p>
       </div>
       <div className="spark-card p-4">
-        <p className="label-mini">DECIDED &lt; 24H</p>
+        <p className="label-mini">Decided &lt; 24h</p>
         <p
           className="tab-num text-3xl font-bold mt-1"
           style={{
@@ -995,25 +1017,27 @@ const ApprovalsInner: React.FC = () => {
         <button
           type="button"
           onClick={() => setSlaOnly((v) => !v)}
-          className="mono text-[10px] px-2.5 py-1.5 rounded-md transition"
+          className="text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition"
           title={
             slaOnly
               ? "Show the full pending queue again"
               : `Filter to only the ${slaBreachCount} request${slaBreachCount === 1 ? "" : "s"} pending >72h`
           }
           style={{
-            letterSpacing: "0.14em",
             background: slaOnly
               ? "var(--spark-orange)"
               : "rgba(239,90,42,0.12)",
             border: `1px solid ${slaOnly ? "var(--spark-orange)" : "rgba(239,90,42,0.4)"}`,
             color: slaOnly ? "var(--spark-on-accent)" : "var(--spark-orange)",
-            fontWeight: slaOnly ? 700 : 400,
+            fontWeight: slaOnly ? 600 : 500,
           }}
         >
-          {slaOnly
-            ? `✓ SLA BREACH · ${slaBreachCount}`
-            : `⚠ SLA BREACH · ${slaBreachCount}`}
+          {slaOnly ? (
+            <Check size={13} strokeWidth={1.75} />
+          ) : (
+            <AlertTriangle size={13} strokeWidth={1.75} />
+          )}
+          SLA breach · {slaBreachCount}
         </button>
       )}
       <button
@@ -1040,29 +1064,27 @@ const ApprovalsInner: React.FC = () => {
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
         <p
-          className="mono text-[10px]"
+          className="text-xs font-medium"
           style={{
-            letterSpacing: "0.18em",
             color: "var(--spark-muted, rgba(var(--spark-ink-rgb),0.5))",
           }}
         >
-          RECENTLY DECIDED · LAST 7D
+          Recently decided · Last 7d
         </p>
         <span
-          className="mono text-[10px]"
+          className="text-xs"
           style={{
-            letterSpacing: "0.14em",
             color: "var(--spark-faint, rgba(var(--spark-ink-rgb),0.38))",
           }}
         >
-          {recentlyDecided.length} ITEMS
+          {recentlyDecided.length} {recentlyDecided.length === 1 ? "item" : "items"}
         </span>
       </div>
       <ul>
         {recentlyDecided.map((d, i) => {
           const isApproved = d.slug === "approved";
           const color = isApproved ? "var(--spark-lime)" : "var(--spark-orange)";
-          const label = isApproved ? "✓ APPROVED" : "✗ DECLINED";
+          const label = isApproved ? "Approved" : "Declined";
           const when = (() => {
             const diffMs = Date.now() - d.updated;
             const mins = Math.floor(diffMs / 60_000);
@@ -1096,14 +1118,18 @@ const ApprovalsInner: React.FC = () => {
             >
               <div className="flex items-center gap-3 flex-wrap">
                 <span
-                  className="mono text-[10px] px-2 py-1 rounded-md"
+                  className="text-xs font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1"
                   style={{
-                    letterSpacing: "0.14em",
                     background: `${color}1a`,
                     border: `1px solid ${color}40`,
                     color,
                   }}
                 >
+                  {isApproved ? (
+                    <Check size={12} strokeWidth={1.75} />
+                  ) : (
+                    <X size={12} strokeWidth={1.75} />
+                  )}
                   {label}
                 </span>
                 <span
@@ -1230,7 +1256,7 @@ const ApprovalsInner: React.FC = () => {
         type="button"
         onClick={() => setBulkDeclineOpen(true)}
         disabled={bulkBusy}
-        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        className="px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5"
         style={{
           background: "transparent",
           color: "var(--spark-orange)",
@@ -1238,23 +1264,44 @@ const ApprovalsInner: React.FC = () => {
           opacity: bulkBusy ? 0.5 : 1,
         }}
       >
-        ✗ Decline {selectedCount}
+        <X size={14} strokeWidth={1.75} />
+        Decline {selectedCount}
       </button>
       <button
         type="button"
         onClick={() => setBulkConfirm(true)}
         disabled={bulkBusy}
-        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        className="px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-1.5"
         style={{
           background: "var(--spark-lime)",
           color: "var(--spark-on-accent)",
           opacity: bulkBusy ? 0.5 : 1,
         }}
       >
-        ✓ Approve {selectedCount}
+        <Check size={14} strokeWidth={1.75} />
+        Approve {selectedCount}
       </button>
     </div>
   );
+
+  const focusedRow = focusedIdx >= 0 && focusedIdx < rows.length ? rows[focusedIdx] : null;
+  const peekItem: QuickPeekItem | null = focusedRow
+    ? {
+        uuid: focusedRow.uuid,
+        id: focusedRow.id,
+        reqLabel: focusedRow.reqId,
+        venue: focusedRow.venue,
+        dateLabel: focusedRow.locationDate,
+        statusLabel: "Pending review",
+        statusSlug: "pending",
+        type: focusedRow.type,
+        requester: focusedRow.requester,
+        statusNote: focusedRow.statusNote,
+        fullHref: `/request/view/${focusedRow.uuid}`,
+        editHref: `/requests/edit/${focusedRow.uuid}`,
+        canApprove: true,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -1272,7 +1319,10 @@ const ApprovalsInner: React.FC = () => {
           busy={busyId === r.id}
           selected={selectedIds.has(r.id)}
           focused={focusedIdx === idx}
-          onFocus={() => setFocusedIdx(idx)}
+          onFocus={() => {
+            setFocusedIdx(idx);
+            setPeekOpen(true);
+          }}
           onToggleSelect={() => toggleSelected(r.id)}
           onApprove={() => setApproving(r)}
           onDecline={() => setDeclining(r)}
@@ -1285,6 +1335,36 @@ const ApprovalsInner: React.FC = () => {
       ))}
 
       </div>
+
+      <RequestQuickPeekSheet
+        open={peekOpen && Boolean(peekItem)}
+        onOpenChange={setPeekOpen}
+        item={peekItem}
+        index={focusedIdx}
+        total={rows.length}
+        enableHotkeys={false}
+        approving={Boolean(focusedRow && busyId === focusedRow.id)}
+        onStep={(delta) =>
+          setFocusedIdx((i) =>
+            Math.max(0, Math.min(rows.length - 1, (i < 0 ? 0 : i) + delta)),
+          )
+        }
+        onOpenFull={(item) => {
+          setPeekOpen(false);
+          navigate(item.fullHref, { state: { from: "/approvals" } });
+        }}
+        onEdit={(item) => {
+          if (!item.editHref) return;
+          setPeekOpen(false);
+          navigate(item.editHref, { state: { from: "/approvals" } });
+        }}
+        onApprove={() => {
+          if (focusedRow) setApproving(focusedRow);
+        }}
+        onDecline={() => {
+          if (focusedRow) setDeclining(focusedRow);
+        }}
+      />
 
       {RecentlyDecided}
 
@@ -1937,7 +2017,8 @@ const LinkedSheetChip: React.FC = () => {
       }}
       title="Open the brand's linked Google Sheet"
     >
-      Sheet ↗
+      Sheet
+      <ArrowUpRight size={14} strokeWidth={1.75} />
     </a>
   );
 };
@@ -1955,10 +2036,10 @@ const LinkedSheetChip: React.FC = () => {
 export const ApprovalsBody: React.FC = () => {
   void useSparkRole;
   return (
-    <div className="space-y-6 max-w-5xl spark-fade-in">
+    <div className="space-y-6 max-w-6xl spark-fade-in spark-scale">
         <SparkPageHeader
-          eyebrow="PENDING APPROVALS"
-          title="Review & approve."
+          eyebrow="Pending approvals"
+          title="Review & approve"
           support={
             <>
               External requests route to a mapped client user. Logged-in
@@ -1987,13 +2068,12 @@ export const ApprovalsBody: React.FC = () => {
           }}
         >
           <summary
-            className="mono text-[10px] cursor-pointer"
+            className="text-xs font-semibold cursor-pointer"
             style={{
-              letterSpacing: "0.16em",
-              color: "var(--spark-lime)",
+              color: "var(--spark-text)",
             }}
           >
-            APPROVAL ROUTING — HOW IT WORKS
+            Approval routing — how it works
           </summary>
           <div className="grid md:grid-cols-3 gap-4 mt-4 text-sm">
             <div>

@@ -8,7 +8,11 @@ import {
   type CostEvidenceKind,
   type CostSettlementKind,
 } from "./pilotHelpers";
+import { ArrowUpRight } from "lucide-react";
 import { PlanGateCallout } from "./PlanGateCallout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkHubTabs from "@/shared/SparkHubTabs";
+import { BUDGET_PNL_SUBTABS, REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import { PilotQueriesDemoCostsPageQuery } from "@/api/queries/PilotQueries";
 import {
   PilotMutationsUpsertAgreementMutation,
@@ -95,33 +99,25 @@ const DemoCostsBody: React.FC<{
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider mono" style={META}>
-            Brand-Visible Economics · Never Exposes Worker Pay
-          </p>
-          <h1
-            className="display text-2xl lg:text-3xl font-bold mt-1"
-            style={{ letterSpacing: "-0.02em" }}
+      <SparkPageHeader
+        eyebrow="Brand-visible economics · Never exposes worker pay"
+        title="Actual cost per demo & rollups"
+        support="Unknown rates stay explicitly marked Unknown (never $0.00). Efficiency metrics withhold until proof and rates are complete."
+        action={
+          <Link
+            to="/finance-queue"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
+            style={{
+              background: "rgba(239,90,42,0.12)",
+              color: "var(--spark-flag-ink, #ef5a2a)",
+              border: "1px solid rgba(239,90,42,0.4)",
+            }}
           >
-            Actual Cost per Demo & Rollups
-          </h1>
-          <p className="text-xs mt-1" style={META}>
-            Unknown rates stay explicitly marked Unknown (never $0.00). Efficiency metrics withhold until proof & rates are complete.
-          </p>
-        </div>
-        <Link
-          to="/finance-queue"
-          className="px-4 py-2 rounded-xl text-xs font-bold"
-          style={{
-            background: "rgba(239,90,42,0.14)",
-            color: "var(--spark-flag-ink, #ef5a2a)",
-            border: "1px solid rgba(239,90,42,0.4)",
-          }}
-        >
-          Open Finance Exception Queue →
-        </Link>
-      </header>
+            Finance exception queue
+            <ArrowUpRight size={14} strokeWidth={1.75} />
+          </Link>
+        }
+      />
 
       {dash.planGated ? (
         <PlanGateCallout
@@ -535,7 +531,11 @@ export const DemoCostsPage: React.FC = () => {
   const [groupBy, setGroupBy] = useState("store");
   const [fetchKey, setFetchKey] = useState(0);
   return (
-    <div className="p-4 lg:p-8">
+    <div className="space-y-5 max-w-7xl spark-scale">
+      <div className="flex flex-wrap items-center gap-2">
+        <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
+        <SparkHubTabs tabs={BUDGET_PNL_SUBTABS} ariaLabel="Budget & P&L views" />
+      </div>
       <Suspense fallback={<p className="text-sm mono">Loading demo costs…</p>}>
         <DemoCostsBody
           groupBy={groupBy}

@@ -1,5 +1,6 @@
 import React, { Suspense, useState } from "react";
 import { Link } from "react-router";
+import { ArrowUpRight } from "lucide-react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { TenantStoreInsightsQuery } from "@/api/queries/TenantStoreInsightsQuery";
 import { PilotMutationsCreateStoreActionMutation } from "@/api/mutations/PilotMutations";
@@ -61,10 +62,11 @@ const SubjectStoreChip: React.FC<{
             fallbackTitle: trimmed,
           })
         }
-        className="chip chip-muted chip-sm cursor-pointer hover:underline"
+        className="chip chip-muted chip-sm cursor-pointer hover:underline inline-flex items-center gap-1"
         title={`Open store profile for ${trimmed}`}
       >
-        {trimmed} ↗
+        {trimmed}
+        <ArrowUpRight size={12} strokeWidth={1.75} />
       </button>
     </div>
   );
