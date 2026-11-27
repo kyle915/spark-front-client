@@ -5,6 +5,7 @@ import { UpsertDemoBudgetTargetMutation } from "@/api/mutations/RoiPacingMutatio
 import type { RoiPacingQueriesPageQuery as PacingQueryType } from "@/api/queries/__generated__/RoiPacingQueriesPageQuery.graphql";
 import type { RoiPacingMutationsUpsertDemoBudgetTargetMutation as UpsertMutationType } from "@/api/mutations/__generated__/RoiPacingMutationsUpsertDemoBudgetTargetMutation.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useAuthStore } from "@/store/authStore";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { BUDGET_PNL_SUBTABS, REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
@@ -427,6 +428,7 @@ const PacingBody: React.FC<{
 };
 
 export const RoiPacingPage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
   const now = new Date();
   const [month, setMonth] = useState(
     `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
@@ -441,9 +443,10 @@ export const RoiPacingPage: React.FC = () => {
         <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
         <SparkHubTabs tabs={BUDGET_PNL_SUBTABS} ariaLabel="Budget & P&L views" />
       </div>
-      <ErrorBoundary>
+      <ErrorBoundary key={tenantId ?? "none"}>
         <Suspense fallback={<p className="text-sm" style={META}>Loading pacing…</p>}>
           <PacingBody
+            key={tenantId ?? "none"}
             month={month}
             groupBy={groupBy}
             sortBy={sortBy}

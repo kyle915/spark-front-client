@@ -14,6 +14,7 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { BUDGET_PNL_SUBTABS, REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
+import { useAuthStore } from "@/store/authStore";
 import PilotPeriodBar from "./PilotPeriodBar";
 import { resolvePilotPeriod, type PilotRangeKey } from "./pilotPeriodFilter";
 import { PilotQueriesDemoCostsPageQuery } from "@/api/queries/PilotQueries";
@@ -584,6 +585,7 @@ const DemoCostsBody: React.FC<{
 };
 
 export const DemoCostsPage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
   const [groupBy, setGroupBy] = useState("store");
   const [range, setRange] = useState<PilotRangeKey>("all");
   const [customStart, setCustomStart] = useState("");
@@ -603,6 +605,7 @@ export const DemoCostsPage: React.FC = () => {
       </div>
       <Suspense fallback={<p className="text-sm" style={META}>Loading demo costs…</p>}>
         <DemoCostsBody
+          key={tenantId ?? "none"}
           groupBy={groupBy}
           setGroupBy={setGroupBy}
           periodStart={periodStart}

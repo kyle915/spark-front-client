@@ -161,20 +161,32 @@ const PhotoWallBody: React.FC<{
   };
 
   const hasMore = photos.length < total;
+  const buildDeckHref = useMemo(() => {
+    const qs = new URLSearchParams({ deck: "1" });
+    if (retailer.trim()) qs.set("retailer", retailer.trim());
+    if (market.trim()) qs.set("market", market.trim());
+    return `/buyer-report?${qs.toString()}`;
+  }, [retailer, market]);
 
   return (
-    <div className="space-y-5 max-w-6xl spark-scale">
+    <div className="space-y-5 max-w-7xl spark-scale">
       <SparkPageHeader
         title="Curate demo proof for buyer decks"
         support={
           <>
             Showing <strong className="mono">{photos.length}</strong> of{" "}
             <strong className="mono">{total}</strong> photos ·{" "}
-            <strong className="mono">{pinnedCount}</strong> pinned ·{" "}
-            <Link to="/buyer-report" className="underline underline-offset-2">
-              Build a Buyer Pitch Deck
-            </Link>
+            <strong className="mono">{pinnedCount}</strong> pinned for QBR decks
           </>
+        }
+        action={
+          <Link
+            to={buildDeckHref}
+            className="px-4 py-2 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 no-underline"
+            style={PRIMARY_BTN_STYLE}
+          >
+            Build Buyer Deck ({pinnedCount} {pinnedCount === 1 ? "pin" : "pins"}) →
+          </Link>
         }
       />
 
@@ -289,8 +301,10 @@ const PhotoWallBody: React.FC<{
 
 export const PhotoWallPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [retailer, setRetailer] = useState("");
-  const [market, setMarket] = useState("");
+  const [retailer, setRetailer] = useState(
+    () => searchParams.get("retailer") ?? "",
+  );
+  const [market, setMarket] = useState(() => searchParams.get("market") ?? "");
   const [sku, setSku] = useState("");
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
@@ -310,7 +324,7 @@ export const PhotoWallPage: React.FC = () => {
   }, [searchParams]);
 
   return (
-    <div className="space-y-5 max-w-6xl spark-scale">
+    <div className="space-y-5 max-w-7xl spark-scale">
       <SparkHubTabs tabs={PHOTOS_HUB_TABS} ariaLabel="Photo views" />
       <div className="spark-card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
         <input

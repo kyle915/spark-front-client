@@ -6,6 +6,7 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
+import { useAuthStore } from "@/store/authStore";
 import PilotPeriodBar from "./PilotPeriodBar";
 import { resolvePilotPeriod, type PilotRangeKey } from "./pilotPeriodFilter";
 import { PilotQueriesRetailerPosPageQuery } from "@/api/queries/PilotQueries";
@@ -805,6 +806,7 @@ const PosBody: React.FC<{
 };
 
 export const RetailerPosPage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
   const [range, setRange] = useState<PilotRangeKey>("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -823,6 +825,7 @@ export const RetailerPosPage: React.FC = () => {
       </div>
       <Suspense fallback={<p className="text-sm" style={META}>Loading POS analytics…</p>}>
         <PosBody
+          key={tenantId ?? "none"}
           periodStart={periodStart}
           periodEnd={periodEnd}
           periodControls={

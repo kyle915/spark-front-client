@@ -1,7 +1,9 @@
-import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import environment from "@/api/relay/environment";
+import { useAuthStore } from "@/store/authStore";
 import { providerSubmitUrl } from "@/utils/publicHosts";
 import {
   formatHonestMoney,
@@ -146,6 +148,24 @@ const BuyerReportBody: React.FC<{
     }
   };
 
+  const retailerBanners = useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of report.rows) {
+      const b = (r.retailerBanner || "").trim();
+      if (b) seen.add(b);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [report.rows]);
+
+  const reportMarkets = useMemo(() => {
+    const seen = new Set<string>();
+    for (const r of report.rows) {
+      const m = (r.market || "").trim();
+      if (m) seen.add(m);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b));
+  }, [report.rows]);
+
   return (
     <div className="space-y-6 max-w-7xl">
       <SparkPageHeader
@@ -241,9 +261,16 @@ const BuyerReportBody: React.FC<{
       </div>
 
       <BuyerPitchDeckShareCard
+        brandName={ws.tenantName}
+        periodStart={periodStart ?? report.periodStart}
+        periodEnd={periodEnd ?? report.periodEnd}
         retailerFilter={retailerFilter}
+        onRetailerFilterChange={setRetailerFilter}
         marketFilter={marketFilter}
+        onMarketFilterChange={setMarketFilter}
         providerUuid={providerUuid}
+        retailerBanners={retailerBanners}
+        markets={reportMarkets}
       />
 
       {(ws.canManagePos || ws.isBrandAdmin) && (
@@ -683,13 +710,26 @@ const BuyerReportBody: React.FC<{
 };
 
 export const BuyerReportPage: React.FC = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
+  const [searchParams] = useSearchParams();
   const [range, setRange] = useState<PilotRangeKey>("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [retailerFilter, setRetailerFilter] = useState("");
-  const [marketFilter, setMarketFilter] = useState("");
+  const [retailerFilter, setRetailerFilter] = useState(
+    () => searchParams.get("retailer") ?? "",
+  );
+  const [marketFilter, setMarketFilter] = useState(
+    () => searchParams.get("market") ?? "",
+  );
   const [providerUuid, setProviderUuid] = useState("");
   const [fetchKey, setFetchKey] = useState(0);
+
+  useEffect(() => {
+    if (searchParams.get("deck") === "1") {
+      const el = document.getElementById("buyer-deck-builder");
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [searchParams]);
 
   const { periodStart, periodEnd } = useMemo(
     () => resolvePilotPeriod(range, customStart, customEnd),
@@ -704,6 +744,7 @@ export const BuyerReportPage: React.FC = () => {
       </div>
       <Suspense fallback={<p className="text-sm" style={META}>Loading buyer report…</p>}>
         <BuyerReportBody
+          key={tenantId ?? "none"}
           periodStart={periodStart}
           periodEnd={periodEnd}
           periodControls={
