@@ -7,6 +7,7 @@ import { EMAIL_RE, parseRecipients } from "@/utils/emailRecipients";
 import { useAlertStore } from "@/store/alertStore";
 import { SparkSheet } from "@/shared/SparkSheet";
 import { CopyMorphButton } from "@/motion/CopyMorphButton";
+import { ChipInput } from "@/motion/ChipInput";
 import { PaperPlaneSendButton } from "@/motion/FeedbackActionButton";
 
 /**
@@ -165,19 +166,19 @@ export default function ShareRecapModal({
         </p>
         {sentTo === null ? (
           <div className="space-y-2">
-            <input
+            <ChipInput
+              mode="email"
               value={recipientsRaw}
-              onChange={(e) => setRecipientsRaw(e.target.value)}
+              onChange={setRecipientsRaw}
               placeholder="name@brand.com, teammate@brand.com"
               autoFocus={!mobile}
-              className="w-full rounded-xl text-sm"
+              ariaLabel="Recipient emails"
+              className="rounded-xl text-sm py-2 px-3"
               style={{
-                padding: "0.6rem 0.85rem",
                 minHeight: 44,
                 background: "var(--spark-bg)",
                 border: "1px solid var(--spark-border)",
                 color: "var(--spark-text)",
-                outline: "none",
               }}
             />
             <textarea

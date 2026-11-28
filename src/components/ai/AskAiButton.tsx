@@ -15,7 +15,11 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import AiMarkdown from "./AiMarkdown";
 import AiChartView from "./AiChartView";
-import AskSparkPopoverFrame, { SparkThinkingDots } from "./AskSparkPopoverFrame";
+import AskSparkPopoverFrame from "./AskSparkPopoverFrame";
+import {
+  AskSparkEvidenceBar,
+  AskSparkPendingStatus,
+} from "./AskSparkGroundingBar";
 import {
   ASK_AI_FOLLOWUPS,
   EVENT_ASK_AI_FOLLOWUPS,
@@ -384,6 +388,25 @@ export const AskAiModal: React.FC<{
                     >
                       {dt.ok ? (
                         <>
+                          <AskSparkEvidenceBar
+                            scopeLabel={
+                              scope === "recap"
+                                ? subjectLabel
+                                  ? `recap (${subjectLabel})`
+                                  : "this recap"
+                                : scope === "event"
+                                  ? subjectLabel
+                                    ? `event (${subjectLabel})`
+                                    : "this event"
+                                  : "client program data"
+                            }
+                            thoughtSeconds={dt.thoughtFor}
+                            hasChart={Boolean(dt.chart)}
+                          >
+                            <p className="text-[11.5px] leading-snug" style={META}>
+                              {copy.blurb}
+                            </p>
+                          </AskSparkEvidenceBar>
                           <AiMarkdown>{dt.answer}</AiMarkdown>
                           {dt.chart ? <AiChartView chart={dt.chart} /> : null}
                           <div
@@ -444,7 +467,7 @@ export const AskAiModal: React.FC<{
                     {pendingData}
                   </p>
                 </div>
-                <SparkThinkingDots label="Checking program data…" />
+                <AskSparkPendingStatus />
               </li>
             ) : null}
           </ul>

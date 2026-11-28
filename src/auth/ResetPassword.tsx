@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { AuthShell } from "./AuthShell";
 import { failureMessage, newPasswordProblem } from "./authCopy";
+import { PasswordStrengthMeter } from "@/motion/PasswordStrengthMeter";
 
 /**
  * /reset-password/:token — Set a new password. We POST the token +
@@ -102,6 +103,7 @@ export default function ResetPassword() {
               onChange={(e) => setPassword1(e.target.value)}
               autoFocus
             />
+            <PasswordStrengthMeter password={password1} />
           </div>
 
           <div className="signin-field">

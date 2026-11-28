@@ -24,6 +24,8 @@ import {
   utmMutationVariables,
 } from "./marketingUtm";
 import { StepTrack, StrokeCheckBadge } from "@/motion/ProgressMoments";
+import { PasswordStrengthMeter } from "@/motion/PasswordStrengthMeter";
+import { PlanPickerCard } from "@/motion/PlanAndTideMoments";
 import {
   PilotQueriesOnboardingStateQuery,
   PilotQueriesStarterCatalogQuery,
@@ -274,6 +276,7 @@ const UnauthenticatedSignupStep: React.FC<{
                 border: "1px solid var(--spark-border)",
               }}
             />
+            <PasswordStrengthMeter password={password} />
           </label>
         </div>
 
@@ -759,35 +762,16 @@ const AuthenticatedOnboardingWizard: React.FC<{
             </h3>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" role="radiogroup" aria-label="Starter program format">
             {st.starters.map((opt) => (
-              <label
+              <PlanPickerCard
                 key={opt.key}
-                className="flex items-start gap-3 rounded-xl p-3 cursor-pointer"
-                style={{
-                  background:
-                    selectedKey === opt.key
-                      ? "var(--pilot-ok-subtle)"
-                      : "var(--spark-surface-2)",
-                  border:
-                    selectedKey === opt.key
-                      ? "1.5px solid var(--pilot-ok-border)"
-                      : "1px solid var(--spark-border)",
-                }}
-              >
-                <input
-                  type="radio"
-                  name="starterKey"
-                  checked={selectedKey === opt.key}
-                  onChange={() => setSelectedKey(opt.key)}
-                  className="mt-1"
-                  style={{ accentColor: "var(--pilot-control-accent)" }}
-                />
-                <div>
-                  <p className="text-sm font-semibold">{opt.name}</p>
-                  <p className="text-xs" style={{ color: "var(--spark-text-meta)" }}>{opt.description}</p>
-                </div>
-              </label>
+                compact
+                selected={selectedKey === opt.key}
+                onSelect={() => setSelectedKey(opt.key)}
+                title={opt.name}
+                subtitle={opt.description}
+              />
             ))}
           </div>
 

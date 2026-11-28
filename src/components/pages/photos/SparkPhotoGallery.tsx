@@ -6,6 +6,7 @@ import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
+import { LikeBurst } from "@/motion/LikeBurst";
 import { PHOTOS_HUB_TABS } from "@/shared/sparkHubNav";
 import { TenantPhotoGalleryQuery } from "@/api/queries/TenantPhotoGalleryQuery";
 import type { TenantPhotoGalleryQuery as QueryType } from "@api/queries/__generated__/TenantPhotoGalleryQuery.graphql";
@@ -184,33 +185,38 @@ const Grid: React.FC<{
                     <Maximize2 size={13} strokeWidth={2} />
                   </span>
                 </button>
-                <label
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-2 left-2 z-10 inline-flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition"
-                  style={{
-                    background: on ? "var(--spark-lime)" : "rgba(255, 255, 255, 0.92)",
-                    border: on
-                      ? "1px solid var(--spark-lime)"
-                      : "1px solid rgba(20, 22, 15, 0.18)",
-                  }}
+                <LikeBurst
+                  active={on}
+                  className="absolute top-2 left-2 z-10 rounded-lg"
                 >
-                  <input
-                    type="checkbox"
-                    checked={on}
-                    onChange={() => onToggle(p)}
-                    aria-label={`Select photo: ${p.category || "field photo"}, ${photoCaption(p)}`}
-                    className="sr-only"
-                  />
-                  {on ? (
-                    <Check size={14} strokeWidth={2.5} style={{ color: "var(--spark-on-accent)" }} />
-                  ) : (
-                    <span
-                      aria-hidden
-                      className="w-3.5 h-3.5 rounded-[4px]"
-                      style={{ border: "1.5px solid rgba(20, 22, 15, 0.45)" }}
+                  <label
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer transition"
+                    style={{
+                      background: on ? "var(--spark-lime)" : "rgba(255, 255, 255, 0.92)",
+                      border: on
+                        ? "1px solid var(--spark-lime)"
+                        : "1px solid rgba(20, 22, 15, 0.18)",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => onToggle(p)}
+                      aria-label={`Select photo: ${p.category || "field photo"}, ${photoCaption(p)}`}
+                      className="sr-only"
                     />
-                  )}
-                </label>
+                    {on ? (
+                      <Check size={14} strokeWidth={2.5} style={{ color: "var(--spark-on-accent)" }} />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="w-3.5 h-3.5 rounded-[4px]"
+                        style={{ border: "1.5px solid rgba(20, 22, 15, 0.45)" }}
+                      />
+                    )}
+                  </label>
+                </LikeBurst>
               </div>
               <p className="text-xs mt-1.5 font-semibold truncate" title={p.category}>
                 {p.category || "Field photo"}
@@ -656,18 +662,20 @@ const SparkPhotoGallery: React.FC = () => {
               }
               loop
               headerAction={
-                <button
-                  type="button"
-                  onClick={() => toggle(activePhoto)}
-                  className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
-                  style={{
-                    background: isSelected ? "#f2f3ee" : "rgba(10, 13, 9, 0.72)",
-                    color: isSelected ? "#14160f" : "#f2f3ee",
-                    border: "1px solid rgba(255, 255, 255, 0.34)",
-                  }}
-                >
-                  {isSelected ? "✓ Selected for deck" : "+ Select for deck"}
-                </button>
+                <LikeBurst active={isSelected} className="rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => toggle(activePhoto)}
+                    className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
+                    style={{
+                      background: isSelected ? "#f2f3ee" : "rgba(10, 13, 9, 0.72)",
+                      color: isSelected ? "#14160f" : "#f2f3ee",
+                      border: "1px solid rgba(255, 255, 255, 0.34)",
+                    }}
+                  >
+                    {isSelected ? "✓ Selected for deck" : "+ Select for deck"}
+                  </button>
+                </LikeBurst>
               }
             />
           );

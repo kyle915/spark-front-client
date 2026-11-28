@@ -1,6 +1,7 @@
 import FormInputText from "@shared/FormInputText";
 import LoadingButton from "@/shared/LoadingButton";
 import SocialAuthButtons from "@auth/components/SocialAuthButtons";
+import { PasswordStrengthMeter } from "@/motion/PasswordStrengthMeter";
 import type { Control, UseFormHandleSubmit } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
 import { Link } from "react-router";
@@ -66,6 +67,7 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
           placeholder="Enter your password"
           rules={{ required: "Password is required" }}
         />
+        <PasswordStrengthMeter password={passwordValue} />
       </div>
 
       <div>

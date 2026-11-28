@@ -47,6 +47,9 @@ import RequestQuickPeekSheet from "./RequestQuickPeekSheet";
 import { stepQuickPeekIndex, type QuickPeekItem } from "./quickPeekNav";
 import { CountReel } from "@/motion/CountReel";
 import { LeafTabs } from "@/motion/LeafTabs";
+import ActiveFilterStrip, {
+  type ActiveFilterChipItem,
+} from "@/shared/ActiveFilterStrip";
 import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
@@ -2477,6 +2480,118 @@ export default function MasterTracker() {
           )}
         </SparkFilterBar>
         </div>
+        {(() => {
+          const dateLabels: Record<string, string> = {
+            next7: "Next 7 days",
+            next30: "Next 30 days",
+            next90: "Next 90 days",
+            month: "This month",
+            past7: "Past 7 days",
+            past30: "Past 30 days",
+          };
+          const schedLabels: Record<string, string> = {
+            already_scheduled: "Already scheduled",
+            needs_scheduling: "Needs scheduling",
+            [STAFFING_UNSTAFFED]: "No ambassador assigned",
+            [STAFFING_STAFFED]: "Ambassador assigned",
+          };
+          const sortLabels: Record<string, string> = {
+            "date-asc": "Date · oldest",
+            venue: "Venue · A → Z",
+            status: "Status · urgency",
+          };
+          const activeChips: ActiveFilterChipItem[] = [];
+          if (search.trim()) {
+            activeChips.push({
+              key: "search",
+              label: `Search: "${search.trim()}"`,
+              onRemove: () => setSearch(""),
+            });
+          }
+          if (groupBy !== "none") {
+            activeChips.push({
+              key: "group",
+              label: `Group: ${groupBy === "date" ? "By date" : "By RMM"}`,
+              onRemove: () => setGroupBy("none"),
+            });
+          }
+          if (rmmFilter !== "all") {
+            const rmmName =
+              rmmList.find((r) => r.id === rmmFilter)?.name ?? rmmFilter;
+            activeChips.push({
+              key: "rmm",
+              label: `RMM: ${rmmName}`,
+              onRemove: () => setRmmFilter("all"),
+            });
+          }
+          if (dateRange !== "all" || customRange !== null) {
+            const whenLabel =
+              dateRange === "custom" && customRange
+                ? `${customRange.startDate} → ${customRange.endDate}`
+                : dateLabels[dateRange] ?? dateRange;
+            activeChips.push({
+              key: "when",
+              label: `When: ${whenLabel}`,
+              onRemove: () => {
+                setCustomRange(null);
+                updateDateRangeFilter("all");
+              },
+            });
+          }
+          if (marketFilter !== "all") {
+            activeChips.push({
+              key: "market",
+              label: `Market: ${marketFilter}`,
+              onRemove: () => updateMarketFilter("all"),
+            });
+          }
+          if (schedulingFilter !== "all") {
+            activeChips.push({
+              key: "staffing",
+              label: `Staffing: ${schedLabels[schedulingFilter] ?? schedulingFilter}`,
+              onRemove: () => setSchedulingFilter("all"),
+            });
+          }
+          if (sortMode !== "date-desc") {
+            activeChips.push({
+              key: "sort",
+              label: `Sort: ${sortLabels[sortMode] ?? sortMode}`,
+              onRemove: () => setSortMode("date-desc"),
+            });
+          }
+          if (planId) {
+            activeChips.push({
+              key: "plan",
+              label: "Activation plan",
+              onRemove: () => setPlanFilter(null),
+            });
+          }
+          return (
+            <ActiveFilterStrip
+              className="mt-1.5"
+              chips={activeChips}
+              onResetAll={() => {
+                setSearch("");
+                setGroupBy("none");
+                setRmmFilter("all");
+                setDateRange("all");
+                setCustomRange(null);
+                setMarketFilter("all");
+                setSchedulingFilter("all");
+                setSortMode("date-desc");
+                setPlanId(null);
+                setSearchParams(
+                  buildTrackerUrlParams(searchParams, {
+                    dateRange: "all",
+                    market: "all",
+                    planId: null,
+                  }),
+                  { replace: true },
+                );
+              }}
+            />
+          );
+        })()}
         </div>
 
         {planId ? (

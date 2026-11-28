@@ -23,6 +23,10 @@ import type { BrandChatMutationsReportUnhelpfulMutation } from "@api/mutations/_
 import type { JumpOrigin } from "@/motion/opsMotion";
 import AiMarkdown from "./AiMarkdown";
 import AskSparkPopoverFrame, { SparkThinkingDots } from "./AskSparkPopoverFrame";
+import {
+  AskSparkEvidenceBar,
+  AskSparkPendingStatus,
+} from "./AskSparkGroundingBar";
 import { deriveAskSparkFollowups } from "./askSparkFollowups";
 import { routeContextLabel } from "./routeAskSparkPrompts";
 
@@ -71,13 +75,50 @@ function CopyReplyButton({ text }: { text: string }) {
 }
 
 function SourceChips({ turn, onNavigate }: { turn: Turn; onNavigate: () => void }) {
-  if (!turn.sources.length && !turn.links.length) return null;
   const waveAction = turn.sources.find(
     (s) => s.tool === "propose_demo_wave" && s.link.includes("wave=1"),
   );
   const regularSources = turn.sources.filter((s) => s !== waveAction);
+  const evidenceCount = regularSources.length + turn.links.length;
+
   return (
-    <div className="mt-2.5 space-y-2">
+    <div className="space-y-2">
+      <AskSparkEvidenceBar
+        sourceCount={evidenceCount}
+        scopeLabel="approved program data"
+      >
+        {evidenceCount > 0 ? (
+          <div className="flex flex-wrap gap-1.5" aria-label="Sources">
+            {regularSources.map((s) => (
+              <Link
+                key={s.tool}
+                to={s.link}
+                onClick={onNavigate}
+                className="inline-flex items-center gap-1 max-w-full rounded-lg px-2.5 py-1 text-[11.5px] leading-snug no-underline transition hover:opacity-80"
+                style={chip}
+                title={`Open ${s.linkLabel}`}
+              >
+                <span style={TEXT}>{s.label}</span>
+                {s.detail ? <span style={META}>· {s.detail}</span> : null}
+                <ArrowUpRight size={11} strokeWidth={1.8} style={META} />
+              </Link>
+            ))}
+            {turn.links.map((l) => (
+              <Link
+                key={l.url}
+                to={l.url}
+                onClick={onNavigate}
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11.5px] no-underline transition hover:opacity-80"
+                style={chip}
+                title={`Open the store page for ${l.label}`}
+              >
+                <span style={TEXT}>Store: {l.label}</span>
+                <ArrowUpRight size={11} strokeWidth={1.8} style={META} />
+              </Link>
+            ))}
+          </div>
+        ) : undefined}
+      </AskSparkEvidenceBar>
       {waveAction ? (
         <div
           className="rounded-xl p-3 flex flex-wrap items-center justify-between gap-2.5"
@@ -103,37 +144,6 @@ function SourceChips({ turn, onNavigate }: { turn: Turn; onNavigate: () => void 
             {waveAction.label}
             <ArrowUpRight size={13} strokeWidth={2} />
           </Link>
-        </div>
-      ) : null}
-      {regularSources.length > 0 || turn.links.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5" aria-label="Sources">
-          {regularSources.map((s) => (
-            <Link
-              key={s.tool}
-              to={s.link}
-              onClick={onNavigate}
-              className="inline-flex items-center gap-1 max-w-full rounded-lg px-2.5 py-1 text-[11.5px] leading-snug no-underline transition hover:opacity-80"
-              style={chip}
-              title={`Open ${s.linkLabel}`}
-            >
-              <span style={TEXT}>{s.label}</span>
-              {s.detail ? <span style={META}>· {s.detail}</span> : null}
-              <ArrowUpRight size={11} strokeWidth={1.8} style={META} />
-            </Link>
-          ))}
-          {turn.links.map((l) => (
-            <Link
-              key={l.url}
-              to={l.url}
-              onClick={onNavigate}
-              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11.5px] no-underline transition hover:opacity-80"
-              style={chip}
-              title={`Open the store page for ${l.label}`}
-            >
-              <span style={TEXT}>Store: {l.label}</span>
-              <ArrowUpRight size={11} strokeWidth={1.8} style={META} />
-            </Link>
-          ))}
         </div>
       ) : null}
     </div>
@@ -172,6 +182,7 @@ function TurnView({
           border: "1px solid var(--spark-hairline, var(--spark-border))",
         }}
       >
+        {answered ? <SourceChips turn={turn} onNavigate={onNavigate} /> : null}
         {answered ? (
           <AiMarkdown links={false}>{turn.answer}</AiMarkdown>
         ) : (
@@ -184,7 +195,6 @@ function TurnView({
             {STATUS_NOTE[turn.status]}
           </p>
         ) : null}
-        {answered ? <SourceChips turn={turn} onNavigate={onNavigate} /> : null}
         {answered || turn.status === "not_grounded" ? (
           <div
             className="mt-2.5 pt-2 flex items-center justify-between gap-3"
@@ -553,7 +563,7 @@ export default function BrandChatPanel({
                         {pending}
                       </p>
                     </div>
-                    <SparkThinkingDots label="Checking your program data…" />
+                    <AskSparkPendingStatus isClient />
                   </li>
                 ) : null}
               </ul>

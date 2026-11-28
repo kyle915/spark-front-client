@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
+import { OdometerReadout } from "@/motion/OdometerStepper";
 import { stepNumericInput } from "./oneHandedCheckin";
 
 const STEPS = [1, 5, 10] as const;
@@ -29,6 +30,22 @@ export function QuickCountSteppers({
   ariaPrefix: string;
   compact?: boolean;
 }) {
+  const [pulse, setPulse] = useState<{ delta: number; seq: number } | null>(
+    null,
+  );
+  const parsed = Number(value ?? 0);
+  const numericVal =
+    Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
+
+  const triggerStep = (delta: number) => {
+    setPulse((prev) => ({ delta, seq: (prev?.seq ?? 0) + 1 }));
+    onChange(stepNumericInput(value, delta));
+  };
+
+  const sizedStyle: CSSProperties = compact
+    ? { ...pillStyle, minHeight: 34, minWidth: 38, padding: "3px 8px", fontSize: 12 }
+    : pillStyle;
+
   return (
     <div
       role="group"
@@ -40,17 +57,27 @@ export function QuickCountSteppers({
         flexWrap: "wrap",
       }}
     >
+      <OdometerReadout value={numericVal} compact={compact} />
+      {numericVal > 0 ? (
+        <button
+          key={pulse?.delta === -1 ? `minus-${pulse.seq}` : "minus"}
+          type="button"
+          onClick={() => triggerStep(-1)}
+          aria-label={`Subtract 1 from ${ariaPrefix}`}
+          className={pulse?.delta === -1 ? "spark-stepper-pop" : undefined}
+          style={sizedStyle}
+        >
+          −1
+        </button>
+      ) : null}
       {STEPS.map((delta) => (
         <button
-          key={delta}
+          key={pulse?.delta === delta ? `plus-${delta}-${pulse.seq}` : delta}
           type="button"
-          onClick={() => onChange(stepNumericInput(value, delta))}
+          onClick={() => triggerStep(delta)}
           aria-label={`Add ${delta} to ${ariaPrefix}`}
-          style={
-            compact
-              ? { ...pillStyle, minHeight: 34, minWidth: 38, padding: "3px 8px", fontSize: 12 }
-              : pillStyle
-          }
+          className={pulse?.delta === delta ? "spark-stepper-pop" : undefined}
+          style={sizedStyle}
         >
           +{delta}
         </button>

@@ -21,6 +21,7 @@ import type { SavedViewsWebhooksQueriesSavedReportViewsQuery as ViewsQueryType }
 import type { SavedViewsWebhooksMutationsUpsertSavedReportViewMutation as UpsertType } from "@/api/mutations/__generated__/SavedViewsWebhooksMutationsUpsertSavedReportViewMutation.graphql";
 import type { SavedViewsWebhooksMutationsDeleteSavedReportViewMutation as DeleteType } from "@/api/mutations/__generated__/SavedViewsWebhooksMutationsDeleteSavedReportViewMutation.graphql";
 import type { SavedViewsWebhooksMutationsSendSavedReportViewNowMutation as SendNowType } from "@/api/mutations/__generated__/SavedViewsWebhooksMutationsSendSavedReportViewNowMutation.graphql";
+import { ChipInput } from "@/motion/ChipInput";
 
 export type SavedViewFilters = Record<string, string>;
 
@@ -411,20 +412,20 @@ const SavedViewsInner: React.FC<{
                 </select>
               </label>
 
-              <label className="sm:col-span-3 block space-y-1">
+              <div className="sm:col-span-3 block space-y-1">
                 <span className="font-medium" style={META}>
                   Recipients (comma-separated distributor, broker, or buyer emails) *
                 </span>
-                <input
-                  type="text"
+                <ChipInput
+                  mode="email"
                   required={scheduleEnabled}
                   value={recipients}
-                  onChange={(e) => setRecipients(e.target.value)}
+                  onChange={setRecipients}
                   placeholder="broker@distributor.com, regional@brand.com"
-                  className="w-full px-3 py-2 rounded-lg text-xs"
+                  ariaLabel="Digest recipient emails"
                   style={FIELD}
                 />
-              </label>
+              </div>
             </div>
           )}
 

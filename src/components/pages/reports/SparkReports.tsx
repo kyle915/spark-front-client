@@ -62,6 +62,11 @@ import {
   ConsumersPerWeek,
 } from "@/components/charts/ConsumerCharts";
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
+import {
+  KpiDeltaBadge,
+  MiniSparkline,
+  StudioKpiSkeleton,
+} from "@/motion/StudioKpiCard";
 import { ofAsked } from "@/lib/consumerBreakdown";
 import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
 import type { TenantConversionKpisQuery as TenantConversionKpisQueryType } from "@api/queries/__generated__/TenantConversionKpisQuery.graphql";
@@ -435,16 +440,10 @@ const RequestChartsRow: React.FC = () => {
 
 const DeltaPill: React.FC<{ badge: DeltaBadge | null }> = ({ badge }) => {
   if (!badge) return null;
-  const color =
-    badge.direction === "up"
-      ? "var(--spark-ok-ink)"
-      : badge.direction === "down"
-        ? "var(--spark-orange)"
-        : "var(--spark-text-meta)";
   return (
-    <span className="block text-xs font-medium tab-num mt-1" style={{ color }}>
-      {badge.text}
-    </span>
+    <div className="mt-1.5">
+      <KpiDeltaBadge direction={badge.direction} label={badge.text} />
+    </div>
   );
 };
 
@@ -500,10 +499,17 @@ const ConsumersSummary: React.FC<{
       ? everyRecap
       : null;
   const priorWin = comparePrior ? computePriorDateWindow(startDate, endDate) : null;
+  const weeklyPts = breakdown.byWeek.map((w) => w.consumers);
   return (
     <div className="min-w-0">
-      <dt className="text-[13px] font-medium" style={{ color: "var(--spark-text-secondary)" }}>
-        Consumers sampled
+      <dt
+        className="flex items-center justify-between gap-2 text-[13px] font-medium"
+        style={{ color: "var(--spark-text-secondary)" }}
+      >
+        <span className="truncate">Consumers sampled</span>
+        {weeklyPts.length >= 2 ? (
+          <MiniSparkline points={weeklyPts} tone="positive" width={54} height={18} />
+        ) : null}
       </dt>
       <dd
         className="display tab-num m-0 mt-1 text-3xl font-semibold truncate"
@@ -1013,7 +1019,7 @@ export default function SparkReports() {
                   key={`${tenantId}|${startYmd}|${endYmd}`}
                   fallback={<ConsumersUnavailable />}
                 >
-                  <Suspense fallback={<SummaryItem label="Consumers sampled" figure="…" />}>
+                  <Suspense fallback={<StudioKpiSkeleton variant="inline" label="Consumers sampled" />}>
                     <ConsumersSummary
                       tenantId={tenantId}
                       startDate={startYmd}
@@ -1039,8 +1045,8 @@ export default function SparkReports() {
                   <Suspense
                     fallback={
                       <>
-                        <SummaryItem label="Units sold" figure="…" note="retail and on-premise recaps" />
-                        <SummaryItem label="Conversion" figure="…" note="retail and on-premise only" />
+                        <StudioKpiSkeleton variant="inline" label="Units sold" />
+                        <StudioKpiSkeleton variant="inline" label="Conversion" />
                       </>
                     }
                   >

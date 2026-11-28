@@ -55,6 +55,9 @@ import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { CountReel } from "@/motion/CountReel";
 import { LeafTabs } from "@/motion/LeafTabs";
 import { StatusMorph } from "@/motion/StatusMorph";
+import ActiveFilterStrip, {
+  type ActiveFilterChipItem,
+} from "@/shared/ActiveFilterStrip";
 import {
   dispatchOpenJump,
   holdActionSuccess,
@@ -4237,6 +4240,79 @@ export default function SparkRecapsList() {
             )}
           </div>
         </div>
+
+        {(() => {
+          const removableChips: ActiveFilterChipItem[] = [];
+          if (search.trim()) {
+            removableChips.push({
+              key: "search",
+              label: `Search: "${search.trim()}"`,
+              onRemove: () => setSearch(""),
+            });
+          }
+          if (retailerFilter !== "all") {
+            removableChips.push({
+              key: "retailer",
+              label: `Retailer: ${retailerFilter}`,
+              onRemove: () => setRetailerFilter("all"),
+            });
+          }
+          if (stateFilter !== "all") {
+            removableChips.push({
+              key: "state",
+              label: `State: ${stateFilter}`,
+              onRemove: () => setStateFilter("all"),
+            });
+          }
+          if (!isClient && rmmFilter !== "all") {
+            removableChips.push({
+              key: "rmm",
+              label: "Regional manager",
+              onRemove: () => setRmmFilter("all"),
+            });
+          }
+          if (!isClient && baName.trim()) {
+            removableChips.push({
+              key: "ba",
+              label: `Ambassador: ${baName.trim()}`,
+              onRemove: () => setBaName(""),
+            });
+          }
+          if (activationFilter !== "all") {
+            removableChips.push({
+              key: "activation",
+              label: `Type: ${recapActivationFilterLabel(activationFilter)}`,
+              onRemove: () => setActivationFilter("all"),
+            });
+          }
+          if (!isClient && needsStoreMap) {
+            removableChips.push({
+              key: "store-map",
+              label: "Needs store mapping",
+              onRemove: () => setNeedsStoreMap(false),
+            });
+          }
+          if (!isClient && triageFilter !== "all") {
+            removableChips.push({
+              key: "triage",
+              label: `Triage: ${triageFilter === "clean" ? "Clean" : "Needs Eyes"}`,
+              onRemove: () => setTriageFilter("all"),
+            });
+          }
+          if (dateFrom !== DAYS_30_ISO || dateTo !== TODAY_ISO) {
+            removableChips.push({
+              key: "window",
+              label: `Window: ${windowLabel}`,
+              onRemove: () => applyDatePreset("30d"),
+            });
+          }
+          return (
+            <ActiveFilterStrip
+              chips={removableChips}
+              onResetAll={clearAllFilters}
+            />
+          );
+        })()}
 
         <div className="spark-bento" aria-label="Recap totals in view">
           {demoteEngWhenConvIsLime(

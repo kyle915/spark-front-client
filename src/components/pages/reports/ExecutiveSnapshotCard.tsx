@@ -20,14 +20,18 @@ import {
   Mail,
   MessageSquareQuote,
   Settings2,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react";
 import { InkSwitch } from "@/motion/InkSwitch";
+import { ChipInput } from "@/motion/ChipInput";
 import {
   DownloadRingButton,
   PaperPlaneSendButton,
 } from "@/motion/FeedbackActionButton";
+import {
+  KpiDeltaBadge,
+  MiniSparkline,
+  type KpiDirection,
+} from "@/motion/StudioKpiCard";
 import { ExecutiveSnapshotQuery } from "@/api/queries/RetentionAutomationQueries";
 import {
   ExportExecutiveSnapshotPdfMutation,
@@ -448,19 +452,19 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
           }}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label className="md:col-span-2 block space-y-1">
+            <div className="md:col-span-2 block space-y-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={META}>
                 Stakeholder recipients (comma-separated)
               </span>
-              <input
-                type="text"
+              <ChipInput
+                mode="email"
                 value={recipients}
-                onChange={(e) => setRecipients(e.target.value)}
+                onChange={setRecipients}
                 placeholder="vp-sales@brand.com, founder@brand.com"
-                className="w-full rounded-lg px-3 py-1.5 text-xs outline-none"
+                ariaLabel="Stakeholder recipients"
                 style={FIELD}
               />
-            </label>
+            </div>
             <label className="block space-y-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={META}>
                 Target MSRP ($) for price-drift callouts
@@ -514,37 +518,47 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
       {/* Compact Headline KPIs Strip (vs Prior Month) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {snap.kpis.map((kpi) => {
-          const isUp = kpi.direction === "up";
-          const isDown = kpi.direction === "down";
+          const dir: KpiDirection =
+            kpi.direction === "up"
+              ? "up"
+              : kpi.direction === "down"
+                ? "down"
+                : "flat";
+          const kKey = kpi.key.toLowerCase();
+          const sparkPts =
+            snap.topDoors.length >= 2
+              ? kKey.includes("sold") || kKey.includes("unit")
+                ? [...snap.topDoors].reverse().map((d) => d.unitsSold)
+                : kKey.includes("sample") || kKey.includes("consumer")
+                  ? [...snap.topDoors].reverse().map((d) => d.consumersSampled)
+                  : []
+              : [];
           return (
             <div
               key={kpi.key}
-              className="rounded-xl p-3 space-y-1"
+              className="rounded-xl p-3 space-y-1.5"
               style={{
                 background: "var(--spark-surface-2)",
                 ...BORDER,
               }}
             >
-              <span className="text-[11px] font-medium block truncate" style={META}>
-                {kpi.label}
-              </span>
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="text-[11px] font-medium block truncate" style={META}>
+                  {kpi.label}
+                </span>
+                {sparkPts.length >= 2 ? (
+                  <MiniSparkline
+                    points={sparkPts}
+                    tone={dir === "down" ? "negative" : "positive"}
+                    width={46}
+                    height={16}
+                  />
+                ) : null}
+              </div>
               <p className="display text-lg font-bold tab-num" style={TEXT}>
                 {kpi.formattedValue}
               </p>
-              <span
-                className="inline-flex items-center gap-1 text-[11px] font-medium tab-num"
-                style={{
-                  color: isUp
-                    ? "var(--spark-ok-ink)"
-                    : isDown
-                      ? "var(--spark-flag-ink, #a8340f)"
-                      : "var(--spark-text-meta)",
-                }}
-              >
-                {isUp ? <TrendingUp size={11} /> : null}
-                {isDown ? <TrendingDown size={11} /> : null}
-                {kpi.deltaLabel}
-              </span>
+              <KpiDeltaBadge direction={dir} label={kpi.deltaLabel} />
             </div>
           );
         })}

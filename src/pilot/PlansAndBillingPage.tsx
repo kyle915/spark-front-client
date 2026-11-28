@@ -11,6 +11,9 @@ import {
   planBadgeMeta,
   subscriptionStatusBadge,
 } from "./pilotHelpers";
+import { InkSwitch } from "@/motion/InkSwitch";
+import { LeafTabs } from "@/motion/LeafTabs";
+import { PlanPickerCard, TideProgress } from "@/motion/PlanAndTideMoments";
 import {
   PilotQueriesPlansAndBillingQuery,
   PilotQueriesPreviewPlanChangeQuery,
@@ -128,6 +131,9 @@ const PlansAndBillingBody: React.FC<{
   // Banner / error feedback
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cadenceHorizon, setCadenceHorizon] = useState<"monthly" | "annual">(
+    "monthly",
+  );
 
   const urlTestSessionId = searchParams.get("test_checkout_session");
   const activeOpenCheckout =
@@ -742,18 +748,12 @@ const PlansAndBillingBody: React.FC<{
           </span>
         </div>
 
-        <div
-          className="w-full h-3 rounded-full overflow-hidden"
-          style={{ background: "var(--pilot-meter-track)" }}
-        >
-          <div
-            className="h-full transition-all duration-300"
-            style={{
-              width: `${meter.percent}%`,
-              background: meter.barColor,
-            }}
-          />
-        </div>
+        <TideProgress
+          percent={meter.percent}
+          barColor={meter.barColor}
+          showPercentBadge
+          ariaLabel="Monthly canonical visit meter"
+        />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-lg p-3" style={BORDER}>
@@ -898,106 +898,52 @@ const PlansAndBillingBody: React.FC<{
 
       {/* Plan Comparison Cards */}
       <section className="space-y-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider mono" style={META}>
-            Transparent Monthly Tiers · Configurable Catalog & Volume Bands
-          </p>
-          <h2 className="display text-xl font-bold mt-1">
-            Compare Spark Software Plans
-          </h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wider mono" style={META}>
+              Transparent Monthly Tiers · Configurable Catalog & Volume Bands
+            </p>
+            <h2 className="display text-xl font-bold mt-1">
+              Compare Spark Software Plans
+            </h2>
+          </div>
+          <LeafTabs
+            ariaLabel="Plan price horizon"
+            value={cadenceHorizon}
+            onChange={setCadenceHorizon}
+            options={[
+              { key: "monthly", label: "Monthly rate" },
+              { key: "annual", label: "12-mo run rate" },
+            ]}
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {ov.availablePlans.map((plan) => {
             const isCurrent = plan.isCurrent;
+            const monthlyUsd = Number(plan.monthlyPriceUsd);
+            const shownPrice =
+              cadenceHorizon === "annual" ? monthlyUsd * 12 : monthlyUsd;
             return (
-              <div
+              <PlanPickerCard
                 key={plan.planCode}
-                className="rounded-xl p-5 flex flex-col justify-between space-y-4"
-                style={{
-                  border: isCurrent
-                    ? "1.5px solid var(--pilot-ok-border)"
-                    : "1px solid var(--spark-border)",
-                  background: isCurrent
-                    ? "var(--pilot-ok-subtle)"
-                    : "var(--spark-surface)",
-                }}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="display text-lg font-bold">
-                      {plan.displayName}
-                    </h3>
-                    {isCurrent ? (
-                      <span
-                        className="px-2 py-0.5 rounded-full text-[11px] font-bold mono"
-                        style={{
-                          background: "var(--pilot-cta-bg)",
-                          color: "var(--pilot-cta-fg)",
-                        }}
-                      >
-                        CURRENT
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div>
-                    <span className="display text-2xl font-bold mono">
-                      {plan.isQuoteOnly ? "From " : ""}${Number(plan.monthlyPriceUsd).toLocaleString("en-US")}
+                selected={isCurrent}
+                title={plan.displayName}
+                badge={
+                  isCurrent ? (
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[11px] font-bold mono"
+                      style={{
+                        background: "var(--pilot-cta-bg)",
+                        color: "var(--pilot-cta-fg)",
+                      }}
+                    >
+                      CURRENT
                     </span>
-                    <span className="text-xs ml-1" style={META}>
-                      / month
-                    </span>
-                    <p className="text-xs font-semibold mono mt-1" style={{ color: "var(--pilot-ok-fg)" }}>
-                      {plan.includedCompletedVisits != null
-                        ? `${plan.includedCompletedVisits} completed visits / mo`
-                        : "Contracted SOW visits"}
-                    </p>
-                  </div>
-
-                  <p className="text-xs" style={META}>
-                    {plan.tagline}
-                  </p>
-
-                  <ul
-                    className="space-y-1.5 text-xs pt-2"
-                    style={{ borderTop: "1px solid var(--spark-border)" }}
-                  >
-                    <li>
-                      • Operating providers:{" "}
-                      <strong>{plan.maxOperatingProviders ?? "Unlimited"}</strong>
-                    </li>
-                    <li>
-                      • Active programs:{" "}
-                      <strong>{plan.maxActivePrograms ?? "Unlimited"}</strong>
-                    </li>
-                    <li>
-                      • Ongoing agency CSV imports:{" "}
-                      <strong>{plan.allowsProviderCsvImports ? "Included" : "—"}</strong>
-                    </li>
-                    <li>
-                      • Store recommendations & exports:{" "}
-                      <strong>{plan.allowsStoreRecommendations ? "Included" : "—"}</strong>
-                    </li>
-                    <li>
-                      • POS lift & ROI:{" "}
-                      <strong>
-                        {plan.allowsRetailerPosMeasurement
-                          ? plan.maxPosRetailers != null
-                            ? `Up to ${plan.maxPosRetailers} retailer${plan.maxPosRetailers === 1 ? "" : "s"}`
-                            : "Multi-retailer"
-                          : "—"}
-                      </strong>
-                    </li>
-                    <li>
-                      • Demo costs, Finance queue & Rebook/Hold/Restock:{" "}
-                      <strong>{plan.allowsBrandCostTracking ? "Included" : "—"}</strong>
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="pt-2">
-                  {isCurrent ? (
+                  ) : null
+                }
+                footer={
+                  isCurrent ? (
                     <button
                       type="button"
                       disabled
@@ -1019,13 +965,13 @@ const PlansAndBillingBody: React.FC<{
                       type="button"
                       disabled={loadingPreview}
                       onClick={() => void openPlanChangeModal(plan.planCode)}
-                      className="w-full py-2 rounded-lg text-xs font-bold transition-opacity hover:opacity-90"
+                      className="w-full py-2 rounded-lg text-xs font-bold transition-opacity hover:opacity-90 cursor-pointer"
                       style={{
                         background: "var(--pilot-cta-bg)",
                         color: "var(--pilot-cta-fg)",
                       }}
                     >
-                      {Number(plan.monthlyPriceUsd) > Number(ov.monthlyPriceUsd)
+                      {monthlyUsd > Number(ov.monthlyPriceUsd)
                         ? `Upgrade to ${plan.displayName} →`
                         : `Switch to ${plan.displayName}`}
                     </button>
@@ -1033,9 +979,69 @@ const PlansAndBillingBody: React.FC<{
                     <p className="text-[11px] text-center" style={META}>
                       Ask a Brand Admin to change plan
                     </p>
-                  )}
+                  )
+                }
+              >
+                <div>
+                  <span className="display text-2xl font-bold mono tab-num">
+                    {plan.isQuoteOnly ? "From " : ""}$
+                    {shownPrice.toLocaleString("en-US")}
+                  </span>
+                  <span className="text-xs ml-1" style={META}>
+                    {cadenceHorizon === "annual"
+                      ? "/ yr (billed monthly)"
+                      : "/ month"}
+                  </span>
+                  <p
+                    className="text-xs font-semibold mono mt-1"
+                    style={{ color: "var(--pilot-ok-fg)" }}
+                  >
+                    {plan.includedCompletedVisits != null
+                      ? `${plan.includedCompletedVisits} completed visits / mo`
+                      : "Contracted SOW visits"}
+                  </p>
                 </div>
-              </div>
+
+                <p className="text-xs" style={META}>
+                  {plan.tagline}
+                </p>
+
+                <ul
+                  className="space-y-1.5 text-xs pt-2"
+                  style={{ borderTop: "1px solid var(--spark-border)" }}
+                >
+                  <li>
+                    • Operating providers:{" "}
+                    <strong>{plan.maxOperatingProviders ?? "Unlimited"}</strong>
+                  </li>
+                  <li>
+                    • Active programs:{" "}
+                    <strong>{plan.maxActivePrograms ?? "Unlimited"}</strong>
+                  </li>
+                  <li>
+                    • Ongoing agency CSV imports:{" "}
+                    <strong>{plan.allowsProviderCsvImports ? "Included" : "—"}</strong>
+                  </li>
+                  <li>
+                    • Store recommendations & exports:{" "}
+                    <strong>{plan.allowsStoreRecommendations ? "Included" : "—"}</strong>
+                  </li>
+                  <li>
+                    • POS lift & ROI:{" "}
+                    <strong>
+                      {plan.allowsRetailerPosMeasurement
+                        ? plan.maxPosRetailers != null
+                          ? `Up to ${plan.maxPosRetailers} retailer${plan.maxPosRetailers === 1 ? "" : "s"}`
+                          : "Multi-retailer"
+                        : "—"}
+                    </strong>
+                  </li>
+                  <li>
+                    • Demo costs, Finance queue & Rebook/Hold/Restock:{" "}
+                    <strong>{plan.allowsBrandCostTracking ? "Included" : "—"}</strong>
+                  </li>
+                </ul>
+              </PlanPickerCard>
             );
           })}
         </div>
@@ -1067,15 +1073,14 @@ const PlansAndBillingBody: React.FC<{
                   style={BORDER}
                 />
               </label>
-              <label className="flex items-center gap-2 text-xs pt-4 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="pt-4">
+                <InkSwitch
                   checked={overageApproved}
-                  onChange={(e) => setOverageApproved(e.target.checked)}
-                  style={{ accentColor: "var(--pilot-control-accent)" }}
+                  onChange={setOverageApproved}
+                  className="text-xs"
+                  label="Approve $12/visit metered overage above band"
                 />
-                <span>Approve $12/visit metered overage above band</span>
-              </label>
+              </div>
             </div>
             <button
               type="submit"

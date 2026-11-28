@@ -31,6 +31,7 @@ import type { RetentionAutomationMutationsDeleteRegionalAlertSubscriptionMutatio
 import type { RetentionAutomationMutationsSendTestRegionalAlertMutation as TestType } from "@/api/mutations/__generated__/RetentionAutomationMutationsSendTestRegionalAlertMutation.graphql";
 import { parseCsvTokens } from "./regionalAlertsHelpers";
 import { BellToggle, InkSwitch } from "@/motion/InkSwitch";
+import { ChipInput } from "@/motion/ChipInput";
 
 const TEXT = { color: "var(--spark-text)" } as const;
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -372,16 +373,16 @@ export const RegionalAlertsCard: React.FC<{
               />
             </label>
 
-            <label className="block space-y-1">
+            <div className="block space-y-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={META}>
                 States (blank = all states)
               </span>
-              <input
-                type="text"
+              <ChipInput
+                mode="state"
                 value={statesText}
-                onChange={(e) => setStatesText(e.target.value)}
+                onChange={setStatesText}
                 placeholder="TX, OK, LA"
-                className="w-full rounded-lg px-3 py-1.5 text-xs outline-none"
+                ariaLabel="States"
                 style={FIELD}
               />
               {suggestedStates.length > 0 ? (
@@ -403,21 +404,21 @@ export const RegionalAlertsCard: React.FC<{
                   ))}
                 </div>
               ) : null}
-            </label>
+            </div>
 
-            <label className="block space-y-1">
+            <div className="block space-y-1">
               <span className="text-[11px] font-semibold uppercase tracking-wider" style={META}>
                 Retail chains (blank = all chains)
               </span>
-              <input
-                type="text"
+              <ChipInput
+                mode="text"
                 value={chainsText}
-                onChange={(e) => setChainsText(e.target.value)}
+                onChange={setChainsText}
                 placeholder="H-E-B, Whole Foods"
-                className="w-full rounded-lg px-3 py-1.5 text-xs outline-none"
+                ariaLabel="Retail chains"
                 style={FIELD}
               />
-            </label>
+            </div>
           </div>
 
           {/* Conditions */}
@@ -493,12 +494,12 @@ export const RegionalAlertsCard: React.FC<{
                 ariaLabel="Instant email alert"
               />
               {notifyEmail ? (
-                <input
-                  type="text"
+                <ChipInput
+                  mode="email"
                   value={recipientEmails}
-                  onChange={(e) => setRecipientEmails(e.target.value)}
+                  onChange={setRecipientEmails}
                   placeholder="south-region@brand.com, broker@agency.com"
-                  className="w-full rounded-lg px-2.5 py-1.5 text-xs outline-none"
+                  ariaLabel="Alert recipient emails"
                   style={FIELD}
                 />
               ) : null}

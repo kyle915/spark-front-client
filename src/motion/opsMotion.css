@@ -537,6 +537,181 @@
   box-shadow: none !important;
 }
 
+/* 7. Hub Sub-Nav Sliding Underline (LeafTabs extension for SparkHubTabs) */
+.spark-hub-tabs {
+  position: relative;
+}
+.spark-hub-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--spark-text);
+  pointer-events: none;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 150ms ease;
+  will-change: transform, width;
+}
+.spark-hub-tabs.has-hub-indicator .spark-hub-tab.is-active {
+  border-bottom-color: transparent;
+}
+
+/* 8. Chip Input */
+@keyframes spark-chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.spark-chip-pill {
+  animation: spark-chip-in 170ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 9. Odometer Stepper */
+@keyframes spark-odo-roll-up {
+  from {
+    opacity: 0.25;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes spark-odo-roll-down {
+  from {
+    opacity: 0.25;
+    transform: translateY(-7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes spark-stepper-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(0.93);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.spark-odo-up {
+  display: inline-block;
+  animation: spark-odo-roll-up 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.spark-odo-down {
+  display: inline-block;
+  animation: spark-odo-roll-down 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.spark-stepper-pop {
+  animation: spark-stepper-pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 10. Plan Picker & Tide Progress */
+.spark-plan-card {
+  transition: border-color 220ms ease, background-color 220ms ease,
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.spark-plan-card:hover {
+  transform: translateY(-1px);
+}
+.spark-plan-card[data-selected="true"] {
+  box-shadow: 0 0 0 1px rgba(var(--spark-accent-rgb, 148, 224, 64), 0.28),
+    0 10px 24px -12px rgba(0, 0, 0, 0.24);
+}
+@keyframes spark-tide-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+.spark-tide-fill {
+  position: relative;
+  overflow: hidden;
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 260ms ease;
+}
+.spark-tide-crest {
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.28),
+    transparent
+  );
+  animation: spark-tide-shimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* 11. Password Strength Meter */
+.spark-strength-seg {
+  transition: background-color 220ms ease, transform 200ms ease;
+}
+
+/* 12. Like Burst (Photo Pinning / Deck Selection) */
+@keyframes spark-like-ring {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.55);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+@keyframes spark-like-pop {
+  0% {
+    transform: scale(0.82);
+  }
+  55% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.spark-like-burst-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--spark-lime);
+  pointer-events: none;
+  animation: spark-like-ring 460ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.spark-like-pop {
+  animation: spark-like-pop 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 13. Studio KPI Hairline Skeleton */
+@keyframes spark-kpi-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+.spark-kpi-skeleton-bar {
+  background: rgba(var(--spark-ink-rgb, 242, 243, 238), 0.08);
+  animation: spark-kpi-pulse 1.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spark-ops-spinner,
   .spark-ops-check-path,
@@ -552,14 +727,26 @@
   .spark-download-ring-arc,
   .spark-copy-pop,
   .spark-code-shake,
-  .spark-stroke-check-path {
+  .spark-stroke-check-path,
+  .spark-chip-pill,
+  .spark-odo-up,
+  .spark-odo-down,
+  .spark-stepper-pop,
+  .spark-tide-crest,
+  .spark-like-burst-ring,
+  .spark-like-pop,
+  .spark-kpi-skeleton-bar {
     animation: none !important;
   }
   .spark-ink-switch,
   .spark-ink-switch-thumb,
   .spark-stroke-check-path,
   .spark-step-connector-fill,
-  .spark-leaf-indicator {
+  .spark-leaf-indicator,
+  .spark-hub-indicator,
+  .spark-plan-card,
+  .spark-tide-fill,
+  .spark-strength-seg {
     transition: none !important;
   }
   .spark-ops-thinking {

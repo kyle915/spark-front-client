@@ -21,6 +21,12 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import { PhotoLightbox, type PhotoLightboxItem } from "@/shared/PhotoLightbox";
+import { TideProgress } from "@/motion/PlanAndTideMoments";
+import {
+  KpiDeltaBadge,
+  MiniSparkline,
+  StudioKpiSkeleton,
+} from "@/motion/StudioKpiCard";
 import SparkThumb from "@/shared/SparkThumb";
 import { thumbUrl } from "@/utils/thumb";
 import ChartBlock from "@/components/charts/ChartBlock";
@@ -313,34 +319,46 @@ const ShelfVoiceBody: React.FC<{
             <span className="text-xs font-medium" style={META}>
               On-Shelf Availability (OSA)
             </span>
-            <CheckCircle2
-              size={15}
-              style={{
-                color:
-                  (hub.osaRatePct ?? 100) >= 85
-                    ? "var(--spark-ok-ink)"
-                    : "var(--spark-flag-ink, #a8340f)",
-              }}
-            />
+            {marketOsaRows.length >= 2 ? (
+              <MiniSparkline
+                points={marketOsaRows.map((m) => m.osaRatePct)}
+                tone={(hub.osaRatePct ?? 100) >= 85 ? "positive" : "negative"}
+                width={52}
+                height={18}
+              />
+            ) : (
+              <CheckCircle2
+                size={15}
+                style={{
+                  color:
+                    (hub.osaRatePct ?? 100) >= 85
+                      ? "var(--spark-ok-ink)"
+                      : "var(--spark-flag-ink, #a8340f)",
+                }}
+              />
+            )}
           </div>
-          <p className="display text-3xl font-bold tab-num" style={TEXT}>
-            {hub.osaRatePct != null ? `${hub.osaRatePct}%` : "—"}
-          </p>
-          <div
-            className="h-2 w-full rounded-full overflow-hidden"
-            style={{ background: "var(--spark-surface-2)" }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${Math.min(100, Math.max(0, hub.osaRatePct ?? 0))}%`,
-                background:
-                  (hub.osaRatePct ?? 100) >= 85
-                    ? "var(--spark-ok-ink)"
-                    : "var(--spark-flag-ink, #a8340f)",
-              }}
-            />
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <p className="display text-3xl font-bold tab-num" style={TEXT}>
+              {hub.osaRatePct != null ? `${hub.osaRatePct}%` : "—"}
+            </p>
+            {hub.osaRatePct != null ? (
+              <KpiDeltaBadge
+                direction={hub.osaRatePct >= 85 ? "up" : "down"}
+                label={hub.osaRatePct >= 85 ? "Healthy OSA" : "Below 85% target"}
+              />
+            ) : null}
           </div>
+          <TideProgress
+            height={8}
+            percent={hub.osaRatePct ?? 0}
+            barColor={
+              (hub.osaRatePct ?? 100) >= 85
+                ? "var(--spark-ok-ink)"
+                : "var(--spark-flag-ink, #a8340f)"
+            }
+            ariaLabel="On-shelf availability rate"
+          />
           <p className="text-xs tab-num" style={META}>
             {hub.onShelfCount} on shelf · {hub.notFoundCount} not found
             {hub.oosGapsCount > 0 ? ` · ${hub.oosGapsCount} OOS gaps` : ""}
@@ -354,24 +372,27 @@ const ShelfVoiceBody: React.FC<{
             </span>
             <Tag size={15} style={META} />
           </div>
-          <p className="display text-3xl font-bold tab-num" style={TEXT}>
-            {hub.priceTagRatePct != null ? `${hub.priceTagRatePct}%` : "—"}
-          </p>
-          <div
-            className="h-2 w-full rounded-full overflow-hidden"
-            style={{ background: "var(--spark-surface-2)" }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${Math.min(100, Math.max(0, hub.priceTagRatePct ?? 0))}%`,
-                background:
-                  (hub.priceTagRatePct ?? 100) >= 80
-                    ? "var(--spark-ok-ink)"
-                    : "var(--spark-flag-ink, #a8340f)",
-              }}
-            />
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <p className="display text-3xl font-bold tab-num" style={TEXT}>
+              {hub.priceTagRatePct != null ? `${hub.priceTagRatePct}%` : "—"}
+            </p>
+            {hub.priceTagRatePct != null ? (
+              <KpiDeltaBadge
+                direction={hub.priceTagRatePct >= 80 ? "up" : "down"}
+                label={hub.priceTagRatePct >= 80 ? "Tagged" : "Missing tags"}
+              />
+            ) : null}
           </div>
+          <TideProgress
+            height={8}
+            percent={hub.priceTagRatePct ?? 0}
+            barColor={
+              (hub.priceTagRatePct ?? 100) >= 80
+                ? "var(--spark-ok-ink)"
+                : "var(--spark-flag-ink, #a8340f)"
+            }
+            ariaLabel="Price tag compliance rate"
+          />
           <p className="text-xs tab-num" style={META}>
             {hub.priceTagVisibleCount} tagged · {hub.missingTagCount} missing tag
           </p>
@@ -392,9 +413,19 @@ const ShelfVoiceBody: React.FC<{
               }}
             />
           </div>
-          <p className="display text-3xl font-bold tab-num" style={TEXT}>
-            {hub.avgFacings != null ? hub.avgFacings : "—"}
-          </p>
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <p className="display text-3xl font-bold tab-num" style={TEXT}>
+              {hub.avgFacings != null ? hub.avgFacings : "—"}
+            </p>
+            <KpiDeltaBadge
+              direction={hub.oosGapsCount > 0 ? "down" : "flat"}
+              label={
+                hub.oosGapsCount > 0
+                  ? `${hub.oosGapsCount} OOS gap${hub.oosGapsCount === 1 ? "" : "s"}`
+                  : "0 OOS gaps"
+              }
+            />
+          </div>
           <p className="text-xs tab-num" style={META}>
             Avg front facings per audited shelf
           </p>
@@ -1109,9 +1140,12 @@ export const ShelfVoicePage: React.FC = () => {
       ) : (
         <Suspense
           fallback={
-            <p className="text-sm" style={META}>
-              Loading shelf compliance & competitor voice…
-            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StudioKpiSkeleton />
+              <StudioKpiSkeleton />
+              <StudioKpiSkeleton />
+              <StudioKpiSkeleton />
+            </div>
           }
         >
           <ShelfVoiceBody
