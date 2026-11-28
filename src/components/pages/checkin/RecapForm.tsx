@@ -119,6 +119,10 @@ import {
   type RecapDraft,
   type StoreIdentityDraft,
 } from "./recapDraft";
+import {
+  computeRecapSamplesCount,
+  writeShiftReceiptSnapshot,
+} from "./checkinReceiptAndSync";
 import { buildRecapDraftRequest } from "./recapServerDraft";
 import {
   buildCompletenessItems,
@@ -725,6 +729,7 @@ export default function RecapForm({
         /* the device copy already landed */
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- photos triggers debounced draft sync via persistDraft
     [
       code,
       token,
@@ -1532,6 +1537,11 @@ export default function RecapForm({
         photoFiles,
         id: submitKey,
       });
+      writeShiftReceiptSnapshot(code, token, {
+        samplesCount: computeRecapSamplesCount({ productSamples, totalEngagements }),
+        photosCount: files.length,
+        filedAt: submittedAt,
+      });
       // Draft stays until the server ACKs — flushQueuedRecap clears it.
       if (!opts.silent) onQueued();
     };
@@ -1632,6 +1642,11 @@ export default function RecapForm({
       // unmounts this form so a later shift can't resurrect these answers.
       submittedRef.current = true;
       for (const id of [...retryTimers.current.keys()]) cancelAutoRetry(id);
+      writeShiftReceiptSnapshot(code, token, {
+        samplesCount: computeRecapSamplesCount({ productSamples, totalEngagements }),
+        photosCount: photos.filter((p) => !p.unrecoverable).length,
+        filedAt: submittedAt,
+      });
       clearDraft(code, token);
       // This submit just went through. If the queued copy of the same recap
       // had been refused earlier, lift that hold so the queue can settle
@@ -2489,7 +2504,6 @@ export default function RecapForm({
 function MultiselectFieldInput({
   field,
   value,
-  accent: _accent,
   onChange,
   products,
   sampleQtys,

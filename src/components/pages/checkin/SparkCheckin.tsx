@@ -66,6 +66,18 @@ import {
   hasRecapDraft,
 } from "./recapDraft";
 import {
+  buildShiftReceiptMetrics,
+  clearShiftReceiptSnapshot,
+  computeRecapSamplesCount,
+  deriveCheckinSyncPill,
+  readShiftReceiptSnapshot,
+} from "./checkinReceiptAndSync";
+import {
+  CheckinDoneCheck,
+  CheckinSyncPill,
+  ShiftReceiptCard,
+} from "./CheckinReceiptCard";
+import {
   CLOCK_FETCH_TIMEOUT_MS,
   clearCachedContext,
   clearPendingClock,
@@ -625,6 +637,7 @@ export default function SparkCheckin() {
         if (token) {
           clearDraft(code, token);
           clearLiveShiftCounter(code, token);
+          clearShiftReceiptSnapshot(code, token);
         }
       }
     } catch {
@@ -1053,6 +1066,19 @@ function CheckedInFlow({
     readPendingMileage(code),
   );
   const [sendingQueuedRecap, setSendingQueuedRecap] = useState(false);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine !== false,
+  );
+  useEffect(() => {
+    const onUp = () => setIsOnline(true);
+    const onDown = () => setIsOnline(false);
+    window.addEventListener("online", onUp);
+    window.addEventListener("offline", onDown);
+    return () => {
+      window.removeEventListener("online", onUp);
+      window.removeEventListener("offline", onDown);
+    };
+  }, []);
   // Bumped to remount RecapForm after it adopts an earlier session's draft.
   const [recapFormKey, setRecapFormKey] = useState(0);
   // Local draft (typed answers or live shift tallies) — same phone, same session token.
@@ -1661,9 +1687,29 @@ function CheckedInFlow({
   const activePayable =
     payableMileage ?? ctx.session?.payableMileage ?? null;
 
+  const hasQueuedWork = Boolean(
+    queuedClock ||
+      queuedClockOut ||
+      queuedMileage ||
+      (queuedRecap && !queuedRecap.rejected),
+  );
+  const hasRejectedWork = Boolean(lostPunch || queuedRecap?.rejected);
+  const syncPill = deriveCheckinSyncPill({
+    identified: true,
+    isOnline,
+    syncingNow: sendingQueuedRecap || busy !== "",
+    hasQueuedWork,
+    hasRejectedWork,
+    hasLocalDraft: draftWaiting,
+    clockState: effectiveClock,
+    hasRecap,
+  });
+
   if (showMileageStep && activePayable) {
     return (
-      <PayableMileageStep
+      <>
+        <CheckinSyncPill state={syncPill} />
+        <PayableMileageStep
         accent={accent}
         payableMileage={activePayable}
         forceNew={recapAsNew && ctx.mode === "tenant"}
@@ -1757,6 +1803,7 @@ function CheckedInFlow({
           }
         }}
       />
+      </>
     );
   }
 
@@ -1770,7 +1817,9 @@ function CheckedInFlow({
 
   if (showRecap) {
     return (
-      <RecapForm
+      <>
+        <CheckinSyncPill state={syncPill} />
+        <RecapForm
         key={`recap-${recapFormKey}-${programEpoch}`}
         onDraftAdopted={() => setRecapFormKey((k) => k + 1)}
         code={code}
@@ -1815,6 +1864,7 @@ function CheckedInFlow({
           setQueuedRecap(readPendingRecap(code));
         }}
       />
+      </>
     );
   }
 
@@ -1916,57 +1966,90 @@ function CheckedInFlow({
   if (ts && effectiveClock === "clocked_out") {
     const outAt = ctx.session?.clock.clockOutAt ?? queuedClockOut?.clockedOutAt ?? null;
     const hours = workedHours(clockInAt, outAt);
+    const tsMetrics = buildShiftReceiptMetrics({
+      workedHoursValue: hours,
+      clockInAt,
+      clockOutAt: outAt,
+      timesheetOnly: true,
+      snapshot: null,
+      isQueuedOffline: Boolean(queuedClock || queuedClockOut),
+    });
+    const tsDateAndPlace = ctx.event?.date
+      ? `${fmtDay(ctx.event.date)}${ctx.event.address ? ` · ${ctx.event.address}` : ""}`
+      : undefined;
+    const tsPunchLine = clockInAt
+      ? `In ${fmtTime(clockInAt)}${outAt ? ` · Out ${fmtTime(outAt)}` : ""}`
+      : undefined;
     return (
-      <div style={{ ...card, textAlign: "center" }}>
-        <div style={{ fontSize: 40, marginBottom: 6 }} aria-hidden>
-          ✓
+      <>
+        <CheckinSyncPill state={syncPill} />
+        <div style={{ ...card, textAlign: "center" }}>
+          <CheckinDoneCheck />
+          <h2 style={{ ...h2, marginBottom: 6 }}>{TIMESHEET_DONE_TITLE}</h2>
+          <p style={{ color: "#44403c", fontSize: 14, opacity: 1 }}>
+            {queuedClockOut ? offlineClockOutBanner(queuedClockOut.clockedOutAt) : TIMESHEET_DONE_BODY}
+          </p>
+          <ShiftReceiptCard
+            metrics={tsMetrics}
+            dateAndPlace={tsDateAndPlace}
+            punchLine={tsPunchLine}
+          />
+          {ctx.mode === "tenant" ? (
+            <button
+              type="button"
+              onClick={() => requestStartAnother()}
+              style={{ ...secondaryBtn, marginTop: 18, width: "100%" }}
+            >
+              Start another shift
+            </button>
+          ) : null}
+          {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
+          {switchNotice}
         </div>
-        <h2 style={{ ...h2, marginBottom: 6 }}>{TIMESHEET_DONE_TITLE}</h2>
-        <p style={{ color: "#44403c", fontSize: 14, opacity: 1 }}>
-          {queuedClockOut ? offlineClockOutBanner(queuedClockOut.clockedOutAt) : TIMESHEET_DONE_BODY}
-        </p>
-        {ctx.event?.date ? (
-          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 8 }}>
-            {fmtDay(ctx.event.date)}
-            {ctx.event.address ? ` · ${ctx.event.address}` : ""}
-          </p>
-        ) : null}
-        {clockInAt ? (
-          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 4 }}>
-            In {fmtTime(clockInAt)}
-            {outAt ? ` · Out ${fmtTime(outAt)}` : ""}
-            {hours != null ? ` · ${hours} hr${hours === 1 ? "" : "s"}` : ""}
-          </p>
-        ) : null}
-        {ctx.mode === "tenant" ? (
-          <button
-            type="button"
-            onClick={() => requestStartAnother()}
-            style={{ ...secondaryBtn, marginTop: 18, width: "100%" }}
-          >
-            Start another shift
-          </button>
-        ) : null}
-        {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
-        {switchNotice}
-      </div>
+      </>
     );
   }
 
   if (hasRecap && clockState !== "clocked_in" && !leftover) {
+    const outAt = ctx.session?.clock.clockOutAt ?? queuedClockOut?.clockedOutAt ?? null;
+    const hours = workedHours(clockInAt, outAt);
+    const receiptSnap = readShiftReceiptSnapshot(code, token);
+    const pendingSamples = ownQueuedRecap
+      ? computeRecapSamplesCount({
+          productSamples: ownQueuedRecap.productSamples,
+          totalEngagements: ownQueuedRecap.totalEngagements,
+        })
+      : null;
+    const receiptMetrics = buildShiftReceiptMetrics({
+      workedHoursValue: hours,
+      clockInAt,
+      clockOutAt: outAt,
+      recapOnly: Boolean(ctx.recapOnly),
+      snapshot: receiptSnap,
+      pendingRecapFilesCount: ownQueuedRecap ? ownQueuedRecap.files.length : null,
+      pendingRecapSamplesCount: pendingSamples,
+      isQueuedOffline: hasQueuedWork,
+    });
+    const receiptDateAndPlace = ctx.event?.date
+      ? `${fmtDay(ctx.event.date)}${ctx.event.address ? ` · ${ctx.event.address}` : ""}`
+      : undefined;
+    const receiptPunchLine = clockInAt
+      ? `In ${fmtTime(clockInAt)}${outAt ? ` · Out ${fmtTime(outAt)}` : ""}`
+      : undefined;
     return (
-      <div style={{ ...card, textAlign: "center" }}>
-        <div style={{ fontSize: 40, marginBottom: 6 }}>✓</div>
-        <h2 style={{ ...h2, marginBottom: 6 }}>You're all set</h2>
-        <p style={{ color: "#44403c", fontSize: 14, opacity: 1 }}>
-          Your recap is in{pending ? " and is pending your lead's confirmation" : ""}. Thanks for the great work!
-        </p>
-        {ctx.event?.date ? (
-          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 8 }}>
-            {fmtDay(ctx.event.date)}
-            {ctx.event.address ? ` · ${ctx.event.address}` : ""}
+      <>
+        <CheckinSyncPill state={syncPill} />
+        <div style={{ ...card, textAlign: "center" }}>
+          <CheckinDoneCheck />
+          <h2 style={{ ...h2, marginBottom: 6 }}>You're all set</h2>
+          <p style={{ color: "#44403c", fontSize: 14, opacity: 1 }}>
+            Your recap is in{pending ? " and is pending your lead's confirmation" : ""}. Thanks for the great work!
           </p>
-        ) : null}
+          <ShiftReceiptCard
+            metrics={receiptMetrics}
+            dateAndPlace={receiptDateAndPlace}
+            punchLine={receiptPunchLine}
+          />
         {/* Standing clock links share one event per place/day. Gloria (Feel
             Free Tampa) was stuck here after a 12-minute morning punch + recap:
             "You're all set" hid Clock in, so the riverwalk shift could not
@@ -2081,7 +2164,8 @@ function CheckedInFlow({
             {switchNotice}
           </>
         ) : null}
-      </div>
+        </div>
+      </>
     );
   }
 
@@ -2264,6 +2348,7 @@ function CheckedInFlow({
           : 0,
       }}
     >
+      <CheckinSyncPill state={syncPill} />
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div>
@@ -2450,6 +2535,25 @@ function CheckedInFlow({
         {queuedRecap && !queuedRecap.rejected ? (
           <div style={{ ...errText, color: "#92400e" }} role="status">
             {offlineRecapBanner(queuedRecap.submittedAt)}
+            <ShiftReceiptCard
+              metrics={buildShiftReceiptMetrics({
+                workedHoursValue: workedHours(
+                  clockInAt,
+                  ctx.session?.clock.clockOutAt ?? queuedClockOut?.clockedOutAt ?? null,
+                ),
+                clockInAt,
+                clockOutAt:
+                  ctx.session?.clock.clockOutAt ?? queuedClockOut?.clockedOutAt ?? null,
+                recapOnly: Boolean(ctx.recapOnly),
+                snapshot: readShiftReceiptSnapshot(code, token),
+                pendingRecapFilesCount: queuedRecap.files.length,
+                pendingRecapSamplesCount: computeRecapSamplesCount({
+                  productSamples: queuedRecap.productSamples,
+                  totalEngagements: queuedRecap.totalEngagements,
+                }),
+                isQueuedOffline: true,
+              })}
+            />
             <div style={{ marginTop: 8 }}>
               <button
                 type="button"

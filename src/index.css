@@ -3602,3 +3602,27 @@ main table th {
     animation-duration: 0s;
   }
 }
+
+/* Progressive 140ms View Transition cross-fade scoped strictly to the main
+   route stage so persistent sidebar/topbar/dock chrome never snapshots. */
+:root {
+  view-transition-name: none;
+}
+.spark-route-stage {
+  view-transition-name: spark-route-stage;
+}
+::view-transition-old(spark-route-stage),
+::view-transition-new(spark-route-stage) {
+  animation-duration: 140ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-route-stage {
+    view-transition-name: none;
+  }
+  ::view-transition-group(spark-route-stage),
+  ::view-transition-old(spark-route-stage),
+  ::view-transition-new(spark-route-stage) {
+    animation-duration: 0.01ms !important;
+  }
+}

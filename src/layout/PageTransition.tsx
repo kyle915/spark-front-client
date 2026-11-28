@@ -2,19 +2,20 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import type { ReactNode } from "react";
 import { useLocation } from "react-router";
+import { canStartViewTransition, ROUTE_VIEW_TRANSITION_MS } from "./routeViewTransition";
 
 /**
- * Short, subtle opacity-only transition. The old 350ms + y-slide made every
- * cached nav feel laggy after the data-path speed work landed.
+ * 140ms subtle opacity cross-fade fallback for browsers without native
+ * `document.startViewTransition` (and sub-route switches within a hub).
+ * When native View Transitions handle the hub cross-fade or reduced motion
+ * is requested, renders at opacity 1 without double-fading.
  */
-// Starts almost opaque: fading in from 0 blanked the whole content pane on
-// every navigation (the old page is already gone), which read as a flicker.
 const fastVariants: Variants = {
-  initial: { opacity: 0.85 },
+  initial: { opacity: 0.88 },
   animate: {
     opacity: 1,
     transition: {
-      duration: 0.12,
+      duration: ROUTE_VIEW_TRANSITION_MS / 1000,
       ease: [0.22, 1, 0.36, 1],
     },
   },
@@ -36,11 +37,10 @@ const instantVariants: Variants = {
 export const PageTransition = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
-  const variants = reduceMotion ? instantVariants : fastVariants;
+  const nativeVtSupported = canStartViewTransition();
+  const variants =
+    reduceMotion || nativeVtSupported ? instantVariants : fastVariants;
 
-  // No mode="wait": waiting for the exit animation unmounts the page
-  // (and its Layout) before the next route paints, which is what made
-  // navigations flash a blank/LOADING screen for seconds.
   return (
     <AnimatePresence>
       <motion.div
