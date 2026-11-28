@@ -1,11 +1,13 @@
-import { Suspense } from "react";
+import { Suspense, useCallback, useState } from "react";
 import Layout from "@/layout/Layout";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
-import TodayAttentionPanels, { OnTheSheets } from "@/components/dashboard/TodayAttentionPanels";
+import TodayAttentionPanels, {
+  OnTheSheets,
+} from "@/components/dashboard/TodayAttentionPanels";
 import TodayAttentionStrip from "@/components/dashboard/TodayAttentionStrip";
 import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
 import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard";
@@ -18,6 +20,8 @@ import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
 import { attentionSnapshotKpis } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { LeafTabs } from "@/motion/LeafTabs";
+import { InkSwitch } from "@/motion/InkSwitch";
 import { ArrowDown, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
@@ -25,6 +29,12 @@ import {
   BrandViewSwitch,
 } from "@/components/brandGroup/BrandCompare";
 import { useBrandView } from "@/components/brandGroup/useBrandView";
+import {
+  OPS_JUMP_SECTIONS,
+  readOpsAnalyticsCollapsed,
+  writeOpsAnalyticsCollapsed,
+  type OpsJumpSectionId,
+} from "./opsCockpitHelpers";
 
 /**
  * Compact priority-glance card: pending approvals (SLA), recaps due,
@@ -56,7 +66,12 @@ const TodaysSnapshot: React.FC = () => {
 
   if (visibleTiles.length === 0 && !opsClear) return null;
 
-  if (opsClear && counts.tracker === 0 && counts.upcoming === 0 && counts.alertsUnread === 0) {
+  if (
+    opsClear &&
+    counts.tracker === 0 &&
+    counts.upcoming === 0 &&
+    counts.alertsUnread === 0
+  ) {
     return (
       <div
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-xs font-medium"
@@ -113,12 +128,16 @@ const TodaysSnapshot: React.FC = () => {
   );
 };
 
+const JUMP_TAB_OPTIONS = OPS_JUMP_SECTIONS.map((s) => ({
+  key: s.id,
+  label: s.label,
+}));
+
 /**
  * Ops home — due recaps, clock, what needs you, then program
- * performance (pace / KPIs / map) on the same page. Legacy
- * /insights redirects here.
+ * performance (pace / KPIs / map) on the same page, with a sticky Ops Jump
+ * Rail and persisted Ops-only cockpit collapse for peak weekend dispatch.
  */
-
 function DashboardInner() {
   const { tenantId, tenantMeta, tenantSlug } = useAuthStore();
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
@@ -127,100 +146,170 @@ function DashboardInner() {
   const { view, choose: chooseView } = useBrandView();
   const comparing = view === "compare" && !!tenantId;
 
+  const [activeSection, setActiveSection] =
+    useState<OpsJumpSectionId>("ops-triage");
+  const [analyticsCollapsed, setAnalyticsCollapsed] = useState<boolean>(() =>
+    readOpsAnalyticsCollapsed(),
+  );
+
+  const setCollapsedPersisted = useCallback((next: boolean) => {
+    setAnalyticsCollapsed(next);
+    writeOpsAnalyticsCollapsed(next);
+  }, []);
+
+  const jumpToSection = useCallback(
+    (sectionId: OpsJumpSectionId) => {
+      setActiveSection(sectionId);
+      if (sectionId === "performance" && analyticsCollapsed) {
+        setCollapsedPersisted(false);
+        requestAnimationFrame(() => {
+          document
+            .getElementById("performance")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        return;
+      }
+      document
+        .getElementById(sectionId)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    [analyticsCollapsed, setCollapsedPersisted],
+  );
+
   const linkedSheetUrl = tenantId
     ? (() => {
         try {
-          return localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? "";
+          return (
+            localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? ""
+          );
         } catch {
           return "";
         }
       })()
     : "";
 
+  const showOpsJumpRail = !comparing && !isClient && program !== "field";
+
   return (
     <div className="spark-dash spark-scale">
       <div className="spark-dash-top space-y-5 lg:space-y-6">
-      <SparkPageHeader
-        title="Dashboard"
-        action={
-          <div className="flex items-center gap-2 flex-wrap">
-            <BrandViewSwitch
-              tenantId={tenantId}
-              view={view}
-              onChange={chooseView}
+        <SparkPageHeader
+          title="Dashboard"
+          action={
+            <div className="flex items-center gap-2 flex-wrap">
+              <BrandViewSwitch
+                tenantId={tenantId}
+                view={view}
+                onChange={chooseView}
+              />
+              {torch && !comparing ? (
+                <DashboardProgramSwitch program={program} onChange={choose} />
+              ) : null}
+              {linkedSheetUrl ? (
+                <a
+                  href={linkedSheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-[8px] text-sm font-semibold inline-flex items-center gap-1.5"
+                  style={{
+                    background: "rgba(95,184,239,0.10)",
+                    color: "var(--spark-sky)",
+                    border: "1px solid rgba(95,184,239,0.35)",
+                    textDecoration: "none",
+                  }}
+                  title="Open the brand's linked Google Sheet in a new tab"
+                >
+                  Sheet
+                  <ArrowUpRight size={14} strokeWidth={1.75} />
+                </a>
+              ) : null}
+              {comparing ? null : (
+                <button
+                  type="button"
+                  onClick={() => jumpToSection("performance")}
+                  className="px-3 py-1.5 rounded-[8px] text-sm font-medium inline-flex items-center gap-1.5 cursor-pointer"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-text-secondary)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  Performance
+                  <ArrowDown size={14} strokeWidth={1.75} />
+                </button>
+              )}
+            </div>
+          }
+        />
+
+        {showOpsJumpRail ? (
+          <nav
+            aria-label="Ops cockpit navigation"
+            className="sticky top-12 z-20 rounded-xl px-3 py-2 flex items-center justify-between gap-3 flex-wrap print:hidden"
+            style={{
+              background:
+                "color-mix(in srgb, var(--spark-surface) 90%, transparent)",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <LeafTabs
+              ariaLabel="Dashboard sections"
+              value={activeSection}
+              onChange={jumpToSection}
+              options={JUMP_TAB_OPTIONS}
             />
-            {torch && !comparing ? (
-              <DashboardProgramSwitch program={program} onChange={choose} />
+            <InkSwitch
+              checked={analyticsCollapsed}
+              onChange={(next) => setCollapsedPersisted(next)}
+              label="Ops-only cockpit"
+              ariaLabel="Collapse program analytics for zero-scroll ops cockpit"
+              className="text-xs font-medium"
+            />
+          </nav>
+        ) : null}
+
+        {comparing && tenantId ? (
+          <BrandComparePanel tenantId={tenantId} canManageAccess={isAdmin} />
+        ) : (
+          <>
+            {isAdmin ? (
+              <Suspense fallback={null}>
+                <SetupChecklistCard key={String(tenantId ?? "")} />
+              </Suspense>
             ) : null}
-            {linkedSheetUrl ? (
-              <a
-                href={linkedSheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-[8px] text-sm font-semibold inline-flex items-center gap-1.5"
-                style={{
-                  background: "rgba(95,184,239,0.10)",
-                  color: "var(--spark-sky)",
-                  border: "1px solid rgba(95,184,239,0.35)",
-                  textDecoration: "none",
-                }}
-                title="Open the brand's linked Google Sheet in a new tab"
+
+            {program === "field" ? null : (
+              <div
+                id="ops-triage"
+                className="space-y-5 lg:space-y-6"
+                style={{ scrollMarginTop: 84 }}
               >
-                Sheet
-                <ArrowUpRight size={14} strokeWidth={1.75} />
-              </a>
-            ) : null}
-            {comparing ? null : (
-              <a
-                href="#performance"
-                className="px-3 py-1.5 rounded-[8px] text-sm font-medium inline-flex items-center gap-1.5"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text-secondary)",
-                  border: "1px solid var(--spark-border)",
-                  textDecoration: "none",
-                }}
-              >
-                Performance
-                <ArrowDown size={14} strokeWidth={1.75} />
-              </a>
+                <Suspense fallback={null}>
+                  <TodaysSnapshot />
+                </Suspense>
+
+                {!isClient ? <TodayAttentionStrip /> : null}
+
+                <Suspense fallback={null}>
+                  <TodayAttentionPanels staff={!isClient} />
+                </Suspense>
+              </div>
             )}
-          </div>
-        }
-      />
-
-      {comparing && tenantId ? (
-        <BrandComparePanel tenantId={tenantId} canManageAccess={isAdmin} />
-      ) : (
-      <>
-      {isAdmin ? (
-        <Suspense fallback={null}>
-          <SetupChecklistCard key={String(tenantId ?? "")} />
-        </Suspense>
-      ) : null}
-
-      {program === "field" ? null : (
-        <>
-          <Suspense fallback={null}>
-            <TodaysSnapshot />
-          </Suspense>
-
-          {!isClient ? <TodayAttentionStrip /> : null}
-
-          <Suspense fallback={null}>
-            <TodayAttentionPanels staff={!isClient} />
-          </Suspense>
-        </>
-      )}
-      </>
-      )}
+          </>
+        )}
       </div>
 
       {/* Today's working detail. Below the panels on a laptop; a second
           column beside the whole page on a wide monitor, where the page
           used to leave the right third of the screen empty. */}
       {comparing || program === "field" || isClient ? null : (
-        <div className="spark-dash-rail space-y-5 lg:space-y-6">
+        <div
+          id="live-clock"
+          className="spark-dash-rail space-y-5 lg:space-y-6"
+          style={{ scrollMarginTop: 84 }}
+        >
           {isAdmin ? (
             <ErrorBoundary fallback={null}>
               <Suspense fallback={null}>
@@ -239,9 +328,43 @@ function DashboardInner() {
 
       {comparing ? null : (
         <div className="spark-dash-rest">
-          <Suspense fallback={<DashboardSkeleton />}>
-            <InsightsBody embedded />
-          </Suspense>
+          {!isClient && analyticsCollapsed ? (
+            <section
+              id="performance"
+              aria-label="Program analytics collapsed"
+              className="spark-card px-5 py-4 flex items-center justify-between gap-3 flex-wrap"
+              style={{ scrollMarginTop: 84 }}
+            >
+              <div>
+                <p className="text-sm font-semibold">
+                  Program analytics tucked · Ops-only cockpit active
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  Keeps live shift triage, staffing coverage, and time clock
+                  zero-scroll during active dispatch.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCollapsedPersisted(false)}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition hover:opacity-90"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "var(--spark-on-accent)",
+                }}
+              >
+                Expand Program Analytics
+                <ArrowDown size={13} strokeWidth={2} />
+              </button>
+            </section>
+          ) : (
+            <Suspense fallback={<DashboardSkeleton />}>
+              <InsightsBody embedded />
+            </Suspense>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import StatusChip from "@/shared/StatusChip";
 import { Fragment, Suspense, useState } from "react";
+import { useSearchParams } from "react-router";
 import TimesheetShiftRows from "./TimesheetShiftRows";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { PayrollTimesheetQuery } from "@/api/queries/PayrollTimesheetQuery";
@@ -124,7 +125,10 @@ const Inner: React.FC<{ startDate: string; endDate: string; tenantId: string }> 
   const [held, setHeld] = useState(false);
   const showUndoable = useAlertStore((s) => s.showUndoable);
   // Which ambassador's shifts are expanded under their row (one at a time).
-  const [openUuid, setOpenUuid] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [openUuid, setOpenUuid] = useState<string | null>(
+    () => searchParams.get("ba") || null,
+  );
   const shown = rows.filter(
     (r) =>
       (!reviewOnly || r.needsReview) &&

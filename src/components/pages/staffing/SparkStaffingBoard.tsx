@@ -1,4 +1,5 @@
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
@@ -26,6 +27,7 @@ import {
   defaultClientScope,
   tenantKey,
 } from "./staffingBoardScope";
+import { parseMondayOfDateYmd } from "@/components/dashboard/staffingGlanceHelpers";
 
 /**
  * Staffing Board — a week grid of shifts × dates so an admin can see who's
@@ -285,10 +287,19 @@ const Inner: React.FC<{
   // in knownBrandsRef so switching back to another brand stays one click away.
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const currentKey = tenantKey(tenantId);
+  const [searchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter");
   const [brandFilter, setBrandFilter] = useState(() =>
     defaultClientScope(tenantId),
   );
-  const [unstaffedOnly, setUnstaffedOnly] = useState(false);
+  const [unstaffedOnly, setUnstaffedOnly] = useState(
+    () => filterParam === "unstaffed",
+  );
+  useEffect(() => {
+    if (filterParam === "unstaffed") {
+      setUnstaffedOnly(true);
+    }
+  }, [filterParam]);
   const [view, setView] = useState<"venue" | "person">("venue");
   const [venueQuery, setVenueQuery] = useState("");
 
@@ -876,14 +887,22 @@ const Inner: React.FC<{
 
 export default function SparkStaffingBoard() {
   const { tenantId } = useAuthStore();
-  // Start the window on the Monday of the current week.
+  const [searchParams] = useSearchParams();
+  const dateParam = searchParams.get("date");
+  // Start the window on the Monday of `?date=` when deep-linked, else current week.
   const [weekStart, setWeekStart] = useState<Date>(() => {
+    const fromParam = parseMondayOfDateYmd(dateParam);
+    if (fromParam) return fromParam;
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     const dow = (d.getDay() + 6) % 7; // 0 = Monday
     d.setDate(d.getDate() - dow);
     return d;
   });
+  useEffect(() => {
+    const fromParam = parseMondayOfDateYmd(dateParam);
+    if (fromParam) setWeekStart(fromParam);
+  }, [dateParam]);
   const [refreshKey, setRefreshKey] = useState(0);
   const bump = () => setRefreshKey((k) => k + 1);
 

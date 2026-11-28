@@ -33,19 +33,35 @@ export type BoardShift = {
   assigned: ReadonlyArray<BoardAssignee>;
 };
 
+export type AttentionRowKind =
+  | "open_punch"
+  | "not_clocked_in"
+  | "no_show"
+  | "unbooked"
+  | "walkup"
+  | "stale_requests"
+  | "unscheduled_requests";
+
 export type StartsTodayRow = {
   key: string;
+  eventUuid?: string;
   title: string;
   /** Who is on it and where they stand; empty when nobody is booked. */
   detail: string;
   /** True when `detail` describes a problem (nobody booked, a no-show). */
   flagged: boolean;
+  unbooked?: boolean;
+  primaryAmbassadorUuid?: string | null;
+  primaryAmbassadorName?: string | null;
   time: string;
   to: string;
 };
 
 export type AttentionRow = {
   key: string;
+  kind?: AttentionRowKind;
+  eventUuid?: string;
+  ambassadorUuid?: string;
   subject: string;
   context: string;
   reason: string;
@@ -146,11 +162,19 @@ export function startsTodayRows(
       const who = unbooked ? "No ambassador booked" : assigneeLine(s.assigned);
       const detail =
         opts.showBrand && s.brandName ? `${s.brandName} · ${who}` : who;
+      const flaggedBa =
+        s.assigned.find((a) => isNoShow(a.status) || !a.clockInAt) ??
+        s.assigned[0] ??
+        null;
       return {
         key: s.eventUuid,
+        eventUuid: s.eventUuid,
         title: place(s),
         detail,
         flagged: unbooked || s.assigned.some((a) => isNoShow(a.status)),
+        unbooked,
+        primaryAmbassadorUuid: flaggedBa ? flaggedBa.ambassadorUuid : null,
+        primaryAmbassadorName: flaggedBa ? named(flaggedBa) : null,
         time: shiftTime(s.startTime),
         to: `/event/view/${s.eventUuid}`,
       };
@@ -186,6 +210,9 @@ export function attentionRows(input: {
         const at = punchTime(a.clockInAt);
         rows.push({
           key: `open:${s.eventUuid}:${a.ambassadorUuid}`,
+          kind: "open_punch",
+          eventUuid: s.eventUuid,
+          ambassadorUuid: a.ambassadorUuid,
           subject: named(a),
           context: place(s),
           reason: at
@@ -213,6 +240,9 @@ export function attentionRows(input: {
       const registered = punchTime(a.registeredAt);
       rows.push({
         key: `notin:${s.eventUuid}:${a.ambassadorUuid}`,
+        kind: "not_clocked_in",
+        eventUuid: s.eventUuid,
+        ambassadorUuid: a.ambassadorUuid,
         subject: named(a),
         context: place(s),
         reason: pressed
@@ -229,6 +259,9 @@ export function attentionRows(input: {
       if (isNoShow(a.status)) {
         rows.push({
           key: `noshow:${s.eventUuid}:${a.ambassadorUuid}`,
+          kind: "no_show",
+          eventUuid: s.eventUuid,
+          ambassadorUuid: a.ambassadorUuid,
           subject: named(a),
           context: place(s),
           reason: start ? `No-show · due ${start}` : "No-show",
@@ -243,6 +276,8 @@ export function attentionRows(input: {
       const start = shiftTime(s.startTime);
       rows.push({
         key: `unbooked:${s.eventUuid}`,
+        kind: "unbooked",
+        eventUuid: s.eventUuid,
         subject: place(s),
         context: s.brandName,
         reason: start
@@ -258,6 +293,9 @@ export function attentionRows(input: {
       if (a.pendingApproval) {
         rows.push({
           key: `walkup:${s.eventUuid}:${a.ambassadorUuid}`,
+          kind: "walkup",
+          eventUuid: s.eventUuid,
+          ambassadorUuid: a.ambassadorUuid,
           subject: named(a),
           context: place(s),
           reason: "Walk-up waiting for approval",
@@ -271,6 +309,7 @@ export function attentionRows(input: {
     const n = input.staleRequests;
     rows.push({
       key: "stale-requests",
+      kind: "stale_requests",
       subject: `${n.toLocaleString()} ${plural(n, "request", "requests")}`,
       context: "",
       reason: "Waiting more than 24 hours",
@@ -281,6 +320,7 @@ export function attentionRows(input: {
     const n = input.unscheduledRequests;
     rows.push({
       key: "unscheduled-requests",
+      kind: "unscheduled_requests",
       subject: `${n.toLocaleString()} ${plural(n, "request", "requests")} in the next 7 days`,
       context: "",
       reason: "Not scheduled yet",

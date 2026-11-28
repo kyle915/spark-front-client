@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { AmbassadorProfileDetailQuery } from "@/api/queries/AmbassadorProfileDetailQuery";
 import type { AmbassadorProfileDetailQuery as AmbassadorProfileDetailQueryType } from "@api/queries/__generated__/AmbassadorProfileDetailQuery.graphql";
@@ -28,6 +28,8 @@ type Props = {
   /** Fallback display name (from the card) shown in the header before
    *  the detail query resolves. */
   fallbackName?: string;
+  /** When true, automatically opens the 1:1 DM conversation thread on mount. */
+  autoOpenDm?: boolean;
   onClose: () => void;
 };
 
@@ -75,10 +77,12 @@ const StatBlock: React.FC<{ value: string; label: string }> = ({
 
 const ProfileInner: React.FC<{
   ambassadorUuid: string;
+  autoOpenDm?: boolean;
   onClose: () => void;
-}> = ({ ambassadorUuid, onClose }) => {
+}> = ({ ambassadorUuid, autoOpenDm = false, onClose }) => {
   const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
+  const autoOpenedRef = useRef(false);
 
   const data = useLazyLoadQuery<AmbassadorProfileDetailQueryType>(
     AmbassadorProfileDetailQuery,
@@ -94,6 +98,20 @@ const ProfileInner: React.FC<{
     useMutation<OpenChatThreadMutationType>(OpenChatThreadMutation);
 
   const p = data?.ambassadorProfileDetail;
+
+  useEffect(() => {
+    if (!autoOpenDm || autoOpenedRef.current || !p || !tenantId || threadUuid) {
+      return;
+    }
+    autoOpenedRef.current = true;
+    commitOpenThread({
+      variables: { input: { ambassadorUuid } },
+      onCompleted: (res) => {
+        const uuid = res?.openChatThread?.uuid;
+        if (uuid) setThreadUuid(String(uuid));
+      },
+    });
+  }, [autoOpenDm, p, tenantId, threadUuid, ambassadorUuid, commitOpenThread]);
 
   if (!p) {
     return (
@@ -451,6 +469,7 @@ const ProfileInner: React.FC<{
 export default function BAProfileModal({
   ambassadorUuid,
   fallbackName,
+  autoOpenDm = false,
   onClose,
 }: Props) {
   return (
@@ -480,7 +499,11 @@ export default function BAProfileModal({
           </div>
         }
       >
-        <ProfileInner ambassadorUuid={ambassadorUuid} onClose={onClose} />
+        <ProfileInner
+          ambassadorUuid={ambassadorUuid}
+          autoOpenDm={autoOpenDm}
+          onClose={onClose}
+        />
       </Suspense>
     </div>
   );

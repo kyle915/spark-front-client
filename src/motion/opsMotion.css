@@ -727,6 +727,27 @@ html[data-spark-present="true"] .spark-studio-frame > main .max-w-6xl {
   margin-right: auto;
 }
 
+/* 15. Live Clock Pulsing Dot */
+@keyframes spark-live-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--spark-accent-rgb, 148, 224, 64), 0.55);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(var(--spark-accent-rgb, 148, 224, 64), 0);
+    transform: scale(1.08);
+  }
+}
+.spark-live-clock-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--spark-lime);
+  flex-shrink: 0;
+  animation: spark-live-dot-pulse 2.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spark-ops-spinner,
   .spark-ops-check-path,
@@ -750,7 +771,8 @@ html[data-spark-present="true"] .spark-studio-frame > main .max-w-6xl {
   .spark-tide-crest,
   .spark-like-burst-ring,
   .spark-like-pop,
-  .spark-kpi-skeleton-bar {
+  .spark-kpi-skeleton-bar,
+  .spark-live-clock-dot {
     animation: none !important;
   }
   .spark-ink-switch,
