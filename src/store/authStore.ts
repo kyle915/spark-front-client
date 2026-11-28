@@ -3,6 +3,7 @@ import { login as loginService } from "@api/auth/login";
 import { fetchMe, type MeUser } from "@api/auth/me";
 import { themes } from "@/utils";
 import { resetHotRelayDataPrefetch } from "@/lib/prefetchHotRelayData";
+import { clearAllAdminAskThreads } from "@/components/ai/adminAskThreadStorage";
 
 type TenantMeta = {
   logo?: string | null;
@@ -135,8 +136,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("@tenantRequestUrlName");
     localStorage.removeItem("@tenantCheckinCode");
 
-    // Allow idle Relay warmup again after the next login.
+    // Allow idle Relay warmup again after the next login, and drop any
+    // session-persisted Admin Ask Spark threads from the prior user.
     resetHotRelayDataPrefetch();
+    clearAllAdminAskThreads();
 
     set({
       user: null,

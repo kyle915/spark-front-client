@@ -46,10 +46,14 @@ describe("Floating bottom-right Ask Spark pop-up (Client & Admin)", () => {
     expect(clientSrc).not.toContain("Spark Help");
     expect(clientSrc).not.toContain("/help-knowledge");
 
-    // Admin pop-up uses floating frame + multi-turn data threads (no Spark Help tab)
+    // Admin pop-up uses floating frame + multi-turn data threads persisted per brand (no Spark Help tab)
     const adminSrc = readFileSync(resolve(__dirname, "./AskAiButton.tsx"), "utf8");
     expect(adminSrc).toContain("AskSparkPopoverFrame");
     expect(adminSrc).toContain("dataTurns");
+    expect(adminSrc).toContain("adminAskThreadStorage");
+    expect(adminSrc).toContain("loadAdminAskThread");
+    expect(adminSrc).toContain("appendAdminAskTurn");
+    expect(adminSrc).toContain("clearAdminAskThread");
     expect(adminSrc).not.toContain("AskSparkHelpMutation");
     expect(adminSrc).not.toContain("Spark Help");
     expect(adminSrc).toContain("dispatchOpenAskSpark");

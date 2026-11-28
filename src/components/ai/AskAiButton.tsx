@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import {
   ArrowUp,
@@ -15,7 +15,7 @@ import type { TenantAiAnswerQuery as TenantAiAnswerQueryType } from "@api/querie
 import useSparkRole from "@/hooks/useSparkRole";
 import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import AiMarkdown from "./AiMarkdown";
-import AiChartView, { type AiChart } from "./AiChartView";
+import AiChartView from "./AiChartView";
 import AskSparkPopoverFrame, { SparkThinkingDots } from "./AskSparkPopoverFrame";
 import {
   ASK_AI_FOLLOWUPS,
@@ -30,16 +30,15 @@ import {
 import { askAiModalTitle } from "./askAiSubjectName";
 import { deriveAskSparkFollowups } from "./askSparkFollowups";
 import { routeContextLabel } from "./routeAskSparkPrompts";
+import {
+  adminAskThreadKey,
+  appendAdminAskTurn,
+  clearAdminAskThread,
+  loadAdminAskThread,
+  type AdminAskTurn,
+} from "./adminAskThreadStorage";
 
-type DataTurn = {
-  id: string;
-  question: string;
-  ok: boolean;
-  answer: string;
-  reason?: string | null;
-  chart?: AiChart | null;
-  thoughtFor: number | null;
-};
+type DataTurn = AdminAskTurn;
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const TEXT = { color: "var(--spark-text)" } as const;
@@ -165,27 +164,59 @@ export const AskAiModal: React.FC<{
 }) => {
   const location = useLocation();
   const { isAdmin } = useSparkRole();
+  const threadKey = useMemo(
+    () => adminAskThreadKey({ tenantId, scope, recapId, eventId }),
+    [tenantId, scope, recapId, eventId],
+  );
   const [question, setQuestion] = useState("");
   const [pendingData, setPendingData] = useState<string | null>(null);
-  const [dataTurns, setDataTurns] = useState<DataTurn[]>([]);
+  const [dataTurns, setDataTurns] = useState<DataTurn[]>(() =>
+    loadAdminAskThread(threadKey),
+  );
   const startedAt = useRef(0);
   const listEnd = useRef<HTMLDivElement | null>(null);
   const consumedInitialRef = useRef<string | null>(null);
+  const activeThreadKeyRef = useRef<string | null>(threadKey);
+  const mountedRef = useRef(true);
+  const didInitialScrollRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Re-hydrate from sessionStorage whenever the active brand or detail scope changes.
+  useEffect(() => {
+    if (activeThreadKeyRef.current === threadKey) return;
+    activeThreadKeyRef.current = threadKey;
+    didInitialScrollRef.current = false;
+    consumedInitialRef.current = null;
+    setPendingData(null);
+    setQuestion("");
+    setDataTurns(loadAdminAskThread(threadKey));
+  }, [threadKey]);
 
   const isBusy = Boolean(pendingData);
   const canAsk = question.trim().length > 0 && !isBusy && Boolean(tenantId);
 
   useEffect(() => {
-    listEnd.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (dataTurns.length === 0 && !pendingData) return;
+    const behavior = didInitialScrollRef.current ? "smooth" : "auto";
+    didInitialScrollRef.current = true;
+    listEnd.current?.scrollIntoView({ behavior, block: "end" });
   }, [dataTurns.length, pendingData]);
 
   const ask = useCallback(
     async (raw?: string) => {
       const q = (raw ?? question).trim();
       if (!q || !tenantId || pendingData) return;
+      const requestThreadKey = threadKey;
       setQuestion("");
       setPendingData(q);
       startedAt.current = Date.now();
+      let completedTurn: DataTurn;
       try {
         const data = await fetchQuery<TenantAiAnswerQueryType>(
           environment,
@@ -201,45 +232,45 @@ export const AskAiModal: React.FC<{
 
         const elapsed = thoughtSeconds(Date.now() - startedAt.current);
         const res = data?.tenantAiAnswer;
-        setDataTurns((prev) => [
-          ...prev,
-          res
-            ? {
-                id: `d-${Date.now()}-${prev.length}`,
-                question: q,
-                ok: res.ok,
-                answer: res.answer,
-                reason: res.reason,
-                chart: res.chart,
-                thoughtFor: elapsed,
-              }
-            : {
-                id: `dn-${Date.now()}-${prev.length}`,
-                question: q,
-                ok: false,
-                answer: "",
-                reason: "No response from the answer service.",
-                thoughtFor: elapsed,
-              },
-        ]);
+        completedTurn = res
+          ? {
+              id: `d-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              question: q,
+              ok: res.ok,
+              answer: res.answer,
+              reason: res.reason,
+              chart: res.chart,
+              thoughtFor: elapsed,
+            }
+          : {
+              id: `dn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              question: q,
+              ok: false,
+              answer: "",
+              reason: "No response from the answer service.",
+              thoughtFor: elapsed,
+            };
       } catch {
         const elapsed = thoughtSeconds(Date.now() - startedAt.current);
-        setDataTurns((prev) => [
-          ...prev,
-          {
-            id: `de-${Date.now()}-${prev.length}`,
-            question: q,
-            ok: false,
-            answer: "",
-            reason: "Couldn't reach the answer service — try again.",
-            thoughtFor: elapsed,
-          },
-        ]);
-      } finally {
+        completedTurn = {
+          id: `de-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          question: q,
+          ok: false,
+          answer: "",
+          reason: "Couldn't reach the answer service — try again.",
+          thoughtFor: elapsed,
+        };
+      }
+
+      // Always persist to the originating brand/scope thread even if the admin
+      // closed the pop-up or switched brands while the query was in flight.
+      const nextTurns = appendAdminAskTurn(requestThreadKey, completedTurn);
+      if (mountedRef.current && activeThreadKeyRef.current === requestThreadKey) {
+        setDataTurns(nextTurns);
         setPendingData(null);
       }
     },
-    [tenantId, question, pendingData, scope, recapId, eventId],
+    [tenantId, threadKey, question, pendingData, scope, recapId, eventId],
   );
 
   useEffect(() => {
@@ -264,7 +295,10 @@ export const AskAiModal: React.FC<{
         </span>
         <button
           type="button"
-          onClick={() => setDataTurns([])}
+          onClick={() => {
+            clearAdminAskThread(threadKey);
+            setDataTurns([]);
+          }}
           disabled={isBusy}
           className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition hover:opacity-80 disabled:opacity-45 cursor-pointer"
           style={{
