@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { HoldToConfirmButton } from "@/motion/ConfirmGestures";
+import { CodeShakeBox } from "@/motion/CopyMorphButton";
 
 /**
  * Admin confirmation modal for deleting a gig/request from the Master
@@ -138,15 +140,17 @@ export default function DeleteRequestModal({
             you need it restored.
           </p>
           {error && (
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.14em",
-                color: "var(--spark-orange)",
-              }}
-            >
-              {error}
-            </p>
+            <CodeShakeBox trigger={error}>
+              <p
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--spark-orange)",
+                }}
+              >
+                {error}
+              </p>
+            </CodeShakeBox>
           )}
         </div>
 
@@ -166,17 +170,18 @@ export default function DeleteRequestModal({
           >
             Cancel
           </button>
-          <button
-            onClick={submit}
-            disabled={submitting}
+          <HoldToConfirmButton
+            label="Delete gig"
+            holdingLabel="Keep holding…"
+            busyLabel="Deleting…"
+            busy={submitting}
+            onConfirm={() => void submit()}
             className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
             style={{
               background: "var(--spark-orange)",
               color: "var(--spark-on-accent)",
             }}
-          >
-            {submitting ? "Deleting…" : "Delete gig"}
-          </button>
+          />
         </div>
       </div>
     </div>

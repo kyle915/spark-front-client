@@ -331,6 +331,212 @@
   }
 }
 
+/* ─── Spark UI Moments (adapted zero-dep CSS/SVG micro-interactions) ─── */
+
+/* 1. Ink Switch & Bell Toggle */
+.spark-ink-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 2px;
+  border: 1px solid var(--spark-border);
+  background: var(--spark-surface-2);
+  transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease;
+  cursor: pointer;
+}
+.spark-ink-switch[data-checked="true"] {
+  background: var(--spark-lime);
+  border-color: var(--spark-lime);
+}
+.spark-ink-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.spark-ink-switch-thumb {
+  display: block;
+  border-radius: 999px;
+  background: var(--spark-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  transition: transform 260ms cubic-bezier(0.34, 1.45, 0.64, 1),
+    width 180ms ease,
+    background-color 180ms ease;
+}
+.spark-ink-switch[data-checked="true"] .spark-ink-switch-thumb {
+  background: var(--spark-on-accent);
+}
+
+@keyframes spark-bell-ring {
+  0%, 100% { transform: rotate(0deg); }
+  18% { transform: rotate(15deg); }
+  36% { transform: rotate(-13deg); }
+  54% { transform: rotate(9deg); }
+  72% { transform: rotate(-6deg); }
+  88% { transform: rotate(3deg); }
+}
+.spark-bell-ring {
+  transform-origin: 50% 18%;
+  animation: spark-bell-ring 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 2. Download Ring & Paper Plane Send */
+@keyframes spark-plane-launch {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  45% { transform: translate(6px, -6px) scale(0.85); opacity: 0.25; }
+  46% { transform: translate(-5px, 5px) scale(0.85); opacity: 0; }
+  100% { transform: translate(0, 0) scale(1); opacity: 1; }
+}
+.spark-plane-launching {
+  animation: spark-plane-launch 650ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes spark-ring-dash {
+  0% { stroke-dashoffset: 38; transform: rotate(0deg); }
+  50% { stroke-dashoffset: 12; }
+  100% { stroke-dashoffset: 38; transform: rotate(360deg); }
+}
+.spark-download-ring-arc {
+  transform-origin: center;
+  animation: spark-ring-dash 0.9s linear infinite;
+}
+
+/* 3. Copy Button Morph & Code Shake */
+@keyframes spark-copy-pop {
+  0% { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+  65% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.spark-copy-pop {
+  animation: spark-copy-pop 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes spark-code-shake {
+  0%, 100% { transform: translateX(0); }
+  16% { transform: translateX(-6px); }
+  34% { transform: translateX(6px); }
+  52% { transform: translateX(-4px); }
+  70% { transform: translateX(4px); }
+  86% { transform: translateX(-2px); }
+}
+.spark-code-shake {
+  animation: spark-code-shake 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* 4. Hold to Confirm & Swipe to Confirm */
+.spark-hold-btn {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.spark-hold-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.spark-swipe-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+.spark-swipe-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  pointer-events: none;
+}
+.spark-swipe-thumb {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #14160f;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+  will-change: transform;
+}
+.spark-swipe-thumb:active {
+  cursor: grabbing;
+}
+
+/* 5. Stroke Checklist & Step Track */
+@keyframes spark-stroke-draw {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.spark-stroke-check-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  transition: stroke-dashoffset 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.spark-stroke-check-path[data-done="true"] {
+  stroke-dashoffset: 0;
+  animation: spark-stroke-draw 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.spark-step-connector-fill {
+  transform-origin: left center;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 6. Leaf Tabs (sliding active-pill indicator) */
+.spark-leaf-tabs {
+  position: relative;
+}
+.spark-leaf-indicator {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 150ms ease;
+  will-change: transform, width;
+}
+[data-spark-mode="light"] .spark-leaf-indicator,
+[data-theme="spark-v2"][data-spark-mode="light"] .spark-leaf-indicator {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(20, 22, 15, 0.08),
+    0 0 0 1px rgba(20, 22, 15, 0.06);
+}
+.spark-leaf-tab-btn {
+  position: relative;
+  z-index: 1;
+}
+.spark-leaf-tabs .spark-leaf-tab-btn.on {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spark-ops-spinner,
   .spark-ops-check-path,
@@ -340,8 +546,21 @@
   .spark-ops-thought,
   .spark-ops-query-ghost,
   .spark-popover,
-  .spark-toast {
+  .spark-toast,
+  .spark-bell-ring,
+  .spark-plane-launching,
+  .spark-download-ring-arc,
+  .spark-copy-pop,
+  .spark-code-shake,
+  .spark-stroke-check-path {
     animation: none !important;
+  }
+  .spark-ink-switch,
+  .spark-ink-switch-thumb,
+  .spark-stroke-check-path,
+  .spark-step-connector-fill,
+  .spark-leaf-indicator {
+    transition: none !important;
   }
   .spark-ops-thinking {
     color: var(--spark-text-meta);

@@ -30,6 +30,7 @@ import type { RetentionAutomationMutationsUpsertRegionalAlertSubscriptionMutatio
 import type { RetentionAutomationMutationsDeleteRegionalAlertSubscriptionMutation as DeleteType } from "@/api/mutations/__generated__/RetentionAutomationMutationsDeleteRegionalAlertSubscriptionMutation.graphql";
 import type { RetentionAutomationMutationsSendTestRegionalAlertMutation as TestType } from "@/api/mutations/__generated__/RetentionAutomationMutationsSendTestRegionalAlertMutation.graphql";
 import { parseCsvTokens } from "./regionalAlertsHelpers";
+import { BellToggle, InkSwitch } from "@/motion/InkSwitch";
 
 const TEXT = { color: "var(--spark-text)" } as const;
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -425,33 +426,21 @@ export const RegionalAlertsCard: React.FC<{
               Trigger conditions
             </span>
             <div className="flex flex-wrap items-center gap-4 text-xs" style={TEXT}>
-              <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={alertOos}
-                  onChange={(e) => setAlertOos(e.target.checked)}
-                  style={{ accentColor: "var(--spark-lime)" }}
-                />
-                <span>Out-of-stock / not found</span>
-              </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={alertMissingTag}
-                  onChange={(e) => setAlertMissingTag(e.target.checked)}
-                  style={{ accentColor: "var(--spark-lime)" }}
-                />
-                <span>Missing shelf price tag</span>
-              </label>
-              <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={alertPriceDrift}
-                  onChange={(e) => setAlertPriceDrift(e.target.checked)}
-                  style={{ accentColor: "var(--spark-lime)" }}
-                />
-                <span>MSRP price drift</span>
-              </label>
+              <InkSwitch
+                checked={alertOos}
+                onChange={setAlertOos}
+                label="Out-of-stock / not found"
+              />
+              <InkSwitch
+                checked={alertMissingTag}
+                onChange={setAlertMissingTag}
+                label="Missing shelf price tag"
+              />
+              <InkSwitch
+                checked={alertPriceDrift}
+                onChange={setAlertPriceDrift}
+                label="MSRP price drift"
+              />
             </div>
             {alertPriceDrift ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
@@ -491,16 +480,18 @@ export const RegionalAlertsCard: React.FC<{
               className="rounded-xl p-3 space-y-2"
               style={{ background: "var(--spark-surface)", ...BORDER }}
             >
-              <label className="inline-flex items-center gap-2 text-xs font-semibold cursor-pointer" style={TEXT}>
-                <input
-                  type="checkbox"
-                  checked={notifyEmail}
-                  onChange={(e) => setNotifyEmail(e.target.checked)}
-                  style={{ accentColor: "var(--spark-lime)" }}
-                />
-                <Mail size={13} />
-                <span>Instant email alert</span>
-              </label>
+              <InkSwitch
+                checked={notifyEmail}
+                onChange={setNotifyEmail}
+                className="text-xs font-semibold"
+                label={
+                  <span className="inline-flex items-center gap-1.5" style={TEXT}>
+                    <Mail size={13} />
+                    <span>Instant email alert</span>
+                  </span>
+                }
+                ariaLabel="Instant email alert"
+              />
               {notifyEmail ? (
                 <input
                   type="text"
@@ -517,16 +508,18 @@ export const RegionalAlertsCard: React.FC<{
               className="rounded-xl p-3 space-y-2"
               style={{ background: "var(--spark-surface)", ...BORDER }}
             >
-              <label className="inline-flex items-center gap-2 text-xs font-semibold cursor-pointer" style={TEXT}>
-                <input
-                  type="checkbox"
-                  checked={notifyWebhook}
-                  onChange={(e) => setNotifyWebhook(e.target.checked)}
-                  style={{ accentColor: "var(--spark-lime)" }}
-                />
-                <Webhook size={13} />
-                <span>Signed HTTPS webhook (Slack / Zapier / CRM)</span>
-              </label>
+              <InkSwitch
+                checked={notifyWebhook}
+                onChange={setNotifyWebhook}
+                className="text-xs font-semibold"
+                label={
+                  <span className="inline-flex items-center gap-1.5" style={TEXT}>
+                    <Webhook size={13} />
+                    <span>Signed HTTPS webhook (Slack / Zapier / CRM)</span>
+                  </span>
+                }
+                ariaLabel="Signed HTTPS webhook"
+              />
               {notifyWebhook ? (
                 <input
                   type="url"
@@ -582,25 +575,11 @@ export const RegionalAlertsCard: React.FC<{
                     <h3 className="text-sm font-semibold truncate" style={TEXT}>
                       {sub.name}
                     </h3>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(sub)}
-                      className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold cursor-pointer"
-                      style={{
-                        background: sub.isActive
-                          ? "var(--spark-ok-bg)"
-                          : "var(--spark-surface)",
-                        color: sub.isActive
-                          ? "var(--spark-ok-ink)"
-                          : "var(--spark-text-meta)",
-                        border: sub.isActive
-                          ? "1px solid var(--spark-ok-border)"
-                          : "1px solid var(--spark-border)",
-                      }}
+                    <BellToggle
+                      active={sub.isActive}
+                      onToggle={() => handleToggleActive(sub)}
                       title="Click to pause or resume"
-                    >
-                      {sub.isActive ? "Active" : "Paused"}
-                    </button>
+                    />
                   </div>
                   <p className="text-[11.5px] mt-1" style={META}>
                     {sub.states.length > 0

@@ -2,6 +2,8 @@ import { timedFetch } from "./timedFetch";
 import { reportFieldIssue } from "./fieldIssues";
 import CheckinStepBar from "./CheckinStepBar";
 import { checkinSteps } from "./checkinSteps";
+import { SwipeToConfirm } from "@/motion/ConfirmGestures";
+import { CodeShakeBox } from "@/motion/CopyMorphButton";
 import TimesheetIdentify from "./TimesheetIdentify";
 import {
   TIMESHEET_CLOCKED_IN_HINT,
@@ -2071,7 +2073,11 @@ function CheckedInFlow({
             >
               {FORGOT_PAST_RECAP_CTA}
             </button>
-            {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
+            {msg ? (
+              <CodeShakeBox trigger={msg}>
+                <p style={{ ...errText, marginTop: 12 }}>{msg}</p>
+              </CodeShakeBox>
+            ) : null}
             {switchNotice}
           </>
         ) : null}
@@ -2088,21 +2094,48 @@ function CheckedInFlow({
       return (
         <>
           {effectiveClock === "not_started" && !pastDay ? (
-            <ActionMorphButton
-              style={fit(primaryBtn(accent))}
-              disabled={busy !== ""}
-              onClick={() => clock("in")}
-              phase={inPhase}
-              pendingLabel="Clocking in…"
-              successLabel="Clocked in"
-            >
-              Clock in
-            </ActionMorphButton>
+            compact ? (
+              <ActionMorphButton
+                style={fit(primaryBtn(accent))}
+                disabled={busy !== ""}
+                onClick={() => clock("in")}
+                phase={inPhase}
+                pendingLabel="Clocking in…"
+                successLabel="Clocked in"
+              >
+                Clock in
+              </ActionMorphButton>
+            ) : (
+              <SwipeToConfirm
+                label="Clock in"
+                busyLabel="Clocking in…"
+                doneLabel="Clocked in"
+                accent={accent}
+                textColor="#0a0d09"
+                busy={busy === "in"}
+                done={inPhase === "success"}
+                disabled={busy !== ""}
+                onConfirm={() => clock("in")}
+              />
+            )
           ) : null}
           {effectiveClock === "clocked_in" ? (
-            <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("out")}>
-              {busy === "out" ? "Clocking out…" : "Clock out"}
-            </button>
+            compact ? (
+              <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("out")}>
+                {busy === "out" ? "Clocking out…" : "Clock out"}
+              </button>
+            ) : (
+              <SwipeToConfirm
+                label="Clock out"
+                busyLabel="Clocking out…"
+                doneLabel="Clocked out"
+                accent={accent}
+                textColor="#0a0d09"
+                busy={busy === "out"}
+                disabled={busy !== ""}
+                onConfirm={() => clock("out")}
+              />
+            )
           ) : null}
         </>
       );
@@ -2119,16 +2152,30 @@ function CheckedInFlow({
             </button>
           ) : null}
           {effectiveClock === "not_started" && !leftover && !pastDay ? (
-            <ActionMorphButton
-              style={fit(primaryBtn(accent))}
-              disabled={busy !== ""}
-              onClick={() => clock("in")}
-              phase={inPhase}
-              pendingLabel="Clocking in…"
-              successLabel="Clocked in"
-            >
-              Clock in
-            </ActionMorphButton>
+            compact ? (
+              <ActionMorphButton
+                style={fit(primaryBtn(accent))}
+                disabled={busy !== ""}
+                onClick={() => clock("in")}
+                phase={inPhase}
+                pendingLabel="Clocking in…"
+                successLabel="Clocked in"
+              >
+                Clock in
+              </ActionMorphButton>
+            ) : (
+              <SwipeToConfirm
+                label="Clock in"
+                busyLabel="Clocking in…"
+                doneLabel="Clocked in"
+                accent={accent}
+                textColor="#0a0d09"
+                busy={busy === "in"}
+                done={inPhase === "success"}
+                disabled={busy !== ""}
+                onConfirm={() => clock("in")}
+              />
+            )
           ) : null}
 
           {/* Recap first — that's the intended order, so it stays the primary
@@ -2154,9 +2201,22 @@ function CheckedInFlow({
 
           {effectiveClock === "clocked_in" && hasRecap ? (
             <>
-              <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("out")}>
-                {busy === "out" ? "Clocking out…" : "Clock out"}
-              </button>
+              {compact ? (
+                <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("out")}>
+                  {busy === "out" ? "Clocking out…" : "Clock out"}
+                </button>
+              ) : (
+                <SwipeToConfirm
+                  label="Clock out"
+                  busyLabel="Clocking out…"
+                  doneLabel="Clocked out"
+                  accent={accent}
+                  textColor="#0a0d09"
+                  busy={busy === "out"}
+                  disabled={busy !== ""}
+                  onConfirm={() => clock("out")}
+                />
+              )}
               <button style={fit(secondaryBtn)} onClick={() => openRecap(false)}>
                 Edit recap
               </button>

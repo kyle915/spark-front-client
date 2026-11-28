@@ -46,6 +46,7 @@ import { trackerRowDestination } from "./trackerRowDestination";
 import RequestQuickPeekSheet from "./RequestQuickPeekSheet";
 import { stepQuickPeekIndex, type QuickPeekItem } from "./quickPeekNav";
 import { CountReel } from "@/motion/CountReel";
+import { LeafTabs } from "@/motion/LeafTabs";
 import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
@@ -2358,26 +2359,16 @@ export default function MasterTracker() {
           />
         ) : null}
         <SparkFilterBar label="Refine">
-            <div className="pill-group">
-              <button
-                onClick={() => setGroupBy("none")}
-                className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
-              >
-                Flat
-              </button>
-              <button
-                onClick={() => setGroupBy("date")}
-                className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
-              >
-                By date
-              </button>
-              <button
-                onClick={() => setGroupBy("rmm")}
-                className={`pill-btn ${groupBy === "rmm" ? "on" : ""}`}
-              >
-                By RMM
-              </button>
-            </div>
+            <LeafTabs
+              ariaLabel="Group tracker rows"
+              value={groupBy}
+              onChange={setGroupBy}
+              options={[
+                { key: "none", label: "Flat" },
+                { key: "date", label: "By date" },
+                { key: "rmm", label: "By RMM" },
+              ]}
+            />
             <DuplicateEventsButton />
             {tenantId && (
               <Suspense fallback={null}>

@@ -1,6 +1,7 @@
 import Layout from "@/layout/Layout";
 import SparkConfirm from "@/shared/SparkConfirm";
 import AskAiButton from "@/components/ai/AskAiButton";
+import { DownloadRingButton } from "@/motion/FeedbackActionButton";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
 import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
@@ -684,6 +685,7 @@ const RecapCustomViewInner = ({
     useMutation<GenerateCustomRecapPdfMutationType>(
       GenerateCustomRecapPdfMutation,
     );
+  const [pdfDoneCount, setPdfDoneCount] = useState(0);
   const [commitApprove, isApproving] =
     useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
   const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
@@ -1025,6 +1027,7 @@ const RecapCustomViewInner = ({
             "";
           if (fileUrl) {
             window.open(fileUrl, "_blank", "noopener,noreferrer");
+            setPdfDoneCount((c) => c + 1);
             showAlert(
               existingPdfUrl ? "PDF ready." : "PDF generated.",
               "success",
@@ -1734,9 +1737,13 @@ const RecapCustomViewInner = ({
                     <StatusMorph value="Archived" />
                   </span>
                 ) : null}
-                <button
+                <DownloadRingButton
                   onClick={handleGeneratePdf}
-                  disabled={isGeneratingPdf}
+                  busy={isGeneratingPdf}
+                  idleLabel={existingPdfUrl ? "Download PDF" : "PDF"}
+                  busyLabel="Generating…"
+                  doneLabel="PDF ready"
+                  successCount={pdfDoneCount}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                   style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                   title={
@@ -1744,13 +1751,7 @@ const RecapCustomViewInner = ({
                       ? "Download the ready PDF (regenerates if missing)"
                       : "Generate and download this recap as a PDF"
                   }
-                >
-                  {isGeneratingPdf
-                    ? "Generating…"
-                    : existingPdfUrl
-                      ? "⬇ Download PDF"
-                      : "⬇ PDF"}
-                </button>
+                />
                 {!isClient && (
                 <button
                   onClick={handleDownloadPhotos}
@@ -3572,9 +3573,13 @@ const RecapCustomViewInner = ({
               {recap.name ? ` / ${recap.name}` : ""}
             </Link>
             <div className="flex items-center gap-2 flex-wrap">
-              <button
+              <DownloadRingButton
                 onClick={handleGeneratePdf}
-                disabled={isGeneratingPdf}
+                busy={isGeneratingPdf}
+                idleLabel={existingPdfUrl ? "Download PDF" : "PDF"}
+                busyLabel="Generating…"
+                doneLabel="PDF ready"
+                successCount={pdfDoneCount}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap"
                 style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                 title={
@@ -3582,13 +3587,7 @@ const RecapCustomViewInner = ({
                     ? "Download the ready PDF (regenerates if missing)"
                     : "Generate and download this recap as a PDF"
                 }
-              >
-                {isGeneratingPdf
-                  ? "Generating…"
-                  : existingPdfUrl
-                    ? "Download PDF"
-                    : "PDF"}
-              </button>
+              />
               <button
                 onClick={() => {
                   if (!recap.shareToken) {

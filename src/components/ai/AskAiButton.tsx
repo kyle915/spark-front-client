@@ -1,13 +1,12 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import {
-  ArrowUp,
   ArrowUpRight,
-  Check,
-  Copy,
   CornerDownRight,
   RotateCcw,
 } from "lucide-react";
+import { CopyMorphButton } from "@/motion/CopyMorphButton";
+import { PaperPlaneSendButton } from "@/motion/FeedbackActionButton";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { TenantAiAnswerQuery } from "@/api/queries/TenantAiAnswerQuery";
@@ -119,24 +118,16 @@ function scopeCopy(
 }
 
 function CopyReplyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
   return (
-    <button
-      type="button"
-      onClick={() => {
-        if (typeof navigator !== "undefined" && navigator.clipboard) {
-          void navigator.clipboard.writeText(text);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1600);
-        }
-      }}
-      className="inline-flex items-center gap-1 text-[11px] transition hover:opacity-80 cursor-pointer"
-      style={{ ...META, background: "transparent", border: "none", padding: 0 }}
+    <CopyMorphButton
+      text={text}
+      label="Copy"
+      copiedLabel="Copied"
       title="Copy answer"
-    >
-      {copied ? <Check size={11} strokeWidth={2} /> : <Copy size={11} strokeWidth={1.8} />}
-      <span>{copied ? "Copied" : "Copy"}</span>
-    </button>
+      className="text-[11px]"
+      style={{ ...META, background: "transparent", border: "none", padding: 0 }}
+      iconSize={11}
+    />
   );
 }
 
@@ -491,16 +482,16 @@ export const AskAiModal: React.FC<{
             className="flex-1 min-w-0 bg-transparent text-[13.5px] outline-none disabled:opacity-60"
             style={{ color: "var(--spark-text)" }}
           />
-          <button
+          <PaperPlaneSendButton
             type="submit"
+            iconOnly
+            busy={isBusy}
             disabled={!canAsk}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition hover:opacity-90 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+            className={`h-8 w-8 shrink-0 rounded-lg transition hover:opacity-90 active:scale-95 ${isBusy ? "" : "disabled:opacity-35"} disabled:cursor-not-allowed cursor-pointer`}
             style={limeBtn}
             aria-label="Send question"
             title="Ask Spark"
-          >
-            <ArrowUp size={15} strokeWidth={2.2} />
-          </button>
+          />
         </div>
 
         <div className="mt-1.5 px-0.5 flex items-center justify-between text-[10.5px]" style={META}>

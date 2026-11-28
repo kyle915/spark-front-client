@@ -120,6 +120,7 @@ import {
   revealProgramPicker,
   storeNameRequired,
 } from "./programPickerGate";
+import { CodeShakeBox } from "@/motion/CopyMorphButton";
 
 
 function CheckinStoreSuggestions({
@@ -1412,7 +1413,11 @@ export default function IdentifyStep({
         </>
       ) : null}
 
-      {err ? <p style={errText}>{err}</p> : null}
+      {err ? (
+        <CodeShakeBox trigger={err}>
+          <p style={errText}>{err}</p>
+        </CodeShakeBox>
+      ) : null}
       {identityAsk ? (
         <div role="alertdialog" aria-labelledby="identity-ask-title" style={shiftAskBox}>
           <p id="identity-ask-title" style={shiftAskTitle}>

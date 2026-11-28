@@ -17,14 +17,17 @@ import {
   CalendarClock,
   ChevronDown,
   ChevronUp,
-  Download,
   Mail,
   MessageSquareQuote,
-  Send,
   Settings2,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { InkSwitch } from "@/motion/InkSwitch";
+import {
+  DownloadRingButton,
+  PaperPlaneSendButton,
+} from "@/motion/FeedbackActionButton";
 import { ExecutiveSnapshotQuery } from "@/api/queries/RetentionAutomationQueries";
 import {
   ExportExecutiveSnapshotPdfMutation,
@@ -107,6 +110,8 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pdfDoneCount, setPdfDoneCount] = useState(0);
+  const [sentDoneCount, setSentDoneCount] = useState(0);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(
     null,
   );
@@ -216,6 +221,7 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
       onCompleted: (res) => {
         const out = res.sendExecutiveSnapshotNow;
         if (out.ok) {
+          setSentDoneCount((c) => c + 1);
           setNotice({
             ok: true,
             text: `Sent ${out.monthLabel || snap.monthLabel} Executive Snapshot${out.pdfAttached ? " + PDF" : ""} to ${out.recipients.join(", ")}.`,
@@ -246,6 +252,7 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
         const out = res.exportExecutiveSnapshotPdf;
         if (out.ok && out.pdfBase64) {
           downloadBase64Pdf(out.pdfBase64, out.filename);
+          setPdfDoneCount((c) => c + 1);
           setNotice({
             ok: true,
             text: `Downloaded ${out.filename}.`,
@@ -352,8 +359,8 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
           </label>
 
           {snap.canManage ? (
-            <label
-              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer select-none"
+            <div
+              className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold"
               style={{
                 ...BORDER,
                 background: enabled
@@ -361,44 +368,40 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
                   : "transparent",
                 color: "var(--spark-text)",
               }}
-              title="Automatically email this brief + PDF on the 1st of every month"
             >
-              <input
-                type="checkbox"
-                role="switch"
+              <InkSwitch
                 checked={enabled}
-                onChange={toggleEnabled}
+                onChange={() => toggleEnabled()}
                 disabled={saving}
-                className="w-3.5 h-3.5"
-                style={{ accentColor: "var(--spark-lime)" }}
+                label="Auto-send 1st of month"
+                title="Automatically email this brief + PDF on the 1st of every month"
               />
-              <span>Auto-send 1st of month</span>
-            </label>
+            </div>
           ) : null}
 
-          <button
-            type="button"
+          <DownloadRingButton
+            busy={exportingPdf}
             onClick={handleDownloadPdf}
-            disabled={exportingPdf}
-            className="spark-btn-ghost text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <Download size={13} strokeWidth={1.9} />
-            {exportingPdf ? "Building PDF…" : "Download PDF"}
-          </button>
+            idleLabel="Download PDF"
+            busyLabel="Building PDF…"
+            doneLabel="Downloaded"
+            successCount={pdfDoneCount}
+            className="spark-btn-ghost text-xs px-3 py-1.5 rounded-lg cursor-pointer disabled:opacity-50"
+          />
 
-          <button
-            type="button"
+          <PaperPlaneSendButton
+            busy={sendingNow}
             onClick={handleSendNow}
-            disabled={sendingNow}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition hover:opacity-90 disabled:opacity-50"
+            label="Send now"
+            busyLabel="Sending…"
+            doneLabel="Sent"
+            successCount={sentDoneCount}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition hover:opacity-90 disabled:opacity-50"
             style={{
               background: "var(--spark-lime)",
               color: "var(--spark-on-accent)",
             }}
-          >
-            <Send size={12.5} strokeWidth={2} />
-            {sendingNow ? "Sending…" : "Send now"}
-          </button>
+          />
 
           {snap.canManage ? (
             <button
@@ -473,15 +476,17 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
             </label>
           </div>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
-            <label className="inline-flex items-center gap-2 text-xs cursor-pointer" style={SECONDARY}>
-              <input
-                type="checkbox"
-                checked={includePhotos}
-                onChange={(e) => setIncludePhotos(e.target.checked)}
-                style={{ accentColor: "var(--spark-lime)" }}
-              />
-              <span>Include up to 4 best approved field photos</span>
-            </label>
+            <InkSwitch
+              checked={includePhotos}
+              onChange={setIncludePhotos}
+              className="text-xs"
+              label={
+                <span style={SECONDARY}>
+                  Include up to 4 best approved field photos
+                </span>
+              }
+              ariaLabel="Include up to 4 best approved field photos"
+            />
             <div className="flex items-center gap-2">
               <button
                 type="button"

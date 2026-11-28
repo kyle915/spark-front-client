@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import SparkOverlay from "@/shared/SparkOverlay";
 import { useAlertStore } from "@/store/alertStore";
+import { HoldToConfirmButton } from "@/motion/ConfirmGestures";
+import { CodeShakeBox } from "@/motion/CopyMorphButton";
 
 /**
  * Cancel a scheduled event / request with comments.
@@ -349,19 +351,21 @@ export default function CancelDemoDialog({
         />
       </label>
       {error ? (
-        <p className="mt-3 text-sm" style={{ color: "var(--spark-flag-ink)" }}>
-          {error}
-        </p>
+        <CodeShakeBox trigger={error}>
+          <p className="mt-3 text-sm" style={{ color: "var(--spark-flag-ink)" }}>
+            {error}
+          </p>
+        </CodeShakeBox>
       ) : null}
       <div className="spark-overlay-actions">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={busy}
+        <HoldToConfirmButton
+          label="Cancel event"
+          holdingLabel="Keep holding…"
+          busyLabel="Cancelling…"
+          busy={busy}
+          onConfirm={() => void submit()}
           className="spark-overlay-action spark-overlay-action-danger"
-        >
-          {busy ? "Cancelling…" : "Cancel event"}
-        </button>
+        />
         <button
           type="button"
           onClick={onClose}

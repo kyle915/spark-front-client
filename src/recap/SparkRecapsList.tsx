@@ -53,6 +53,7 @@ import ImportConnecteamButton from "./ImportConnecteamButton";
 import ExportReceiptsButton from "./ExportReceiptsButton";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { CountReel } from "@/motion/CountReel";
+import { LeafTabs } from "@/motion/LeafTabs";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
   dispatchOpenJump,
@@ -3546,29 +3547,27 @@ export default function SparkRecapsList() {
               style={{ ...filterStyle, flex: 1, minWidth: 140, maxWidth: 300 }}
             />
             {!isClient && (
-              <div className="pill-group overflow-x-auto max-w-full spark-scroll-fade">
-                {(
-                  [
-                    ["needs_review", "Needs review"],
-                    ["approved", "Approved"],
-                    ["shared", "Shared"],
-                    ["archived", "Archived"],
-                    ["submitted", "Submitted"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setStatusFilter(key)}
-                    className={`pill-btn whitespace-nowrap ${pipelineKey === key ? "on" : ""}`}
-                  >
-                    {label}
-                    {key === "needs_review" ? (
-                      <SidebarTabCount pick="recapsNeedsReview" />
-                    ) : null}
-                  </button>
-                ))}
-              </div>
+              <LeafTabs
+                ariaLabel="Recap pipeline filter"
+                className="overflow-x-auto max-w-full spark-scroll-fade"
+                value={pipelineKey}
+                onChange={setStatusFilter}
+                options={[
+                  {
+                    key: "needs_review",
+                    label: (
+                      <>
+                        Needs review
+                        <SidebarTabCount pick="recapsNeedsReview" />
+                      </>
+                    ),
+                  },
+                  { key: "approved", label: "Approved" },
+                  { key: "shared", label: "Shared" },
+                  { key: "archived", label: "Archived" },
+                  { key: "submitted", label: "Submitted" },
+                ]}
+              />
             )}
             {!isClient && (
               <button

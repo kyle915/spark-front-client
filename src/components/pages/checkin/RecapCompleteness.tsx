@@ -3,6 +3,7 @@ import {
   type CompletenessItem,
 } from "./checkinCompleteness";
 import { computeCompletionSummary } from "./oneHandedCheckin";
+import { StrokeCheckBadge } from "@/motion/ProgressMoments";
 
 export function RecapCompletionBar({
   totalCheckpoints,
@@ -40,11 +41,15 @@ export function RecapCompletionBar({
       >
         <span
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
             fontSize: 13,
             fontWeight: 700,
             color: done ? "#166534" : "#1c1917",
           }}
         >
+          {done ? <StrokeCheckBadge done accent="#166534" size={18} /> : null}
           {summary.label}
         </span>
         {nextItem ? (
@@ -111,9 +116,13 @@ export function RecapCompletenessChecklist({ items }: { items: CompletenessItem[
           color: "#1c1917",
           fontSize: 14,
           fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
         }}
       >
-        Everything&apos;s filled in — ready to submit.
+        <StrokeCheckBadge done accent="#166534" size={20} />
+        <span>Everything&apos;s filled in — ready to submit.</span>
       </p>
     );
   }
@@ -149,6 +158,9 @@ export function RecapCompletenessChecklist({ items }: { items: CompletenessItem[
             type="button"
             onClick={() => scrollToCompletenessTarget(item.target)}
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
               minHeight: 48,
               padding: "10px 12px",
               borderRadius: 10,
@@ -161,7 +173,8 @@ export function RecapCompletenessChecklist({ items }: { items: CompletenessItem[
               cursor: "pointer",
             }}
           >
-            {item.label}
+            <StrokeCheckBadge done={false} size={18} />
+            <span>{item.label}</span>
           </button>
         ))}
       </div>

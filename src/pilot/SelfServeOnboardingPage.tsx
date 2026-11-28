@@ -23,6 +23,7 @@ import {
   captureOnboardingMarketingUtm,
   utmMutationVariables,
 } from "./marketingUtm";
+import { StepTrack, StrokeCheckBadge } from "@/motion/ProgressMoments";
 import {
   PilotQueriesOnboardingStateQuery,
   PilotQueriesStarterCatalogQuery,
@@ -649,32 +650,69 @@ const AuthenticatedOnboardingWizard: React.FC<{
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-        {steps.map((step, i) => (
-          <div
-            key={step.label}
-            className="rounded-xl px-3.5 py-3 text-xs"
-            style={{
-              background: step.done ? "var(--pilot-ok-bg)" : "var(--spark-surface)",
-              border: step.done
-                ? "1px solid var(--pilot-ok-border)"
-                : "1px solid var(--spark-border)",
-            }}
-          >
-            <p
-              className="mono font-bold"
+      {(() => {
+        const firstPendingIdx = steps.findIndex((s) => !s.done);
+        return (
+          <div className="space-y-3">
+            <div
+              className="hidden md:block rounded-xl px-4 py-3"
               style={{
-                color: step.done ? "var(--pilot-ok-fg)" : "var(--spark-text-meta)",
+                background: "var(--spark-surface)",
+                border: "1px solid var(--spark-border)",
               }}
             >
-              STEP {i + 1} · {step.done ? "DONE" : "NEXT"}
-            </p>
-            <p className="font-medium mt-1" style={{ color: "var(--spark-text)" }}>
-              {step.label}
-            </p>
+              <StepTrack
+                ariaLabel="Onboarding launch progress"
+                accent="var(--spark-lime)"
+                steps={steps.map((step, i) => ({
+                  key: step.label,
+                  label: step.label,
+                  state: step.done
+                    ? "done"
+                    : i === firstPendingIdx
+                      ? "current"
+                      : "upcoming",
+                }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+              {steps.map((step, i) => (
+                <div
+                  key={step.label}
+                  className="rounded-xl px-3.5 py-3 text-xs"
+                  style={{
+                    background: step.done ? "var(--pilot-ok-bg)" : "var(--spark-surface)",
+                    border: step.done
+                      ? "1px solid var(--pilot-ok-border)"
+                      : "1px solid var(--spark-border)",
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p
+                      className="mono font-bold"
+                      style={{
+                        color: step.done ? "var(--pilot-ok-fg)" : "var(--spark-text-meta)",
+                      }}
+                    >
+                      STEP {i + 1} · {step.done ? "DONE" : "NEXT"}
+                    </p>
+                    <StrokeCheckBadge
+                      done={step.done}
+                      current={!step.done && i === firstPendingIdx}
+                      index={i}
+                      accent="var(--spark-lime)"
+                      size={18}
+                    />
+                  </div>
+                  <p className="font-medium mt-1" style={{ color: "var(--spark-text)" }}>
+                    {step.label}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {banner ? (
         <div

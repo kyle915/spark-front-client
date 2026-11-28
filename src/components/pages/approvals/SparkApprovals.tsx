@@ -27,6 +27,7 @@ import { AlertTriangle, ArrowUpRight, Check, X } from "lucide-react";
 import RequestQuickPeekSheet from "@/requests/RequestQuickPeekSheet";
 import { type QuickPeekItem } from "@/requests/quickPeekNav";
 import { CountReel } from "@/motion/CountReel";
+import { LeafTabs } from "@/motion/LeafTabs";
 import { decodeReqLabel } from "./decodeReqLabel";
 
 /**
@@ -1042,24 +1043,16 @@ const ApprovalsInner: React.FC = () => {
   const SearchBar = (
     <div className="spark-card px-4 py-3 flex items-center gap-3 flex-wrap">
       {horizonCounts.pastDue > 0 && (
-        <div className="pill-group">
-          {(
-            [
-              { key: "all", label: `All (${horizonCounts.all})` },
-              { key: "upcoming", label: `Upcoming (${horizonCounts.upcoming})` },
-              { key: "past_due", label: `Past-due (${horizonCounts.pastDue})` },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setHorizonTab(tab.key)}
-              className={`pill-btn ${horizonTab === tab.key ? "on" : ""}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <LeafTabs
+          ariaLabel="Approval horizon filter"
+          value={horizonTab}
+          onChange={setHorizonTab}
+          options={[
+            { key: "all", label: `All (${horizonCounts.all})` },
+            { key: "upcoming", label: `Upcoming (${horizonCounts.upcoming})` },
+            { key: "past_due", label: `Past-due (${horizonCounts.pastDue})` },
+          ]}
+        />
       )}
       <input
         ref={searchRef}

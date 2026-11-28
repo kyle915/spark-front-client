@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
+import { DownloadRingButton } from "@/motion/FeedbackActionButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
   holdActionSuccess,
@@ -437,6 +438,7 @@ const SparkRecapInner: React.FC<{
   const [commitPdf, isPdfRunning] = useMutation<GenerateRecapPdfMutationType>(
     GenerateRecapPdfMutation,
   );
+  const [pdfDoneCount, setPdfDoneCount] = useState(0);
   const [commitAddFile] = useMutation<AddRecapFileMutationType>(
     AddRecapFileMutation,
   );
@@ -1161,8 +1163,12 @@ const SparkRecapInner: React.FC<{
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button
-              disabled={isPdfRunning}
+            <DownloadRingButton
+              busy={isPdfRunning}
+              idleLabel={existingPdfUrl ? "Download PDF" : "PDF"}
+              busyLabel="Generating…"
+              doneLabel="PDF ready"
+              successCount={pdfDoneCount}
               onClick={() => {
                 // Always generate-on-demand — backend reuses only when the
                 // GCS blob still exists (avoids NoSuchKey on stale rows).
@@ -1174,6 +1180,7 @@ const SparkRecapInner: React.FC<{
                       if (file) {
                         window.open(recapFileUrl(file), "_blank");
                       }
+                      setPdfDoneCount((c) => c + 1);
                       showAlert("PDF ready.", "success");
                     } else {
                       showAlert(
@@ -1200,13 +1207,7 @@ const SparkRecapInner: React.FC<{
                 border: "1px solid var(--spark-border)",
                 opacity: isPdfRunning ? 0.5 : 1,
               }}
-            >
-              {isPdfRunning
-                ? "Generating…"
-                : existingPdfUrl
-                  ? "⬇ Download PDF"
-                  : "⬇ PDF"}
-            </button>
+            />
             <button
               disabled={isZipping || allFiles.length === 0}
               onClick={async () => {

@@ -6,6 +6,8 @@ import { recapShareUrl } from "@/utils/recapShare";
 import { EMAIL_RE, parseRecipients } from "@/utils/emailRecipients";
 import { useAlertStore } from "@/store/alertStore";
 import { SparkSheet } from "@/shared/SparkSheet";
+import { CopyMorphButton } from "@/motion/CopyMorphButton";
+import { PaperPlaneSendButton } from "@/motion/FeedbackActionButton";
 
 /**
  * On-platform Share dialog for recap views — replaces the native OS
@@ -43,7 +45,6 @@ export default function ShareRecapModal({
   const shareUrl = recapShareUrl(shareToken);
   const mobile = useIsMobileSheet();
 
-  const [copied, setCopied] = useState(false);
   const [recipientsRaw, setRecipientsRaw] = useState("");
   const [note, setNote] = useState("");
   const [sentTo, setSentTo] = useState<number | null>(null);
@@ -54,11 +55,10 @@ export default function ShareRecapModal({
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
       showAlert("Link copied.", "success");
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } catch (err) {
       showAlert("Couldn't copy — select the link and copy it.", "warning");
+      throw err;
     }
   };
 
@@ -128,21 +128,20 @@ export default function ShareRecapModal({
               outline: "none",
             }}
           />
-          <button
-            type="button"
-            onClick={copyLink}
-            className="px-3 rounded-xl text-sm font-semibold shrink-0 transition"
+          <CopyMorphButton
+            onCopy={copyLink}
+            label="Copy link"
+            copiedLabel="Copied"
+            title="Copy public recap link"
+            className="px-3 rounded-xl text-sm font-semibold shrink-0"
             style={{
               minHeight: 44,
-              background: copied ? "rgba(var(--spark-accent-rgb),0.15)" : "transparent",
-              color: copied ? "var(--spark-lime)" : "var(--spark-text)",
-              border: `1px solid ${
-                copied ? "rgba(var(--spark-accent-rgb),0.4)" : "var(--spark-border)"
-              }`,
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
             }}
-          >
-            {copied ? "✓ Copied" : "Copy link"}
-          </button>
+            iconSize={13}
+          />
         </div>
         <p
           className="text-[11px] mt-2"
@@ -227,10 +226,13 @@ export default function ShareRecapModal({
           {sentTo === null ? "Cancel" : "Done"}
         </button>
         {sentTo === null && (
-          <button
-            type="button"
+          <PaperPlaneSendButton
+            busy={isSending}
+            label="Send email"
+            busyLabel="Sending…"
+            doneLabel="Sent"
             onClick={sendEmail}
-            disabled={isSending || recipientsRaw.trim().length === 0}
+            disabled={recipientsRaw.trim().length === 0}
             className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40 transition"
             style={{
               minHeight: 44,
@@ -241,9 +243,7 @@ export default function ShareRecapModal({
                   ? "0 0 16px rgba(var(--spark-accent-rgb),0.35)"
                   : "none",
             }}
-          >
-            {isSending ? "Sending…" : "Send email"}
-          </button>
+          />
         )}
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
   readLiveWalkupCode,
   writeLiveWalkupCode,
 } from "@/components/pages/walkups/walkupLiveCode";
+import { CopyMorphButton } from "@/motion/CopyMorphButton";
 
 /**
  * Walk-up access control for an event. An admin generates a short code (shown
@@ -79,25 +80,19 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
     });
   };
 
-  const copy = () => {
-    if (code) {
-      navigator.clipboard?.writeText(code).then(
-        () => showAlert("Code copied.", "success"),
-        () => {},
-      );
-    }
+  const copy = async () => {
+    if (!code) return;
+    await navigator.clipboard?.writeText(code);
+    showAlert("Code copied.", "success");
   };
 
   // Shareable no-login web link — the BA opens it, clocks in/out, and files the
   // full recap right in their browser (no app). Same code, web door.
   const checkinHref = code ? checkinUrl(code) : null;
-  const copyLink = () => {
-    if (checkinHref) {
-      navigator.clipboard?.writeText(checkinHref).then(
-        () => showAlert("Check-in link copied.", "success"),
-        () => {},
-      );
-    }
+  const copyLink = async () => {
+    if (!checkinHref) return;
+    await navigator.clipboard?.writeText(checkinHref);
+    showAlert("Check-in link copied.", "success");
   };
 
   return (
@@ -172,27 +167,30 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
               <div className="mt-3">
                 <CheckinQr url={checkinHref} downloadName={`${code}-checkin-qr.png`} />
               </div>
-              <button
-                onClick={copyLink}
+              <CopyMorphButton
+                onCopy={copyLink}
+                label="Copy link"
+                copiedLabel="Copied"
+                title="Copy check-in link"
                 className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
                 style={{
                   background: "transparent",
                   color: "var(--spark-text)",
                   border: "1px solid var(--spark-border)",
                 }}
-              >
-                Copy link
-              </button>
+              />
             </div>
           ) : null}
           <div className="flex items-center gap-2">
-            <button
-              onClick={copy}
+            <CopyMorphButton
+              onCopy={copy}
+              label="Copy code"
+              copiedLabel="Copied"
+              title="Copy walk-up code"
               className="px-4 py-2 rounded-xl text-sm font-semibold flex-1"
               style={{ background: "var(--spark-lime)", color: "var(--spark-on-accent)" }}
-            >
-              Copy code
-            </button>
+              iconSize={13}
+            />
             <button
               onClick={generate}
               disabled={generating}

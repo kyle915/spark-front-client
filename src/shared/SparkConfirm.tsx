@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import SparkOverlay from "./SparkOverlay";
 import type { JumpOrigin } from "@/motion/opsMotion";
+import { HoldToConfirmButton } from "@/motion/ConfirmGestures";
 import { confirmActionClass, type ConfirmTone } from "./sparkConfirmTone";
 
 export type { ConfirmTone };
@@ -52,14 +53,25 @@ export function SparkConfirm({
       <h2 className="spark-overlay-title">{title}</h2>
       <div className="spark-overlay-copy">{body}</div>
       <div className="spark-overlay-actions">
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={busy}
-          className={confirmActionClass(tone)}
-        >
-          {busy ? "…" : confirmLabel}
-        </button>
+        {tone === "danger" ? (
+          <HoldToConfirmButton
+            label={confirmLabel}
+            holdingLabel="Keep holding…"
+            busyLabel="…"
+            busy={busy}
+            onConfirm={onConfirm}
+            className={confirmActionClass(tone)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className={confirmActionClass(tone)}
+          >
+            {busy ? "…" : confirmLabel}
+          </button>
+        )}
         <button
           type="button"
           onClick={onCancel}
