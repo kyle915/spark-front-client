@@ -15,10 +15,20 @@
 
 import type { RecordSourceSelectorProxy } from "relay-runtime";
 import { markRecapsListNeedsRefresh } from "./recapListFilters";
-import { invalidatePrefetchedRecaps } from "./prefetchRecapDetail";
 
 export const RECAP_APPROVAL_EVENT = "spark:recap-approval-changed";
 export const RECAP_APPROVAL_STORAGE_KEY = "spark.recaps.approvalChangedAt";
+
+type PrefetchInvalidator = (uuids?: readonly string[]) => void;
+const prefetchInvalidators = new Set<PrefetchInvalidator>();
+
+/** Register a prefetch-cache invalidator without pulling Relay query artifacts into unit tests. */
+export function registerPrefetchInvalidator(fn: PrefetchInvalidator): () => void {
+  prefetchInvalidators.add(fn);
+  return () => {
+    prefetchInvalidators.delete(fn);
+  };
+}
 
 export interface RecapApprovalChangedDetail {
   ids: string[];
@@ -73,7 +83,13 @@ export function notifyRecapApprovalChanged(input: {
   };
 
   markRecapsListNeedsRefresh();
-  invalidatePrefetchedRecaps(detail.uuids);
+  for (const invalidate of prefetchInvalidators) {
+    try {
+      invalidate(detail.uuids);
+    } catch {
+      // ignore invalidator failure
+    }
+  }
 
   if (typeof window !== "undefined") {
     try {

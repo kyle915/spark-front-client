@@ -1,6 +1,7 @@
 import { fetchQuery, type Environment, type GraphQLTaggedNode } from "relay-runtime";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
+import { registerPrefetchInvalidator } from "./recapApprovalSync";
 
 const retained = new Map<string, { unsubscribe: () => void }>();
 const MAX_RETAINED = 8;
@@ -94,3 +95,5 @@ export function invalidatePrefetchedRecaps(
     }
   }
 }
+
+registerPrefetchInvalidator(invalidatePrefetchedRecaps);
