@@ -24,6 +24,16 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     ],
   },
   {
+    id: "2026-11-27er",
+    date: "November 27, 2026",
+    title: "Monthly Executive Snapshot, Regional Shelf Alerts & Ask Spark Follow-Ups",
+    items: [
+      "Turn on the 1st-of-the-month Executive Snapshot in Program Reports to send stakeholders a clean monthly email and PDF brief with headline KPIs vs. prior month, top 5 converting doors, shelf compliance and pricing callouts, top 3 shopper themes, and 4 best field photos — or download and send anytime.",
+      "Set up Regional Manager Alerts in Shelf & Voice to receive instant email or webhook notifications whenever stores in your states or retail chains log an out-of-stock, MSRP price drift, or missing price tag.",
+      "Ask Spark now suggests contextual next-step follow-up prompts right under each reply so you can drill deeper, compare against last month, or draft a wave in one click.",
+    ],
+  },
+  {
     id: "2026-11-27ah",
     date: "November 27, 2026",
     title: "Floating Ask Spark Pop-Up Everywhere",

@@ -2,6 +2,7 @@ import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import useStickyState from "@/hooks/useStickyState";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
 import ReportSubscriptionToggle from "./ReportSubscriptionToggle";
+import ExecutiveSnapshotCard from "./ExecutiveSnapshotCard";
 import RecapFieldTotalsSection, { SampledQuestionNote } from "./RecapFieldTotalsSection";
 import FieldEfficiencySection from "./FieldEfficiencySection";
 import ProgramShareControl from "./ProgramShareControl";
@@ -973,6 +974,17 @@ export default function SparkReports() {
                   staff={isStaffView}
                   canWrite={!customIncomplete}
                 />
+              </Suspense>
+            </ErrorBoundary>
+          ) : null}
+
+          {tenantId ? (
+            <ErrorBoundary
+              key={`exec-snapshot|${tenantId}`}
+              fallback={null}
+            >
+              <Suspense fallback={null}>
+                <ExecutiveSnapshotCard tenantId={tenantId} />
               </Suspense>
             </ErrorBoundary>
           ) : null}

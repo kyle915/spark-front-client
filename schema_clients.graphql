@@ -1457,132 +1457,6 @@ type BrandChatView {
   questionsLeftThisHour: Int!
 }
 
-type ChatAiDraftReply {
-  ok: Boolean!
-  reason: String
-  draft: String!
-  confidence: String!
-  sources: [String!]!
-  missingInfo: String!
-}
-
-type ChatTeachSparkPreview {
-  ok: Boolean!
-  reason: String
-  title: String!
-  body: String!
-  category: String!
-  audience: String!
-  tags: [String!]!
-  routePath: String!
-  routeLabel: String!
-}
-
-input ResolveSparkHelpGapInput {
-  gapUuid: String!
-  title: String!
-  body: String!
-  category: String! = "general"
-  audience: String! = "all"
-  routePath: String! = ""
-  routeLabel: String! = ""
-  tags: [String!] = null
-}
-
-type SparkHelpActionResult {
-  ok: Boolean!
-  reason: String
-}
-
-type SparkHelpAnswerResult {
-  ok: Boolean!
-  reason: String
-  answer: String!
-  confidence: String!
-  matchedVia: String!
-  sources: [SparkHelpSourceType!]!
-  gapLogged: Boolean!
-  isAdminScope: Boolean!
-}
-
-type SparkHelpArticleMutationResult {
-  ok: Boolean!
-  reason: String
-  article: SparkHelpArticleType
-}
-
-type SparkHelpArticleType {
-  id: ID!
-  uuid: String!
-  title: String!
-  category: String!
-  audience: String!
-  routePath: String!
-  routeLabel: String!
-  tags: [String!]!
-  body: String!
-  sourceKind: String!
-  hasEmbedding: Boolean!
-  embeddingModel: String!
-  isActive: Boolean!
-  usageCount: Int!
-  updatedAt: String!
-}
-
-type SparkHelpEmbeddingSyncResult {
-  ok: Boolean!
-  reason: String
-  articlesChecked: Int!
-  articlesEmbedded: Int!
-  builtinEmbedded: Int!
-}
-
-type SparkHelpGapType {
-  id: ID!
-  uuid: String!
-  question: String!
-  routePath: String!
-  callerRole: String!
-  sourceSurface: String!
-  reason: String!
-  askedCount: Int!
-  status: String!
-  lastAskedAt: String!
-  resolvedArticleTitle: String
-}
-
-type SparkHelpKnowledgePayload {
-  ok: Boolean!
-  reason: String
-  isAdmin: Boolean!
-  builtinCount: Int!
-  embeddedCount: Int!
-  openGapCount: Int!
-  articles: [SparkHelpArticleType!]!
-  gaps: [SparkHelpGapType!]!
-}
-
-type SparkHelpSourceType {
-  title: String!
-  routePath: String!
-  routeLabel: String!
-  audience: String!
-  score: Float!
-}
-
-input UpsertSparkHelpArticleInput {
-  uuid: String = null
-  title: String!
-  body: String!
-  category: String! = "general"
-  audience: String! = "all"
-  routePath: String! = ""
-  routeLabel: String! = ""
-  tags: [String!] = null
-  sourceKind: String! = "admin_faq"
-  isActive: Boolean! = true
-}
-
 type BrandCompareRow {
   tenantPk: Int!
   name: String!
@@ -2075,6 +1949,15 @@ type ChartAnswer {
   reason: String
 }
 
+type ChatAiDraftReply {
+  ok: Boolean!
+  reason: String
+  draft: String!
+  confidence: String!
+  sources: [String!]!
+  missingInfo: String!
+}
+
 input ChatAttachmentInput {
   clientMutationId: ID = null
   file: String!
@@ -2138,6 +2021,18 @@ type ChatRecipient {
   uuid: String!
   name: String!
   email: String!
+}
+
+type ChatTeachSparkPreview {
+  ok: Boolean!
+  reason: String
+  title: String!
+  body: String!
+  category: String!
+  audience: String!
+  tags: [String!]!
+  routePath: String!
+  routeLabel: String!
 }
 
 """
@@ -4880,6 +4775,114 @@ type EventWithRequestDetailResponse {
   request: Request
 }
 
+type ExecutiveSnapshotConfigItem {
+  enabled: Boolean!
+  recipientEmails: String!
+  effectiveRecipients: [String!]!
+  targetMsrp: String
+  includePhotos: Boolean!
+  lastSentAt: String
+  lastSentMonth: String!
+  lastSendStatus: String!
+  lastSendError: String!
+}
+
+type ExecutiveSnapshotConfigOutcome {
+  ok: Boolean!
+  error: String
+  enabled: Boolean!
+  recipientEmails: String!
+  targetMsrp: String
+  includePhotos: Boolean!
+}
+
+type ExecutiveSnapshotDoorItem {
+  storeName: String!
+  market: String!
+  stateCode: String!
+  recaps: Int!
+  consumersSampled: Int!
+  unitsSold: Int!
+  conversionLabel: String!
+}
+
+type ExecutiveSnapshotKpiItem {
+  key: String!
+  label: String!
+  formattedValue: String!
+  deltaLabel: String!
+  direction: String!
+}
+
+type ExecutiveSnapshotPdfOutcome {
+  ok: Boolean!
+  filename: String!
+  monthLabel: String!
+  pdfBase64: String!
+  error: String
+}
+
+type ExecutiveSnapshotPhotoItem {
+  id: String!
+  url: String!
+  store: String!
+  state: String!
+  eventDate: String!
+  category: String!
+  caption: String!
+}
+
+type ExecutiveSnapshotSendOutcome {
+  ok: Boolean!
+  status: String!
+  recipients: [String!]!
+  monthLabel: String!
+  pdfAttached: Boolean!
+  error: String
+}
+
+type ExecutiveSnapshotShelfCallout {
+  storeName: String!
+  market: String!
+  severity: String!
+  detail: String!
+}
+
+type ExecutiveSnapshotShelfSummary {
+  auditedVisits: Int!
+  osaRatePct: Float
+  priceTagRatePct: Float
+  oosGapsCount: Int!
+  missingTagCount: Int!
+  medianPrice: String
+  targetMsrp: String
+  callouts: [ExecutiveSnapshotShelfCallout!]!
+}
+
+type ExecutiveSnapshotThemeItem {
+  title: String!
+  mentions: Int!
+  sentiment: String!
+  summary: String!
+}
+
+type ExecutiveSnapshotView {
+  tenantName: String!
+  canManage: Boolean!
+  year: Int!
+  month: Int!
+  monthKey: String!
+  monthLabel: String!
+  priorMonthLabel: String!
+  hasActivity: Boolean!
+  config: ExecutiveSnapshotConfigItem!
+  kpis: [ExecutiveSnapshotKpiItem!]!
+  topDoors: [ExecutiveSnapshotDoorItem!]!
+  shelf: ExecutiveSnapshotShelfSummary!
+  themes: [ExecutiveSnapshotThemeItem!]!
+  photos: [ExecutiveSnapshotPhotoItem!]!
+}
+
 type ExecutiveSummaryRow {
   label: String!
   primaryMetric: Int!
@@ -7300,6 +7303,12 @@ type Mutation {
   rotateWebhookSecret(endpointUuid: String!, tenantId: ID = null): WebhookEndpointMutationOutcome!
   deleteWebhookEndpoint(endpointUuid: String!, tenantId: ID = null): PilotMutationOutcome!
   sendTestWebhook(endpointUuid: String!, tenantId: ID = null): WebhookTestOutcome!
+  updateExecutiveSnapshotConfig(enabled: Boolean = null, recipientEmails: String = null, targetMsrp: String = null, includePhotos: Boolean = null, tenantId: ID = null): ExecutiveSnapshotConfigOutcome!
+  sendExecutiveSnapshotNow(testEmail: String = null, year: Int = null, month: Int = null, tenantId: ID = null): ExecutiveSnapshotSendOutcome!
+  exportExecutiveSnapshotPdf(year: Int = null, month: Int = null, tenantId: ID = null): ExecutiveSnapshotPdfOutcome!
+  upsertRegionalAlertSubscription(name: String!, subscriptionUuid: String = null, states: [String!] = null, chains: [String!] = null, alertOos: Boolean! = true, alertPriceDrift: Boolean! = true, alertMissingTag: Boolean! = true, targetMsrp: String = null, driftThresholdPct: String = "5.0", notifyEmail: Boolean! = true, recipientEmails: String! = "", notifyWebhook: Boolean! = false, webhookUrl: String! = "", isActive: Boolean! = true, tenantId: ID = null): RegionalAlertMutationOutcome!
+  deleteRegionalAlertSubscription(subscriptionUuid: String!, tenantId: ID = null): PilotMutationOutcome!
+  sendTestRegionalAlert(subscriptionUuid: String!, tenantId: ID = null): RegionalAlertTestOutcome!
 }
 
 type MutationNormalOutput {
@@ -8700,6 +8709,8 @@ type Query {
   billingReadiness: BillingReadinessView!
   savedReportViews(surface: String = null, tenantId: ID = null): [SavedReportViewItem!]!
   workspaceWebhooks(tenantId: ID = null): WebhooksWorkspaceView!
+  executiveSnapshot(year: Int = null, month: Int = null, tenantId: ID = null): ExecutiveSnapshotView!
+  regionalAlertSubscriptions(tenantId: ID = null): RegionalAlertsWorkspaceView!
 }
 
 """
@@ -9620,6 +9631,60 @@ type RegenerateAmbassadorPasswordsResponse {
   results: [RegenerateAmbassadorPasswordResult!]
 }
 
+type RegionalAlertDeliveryItem {
+  uuid: String!
+  triggerKind: String!
+  channel: String!
+  storeName: String!
+  stateCode: String!
+  summary: String!
+  status: String!
+  errorMessage: String!
+  createdAt: String!
+}
+
+type RegionalAlertMutationOutcome {
+  ok: Boolean!
+  error: String
+  subscriptionUuid: String
+}
+
+type RegionalAlertSubscriptionItem {
+  uuid: String!
+  name: String!
+  isActive: Boolean!
+  states: [String!]!
+  chains: [String!]!
+  alertOos: Boolean!
+  alertPriceDrift: Boolean!
+  alertMissingTag: Boolean!
+  targetMsrp: String
+  driftThresholdPct: String!
+  notifyEmail: Boolean!
+  recipientEmails: String!
+  notifyWebhook: Boolean!
+  webhookUrl: String!
+  webhookSecretPreview: String!
+  lastTriggeredAt: String
+  triggerCount: Int!
+  createdAt: String!
+  recentDeliveries: [RegionalAlertDeliveryItem!]!
+}
+
+type RegionalAlertTestOutcome {
+  ok: Boolean!
+  sentCount: Int!
+  failedCount: Int!
+  channels: [String!]!
+  error: String
+}
+
+type RegionalAlertsWorkspaceView {
+  tenantName: String!
+  defaultEmail: String!
+  subscriptions: [RegionalAlertSubscriptionItem!]!
+}
+
 type RegisterResponse {
   success: Boolean!
   message: String!
@@ -10114,6 +10179,17 @@ input ResolveShiftExtensionInput {
   reason: String! = ""
   approvedMinutes: Int = null
   clientMutationId: ID = null
+}
+
+input ResolveSparkHelpGapInput {
+  gapUuid: String!
+  title: String!
+  body: String!
+  category: String! = "general"
+  audience: String! = "all"
+  routePath: String! = ""
+  routeLabel: String! = ""
+  tags: [String!] = null
 }
 
 input RestoreFieldMarketingInput {
@@ -11065,6 +11141,87 @@ type SourceDetailResponse {
   message: String!
   clientMutationId: ID
   source: Source
+}
+
+type SparkHelpActionResult {
+  ok: Boolean!
+  reason: String
+}
+
+type SparkHelpAnswerResult {
+  ok: Boolean!
+  reason: String
+  answer: String!
+  confidence: String!
+  matchedVia: String!
+  sources: [SparkHelpSourceType!]!
+  gapLogged: Boolean!
+  isAdminScope: Boolean!
+}
+
+type SparkHelpArticleMutationResult {
+  ok: Boolean!
+  reason: String
+  article: SparkHelpArticleType
+}
+
+type SparkHelpArticleType {
+  id: ID!
+  uuid: String!
+  title: String!
+  category: String!
+  audience: String!
+  routePath: String!
+  routeLabel: String!
+  tags: [String!]!
+  body: String!
+  sourceKind: String!
+  hasEmbedding: Boolean!
+  embeddingModel: String!
+  isActive: Boolean!
+  usageCount: Int!
+  updatedAt: String!
+}
+
+type SparkHelpEmbeddingSyncResult {
+  ok: Boolean!
+  reason: String
+  articlesChecked: Int!
+  articlesEmbedded: Int!
+  builtinEmbedded: Int!
+}
+
+type SparkHelpGapType {
+  id: ID!
+  uuid: String!
+  question: String!
+  routePath: String!
+  callerRole: String!
+  sourceSurface: String!
+  reason: String!
+  askedCount: Int!
+  status: String!
+  lastAskedAt: String!
+  resolvedArticleTitle: String
+}
+
+type SparkHelpKnowledgePayload {
+  ok: Boolean!
+  reason: String
+  isAdmin: Boolean!
+  builtinCount: Int!
+  embeddedCount: Int!
+  openGapCount: Int!
+  articles: [SparkHelpArticleType!]!
+  gaps: [SparkHelpGapType!]!
+}
+
+type SparkHelpSourceType {
+  title: String!
+  routePath: String!
+  routeLabel: String!
+  audience: String!
+  score: Float!
 }
 
 """
@@ -13141,6 +13298,19 @@ input UpsertRequestReviewedInput {
   reviewed: Boolean!
 }
 
+input UpsertSparkHelpArticleInput {
+  uuid: String = null
+  title: String!
+  body: String!
+  category: String! = "general"
+  audience: String! = "all"
+  routePath: String! = ""
+  routeLabel: String! = ""
+  tags: [String!] = null
+  sourceKind: String! = "admin_faq"
+  isActive: Boolean! = true
+}
+
 input UserFiltersInput {
   tenantId: ID = null
   name: String = null
@@ -13191,13 +13361,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
+  email: String!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  firstName: String
   id: ID!
+  firstName: String
   lastName: String
-  email: String!
   archived: Boolean!
   verified: Boolean!
 }

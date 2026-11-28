@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
-import { ArrowUp, ArrowUpRight, Check, Copy, RotateCcw } from "lucide-react";
+import {
+  ArrowUp,
+  ArrowUpRight,
+  Check,
+  Copy,
+  CornerDownRight,
+  RotateCcw,
+} from "lucide-react";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { TenantAiAnswerQuery } from "@/api/queries/TenantAiAnswerQuery";
@@ -21,6 +28,7 @@ import {
   type JumpOrigin,
 } from "@/motion/opsMotion";
 import { askAiModalTitle } from "./askAiSubjectName";
+import { deriveAskSparkFollowups } from "./askSparkFollowups";
 import { routeContextLabel } from "./routeAskSparkPrompts";
 
 type DataTurn = {
@@ -320,49 +328,87 @@ export const AskAiModal: React.FC<{
           </div>
         ) : (
           <ul className="space-y-4">
-            {dataTurns.map((dt) => (
-              <li key={dt.id} className="space-y-2.5">
-                <div className="flex justify-end">
-                  <p
-                    className="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px] leading-relaxed"
-                    style={limeBtn}
-                  >
-                    {dt.question}
-                  </p>
-                </div>
-                <div
-                  className="rounded-2xl rounded-tl-md px-3.5 py-3 text-[13.5px] space-y-2.5"
-                  style={{
-                    background: "rgba(var(--spark-ink-rgb),0.03)",
-                    border: "1px solid var(--spark-hairline, var(--spark-border))",
-                  }}
-                >
-                  {dt.ok ? (
-                    <>
-                      <AiMarkdown>{dt.answer}</AiMarkdown>
-                      {dt.chart ? <AiChartView chart={dt.chart} /> : null}
-                      <div
-                        className="pt-2 flex items-center justify-between text-[11px]"
-                        style={{
-                          ...META,
-                          borderTop:
-                            "1px solid var(--spark-hairline, var(--spark-border))",
-                        }}
+            {dataTurns.map((dt, idx) => {
+              const isLatest = idx === dataTurns.length - 1;
+              const followups =
+                isLatest && !pendingData && dt.ok
+                  ? deriveAskSparkFollowups({
+                      question: dt.question,
+                      answer: dt.answer,
+                      pathname: location.pathname,
+                      priorQuestions: dataTurns.slice(0, idx).map((p) => p.question),
+                    })
+                  : [];
+              return (
+                <Fragment key={dt.id}>
+                  <li className="space-y-2.5">
+                    <div className="flex justify-end">
+                      <p
+                        className="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2 text-[13.5px] leading-relaxed"
+                        style={limeBtn}
                       >
-                        {dt.answer ? <CopyReplyButton text={dt.answer} /> : <span />}
-                        {dt.thoughtFor != null ? (
-                          <span>{thoughtLabel(dt.thoughtFor)}</span>
-                        ) : null}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-[13px]" style={META}>
-                      {dt.reason || "Couldn't answer that from this client's data."}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
+                        {dt.question}
+                      </p>
+                    </div>
+                    <div
+                      className="rounded-2xl rounded-tl-md px-3.5 py-3 text-[13.5px] space-y-2.5"
+                      style={{
+                        background: "rgba(var(--spark-ink-rgb),0.03)",
+                        border: "1px solid var(--spark-hairline, var(--spark-border))",
+                      }}
+                    >
+                      {dt.ok ? (
+                        <>
+                          <AiMarkdown>{dt.answer}</AiMarkdown>
+                          {dt.chart ? <AiChartView chart={dt.chart} /> : null}
+                          <div
+                            className="pt-2 flex items-center justify-between text-[11px]"
+                            style={{
+                              ...META,
+                              borderTop:
+                                "1px solid var(--spark-hairline, var(--spark-border))",
+                            }}
+                          >
+                            {dt.answer ? <CopyReplyButton text={dt.answer} /> : <span />}
+                            {dt.thoughtFor != null ? (
+                              <span>{thoughtLabel(dt.thoughtFor)}</span>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-[13px]" style={META}>
+                          {dt.reason || "Couldn't answer that from this client's data."}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                  {followups.length > 0 ? (
+                    <li
+                      className="flex flex-wrap gap-1.5 pt-0.5"
+                      aria-label="Follow-up prompts"
+                    >
+                      {followups.map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          onClick={() => void ask(prompt)}
+                          className="group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium text-left transition hover:opacity-85 active:scale-[0.98] cursor-pointer"
+                          style={chipStyle}
+                        >
+                          <CornerDownRight
+                            size={11}
+                            strokeWidth={2}
+                            className="shrink-0 opacity-60 group-hover:opacity-100"
+                            style={TEXT}
+                          />
+                          <span style={TEXT}>{prompt}</span>
+                        </button>
+                      ))}
+                    </li>
+                  ) : null}
+                </Fragment>
+              );
+            })}
             {pendingData ? (
               <li className="space-y-2.5">
                 <div className="flex justify-end">

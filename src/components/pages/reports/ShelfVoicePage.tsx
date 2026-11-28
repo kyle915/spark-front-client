@@ -28,6 +28,7 @@ import { CompetitorMentions } from "@/components/charts/CommentInsights";
 import PilotPeriodBar from "@/pilot/PilotPeriodBar";
 import { SavedViewsDigestBar } from "@/pilot/SavedViewsDigestBar";
 import { resolvePilotPeriod, type PilotRangeKey } from "@/pilot/pilotPeriodFilter";
+import RegionalAlertsCard from "./RegionalAlertsCard";
 import { ShelfVoiceHubQuery } from "@/api/queries/ShelfVoiceHubQuery";
 import type { ShelfVoiceHubQuery as ShelfVoiceHubQueryType } from "@api/queries/__generated__/ShelfVoiceHubQuery.graphql";
 import {
@@ -287,6 +288,20 @@ const ShelfVoiceBody: React.FC<{
           setMsrpInput(f.targetMsrp ?? "");
         }}
       />
+
+      <Suspense fallback={null}>
+        <RegionalAlertsCard
+          tenantId={tenantId}
+          suggestedStates={Array.from(
+            new Set(
+              stores
+                .map((s) => (s.stateCode || "").trim().toUpperCase())
+                .filter((c) => c.length === 2),
+            ),
+          )}
+          activeTargetMsrp={targetMsrp}
+        />
+      </Suspense>
 
       {/* 1. Executive Compliance & MSRP Strip */}
       <section

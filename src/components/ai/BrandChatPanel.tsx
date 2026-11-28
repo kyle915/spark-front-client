@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
   ArrowUp,
   ArrowUpRight,
   Check,
   Copy,
+  CornerDownRight,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import type { BrandChatMutationsReportUnhelpfulMutation } from "@api/mutations/_
 import type { JumpOrigin } from "@/motion/opsMotion";
 import AiMarkdown from "./AiMarkdown";
 import AskSparkPopoverFrame, { SparkThinkingDots } from "./AskSparkPopoverFrame";
+import { deriveAskSparkFollowups } from "./askSparkFollowups";
 import { routeContextLabel } from "./routeAskSparkPrompts";
 
 /**
@@ -500,15 +502,53 @@ export default function BrandChatPanel({
 
             {turns.length > 0 || pending ? (
               <ul className="space-y-4">
-                {turns.map((t) => (
-                  <TurnView
-                    key={t.id}
-                    turn={t}
-                    flagged={Boolean(flaggedIds[String(t.id)])}
-                    onFlagUnhelpful={flagUnhelpful}
-                    onNavigate={onClose}
-                  />
-                ))}
+                {turns.map((t, idx) => {
+                  const isLatest = idx === turns.length - 1;
+                  const followups =
+                    isLatest && !pending && left !== 0 && t.status === "answered"
+                      ? deriveAskSparkFollowups({
+                          question: t.question,
+                          answer: t.answer,
+                          sourceTools: t.sources.map((s) => s.tool),
+                          pathname: location.pathname,
+                          priorQuestions: turns.slice(0, idx).map((p) => p.question),
+                        })
+                      : [];
+                  return (
+                    <Fragment key={t.id}>
+                      <TurnView
+                        turn={t}
+                        flagged={Boolean(flaggedIds[String(t.id)])}
+                        onFlagUnhelpful={flagUnhelpful}
+                        onNavigate={onClose}
+                      />
+                      {followups.length > 0 ? (
+                        <li
+                          className="flex flex-wrap gap-1.5 pt-0.5"
+                          aria-label="Follow-up prompts"
+                        >
+                          {followups.map((prompt) => (
+                            <button
+                              key={prompt}
+                              type="button"
+                              onClick={() => ask(prompt)}
+                              className="group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium text-left transition hover:opacity-85 active:scale-[0.98] cursor-pointer"
+                              style={chip}
+                            >
+                              <CornerDownRight
+                                size={11}
+                                strokeWidth={2}
+                                className="shrink-0 opacity-60 group-hover:opacity-100"
+                                style={TEXT}
+                              />
+                              <span style={TEXT}>{prompt}</span>
+                            </button>
+                          ))}
+                        </li>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
                 {pending ? (
                   <li className="space-y-2.5">
                     <div className="flex justify-end">
