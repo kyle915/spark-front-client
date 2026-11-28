@@ -792,7 +792,7 @@ export default function SparkReports() {
                 Compiled from approved recaps on Spark by Ignite Productions
               </p>
             </div>
-            <SparkMark height={22} />
+            <SparkMark height={38} />
           </header>
 
           <div data-present-hide="true" className="print:hidden">

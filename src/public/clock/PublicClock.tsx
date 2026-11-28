@@ -1189,7 +1189,7 @@ function Shell({
             <img
               src="/legal/spark-logo.png"
               alt="Spark by Ignite"
-              style={{ height: 26, width: "auto" }}
+              style={{ height: 38, width: "auto" }}
             />
           </a>
           {brand ? (

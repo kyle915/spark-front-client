@@ -884,7 +884,7 @@ export default function PublicJobBoard() {
       <div style={{ width: "100%", maxWidth: 640 }}>
         <header style={headerRow}>
           <a href={IGNITE_HOME} style={{ display: "inline-flex", alignItems: "center" }}>
-            <img src="/legal/spark-logo.png" alt="Spark by Ignite" style={{ height: 28, width: "auto" }} />
+            <img src="/legal/spark-logo.png" alt="Spark by Ignite" style={{ height: 38, width: "auto" }} />
           </a>
           {brand ? (
             <TenantLogo

@@ -103,7 +103,7 @@ export default function SparkFormLayout({
             src="/legal/spark-logo.png"
             alt="Spark by Ignite"
             style={{
-              height: 26,
+              height: 38,
               width: "auto",
             }}
           />

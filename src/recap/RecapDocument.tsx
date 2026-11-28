@@ -44,23 +44,24 @@ export function RecapDocument({
             : undefined
         }
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3.5 min-w-0">
           {brandLogoUrl ? (
             <>
               <img
                 src={brandLogoUrl}
                 alt={cleanBrand ?? "Brand"}
-                className="max-h-7 w-auto object-contain"
+                className="h-7 max-h-7 max-w-[8.5rem] w-auto object-contain shrink-0"
               />
               <span
                 aria-hidden
                 style={{
                   width: 1,
-                  height: 18,
+                  height: 24,
+                  flexShrink: 0,
                   background: "var(--recap-border, #e2e4d8)",
                 }}
               />
-              <SparkMark height={20} />
+              <SparkMark height={38} className="shrink-0" />
             </>
           ) : cleanBrand ? (
             <>
@@ -77,14 +78,15 @@ export function RecapDocument({
                 aria-hidden
                 style={{
                   width: 1,
-                  height: 16,
+                  height: 22,
+                  flexShrink: 0,
                   background: "var(--recap-border, #e2e4d8)",
                 }}
               />
-              <SparkMark height={20} />
+              <SparkMark height={34} className="shrink-0" />
             </>
           ) : (
-            <SparkMark height={24} />
+            <SparkMark height={34} className="shrink-0" />
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">

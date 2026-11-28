@@ -66,7 +66,7 @@ export default function SparkRecapPreview() {
             marginBottom: 22,
           }}
         >
-          <img src="/legal/spark-logo.png" alt="Spark by Ignite" style={{ height: 28, width: "auto" }} />
+          <img src="/legal/spark-logo.png" alt="Spark by Ignite" style={{ height: 38, width: "auto" }} />
           {brand ? (
             <TenantLogo
               variant="header"
