@@ -1,5 +1,7 @@
 export type CalendarViewMode = "day" | "week" | "month";
 
+export type ShiftOpsState = "live" | "unstaffed" | "recap_filed" | "scheduled";
+
 export const DEFAULT_HOUR_START = 7;
 export const DEFAULT_HOUR_END = 23;
 
@@ -29,7 +31,7 @@ export const monthGridDays = (anchor: Date): Date[] => {
   const firstOfMonth = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const lastOfMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
   const gridStart = startOfWeek(firstOfMonth);
-  const endOffset = (6 - ((lastOfMonth.getDay() + 6) % 7));
+  const endOffset = 6 - ((lastOfMonth.getDay() + 6) % 7);
   const gridEnd = addDays(lastOfMonth, endOffset);
   const days: Date[] = [];
   for (let cur = new Date(gridStart); cur <= gridEnd; cur = addDays(cur, 1)) {
@@ -122,3 +124,46 @@ export const cleanCalendarShiftTitle = (raw: string | null | undefined): string 
   return stripped || trimmed;
 };
 
+/** Derive operational badge state for a calendar shift chip. */
+export const deriveShiftOpsState = (opts: {
+  onClock: boolean;
+  isClient: boolean;
+  hasSignal: boolean;
+  ambassadorCount: number;
+  recapsFiledCount: number;
+  isPastDay: boolean;
+}): ShiftOpsState => {
+  if (!opts.isClient && opts.onClock) return "live";
+  if (opts.recapsFiledCount > 0) return "recap_filed";
+  if (
+    !opts.isClient &&
+    opts.hasSignal &&
+    opts.ambassadorCount === 0 &&
+    !opts.isPastDay
+  ) {
+    return "unstaffed";
+  }
+  return "scheduled";
+};
+
+/** Wrap-around index stepping for j / k calendar quick-peek navigation. */
+export const stepCalendarPeekIndex = (
+  current: number,
+  total: number,
+  delta: -1 | 1,
+): number => {
+  if (total <= 0) return 0;
+  return ((current + delta) % total + total) % total;
+};
+
+/** Format a hover ghost slot label, e.g. `+ 11 AM – 2 PM`. */
+export const formatGhostSlotLabel = (hour: number): string => {
+  const clampedStart = Math.max(0, Math.min(22, Math.floor(hour)));
+  const clampedEnd = Math.min(23, clampedStart + 3);
+  const fmt = (h: number) => {
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12} ${ampm}`;
+  };
+  return `+ ${fmt(clampedStart)} – ${fmt(clampedEnd)}`;
+};

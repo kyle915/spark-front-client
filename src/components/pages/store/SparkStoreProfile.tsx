@@ -9,12 +9,13 @@ import {
 import { Link, useNavigate, useParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Bar } from "react-chartjs-2";
-import { Sparkles } from "lucide-react";
+import { Camera, Maximize2, Sparkles } from "lucide-react";
 import "@/lib/sparkChartRegister";
 import Layout from "@/layout/Layout";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ChartBlock from "@/components/charts/ChartBlock";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import useSparkRole from "@/hooks/useSparkRole";
 import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import { useAuthStore } from "@/store/authStore";
@@ -27,6 +28,7 @@ import { SaveStoreLogisticsNotesMutation } from "@/api/mutations/SaveStoreLogist
 import type { SaveStoreLogisticsNotesMutation as SaveStoreLogisticsNotesMutationType } from "@api/mutations/__generated__/SaveStoreLogisticsNotesMutation.graphql";
 import { barSeries, chartOptions } from "@/lib/sparkChart";
 import { useAppearance } from "@/theme/appearance";
+import { thumbUrl } from "@/utils/thumb";
 import {
   activationLabel,
   buildStoreScheduleHref,
@@ -48,6 +50,8 @@ const COMMENT_KIND: Record<string, string> = {
   decline: "Reason to pass",
   question: "Question",
 };
+
+const CONTACT_SHEET_MAX = 4;
 
 const Section: React.FC<{ title: string; note?: string; children: ReactNode }> = ({
   title,
@@ -103,6 +107,29 @@ const Message: React.FC<{ children: ReactNode; onNavigateAway?: () => void }> = 
   </div>
 );
 
+const StoreProfileSkeleton: React.FC = () => (
+  <div className="space-y-4 py-2" aria-busy="true" aria-label="Loading store">
+    <div className="space-y-2">
+      <div className="skeleton-block" style={{ height: 11, width: 90 }} />
+      <div className="skeleton-block" style={{ height: 34, width: "48%" }} />
+      <div className="skeleton-block" style={{ height: 14, width: "32%" }} />
+    </div>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="skeleton-block aspect-[4/3]"
+          style={{ borderRadius: 12 }}
+        />
+      ))}
+    </div>
+    <div className="spark-card p-5 space-y-3">
+      <div className="skeleton-block" style={{ height: 16, width: 140 }} />
+      <div className="skeleton-block" style={{ height: 76 }} />
+    </div>
+  </div>
+);
+
 function formatSavedTimestamp(iso: string | null | undefined): string {
   if (!iso) return "";
   const parsed = new Date(iso);
@@ -126,6 +153,7 @@ export const StoreProfileContent: React.FC<{
   const { isClient } = useSparkRole();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const data = useLazyLoadQuery<StoreProfileQueryType>(
     StoreProfileQuery,
@@ -140,6 +168,10 @@ export const StoreProfileContent: React.FC<{
       onResolvedTitle(store.name);
     }
   }, [store?.name, onResolvedTitle]);
+
+  useEffect(() => {
+    setLightboxIndex(null);
+  }, [storeKey]);
 
   const upcomingVisits = useMemo(() => {
     const rows = (store?.visits ?? []).filter((v) => v.status === "upcoming");
@@ -190,6 +222,8 @@ export const StoreProfileContent: React.FC<{
   const notesDirty = notesDraft.trim() !== savedNotes.trim();
   const hasPastVisits = totals.visits > 0;
   const canRebookCrew = !isClient && upcomingVisits.length > 0 && Boolean(selectedUpcomingEventId);
+  const contactSheetPhotos = store.photos.slice(0, CONTACT_SHEET_MAX);
+  const extraPhotoCount = Math.max(0, store.photos.length - contactSheetPhotos.length);
 
   const handleScheduleVisit = () => {
     onNavigateAway?.();
@@ -358,6 +392,101 @@ export const StoreProfileContent: React.FC<{
         <p className="text-sm leading-relaxed max-w-3xl" style={INK}>
           {store.summary}
         </p>
+      ) : null}
+
+      {/* Top-of-profile Store Shelf & Setup Contact Sheet */}
+      {contactSheetPhotos.length > 0 ? (
+        <section
+          aria-label="Store shelf and table setup contact sheet"
+          className="spark-card p-4 space-y-2.5"
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold"
+              style={INK}
+            >
+              <Camera size={13.5} strokeWidth={1.9} style={SECONDARY} />
+              Shelf &amp; setup proof
+              <span className="font-normal tab-num" style={META}>
+                · {store.photos.length.toLocaleString("en-US")} approved{" "}
+                {store.photos.length === 1 ? "photo" : "photos"}
+              </span>
+            </span>
+            {store.photos.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(0)}
+                className="text-xs underline cursor-pointer"
+                style={SECONDARY}
+              >
+                Inspect all ({store.photos.length})
+              </button>
+            ) : null}
+          </div>
+          <div
+            className={`grid gap-2 ${
+              inDrawer ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"
+            }`}
+          >
+            {contactSheetPhotos.map((p, idx) => {
+              const isLastWithMore =
+                idx === contactSheetPhotos.length - 1 && extraPhotoCount > 0;
+              const captionText = [p.category, dayLabel(p.eventDate)]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <button
+                  key={`${p.url}-${idx}`}
+                  type="button"
+                  onClick={() => setLightboxIndex(idx)}
+                  aria-label={`Inspect store photo: ${captionText || "Field photo"}`}
+                  className="group relative rounded-xl overflow-hidden text-left cursor-zoom-in block"
+                  style={{
+                    border: RULE,
+                    background: "var(--spark-surface-2)",
+                  }}
+                >
+                  <img
+                    src={thumbUrl(p.url, 400)}
+                    alt={captionText || "Store field photo"}
+                    loading="lazy"
+                    className="w-full aspect-[4/3] object-cover block transition duration-200 group-hover:scale-[1.03]"
+                  />
+                  {isLastWithMore ? (
+                    <span
+                      className="absolute inset-0 flex items-center justify-center font-semibold text-sm tab-num"
+                      style={{
+                        background: "rgba(10, 11, 13, 0.64)",
+                        color: "#ffffff",
+                      }}
+                    >
+                      +{extraPhotoCount} more
+                    </span>
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                      style={{
+                        background: "rgba(10, 11, 13, 0.72)",
+                        color: "#ffffff",
+                      }}
+                    >
+                      <Maximize2 size={11.5} strokeWidth={2} />
+                    </span>
+                  )}
+                  {captionText ? (
+                    <span
+                      className="block px-2 py-1 text-[11px] truncate"
+                      style={META}
+                    >
+                      {captionText}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       <Section
@@ -593,29 +722,41 @@ export const StoreProfileContent: React.FC<{
         </Section>
       ) : null}
 
-      {store.photos.length > 0 ? (
-        <Section title="Photos" note="From approved recaps. Receipts are left out.">
+      {store.photos.length > CONTACT_SHEET_MAX ? (
+        <Section title="All store photos" note="From approved recaps. Receipts are left out.">
           <ul className="m-0 p-0 list-none grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {store.photos.map((p) => (
-              <li key={p.url}>
-                <Link
-                  to={recapHref("custom", p.recapUuid)}
-                  onClick={onNavigateAway}
-                  className="block"
+            {store.photos.map((p, idx) => (
+              <li key={`${p.url}-${idx}`}>
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(idx)}
+                  className="block w-full text-left cursor-zoom-in group"
                 >
                   <img
-                    src={p.url}
+                    src={thumbUrl(p.url, 400)}
                     alt={
                       [p.category, dayLabel(p.eventDate)].filter(Boolean).join(", ") ||
                       "Recap photo"
                     }
                     loading="lazy"
-                    className="w-full aspect-square object-cover rounded-xl"
+                    className="w-full aspect-square object-cover rounded-xl transition duration-200 group-hover:scale-[1.02]"
                     style={{ border: RULE }}
                   />
-                </Link>
-                <p className="text-xs mt-1" style={META}>
-                  {[p.category, dayLabel(p.eventDate)].filter(Boolean).join(" · ")}
+                </button>
+                <p className="text-xs mt-1 flex items-center justify-between gap-2" style={META}>
+                  <span className="truncate">
+                    {[p.category, dayLabel(p.eventDate)].filter(Boolean).join(" · ")}
+                  </span>
+                  {p.recapUuid ? (
+                    <Link
+                      to={recapHref("custom", p.recapUuid)}
+                      onClick={onNavigateAway}
+                      className="underline shrink-0"
+                      style={SECONDARY}
+                    >
+                      Recap
+                    </Link>
+                  ) : null}
                 </p>
               </li>
             ))}
@@ -686,15 +827,49 @@ export const StoreProfileContent: React.FC<{
           )}
         </Section>
       ) : null}
+
+      {lightboxIndex !== null && store.photos[lightboxIndex] ? (
+        <PhotoLightbox
+          photos={store.photos.map((p) => ({
+            url: p.url,
+            thumb: thumbUrl(p.url, 400),
+            name: store.name || undefined,
+            caption:
+              [p.category, dayLabel(p.eventDate)].filter(Boolean).join(" · ") ||
+              undefined,
+          }))}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onStep={(next) => setLightboxIndex(next)}
+          loop
+          headerAction={
+            store.photos[lightboxIndex].recapUuid ? (
+              <Link
+                to={recapHref("custom", store.photos[lightboxIndex].recapUuid)}
+                onClick={() => {
+                  setLightboxIndex(null);
+                  onNavigateAway?.();
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold no-underline"
+                style={{
+                  background: "rgba(10, 13, 9, 0.72)",
+                  color: "#f2f3ee",
+                  border: "1px solid rgba(255, 255, 255, 0.34)",
+                }}
+              >
+                Open recap ↗
+              </Link>
+            ) : null
+          }
+        />
+      ) : null}
     </div>
   );
 };
 
 /**
- * One store of the current client: every visit, what its approved recaps
- * add up to, what consumers said there, its photos, and persistent door
- * logistics notes. Reached from the account map, the store chart, a recap,
- * or "Open full page" in the universal StoreSheet drawer.
+ * One store of the current client: shelf & setup visual contact sheet,
+ * persistent door logistics notes, totals, visit history, and consumer comments.
  */
 export default function SparkStoreProfile() {
   const { storeKey = "" } = useParams<{ storeKey: string }>();
@@ -712,13 +887,7 @@ export default function SparkStoreProfile() {
             key={`${tenant}|${storeKey}`}
             fallback={<Message>This store page could not load. Try again in a moment.</Message>}
           >
-            <Suspense
-              fallback={
-                <p className="text-sm py-6" style={META} role="status">
-                  Loading store
-                </p>
-              }
-            >
+            <Suspense fallback={<StoreProfileSkeleton />}>
               <StoreProfileContent tenantId={tenant} storeKey={storeKey} />
             </Suspense>
           </ErrorBoundary>

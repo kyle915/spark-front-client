@@ -1,29 +1,37 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link } from "react-router";
-import { Check, Maximize2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, FileDown, Layers, Maximize2, X } from "lucide-react";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { LikeBurst } from "@/motion/LikeBurst";
+import { LeafTabs } from "@/motion/LeafTabs";
 import { PHOTOS_HUB_TABS } from "@/shared/sparkHubNav";
 import { TenantPhotoGalleryQuery } from "@/api/queries/TenantPhotoGalleryQuery";
 import type { TenantPhotoGalleryQuery as QueryType } from "@api/queries/__generated__/TenantPhotoGalleryQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { tenantDisplayName } from "@/utils/tenantDisplayName";
 import { thumbUrl } from "@/utils/thumb";
 import {
   DATE_RANGES,
   DECK_LAYOUTS,
   fallBackToAll,
   INITIAL_GALLERY_VIEW,
+  moveOrderedPhoto,
   photoCaption,
   photoFileName,
   rangeDates,
+  selectManyOrderedPhotos,
+  summarizeDeckSelection,
+  toggleOrderedPhoto,
   type DateRangeKey,
   type DeckLayout,
+  type DeckTheme,
   type GalleryPhoto,
+  type GalleryView,
   type GalleryViewState,
 } from "./photoGallery";
 import { buildDeckHtml, openDeck } from "./photoDeck";
@@ -38,6 +46,11 @@ import { AddToDeck, LibraryGrid, LibrarySearchBar } from "./PhotoLibrarySearch";
 import useSparkRole from "@/hooks/useSparkRole";
 
 const PAGE_SIZE = 60;
+
+const GALLERY_VIEW_TABS: readonly { key: GalleryView; label: string }[] = [
+  { key: "best", label: "Best photos" },
+  { key: "all", label: "All photos" },
+];
 
 const fieldStyle: React.CSSProperties = {
   border: "1px solid var(--spark-border)",
@@ -55,6 +68,27 @@ type Filters = {
   category: string;
   store: string;
 };
+
+const PhotoGridSkeleton: React.FC = () => (
+  <div aria-busy="true" aria-label="Loading photos" className="space-y-3">
+    <div className="flex items-center justify-between">
+      <div className="skeleton-block" style={{ height: 14, width: 140 }} />
+      <div className="skeleton-block" style={{ height: 14, width: 100 }} />
+    </div>
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 8 }, (_, idx) => (
+        <div key={idx} className="space-y-1.5">
+          <div
+            className="skeleton-block w-full aspect-[4/3]"
+            style={{ borderRadius: 12 }}
+          />
+          <div className="skeleton-block" style={{ height: 12, width: "68%" }} />
+          <div className="skeleton-block" style={{ height: 11, width: "48%" }} />
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const Grid: React.FC<{
   tenantId: string;
@@ -140,7 +174,7 @@ const Grid: React.FC<{
         </span>
         <button
           type="button"
-          className="underline"
+          className="underline cursor-pointer"
           style={{ color: "var(--spark-text-secondary)" }}
           onClick={() => onSelectMany(g.photos, !allOnPage)}
         >
@@ -280,14 +314,11 @@ const Grid: React.FC<{
 
 /**
  * Every approved field photo for the brand in one place: search in plain
- * words or by tag, filter, select, download as a zip, or turn the selection
- * into a print-ready photo deck. Staff can also put photos on a recap deck
- * and include recaps waiting for approval. Brands only ever see their own
- * approved recaps; receipts never show.
- * Needs tenantPhotoGallery (spark-api #1361) and photoLibrary on the server.
+ * words or by tag, filter, select in a tactile bottom filmstrip dock,
+ * reorder lead shots, download as a zip, or export an editorial buyer lookbook.
  */
 const SparkPhotoGallery: React.FC = () => {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantMeta, tenantSlug } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const { isAdmin } = useSparkRole();
   const [library, setLibrary] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
@@ -306,7 +337,6 @@ const SparkPhotoGallery: React.FC = () => {
   });
   const [storeDraft, setStoreDraft] = useState("");
   const [page, setPage] = useState(0);
-  // Opens on best photos; All photos is one click away.
   const [view, setView] = useState<GalleryViewState>(INITIAL_GALLERY_VIEW);
   const [noBestNote, setNoBestNote] = useState(false);
   const showAll = useCallback(() => {
@@ -322,12 +352,21 @@ const SparkPhotoGallery: React.FC = () => {
     categories: readonly string[];
     states: readonly string[];
   }>({ categories: [], states: [] });
-  const [selected, setSelected] = useState<Map<string, GalleryPhoto>>(new Map());
+
+  // Ordered filmstrip array preserves curation order (lead shot #1 = cover hero).
+  const [chosen, setChosen] = useState<GalleryPhoto[]>([]);
+  const selected = useMemo(
+    () => new Map(chosen.map((p) => [p.id, p])),
+    [chosen],
+  );
+
   const [preview, setPreview] = useState<{
     photos: readonly GalleryPhoto[];
     index: number;
   } | null>(null);
   const [perPage, setPerPage] = useState<DeckLayout>(4);
+  const [deckTheme, setDeckTheme] = useState<DeckTheme>("paper");
+  const [includeCover, setIncludeCover] = useState(true);
   const [zipping, setZipping] = useState(false);
 
   const update = (patch: Partial<Filters>) => {
@@ -335,7 +374,6 @@ const SparkPhotoGallery: React.FC = () => {
     setPage(0);
   };
 
-  // Search as you type, after a short pause.
   useEffect(() => {
     const t = window.setTimeout(() => {
       if (storeDraft.trim() !== filters.store) update({ store: storeDraft.trim() });
@@ -344,39 +382,36 @@ const SparkPhotoGallery: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeDraft]);
 
-  const toggle = (p: GalleryPhoto) =>
-    setSelected((cur) => {
-      const next = new Map(cur);
-      if (next.has(p.id)) next.delete(p.id);
-      else next.set(p.id, p);
-      return next;
-    });
-  const selectMany = (photos: readonly GalleryPhoto[], on: boolean) =>
-    setSelected((cur) => {
-      const next = new Map(cur);
-      for (const p of photos) {
-        if (on) next.set(p.id, p);
-        else next.delete(p.id);
-      }
-      return next;
-    });
+  const toggle = useCallback((p: GalleryPhoto) => {
+    setChosen((cur) => toggleOrderedPhoto(cur, p));
+  }, []);
 
-  const chosen = useMemo(
-    () =>
-      [...selected.values()].sort(
-        (a, b) => b.eventDate.localeCompare(a.eventDate) || a.store.localeCompare(b.store),
-      ),
-    [selected],
+  const selectMany = useCallback((photos: readonly GalleryPhoto[], on: boolean) => {
+    setChosen((cur) => selectManyOrderedPhotos(cur, photos, on));
+  }, []);
+
+  const movePhoto = useCallback((id: string, delta: -1 | 1) => {
+    setChosen((cur) => moveOrderedPhoto(cur, id, delta));
+  }, []);
+
+  const deckSummary = useMemo(
+    () => summarizeDeckSelection(chosen, perPage, includeCover),
+    [chosen, perPage, includeCover],
   );
+
+  const brandName = tenantDisplayName(tenantMeta?.requestUrlName, tenantSlug);
 
   const makeDeck = () => {
     const rangeLabel = DATE_RANGES.find((r) => r.key === filters.range)?.label ?? "";
     const ok = openDeck(
       buildDeckHtml({
-        title: "Field photos",
+        title: brandName ? `${brandName} · Field Lookbook` : "Field Execution Lookbook",
+        brandName: brandName || "FIELD EXECUTION LOOKBOOK",
         subtitle: [rangeLabel, filters.state, filters.category].filter(Boolean).join(" · "),
         photos: chosen,
         perPage,
+        theme: deckTheme,
+        includeCover,
       }),
     );
     if (!ok) {
@@ -428,12 +463,16 @@ const SparkPhotoGallery: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-5 max-w-7xl spark-scale">
+      <div
+        className={`space-y-5 max-w-7xl spark-scale ${
+          chosen.length > 0 ? "pb-44" : ""
+        }`.trim()}
+      >
         <SparkHubTabs tabs={PHOTOS_HUB_TABS} ariaLabel="Photo views" />
         <SparkPageHeader
           eyebrow="Recaps · Field gallery"
           title="Photos"
-          infoTip="Approved recap photos, best shots first. Search by content, pin selections, or export a deck."
+          infoTip="Approved recap photos, best shots first. Search by content, curate an ordered filmstrip, or export an editorial buyer deck."
         />
 
         {tenantId ? (
@@ -447,24 +486,12 @@ const SparkPhotoGallery: React.FC = () => {
 
         {!searching ? (
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="pill-group" role="group" aria-label="Which photos to show">
-              {(
-                [
-                  ["best", "Best photos"],
-                  ["all", "All photos"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => chooseView(key)}
-                  aria-pressed={view.view === key}
-                  className={`pill-btn whitespace-nowrap ${view.view === key ? "on" : ""}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <LeafTabs
+              options={GALLERY_VIEW_TABS}
+              value={view.view}
+              onChange={chooseView}
+              ariaLabel="Which photos to show"
+            />
             {noBestNote ? (
               <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
                 No best photos picked for these filters yet, so all photos are shown.
@@ -539,73 +566,8 @@ const SparkPhotoGallery: React.FC = () => {
           ) : null}
         </div>
 
-        {chosen.length > 0 ? (
-          <div
-            className="spark-card p-3 flex items-center gap-2 flex-wrap text-sm sticky top-2 z-10"
-            role="region"
-            aria-label="Actions for selected photos"
-          >
-            <span className="font-semibold">{chosen.length} selected</span>
-            <button
-              type="button"
-              onClick={makeDeck}
-              className="px-3 py-1.5 rounded-xl font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "var(--spark-on-accent)",
-              }}
-            >
-              Build photo deck
-            </button>
-            <label className="inline-flex items-center gap-1.5">
-              <span style={{ color: "var(--spark-text-meta)" }}>Photos per page</span>
-              <select
-                style={{ ...fieldStyle, minHeight: 32, padding: "4px 8px" }}
-                value={perPage}
-                onChange={(e) => setPerPage(Number(e.target.value) as DeckLayout)}
-              >
-                {DECK_LAYOUTS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => void downloadZip()}
-              disabled={zipping}
-              className="px-3 py-1.5 rounded-xl disabled:opacity-50"
-              style={{ border: "1px solid var(--spark-border)" }}
-            >
-              {zipping ? "Preparing zip…" : "Download (.zip)"}
-            </button>
-            {isAdmin && tenantId ? (
-              <AddToDeck
-                tenantId={String(tenantId)}
-                photoIds={chosen.map((p) => p.id)}
-                onDone={(message, ok) => showAlert(message, ok ? "success" : "warning")}
-              />
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setSelected(new Map())}
-              className="underline ml-auto"
-              style={{ color: "var(--spark-text-secondary)" }}
-            >
-              Clear selection
-            </button>
-          </div>
-        ) : null}
-
         {tenantId ? (
-          <Suspense
-            fallback={
-              <p className="text-sm" style={{ color: "var(--spark-text-meta)" }}>
-                Loading photos…
-              </p>
-            }
-          >
+          <Suspense fallback={<PhotoGridSkeleton />}>
             {searching ? (
               <LibraryGrid
                 tenantId={String(tenantId)}
@@ -643,6 +605,209 @@ const SparkPhotoGallery: React.FC = () => {
             Choose a client to see its photos.
           </p>
         )}
+
+        {/* Floating Bottom Filmstrip Selection Dock */}
+        {chosen.length > 0 ? (
+          <div
+            role="region"
+            aria-label="Actions for selected photos"
+            className="fixed bottom-4 left-4 right-4 md:left-72 md:right-6 z-30 mx-auto max-w-5xl rounded-2xl p-3 space-y-2.5 spark-fade-in"
+            style={{
+              background: "rgba(var(--spark-bg-rgb), 0.94)",
+              border: "1px solid var(--spark-border)",
+              boxShadow: "0 16px 40px rgba(0, 0, 0, 0.42)",
+              backdropFilter: "saturate(180%) blur(14px)",
+              WebkitBackdropFilter: "saturate(180%) blur(14px)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold tab-num"
+                  style={{
+                    background: "var(--spark-surface-2)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                >
+                  <Layers size={12.5} strokeWidth={2} />
+                  {deckSummary.photoCount} selected → {deckSummary.slideCount}{" "}
+                  {deckSummary.slideCount === 1 ? "slide" : "slides"}
+                </span>
+                {deckSummary.uniqueStores > 0 ? (
+                  <span className="tab-num" style={{ color: "var(--spark-text-meta)" }}>
+                    {deckSummary.uniqueStores}{" "}
+                    {deckSummary.uniqueStores === 1 ? "store" : "stores"}
+                    {deckSummary.uniqueStates > 0
+                      ? ` · ${deckSummary.uniqueStates} ${
+                          deckSummary.uniqueStates === 1 ? "state" : "states"
+                        }`
+                      : ""}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeCover}
+                    onChange={(e) => setIncludeCover(e.target.checked)}
+                    style={{ accentColor: "var(--spark-lime)" }}
+                  />
+                  <span style={{ color: "var(--spark-text-secondary)" }}>Cover slide</span>
+                </label>
+
+                <select
+                  aria-label="Deck theme"
+                  style={{ ...fieldStyle, minHeight: 30, padding: "3px 8px", fontSize: 12 }}
+                  value={deckTheme}
+                  onChange={(e) => setDeckTheme(e.target.value as DeckTheme)}
+                >
+                  <option value="paper">Warm paper</option>
+                  <option value="dark">Dark gallery</option>
+                </select>
+
+                <label className="inline-flex items-center gap-1">
+                  <span style={{ color: "var(--spark-text-meta)" }}>Per slide</span>
+                  <select
+                    aria-label="Photos per page"
+                    style={{ ...fieldStyle, minHeight: 30, padding: "3px 8px", fontSize: 12 }}
+                    value={perPage}
+                    onChange={(e) => setPerPage(Number(e.target.value) as DeckLayout)}
+                  >
+                    {DECK_LAYOUTS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={makeDeck}
+                  className="px-3.5 py-1.5 rounded-xl font-semibold cursor-pointer transition hover:opacity-90"
+                  style={{
+                    background: "var(--spark-lime)",
+                    color: "var(--spark-on-accent)",
+                  }}
+                >
+                  Build photo deck
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void downloadZip()}
+                  disabled={zipping}
+                  className="px-2.5 py-1.5 rounded-xl inline-flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                  style={{
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                >
+                  <FileDown size={13} strokeWidth={1.9} />
+                  {zipping ? "Zipping…" : ".zip"}
+                </button>
+
+                {isAdmin && tenantId ? (
+                  <AddToDeck
+                    tenantId={String(tenantId)}
+                    photoIds={chosen.map((p) => p.id)}
+                    onDone={(message, ok) => showAlert(message, ok ? "success" : "warning")}
+                  />
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => setChosen([])}
+                  className="underline px-1 cursor-pointer"
+                  style={{ color: "var(--spark-text-secondary)" }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {/* Filmstrip Thumbnails with ‹ / › Reorder & × Unpin */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-0.5 spark-scroll-fade">
+              {chosen.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="group relative shrink-0 rounded-lg overflow-hidden"
+                  style={{
+                    width: 68,
+                    height: 50,
+                    border:
+                      idx === 0 && includeCover
+                        ? "1.5px solid var(--spark-lime)"
+                        : "1px solid var(--spark-border)",
+                    background: "var(--spark-surface-2)",
+                  }}
+                  title={`${idx === 0 && includeCover ? "Cover hero · " : `#${idx + 1} · `}${
+                    photoCaption(p) || p.category || "Field photo"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPreview({ photos: chosen, index: idx })}
+                    className="block w-full h-full cursor-zoom-in"
+                    aria-label={`Preview selected photo ${idx + 1}`}
+                  >
+                    <img
+                      src={thumbUrl(p.url, 400)}
+                      alt={p.caption || p.category || "Selected photo"}
+                      className="w-full h-full object-cover block"
+                    />
+                  </button>
+                  <span
+                    aria-hidden
+                    className="absolute bottom-0.5 left-0.5 px-1 rounded text-[9px] mono font-semibold"
+                    style={{
+                      background: "rgba(10, 11, 13, 0.76)",
+                      color: idx === 0 && includeCover ? "var(--spark-lime)" : "#ffffff",
+                    }}
+                  >
+                    {idx === 0 && includeCover ? "COVER" : idx + 1}
+                  </span>
+                  <div className="absolute inset-x-0 top-0.5 flex items-center justify-between px-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => movePhoto(p.id, -1)}
+                        aria-label={`Move photo ${idx + 1} earlier`}
+                        className="w-4 h-4 rounded flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        style={{ background: "rgba(10, 11, 13, 0.78)", color: "#ffffff" }}
+                      >
+                        <ChevronLeft size={10} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === chosen.length - 1}
+                        onClick={() => movePhoto(p.id, 1)}
+                        aria-label={`Move photo ${idx + 1} later`}
+                        className="w-4 h-4 rounded flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                        style={{ background: "rgba(10, 11, 13, 0.78)", color: "#ffffff" }}
+                      >
+                        <ChevronRight size={10} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggle(p)}
+                      aria-label={`Remove photo ${idx + 1} from deck`}
+                      className="w-4 h-4 rounded flex items-center justify-center cursor-pointer"
+                      style={{ background: "rgba(10, 11, 13, 0.82)", color: "#ffffff" }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {preview && preview.photos[preview.index] ? (() => {
           const activePhoto = preview.photos[preview.index];

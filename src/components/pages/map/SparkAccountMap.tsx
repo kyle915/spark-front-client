@@ -7,11 +7,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { MapPin } from "lucide-react";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
+import { TideProgress } from "@/motion/PlanAndTideMoments";
 import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
 import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
 import { AccountMapStoreSignalsQuery } from "@/api/queries/AccountMapStoreSignalsQuery";
@@ -46,6 +48,10 @@ import {
   type StoreFilters,
 } from "./accountStores";
 import {
+  computeAccountCoverageSummary,
+  summarizeWaveIsland,
+} from "./storeMapPolish";
+import {
   matchWaveTargetStores,
   parseAiWaveParams,
   stripAiWaveSearchParams,
@@ -65,18 +71,6 @@ import { useStoreSheetStore } from "@/store/storeSheetStore";
 import WaveScheduleSheet from "./WaveScheduleSheet";
 import type { WaveTargetStore } from "./waveSchedule";
 
-/**
- * Account Map: every store a brand works with, one pin per physical store.
- *
- * Pins come from the brand's requests (a request with no coordinates of its
- * own is placed from its event's position) and from the brand's uploaded
- * account list. The map and the list beside it show the same stores, and
- * each leads to the other. All of the deciding happens in accountStores.ts.
- *
- * Set VITE_GOOGLE_MAPS_API_KEY to draw the map; without it the list still
- * works and the map area says why it is empty.
- */
-
 type MapPin = NonNullable<
   NonNullable<AccountMapQueryType["response"]["accountMapPins"]>[number]
 >;
@@ -88,7 +82,6 @@ function shortDay(iso: string | null): string | null {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** The list draws this many rows; past that, searching is the way in. */
 const LIST_ROWS = 200;
 
 const coverageFilterFromParam = (raw: string | null): CoverageFilter => {
@@ -317,7 +310,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     setMapsReady(true);
   }, []);
 
-  // Jump deep-links (`?q=`, `?coverage=`, `?state=`, `?overdue=1`) seed the filters.
   useEffect(() => {
     const q = searchParams.get("q");
     if (q != null && q !== search) setSearch(q);
@@ -357,7 +349,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const pinTotal = data?.accountMapPinTotal ?? null;
   const truncation = accountMapTruncation({ total: pinTotal, scanned });
 
-  /** Load pages after what is on screen, up to `upTo` rows scanned. */
   const loadRest = useCallback(async (upTo: number = Number.POSITIVE_INFINITY) => {
     if (loadingRest || pinTotal == null || scanned >= pinTotal) return;
     setLoadingRest(true);
@@ -390,15 +381,12 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         setScanned(Math.min(cap, offset));
       }
     } catch {
-      // The network layer already said why (e.g. a rate limit); keep the
-      // pins we have and leave "Load the rest" to try again.
+      // Keep pins we have and leave "Load the rest" to try again.
     } finally {
       setLoadingRest(false);
     }
   }, [extraPins, loadingRest, pageSize, pinTotal, scanned, tenantId]);
 
-  // A brand user's first page is 200 rows; bring in the rest of what one
-  // admin page holds (2,000) without a click, so the map starts out the same.
   const autoFilled = useRef<string | null>(null);
   useEffect(() => {
     const key = `${tenantId ?? ""}|${pageSize}`;
@@ -414,7 +402,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     return buildStores(rows, list.entries);
   }, [data, extraPins, list.entries]);
 
-  // Typing stays instant; the list and the pins catch up a beat later.
   const deferredSearch = useDeferredValue(search);
   const filters: StoreFilters = useMemo(
     () => ({
@@ -478,6 +465,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const markets = useMemo(() => marketOptions(stores, stateFilter), [stores, stateFilter]);
   const filtering = hasFilters({ ...filters, q: search }) || overdueOnly || signalsOnly;
 
+  const coverageSummary = useMemo(
+    () => computeAccountCoverageSummary(filtering ? shown : counts),
+    [filtering, shown, counts],
+  );
+
   const scope = `${tenantId ?? "all"}|${coverage}|${overdueOnly ? "od" : ""}|${signalsOnly ? "sig" : ""}|${stateFilter}|${marketFilter}|${retailerFilter}|${deferredSearch.trim().toLowerCase()}`;
   const fitKey = useMemo(() => storesFitKey(scope, filtered), [scope, filtered]);
 
@@ -485,12 +477,10 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [focus, setFocus] = useState<{ key: string; n: number } | null>(null);
   const rowEls = useRef(new Map<string, HTMLLIElement>());
 
-  // List → map: pan to the pin and open its card.
   const showOnMap = useCallback((key: string) => {
     setSelectedKey(key);
     setFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
   }, []);
-  // Map → list: highlight the row and bring it into view.
   const selectFromMap = useCallback((key: string) => {
     setSelectedKey(key);
     rowEls.current.get(key)?.scrollIntoView({
@@ -500,7 +490,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   }, []);
   const closeCard = useCallback(() => setSelectedKey(null), []);
 
-  // Prefill the request form with this store.
   const schedule = useCallback(
     (store: Store) => {
       const params = new URLSearchParams({
@@ -535,7 +524,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     [],
   );
 
-  // Pre-load AI-proposed demo wave (`?wave=1&waveStores=...`) once stores resolve.
   useEffect(() => {
     const prefill = parseAiWaveParams(searchParams);
     if (!prefill || stores.length === 0) return;
@@ -603,6 +591,10 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     () => Array.from(selectedWaveMap.values()),
     [selectedWaveMap],
   );
+  const waveIsland = useMemo(
+    () => summarizeWaveIsland(selectedWaveList),
+    [selectedWaveList],
+  );
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((s) => selectedWaveMap.has(s.key));
   const toggleSelectAllFiltered = useCallback(() => {
@@ -664,7 +656,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const offMap = shown.all - shown.onMap;
 
   return (
-    <div className="space-y-5 max-w-7xl spark-fade-in spark-scale">
+    <div
+      className={`space-y-5 max-w-7xl spark-fade-in spark-scale ${
+        selectedWaveList.length > 0 ? "pb-24" : ""
+      }`.trim()}
+    >
       <SparkPageHeader
         title="Account map"
         support="One pin per store. Coverage counts filed recaps only: sampled is one visit, repeat is two or more."
@@ -861,35 +857,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               : `Select all ${filtered.length.toLocaleString("en-US")} filtered stores`}
           </button>
         ) : null}
-        {selectedWaveList.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedWaveMap(new Map())}
-              className="text-xs underline px-1"
-              style={{
-                color: "var(--spark-text-meta)",
-                background: "none",
-                border: 0,
-                cursor: "pointer",
-              }}
-            >
-              Clear ({selectedWaveList.length.toLocaleString("en-US")})
-            </button>
-            <button
-              type="button"
-              onClick={() => setWaveSheetOpen(true)}
-              className="btn btn-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "var(--spark-on-accent)",
-                border: "1px solid var(--spark-lime)",
-              }}
-            >
-              Schedule wave ({selectedWaveList.length.toLocaleString("en-US")})
-            </button>
-          </div>
-        ) : null}
       </SparkFilterBar>
 
       <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]">
@@ -926,30 +893,52 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
         <div className="spark-card overflow-hidden flex flex-col order-2 min-h-[280px] max-h-[460px] lg:max-h-[640px]">
           <div
-            className="p-4"
+            className="p-4 space-y-2.5"
             style={{ borderBottom: "1px solid var(--spark-border)" }}
           >
-            <h3 className="font-bold">
-              Stores
-              <span
-                className="text-xs font-normal ml-2"
-                style={{ color: "var(--spark-text-meta)" }}
-              >
-                {filtering
-                  ? `${shown.all.toLocaleString("en-US")} of ${counts.all.toLocaleString("en-US")}`
-                  : counts.all.toLocaleString("en-US")}
-              </span>
-            </h3>
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 className="font-bold">
+                Stores
+                <span
+                  className="text-xs font-normal ml-2 tab-num"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  {filtering
+                    ? `${shown.all.toLocaleString("en-US")} of ${counts.all.toLocaleString("en-US")}`
+                    : counts.all.toLocaleString("en-US")}
+                </span>
+              </h3>
+              {coverageSummary.totalStores > 0 ? (
+                <span
+                  className="text-xs font-semibold tab-num"
+                  style={{ color: "var(--spark-text-secondary)" }}
+                >
+                  {coverageSummary.visitedPct}% sampled
+                </span>
+              ) : null}
+            </div>
+
+            {coverageSummary.totalStores > 0 ? (
+              <div className="space-y-1">
+                <TideProgress
+                  percent={coverageSummary.visitedPct}
+                  height={8}
+                  barColor="var(--spark-ok-ink, var(--spark-lime))"
+                  ariaLabel={`Account list coverage: ${coverageSummary.headline}`}
+                />
+                <p className="text-xs tab-num" style={{ color: "var(--spark-text-meta)" }}>
+                  {shown.neverVisited.toLocaleString("en-US")} never visited ·{" "}
+                  {shown.sampled.toLocaleString("en-US")} sampled ·{" "}
+                  {shown.repeat.toLocaleString("en-US")} repeat
+                </p>
+              </div>
+            ) : null}
+
             {filtered.length > 0 ? (
-              <div className="mt-2">
+              <div>
                 <AccountUploader list={list} quiet />
               </div>
             ) : null}
-            <p className="text-xs mt-1" style={{ color: "var(--spark-text-meta)" }}>
-              {shown.neverVisited.toLocaleString("en-US")} never visited ·{" "}
-              {shown.sampled.toLocaleString("en-US")} sampled ·{" "}
-              {shown.repeat.toLocaleString("en-US")} repeat
-            </p>
           </div>
           {filtered.length === 0 ? (
             <div className="p-6">
@@ -1020,6 +1009,73 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         refreshKey={waveRefreshKey}
       />
 
+      {/* Floating Wave Builder Island */}
+      {selectedWaveList.length > 0 ? (
+        <div
+          role="region"
+          aria-label="Selected stores wave builder"
+          className="fixed bottom-4 left-4 right-4 md:left-72 md:right-6 z-30 mx-auto max-w-3xl rounded-2xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap text-xs spark-fade-in"
+          style={{
+            background: "rgba(var(--spark-bg-rgb), 0.94)",
+            border: "1px solid var(--spark-border)",
+            boxShadow: "0 16px 40px rgba(0, 0, 0, 0.42)",
+            backdropFilter: "saturate(180%) blur(14px)",
+            WebkitBackdropFilter: "saturate(180%) blur(14px)",
+          }}
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold tab-num"
+              style={{
+                background: "var(--spark-surface-2)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              <MapPin size={12.5} strokeWidth={2} />
+              {waveIsland.summaryLabel}
+            </span>
+            {waveIsland.topMarkets.map((mkt) => (
+              <span key={mkt} className="chip chip-sm chip-muted">
+                {mkt}
+              </span>
+            ))}
+            {waveIsland.overflowMarkets > 0 ? (
+              <span className="chip chip-sm chip-muted tab-num">
+                +{waveIsland.overflowMarkets} more
+              </span>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setSelectedWaveMap(new Map())}
+              className="underline px-1 cursor-pointer"
+              style={{
+                color: "var(--spark-text-secondary)",
+                background: "none",
+                border: 0,
+              }}
+            >
+              Clear ({selectedWaveList.length.toLocaleString("en-US")})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWaveSheetOpen(true)}
+              className="px-4 py-2 rounded-xl font-semibold cursor-pointer transition hover:opacity-90"
+              style={{
+                background: "var(--spark-lime)",
+                color: "var(--spark-on-accent)",
+                border: "1px solid var(--spark-lime)",
+              }}
+            >
+              Launch Wave Schedule →
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <WaveScheduleSheet
         open={waveSheetOpen}
         onClose={() => setWaveSheetOpen(false)}
@@ -1032,14 +1088,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   );
 };
 
-/**
- * Layout-less body of the Account Map. Used by the client dashboard's
- * "Account Map" tab so we don't render the admin shell (sidebar +
- * topbar) inside the dashboard's existing Layout content area.
- *
- * The default export below wraps this in `<Layout>` for the
- * standalone `/account-map` route.
- */
 export const AccountMapBody: React.FC = () => {
   const apiKey = (import.meta as { env?: Record<string, string> }).env
     ?.VITE_GOOGLE_MAPS_API_KEY;

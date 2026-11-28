@@ -1,9 +1,13 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchQuery, useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
 import { useNavigate } from "react-router";
+import { RotateCcw } from "lucide-react";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkGhostButton from "@/shared/SparkGhostButton";
+import { LeafTabs, type LeafTabOption } from "@/motion/LeafTabs";
+import { ActionMorphButton } from "@/motion/ActionMorphButton";
+import type { ActionPhase } from "@/motion/opsMotion";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
@@ -12,17 +16,20 @@ import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import RequestQuickPeekSheet from "@/requests/RequestQuickPeekSheet";
 import { stepQuickPeekIndex, type QuickPeekItem } from "@/requests/quickPeekNav";
 import {
+  approvableSelectedUuids,
+  filterInboxItems,
   INBOX_PAGE_SIZE,
   inboxEndCursor,
   inboxHasMore,
   mergeInboxByUuid,
+  stepInboxFocusIndex,
+  type InboxFilterTab,
+  type InboxKind,
 } from "./inboxListFilters";
 
 /**
  * Fire an approve or decline mutation against the request and return
- * a simple {success, message}. Same posture as the helper inside
- * SparkRequestView — we duplicate it here instead of exporting because
- * the Inbox + Request View have subtly different optimistic-UI needs.
+ * a simple {success, message}.
  */
 async function callApprovalMutation(
   mutation: "approveRequest" | "declineRequest",
@@ -63,21 +70,6 @@ async function callApprovalMutation(
   return { success: Boolean(r?.success), message: r?.message ?? "" };
 }
 
-/**
- * Spark v2 — Workflow Inbox.
- *
- * Pivot from the original "chats UI" placeholder to a real action-
- * items list. Surfaces what needs kyle's attention right now,
- * sorted by urgency:
- *
- *   1. SLA breach — pending request >72h old
- *   2. Pending — needs approve/decline call
- *   3. Recently declined — kyle's team usually wants to follow up
- *
- * Each item is clickable, routes to the relevant detail page.
- * Empty state celebrates the absence of work to do.
- */
-
 type ActionItem = {
   id: string;
   uuid: string;
@@ -90,7 +82,7 @@ type ActionItem = {
   statusLabel: string;
   requester: string;
   whenIso: string;
-  kind: "sla" | "pending" | "declined";
+  kind: InboxKind;
 };
 
 const fmtAgo = (iso: string): string => {
@@ -217,6 +209,46 @@ const nodesFromQuery = (
     ?.map((e) => e?.node)
     ?.filter((n): n is NonNullable<RequestNode> => Boolean(n)) ?? [];
 
+const DoneMarkSvg: React.FC = () => (
+  <svg
+    className="spark-done-mark mx-auto mb-3"
+    width="36"
+    height="36"
+    viewBox="0 0 36 36"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle cx="18" cy="18" r="15" />
+    <path d="M11.5 18.5 16 23l8.5-9.5" />
+  </svg>
+);
+
+const InboxSkeleton: React.FC = () => (
+  <div
+    className="space-y-5 max-w-4xl"
+    aria-busy="true"
+    aria-label="Loading inbox"
+  >
+    <div className="space-y-2">
+      <div className="skeleton-block" style={{ height: 11, width: 140 }} />
+      <div className="skeleton-block" style={{ height: 32, width: 220 }} />
+    </div>
+    <div className="grid grid-cols-3 gap-3">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="spark-card p-4 space-y-2">
+          <div className="skeleton-block" style={{ height: 10, width: 80 }} />
+          <div className="skeleton-block" style={{ height: 28, width: 48 }} />
+        </div>
+      ))}
+    </div>
+    <div className="spark-card p-4 space-y-3">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="skeleton-block" style={{ height: 64 }} />
+      ))}
+    </div>
+  </div>
+);
+
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -246,14 +278,18 @@ const Inner: React.FC = () => {
     { fetchPolicy: "store-or-network" },
   );
 
-  // Inline action state — UUID currently approving / declining, so
-  // we can disable the buttons + show a spinner-y label. Decided
-  // rows go straight into `optimisticallyResolved` so the row hides
-  // until the next refresh.
   const [actingOn, setActingOn] = useState<{
     uuid: string;
     verb: "approve" | "decline";
   } | null>(null);
+  const [rowPhases, setRowPhases] = useState<Record<string, ActionPhase>>({});
+  const [exitingUuids, setExitingUuids] = useState<Set<string>>(new Set());
+  const [bulkPhase, setBulkPhase] = useState<ActionPhase>("idle");
+
+  const [activeTab, setActiveTab] = useState<InboxFilterTab>("all");
+  const [selectedUuids, setSelectedUuids] = useState<Set<string>>(new Set());
+  const [focusedIndex, setFocusedIndex] = useState<number>(0);
+
   const [declineFor, setDeclineFor] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [peekIndex, setPeekIndex] = useState<number | null>(null);
@@ -266,9 +302,15 @@ const Inner: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const loadingMoreRef = useRef(false);
+  const rowRefs = useRef<Map<string, HTMLLIElement>>(new Map());
 
-  // Track which items kyle has dismissed (per-user localStorage).
-  // Lets him clear the inbox progressively without a backend.
+  // Undo state for 4.5-second dismiss recovery.
+  const [undoBanner, setUndoBanner] = useState<{
+    uuids: string[];
+    label: string;
+  } | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
+
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem("@spark.inbox.dismissed");
@@ -289,6 +331,14 @@ const Inner: React.FC = () => {
       /* ignore */
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current != null) {
+        window.clearTimeout(undoTimerRef.current);
+      }
+    };
+  }, []);
 
   const page1Pending = useMemo(
     () => toActionItems(nodesFromQuery(pendingData), ["pending"]),
@@ -320,7 +370,7 @@ const Inner: React.FC = () => {
     [page1Pending, extraPending],
   );
 
-  const items: ActionItem[] = useMemo(() => {
+  const allItems: ActionItem[] = useMemo(() => {
     const rank: Record<ActionItem["kind"], number> = {
       sla: 0,
       pending: 1,
@@ -342,6 +392,37 @@ const Inner: React.FC = () => {
         return new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime();
       });
   }, [pendingItems, page1Declined, dismissed, optimisticallyResolved]);
+
+  const counts = useMemo(
+    () => ({
+      all: allItems.length,
+      sla: allItems.filter((i) => i.kind === "sla").length,
+      pending: allItems.filter((i) => i.kind === "pending").length,
+      declined: allItems.filter((i) => i.kind === "declined").length,
+    }),
+    [allItems],
+  );
+
+  const items = useMemo(
+    () => filterInboxItems(allItems, activeTab),
+    [allItems, activeTab],
+  );
+
+  useEffect(() => {
+    setFocusedIndex((cur) =>
+      items.length === 0 ? 0 : Math.min(cur, items.length - 1),
+    );
+  }, [items.length]);
+
+  const tabOptions: readonly LeafTabOption<InboxFilterTab>[] = useMemo(
+    () => [
+      { key: "all", label: `All · ${counts.all}` },
+      { key: "sla", label: `SLA Breach · ${counts.sla}` },
+      { key: "pending", label: `Pending · ${counts.pending}` },
+      { key: "declined", label: `Declined · ${counts.declined}` },
+    ],
+    [counts],
+  );
 
   const loadMorePending = useCallback(async () => {
     if (!tenantId || !endCursor || loadingMoreRef.current || !hasMore) return;
@@ -373,46 +454,173 @@ const Inner: React.FC = () => {
     }
   }, [tenantId, endCursor, hasMore, environment]);
 
-  // Approve a request directly from the row. Optimistic — hides the
-  // row immediately, then surfaces a success/error toast based on
-  // the mutation response. If the mutation fails the row reappears
-  // on next data refresh.
-  const handleApprove = async (uuid: string) => {
-    if (actingOn) return;
-    setActingOn({ uuid, verb: "approve" });
-    setOptimisticallyResolved((prev) => {
-      const next = new Set(prev);
-      next.add(uuid);
-      return next;
-    });
-    try {
-      const result = await callApprovalMutation("approveRequest", {
-        input: { uuid },
+  const animateOutAndCommit = useCallback(
+    (uuids: string[], commit: () => void) => {
+      if (uuids.length === 0) return;
+      setExitingUuids((prev) => {
+        const next = new Set(prev);
+        for (const u of uuids) next.add(u);
+        return next;
       });
-      if (result.success) {
-        showAlert(result.message || "Request approved.", "success");
-      } else {
-        // Roll back optimistic hide on failure.
-        setOptimisticallyResolved((prev) => {
+      window.setTimeout(() => {
+        commit();
+        setExitingUuids((prev) => {
           const next = new Set(prev);
-          next.delete(uuid);
+          for (const u of uuids) next.delete(u);
           return next;
         });
-        showAlert(result.message || "Couldn't approve.", "error");
+        setSelectedUuids((prev) => {
+          if (prev.size === 0) return prev;
+          const next = new Set(prev);
+          for (const u of uuids) next.delete(u);
+          return next;
+        });
+      }, 200);
+    },
+    [],
+  );
+
+  const stageUndo = useCallback((uuids: string[], label: string) => {
+    if (undoTimerRef.current != null) {
+      window.clearTimeout(undoTimerRef.current);
+    }
+    setUndoBanner({ uuids, label });
+    undoTimerRef.current = window.setTimeout(() => {
+      setUndoBanner(null);
+      undoTimerRef.current = null;
+    }, 4500);
+  }, []);
+
+  const handleUndoDismiss = useCallback(() => {
+    if (!undoBanner) return;
+    const restore = undoBanner.uuids;
+    if (undoTimerRef.current != null) {
+      window.clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setUndoBanner(null);
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      for (const u of restore) next.delete(u);
+      persistDismissed(next);
+      return next;
+    });
+  }, [undoBanner]);
+
+  const dismissMany = useCallback(
+    (uuids: string[], customLabel?: string) => {
+      if (uuids.length === 0) return;
+      animateOutAndCommit(uuids, () => {
+        setDismissed((prev) => {
+          const next = new Set(prev);
+          for (const u of uuids) next.add(u);
+          persistDismissed(next);
+          return next;
+        });
+        stageUndo(
+          uuids,
+          customLabel ??
+            (uuids.length === 1
+              ? "Dismissed 1 item from your inbox."
+              : `Dismissed ${uuids.length} items from your inbox.`),
+        );
+      });
+    },
+    [animateOutAndCommit, stageUndo],
+  );
+
+  const dismissOne = useCallback(
+    (uuid: string) => {
+      dismissMany([uuid]);
+    },
+    [dismissMany],
+  );
+
+  const dismissAll = () => {
+    const targets = items.map((i) => i.uuid);
+    dismissMany(targets, `Dismissed ${targets.length} items from view.`);
+  };
+
+  const handleApprove = useCallback(
+    async (uuid: string) => {
+      if (actingOn || bulkPhase !== "idle") return;
+      setActingOn({ uuid, verb: "approve" });
+      setRowPhases((prev) => ({ ...prev, [uuid]: "pending" }));
+      try {
+        const result = await callApprovalMutation("approveRequest", {
+          input: { uuid },
+        });
+        if (result.success) {
+          setRowPhases((prev) => ({ ...prev, [uuid]: "success" }));
+          showAlert(result.message || "Request approved.", "success");
+          window.setTimeout(() => {
+            animateOutAndCommit([uuid], () => {
+              setOptimisticallyResolved((prev) => {
+                const next = new Set(prev);
+                next.add(uuid);
+                return next;
+              });
+              setRowPhases((prev) => {
+                const next = { ...prev };
+                delete next[uuid];
+                return next;
+              });
+            });
+          }, 260);
+        } else {
+          setRowPhases((prev) => ({ ...prev, [uuid]: "idle" }));
+          showAlert(result.message || "Couldn't approve.", "error");
+        }
+      } finally {
+        setActingOn(null);
       }
-    } finally {
-      setActingOn(null);
+    },
+    [actingOn, bulkPhase, showAlert, animateOutAndCommit],
+  );
+
+  const handleBulkApprove = async () => {
+    const uuids = approvableSelectedUuids(allItems, selectedUuids);
+    if (uuids.length === 0 || bulkPhase !== "idle" || actingOn) return;
+    setBulkPhase("pending");
+    const outcomes = await Promise.all(
+      uuids.map(async (uuid) => {
+        const r = await callApprovalMutation("approveRequest", {
+          input: { uuid },
+        });
+        return { uuid, ok: r.success, message: r.message };
+      }),
+    );
+    const succeeded = outcomes.filter((o) => o.ok).map((o) => o.uuid);
+    const failed = outcomes.length - succeeded.length;
+    if (succeeded.length > 0) {
+      setBulkPhase("success");
+      showAlert(
+        failed === 0
+          ? `Approved ${succeeded.length} ${
+              succeeded.length === 1 ? "request" : "requests"
+            }.`
+          : `Approved ${succeeded.length} of ${outcomes.length} requests (${failed} failed).`,
+        failed === 0 ? "success" : "warning",
+      );
+      window.setTimeout(() => {
+        animateOutAndCommit(succeeded, () => {
+          setOptimisticallyResolved((prev) => {
+            const next = new Set(prev);
+            for (const u of succeeded) next.add(u);
+            return next;
+          });
+        });
+        setBulkPhase("idle");
+      }, 320);
+    } else {
+      setBulkPhase("idle");
+      showAlert(outcomes[0]?.message || "Couldn't approve selected requests.", "error");
     }
   };
 
   const handleDecline = async (uuid: string, reason: string) => {
     if (actingOn) return;
     setActingOn({ uuid, verb: "decline" });
-    setOptimisticallyResolved((prev) => {
-      const next = new Set(prev);
-      next.add(uuid);
-      return next;
-    });
     try {
       const result = await callApprovalMutation("declineRequest", {
         input: { uuid, reason: reason.trim() || undefined },
@@ -421,12 +629,14 @@ const Inner: React.FC = () => {
         showAlert(result.message || "Request declined.", "success");
         setDeclineFor(null);
         setDeclineReason("");
-      } else {
-        setOptimisticallyResolved((prev) => {
-          const next = new Set(prev);
-          next.delete(uuid);
-          return next;
+        animateOutAndCommit([uuid], () => {
+          setOptimisticallyResolved((prev) => {
+            const next = new Set(prev);
+            next.add(uuid);
+            return next;
+          });
         });
+      } else {
         showAlert(result.message || "Couldn't decline.", "error");
       }
     } finally {
@@ -434,39 +644,111 @@ const Inner: React.FC = () => {
     }
   };
 
-  const counts = useMemo(
-    () => ({
-      sla: items.filter((i) => i.kind === "sla").length,
-      pending: items.filter((i) => i.kind === "pending").length,
-      declined: items.filter((i) => i.kind === "declined").length,
-    }),
-    [items],
+  const toggleSelectOne = useCallback((uuid: string) => {
+    setSelectedUuids((prev) => {
+      const next = new Set(prev);
+      if (next.has(uuid)) next.delete(uuid);
+      else next.add(uuid);
+      return next;
+    });
+  }, []);
+
+  const allVisibleSelected =
+    items.length > 0 && items.every((i) => selectedUuids.has(i.uuid));
+  const toggleSelectAllVisible = () => {
+    setSelectedUuids((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const i of items) next.delete(i.uuid);
+      } else {
+        for (const i of items) next.add(i.uuid);
+      }
+      return next;
+    });
+  };
+
+  // Superhuman-style keyboard triage when Quick-Peek is closed.
+  useEffect(() => {
+    if (peekIndex !== null || items.length === 0) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex((cur) => {
+          const next = stepInboxFocusIndex(cur, items.length, 1);
+          const u = items[next]?.uuid;
+          if (u) rowRefs.current.get(u)?.scrollIntoView({ block: "nearest" });
+          return next;
+        });
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex((cur) => {
+          const next = stepInboxFocusIndex(cur, items.length, -1);
+          const u = items[next]?.uuid;
+          if (u) rowRefs.current.get(u)?.scrollIntoView({ block: "nearest" });
+          return next;
+        });
+      } else if (e.key === "x") {
+        const focused = items[focusedIndex];
+        if (focused) {
+          e.preventDefault();
+          toggleSelectOne(focused.uuid);
+        }
+      } else if (e.key === "a") {
+        const focused = items[focusedIndex];
+        if (focused && (focused.kind === "sla" || focused.kind === "pending")) {
+          e.preventDefault();
+          void handleApprove(focused.uuid);
+        }
+      } else if (e.key === "e") {
+        const focused = items[focusedIndex];
+        if (focused) {
+          e.preventDefault();
+          dismissOne(focused.uuid);
+        }
+      } else if (e.key === "Enter" && target?.tagName !== "BUTTON") {
+        if (items[focusedIndex]) {
+          e.preventDefault();
+          setPeekIndex(focusedIndex);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    peekIndex,
+    items,
+    focusedIndex,
+    toggleSelectOne,
+    handleApprove,
+    dismissOne,
+  ]);
+
+  const bulkApprovableCount = useMemo(
+    () => approvableSelectedUuids(allItems, selectedUuids).length,
+    [allItems, selectedUuids],
   );
 
-  const dismissOne = (uuid: string) => {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(uuid);
-      persistDismissed(next);
-      return next;
-    });
-  };
-
-  const dismissAll = () => {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      for (const i of items) next.add(i.uuid);
-      persistDismissed(next);
-      return next;
-    });
-  };
-
   return (
-    <div className="space-y-5 max-w-4xl spark-fade-in">
+    <div
+      className={`space-y-5 max-w-4xl spark-fade-in ${
+        selectedUuids.size > 0 || undoBanner ? "pb-24" : ""
+      }`.trim()}
+    >
       <SparkPageHeader
-        eyebrow={`${items.length} items · action required`}
+        eyebrow={`${counts.all} items · action required`}
         title="What needs you"
-        infoTip="Dismissing an item hides it just for you; the underlying request stays unchanged."
+        infoTip="Use j/k to move, x to select, a to approve, and e to dismiss (with Undo). Dismissing hides an item just for you."
         action={
           <>
             <LinkedSheetChip />
@@ -477,94 +759,172 @@ const Inner: React.FC = () => {
         }
       />
 
-      {/* Mini stat strip */}
-      {items.length > 0 && (
+      {/* Interactive urgency stat cards */}
+      {counts.all > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="spark-card p-4">
-            <p
-              className="mono text-[10px] mb-1"
-              style={{
-                letterSpacing: "0.18em",
+          {(
+            [
+              {
+                key: "sla" as const,
+                label: "SLA BREACH",
+                count: counts.sla,
                 color: "var(--spark-orange)",
-              }}
-            >
-              SLA BREACH
-            </p>
-            <p
-              className="tab-num text-2xl font-bold"
-              style={{ color: "var(--spark-orange)" }}
-            >
-              {counts.sla}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p
-              className="mono text-[10px] mb-1"
-              style={{
-                letterSpacing: "0.18em",
+              },
+              {
+                key: "pending" as const,
+                label: "PENDING",
+                count: counts.pending,
                 color: "var(--spark-gold)",
-              }}
-            >
-              PENDING
-            </p>
-            <p
-              className="tab-num text-2xl font-bold"
-              style={{ color: "var(--spark-gold)" }}
-            >
-              {counts.pending}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p
-              className="mono text-[10px] mb-1"
-              style={{
-                letterSpacing: "0.18em",
+              },
+              {
+                key: "declined" as const,
+                label: "DECLINED · 7D",
+                count: counts.declined,
                 color: "var(--spark-sky)",
-              }}
-            >
-              DECLINED · 7D
-            </p>
-            <p
-              className="tab-num text-2xl font-bold"
-              style={{ color: "var(--spark-sky)" }}
-            >
-              {counts.declined}
-            </p>
-          </div>
+              },
+            ] as const
+          ).map((card) => {
+            const active = activeTab === card.key;
+            return (
+              <button
+                key={card.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() =>
+                  setActiveTab((cur) => (cur === card.key ? "all" : card.key))
+                }
+                className="spark-card p-4 text-left transition cursor-pointer"
+                style={{
+                  outline: active ? `1.5px solid ${card.color}` : undefined,
+                  background: active
+                    ? "rgba(var(--spark-ink-rgb), 0.04)"
+                    : undefined,
+                }}
+              >
+                <p
+                  className="mono text-[10px] mb-1"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: card.color,
+                  }}
+                >
+                  {card.label}
+                </p>
+                <p
+                  className="tab-num text-2xl font-bold"
+                  style={{ color: card.color }}
+                >
+                  {card.count}
+                </p>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* List */}
+      {/* Filter LeafTabs + keyboard shortcut legend */}
+      {counts.all > 0 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <LeafTabs
+            options={tabOptions}
+            value={activeTab}
+            onChange={setActiveTab}
+            ariaLabel="Filter inbox by urgency"
+          />
+          <span
+            className="hidden sm:inline-block mono text-[10px]"
+            style={{
+              letterSpacing: "0.08em",
+              color: "var(--spark-text-meta)",
+            }}
+          >
+            j/k move · x select · a approve · e dismiss
+          </span>
+        </div>
+      )}
+
+      {/* List or Inbox Zero */}
       {items.length === 0 ? (
         <div
           className="spark-card p-10 text-center"
           style={{ color: "var(--spark-text-meta)" }}
         >
+          <DoneMarkSvg />
           <p
-            className="mono text-[10px] mb-2"
+            className="mono text-[10px] mb-1.5"
             style={{
               letterSpacing: "0.22em",
-              color: "var(--spark-lime)",
+              color: "var(--spark-ok-ink, var(--spark-lime))",
             }}
           >
-            ALL CLEAR
+            {counts.all === 0 ? "ALL CLEAR" : "FILTER CLEAR"}
           </p>
-          <p className="text-sm">
-            Inbox zero. Nothing in the queue needs your attention
-            right now.
+          <p className="text-sm font-medium" style={{ color: "var(--spark-text)" }}>
+            {counts.all === 0
+              ? "Inbox zero."
+              : `No ${activeTab === "sla" ? "SLA breach" : activeTab} items right now.`}
+          </p>
+          <p className="text-xs mt-1">
+            {counts.all === 0 ? (
+              "Nothing in the queue needs your attention right now."
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className="underline cursor-pointer"
+                style={{ color: "var(--spark-text-secondary)" }}
+              >
+                Show all {counts.all} inbox items
+              </button>
+            )}
           </p>
         </div>
       ) : (
         <div className="spark-card overflow-hidden">
+          <div
+            className="px-5 py-2.5 flex items-center justify-between gap-3 text-xs"
+            style={{
+              borderBottom: "1px solid var(--spark-border)",
+              background: "rgba(var(--spark-ink-rgb), 0.02)",
+            }}
+          >
+            <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={toggleSelectAllVisible}
+                aria-label="Select all visible inbox items"
+                style={{ accentColor: "var(--spark-lime)" }}
+              />
+              <span style={{ color: "var(--spark-text-secondary)" }}>
+                {selectedUuids.size > 0
+                  ? `${selectedUuids.size} selected`
+                  : `Select visible (${items.length})`}
+              </span>
+            </label>
+            {activeTab !== "all" ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className="underline cursor-pointer"
+                style={{ color: "var(--spark-text-meta)" }}
+              >
+                Reset filter
+              </button>
+            ) : null}
+          </div>
+
           <ul>
             {items.map((it, i) => {
               const meta = KIND_META[it.kind];
+              const isSelected = selectedUuids.has(it.uuid);
+              const isFocused = i === focusedIndex;
+              const isExiting = exitingUuids.has(it.uuid);
+              const rowPhase = rowPhases[it.uuid] ?? "idle";
               const target =
                 it.kind === "declined"
                   ? `/request/view/${it.uuid}`
                   : "/approvals";
-              // Pass /inbox as the back-target so SparkRequestView's
-              // "← BACK" returns here instead of /requests/list.
               const navOpts =
                 it.kind === "declined"
                   ? ({ state: { from: "/inbox" } } as const)
@@ -572,22 +932,44 @@ const Inner: React.FC = () => {
               return (
                 <li
                   key={it.uuid}
-                  className="px-5 py-4 transition"
+                  ref={(el) => {
+                    if (el) rowRefs.current.set(it.uuid, el);
+                    else rowRefs.current.delete(it.uuid);
+                  }}
+                  onMouseEnter={() => setFocusedIndex(i)}
+                  className="px-5 py-4"
                   style={{
                     borderBottom:
                       i < items.length - 1
                         ? "1px solid var(--spark-border)"
                         : "none",
+                    background: isSelected
+                      ? "rgba(var(--spark-ink-rgb), 0.05)"
+                      : isFocused
+                        ? "rgba(var(--spark-ink-rgb), 0.025)"
+                        : "transparent",
+                    boxShadow: isFocused
+                      ? "inset 2px 0 0 var(--spark-text)"
+                      : undefined,
+                    opacity: isExiting ? 0 : 1,
+                    transform: isExiting ? "translateX(14px)" : "none",
+                    transition:
+                      "opacity 190ms cubic-bezier(0.22, 1, 0.36, 1), transform 190ms cubic-bezier(0.22, 1, 0.36, 1), background-color 120ms ease",
                   }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background =
-                      "rgba(var(--spark-ink-rgb),0.025)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
                 >
                   <div className="flex items-start gap-3">
+                    <label
+                      className="pt-1 flex items-center cursor-pointer shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectOne(it.uuid)}
+                        aria-label={`Select ${it.venue} (${it.reqId})`}
+                        style={{ accentColor: "var(--spark-lime)" }}
+                      />
+                    </label>
                     <span
                       className="w-1 self-stretch rounded-full shrink-0"
                       style={{
@@ -633,32 +1015,29 @@ const Inner: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0 items-end">
-                      {/* Inline approve / decline for SLA + pending
-                          rows so kyle doesn't have to leave the
-                          inbox. Declined rows stay click-through
-                          to the detail view (no action surfaced). */}
-                      {(it.kind === "sla" || it.kind === "pending") ? (
+                      {it.kind === "sla" || it.kind === "pending" ? (
                         <div className="flex items-center gap-2">
-                          <button
-                            disabled={actingOn?.uuid === it.uuid}
+                          <ActionMorphButton
+                            phase={rowPhase}
+                            pendingLabel="Approving…"
+                            successLabel="Approved"
+                            disabled={
+                              Boolean(actingOn && actingOn.uuid !== it.uuid) ||
+                              bulkPhase !== "idle"
+                            }
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleApprove(it.uuid);
+                              void handleApprove(it.uuid);
                             }}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer"
                             style={{
                               background: "var(--spark-lime)",
                               color: "var(--spark-on-accent)",
-                              opacity:
-                                actingOn?.uuid === it.uuid ? 0.5 : 1,
                             }}
-                            title="Approve this request now"
+                            title="Approve this request now (a)"
                           >
-                            {actingOn?.uuid === it.uuid &&
-                            actingOn?.verb === "approve"
-                              ? "…"
-                              : "✓ Approve"}
-                          </button>
+                            ✓ Approve
+                          </ActionMorphButton>
                           <button
                             disabled={actingOn?.uuid === it.uuid}
                             onClick={(e) => {
@@ -668,7 +1047,7 @@ const Inner: React.FC = () => {
                               );
                               setDeclineReason("");
                             }}
-                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer"
                             style={{
                               background: "transparent",
                               color: "rgba(255,90,42,0.85)",
@@ -687,7 +1066,7 @@ const Inner: React.FC = () => {
                               e.stopPropagation();
                               navigate(target, navOpts);
                             }}
-                            className="mono text-[10px]"
+                            className="mono text-[10px] cursor-pointer"
                             style={{
                               letterSpacing: "0.14em",
                               color: "var(--spark-text-meta)",
@@ -700,7 +1079,7 @@ const Inner: React.FC = () => {
                       ) : (
                         <button
                           onClick={() => navigate(target, navOpts)}
-                          className="mono text-[10px]"
+                          className="mono text-[10px] cursor-pointer"
                           style={{
                             letterSpacing: "0.14em",
                             color: meta.tone,
@@ -714,8 +1093,8 @@ const Inner: React.FC = () => {
                           e.stopPropagation();
                           dismissOne(it.uuid);
                         }}
-                        className="mono text-[10px]"
-                        title="Hide this item from your inbox (doesn't affect the request)"
+                        className="mono text-[10px] cursor-pointer"
+                        title="Hide this item from your inbox (e)"
                         style={{
                           letterSpacing: "0.14em",
                           color: "var(--spark-text-meta)",
@@ -725,13 +1104,9 @@ const Inner: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                  {/* Decline reason — inline, optional. Submitting
-                      with an empty reason still fires the decline so
-                      kyle can move fast when there's no context to
-                      pass back. */}
                   {declineFor === it.uuid && (
                     <div
-                      className="mt-3 ml-4 flex items-center gap-2"
+                      className="mt-3 ml-7 flex items-center gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
@@ -750,9 +1125,9 @@ const Inner: React.FC = () => {
                       <button
                         disabled={actingOn?.uuid === it.uuid}
                         onClick={() =>
-                          handleDecline(it.uuid, declineReason)
+                          void handleDecline(it.uuid, declineReason)
                         }
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer"
                         style={{
                           background: "rgba(255,90,42,0.95)",
                           color: "#fff",
@@ -768,7 +1143,7 @@ const Inner: React.FC = () => {
                           setDeclineFor(null);
                           setDeclineReason("");
                         }}
-                        className="mono text-[10px]"
+                        className="mono text-[10px] cursor-pointer"
                         style={{
                           letterSpacing: "0.14em",
                           color: "var(--spark-text-meta)",
@@ -791,7 +1166,7 @@ const Inner: React.FC = () => {
                 type="button"
                 disabled={loadingMore || !hasMore}
                 onClick={() => void loadMorePending()}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
                 style={{
                   background: "rgba(var(--spark-ink-rgb),0.06)",
                   color: "var(--spark-text)",
@@ -815,6 +1190,89 @@ const Inner: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Floating Bulk Action Bar */}
+      {selectedUuids.size > 0 ? (
+        <div
+          role="region"
+          aria-label="Bulk inbox actions"
+          className="fixed bottom-4 left-4 right-4 md:left-72 md:right-6 z-30 mx-auto max-w-2xl rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap text-xs spark-fade-in"
+          style={{
+            background: "rgba(var(--spark-bg-rgb), 0.94)",
+            border: "1px solid var(--spark-border)",
+            boxShadow: "0 16px 36px rgba(0, 0, 0, 0.42)",
+            backdropFilter: "saturate(180%) blur(12px)",
+            WebkitBackdropFilter: "saturate(180%) blur(12px)",
+          }}
+        >
+          <span className="font-semibold tab-num" style={{ color: "var(--spark-text)" }}>
+            {selectedUuids.size} selected
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {bulkApprovableCount > 0 ? (
+              <ActionMorphButton
+                phase={bulkPhase}
+                pendingLabel={`Approving ${bulkApprovableCount}…`}
+                successLabel="Approved"
+                onClick={() => void handleBulkApprove()}
+                className="px-3.5 py-1.5 rounded-xl font-semibold cursor-pointer"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "var(--spark-on-accent)",
+                }}
+              >
+                ✓ Approve {bulkApprovableCount}
+              </ActionMorphButton>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => dismissMany([...selectedUuids])}
+              className="px-3 py-1.5 rounded-xl font-semibold cursor-pointer"
+              style={{
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              Dismiss {selectedUuids.size}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedUuids(new Set())}
+              className="underline px-1.5 cursor-pointer"
+              style={{ color: "var(--spark-text-secondary)" }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      ) : undoBanner ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-4 left-4 right-4 md:left-72 md:right-6 z-30 mx-auto max-w-md rounded-2xl px-4 py-2.5 flex items-center justify-between gap-3 text-xs spark-fade-in"
+          style={{
+            background: "rgba(var(--spark-bg-rgb), 0.95)",
+            border: "1px solid var(--spark-border)",
+            boxShadow: "0 14px 32px rgba(0, 0, 0, 0.38)",
+            backdropFilter: "saturate(180%) blur(12px)",
+          }}
+        >
+          <span style={{ color: "var(--spark-text)" }}>{undoBanner.label}</span>
+          <button
+            type="button"
+            onClick={handleUndoDismiss}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold cursor-pointer"
+            style={{
+              background: "var(--spark-lime)",
+              color: "var(--spark-on-accent)",
+            }}
+          >
+            <RotateCcw size={12} strokeWidth={2.2} />
+            Undo
+          </button>
+        </div>
+      ) : null}
+
       {(() => {
         const clampedIdx =
           peekIndex != null && items.length > 0
@@ -937,16 +1395,7 @@ const Inner: React.FC = () => {
 export default function SparkInbox() {
   return (
     <Layout>
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-8 text-center text-sm max-w-4xl"
-            style={{ color: "var(--spark-text-meta)" }}
-          >
-            Loading inbox…
-          </div>
-        }
-      >
+      <Suspense fallback={<InboxSkeleton />}>
         <Inner />
       </Suspense>
     </Layout>
