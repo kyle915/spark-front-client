@@ -180,7 +180,15 @@ const EMPTY_BUCKETS: SearchBuckets = {
   people: [],
 };
 
-export const CommandPalette: React.FC = () => {
+export interface CommandPaletteProps {
+  initialOpen?: boolean;
+  initialOrigin?: JumpOrigin | null;
+}
+
+export const CommandPalette: React.FC<CommandPaletteProps> = ({
+  initialOpen = false,
+  initialOrigin = null,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isClient } = useSparkRole();
@@ -189,10 +197,10 @@ export const CommandPalette: React.FC = () => {
     tenantSlug,
     tenantMeta?.requestUrlName,
   );
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const [origin, setOrigin] = useState<JumpOrigin | null>(null);
+  const [origin, setOrigin] = useState<JumpOrigin | null>(initialOrigin);
   const [ghostQuery, setGhostQuery] = useState("");
   const prevQuery = useRef("");
   const inputRef = useRef<HTMLInputElement | null>(null);

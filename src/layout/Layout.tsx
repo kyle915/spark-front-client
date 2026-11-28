@@ -1,18 +1,72 @@
-import React, { useEffect, type ReactNode } from "react";
+import React, { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "react-router";
 import { PageTransition } from "./PageTransition";
 import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
 import SparkMobileDock from "./SparkMobileDock";
-import CommandPalette from "./CommandPalette";
-import StoreSheet from "@/components/store/StoreSheet";
 import AskSparkHost from "@/components/ai/AskSparkHost";
 import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
 import { MobileNavProvider, useMobileNav } from "./MobileNavContext";
 import { useAuthStore } from "@/store/authStore";
+import { useStoreSheetStore } from "@/store/storeSheetStore";
+import { jumpOriginFromEvent, type JumpOrigin } from "@/motion/opsMotion";
 import { applyAppearance, holdAppearance, readAppearance } from "@/theme/appearance";
+
+// Lazy-load heavy shell overlays so CommandPalette (JumpSearchQuery + 900L)
+// and StoreSheet (vaul + SparkStoreProfile) stay out of the root App bundle
+// until the user actually invokes ⌘K / Jump or clicks a store.
+const LazyCommandPalette = lazy(() => import("./CommandPalette"));
+const LazyStoreSheet = lazy(() => import("@/components/store/StoreSheet"));
+
+function CommandPaletteHost() {
+  const [activated, setActivated] = useState<{ origin: JumpOrigin | null } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (activated) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setActivated({ origin: jumpOriginFromEvent(e) });
+      }
+    };
+    const onOpen = (e: Event) => {
+      setActivated({ origin: jumpOriginFromEvent(e) });
+    };
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("spark:open-jump", onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("spark:open-jump", onOpen);
+    };
+  }, [activated]);
+
+  if (!activated) return null;
+  return (
+    <Suspense fallback={null}>
+      <LazyCommandPalette initialOpen initialOrigin={activated.origin} />
+    </Suspense>
+  );
+}
+
+function StoreSheetHost() {
+  const hasTarget = useStoreSheetStore((s) => Boolean(s.target));
+  const [mounted, setMounted] = useState(hasTarget);
+
+  useEffect(() => {
+    if (hasTarget) setMounted(true);
+  }, [hasTarget]);
+
+  if (!mounted) return null;
+  return (
+    <Suspense fallback={null}>
+      <LazyStoreSheet />
+    </Suspense>
+  );
+}
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -49,8 +103,8 @@ function LayoutChromeInner({ children }: LayoutProps) {
   return (
     <div className="spark-app-shell flex min-h-[100dvh] md:h-[100dvh] md:overflow-hidden text-base-content spark-mesh">
       <UpdateBanner />
-      <CommandPalette />
-      <StoreSheet />
+      <CommandPaletteHost />
+      <StoreSheetHost />
       <AskSparkHost />
       {open ? (
         <button

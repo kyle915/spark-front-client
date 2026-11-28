@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
@@ -8,8 +8,16 @@ import { ASK_SPARK_EVENT, type OpenAskSparkDetail } from "@/lib/askSparkEvent";
 import { askAiSubjectFromTenant } from "./askAiSubjectName";
 import { routeAskSparkPrompts } from "./routeAskSparkPrompts";
 import { SparkEmblem } from "./AskSparkPopoverFrame";
-import BrandChatPanel from "./BrandChatPanel";
-import { AskAiModal } from "./AskAiButton";
+
+// Lazy-load the heavy Ask Spark chat panels (react-markdown, remark/rehype,
+// Chart.js via AiChartView) so they stay out of the root App bundle until
+// the user hovers or opens Ask Spark.
+const loadBrandChatPanel = () => import("./BrandChatPanel");
+const loadAskAiModal = () =>
+  import("./AskAiButton").then((mod) => ({ default: mod.AskAiModal }));
+
+const BrandChatPanel = lazy(loadBrandChatPanel);
+const AskAiModal = lazy(loadAskAiModal);
 
 /**
  * Global bottom-right floating Ask Spark launcher + pop-up host inside the
@@ -29,39 +37,47 @@ export default function AskSparkHost() {
     requestKey: number;
   }>({ open: false, requestKey: 0 });
 
-  const openPopup = useCallback((detail: OpenAskSparkDetail = {}) => {
-    const storeSheetOpen = Boolean(useStoreSheetStore.getState().target);
-    if (storeSheetOpen) {
-      useStoreSheetStore.getState().closeStoreSheet();
-    }
-    const otherDrawerClosing =
-      storeSheetOpen ||
-      (typeof document !== "undefined" &&
-        Boolean(document.querySelector("[data-vaul-drawer]")));
+  const warmPopup = useCallback(() => {
+    void (isClient ? loadBrandChatPanel() : loadAskAiModal()).catch(() => {});
+  }, [isClient]);
 
-    const openNow = () => {
-      handoffTimerRef.current = null;
-      setState((prev) => ({
-        open: true,
-        question: detail.question,
-        overrideTenantId: detail.tenantId,
-        requestKey: prev.requestKey + 1,
-      }));
-    };
+  const openPopup = useCallback(
+    (detail: OpenAskSparkDetail = {}) => {
+      warmPopup();
+      const storeSheetOpen = Boolean(useStoreSheetStore.getState().target);
+      if (storeSheetOpen) {
+        useStoreSheetStore.getState().closeStoreSheet();
+      }
+      const otherDrawerClosing =
+        storeSheetOpen ||
+        (typeof document !== "undefined" &&
+          Boolean(document.querySelector("[data-vaul-drawer]")));
 
-    if (handoffTimerRef.current != null) {
-      window.clearTimeout(handoffTimerRef.current);
-      handoffTimerRef.current = null;
-    }
+      const openNow = () => {
+        handoffTimerRef.current = null;
+        setState((prev) => ({
+          open: true,
+          question: detail.question,
+          overrideTenantId: detail.tenantId,
+          requestKey: prev.requestKey + 1,
+        }));
+      };
 
-    // When handing off from an active/closing Vaul sheet (such as StoreSheet),
-    // defer briefly so the prior sheet releases focus cleanly.
-    if (otherDrawerClosing) {
-      handoffTimerRef.current = window.setTimeout(openNow, 120);
-    } else {
-      openNow();
-    }
-  }, []);
+      if (handoffTimerRef.current != null) {
+        window.clearTimeout(handoffTimerRef.current);
+        handoffTimerRef.current = null;
+      }
+
+      // When handing off from an active/closing Vaul sheet (such as StoreSheet),
+      // defer briefly so the prior sheet releases focus cleanly.
+      if (otherDrawerClosing) {
+        handoffTimerRef.current = window.setTimeout(openNow, 120);
+      } else {
+        openNow();
+      }
+    },
+    [warmPopup],
+  );
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -83,6 +99,7 @@ export default function AskSparkHost() {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === "j") {
         e.preventDefault();
+        warmPopup();
         setState((prev) => {
           if (prev.open) return { ...prev, open: false };
           return {
@@ -96,7 +113,7 @@ export default function AskSparkHost() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [warmPopup]);
 
   const activeTenantId = state.overrideTenantId || tenantId;
   const routePrompts = routeAskSparkPrompts(location.pathname, isClient);
@@ -118,6 +135,8 @@ export default function AskSparkHost() {
           <motion.button
             key="ask-spark-launcher"
             type="button"
+            onMouseEnter={warmPopup}
+            onFocus={warmPopup}
             onClick={() => openPopup()}
             initial={{ opacity: 0, y: 12, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -164,32 +183,34 @@ export default function AskSparkHost() {
         ) : null}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {state.open && activeTenantId ? (
-          isClient ? (
-            <BrandChatPanel
-              key={`client-${state.requestKey}`}
-              tenantId={activeTenantId}
-              initialQuestion={state.question}
-              routePrompts={routePrompts}
-              onClose={close}
-            />
-          ) : (
-            <AskAiModal
-              key={`admin-${state.requestKey}`}
-              tenantId={activeTenantId}
-              tenantName={askAiSubjectFromTenant({
-                name: null,
-                requestUrlName: tenantMeta?.requestUrlName ?? tenantSlug,
-              })}
-              scope="tenant"
-              initialQuestion={state.question}
-              routePrompts={routePrompts}
-              onClose={close}
-            />
-          )
-        ) : null}
-      </AnimatePresence>
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {state.open && activeTenantId ? (
+            isClient ? (
+              <BrandChatPanel
+                key={`client-${state.requestKey}`}
+                tenantId={activeTenantId}
+                initialQuestion={state.question}
+                routePrompts={routePrompts}
+                onClose={close}
+              />
+            ) : (
+              <AskAiModal
+                key={`admin-${state.requestKey}`}
+                tenantId={activeTenantId}
+                tenantName={askAiSubjectFromTenant({
+                  name: null,
+                  requestUrlName: tenantMeta?.requestUrlName ?? tenantSlug,
+                })}
+                scope="tenant"
+                initialQuestion={state.question}
+                routePrompts={routePrompts}
+                onClose={close}
+              />
+            )
+          ) : null}
+        </AnimatePresence>
+      </Suspense>
     </>
   );
 }
