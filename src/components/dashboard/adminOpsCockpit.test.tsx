@@ -235,8 +235,8 @@ describe("Admin Ops Dashboard Cockpit & Triage Upgrades", () => {
       join(SRC_ROOT, "components/pages/dashboard-event/DashboardEvent.tsx"),
       "utf8",
     );
-    expect(dashSrc).toContain("Ops cockpit navigation");
-    expect(dashSrc).toContain("Ops-only cockpit");
+    expect(dashSrc).not.toContain("Ops cockpit navigation");
+    expect(dashSrc).toContain("Ops-only");
     expect(dashSrc).toContain("Expand Program Analytics");
     expect(dashSrc).not.toContain("ActiveTenantAskAi");
   });

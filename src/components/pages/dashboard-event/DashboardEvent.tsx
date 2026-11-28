@@ -20,7 +20,6 @@ import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { SparkKpiLockup } from "@/shared/SparkStatBlocks";
 import { attentionSnapshotKpis } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
-import { LeafTabs } from "@/motion/LeafTabs";
 import { InkSwitch } from "@/motion/InkSwitch";
 import { ArrowDown, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -30,10 +29,8 @@ import {
 } from "@/components/brandGroup/BrandCompare";
 import { useBrandView } from "@/components/brandGroup/useBrandView";
 import {
-  OPS_JUMP_SECTIONS,
   readOpsAnalyticsCollapsed,
   writeOpsAnalyticsCollapsed,
-  type OpsJumpSectionId,
 } from "./opsCockpitHelpers";
 
 /**
@@ -128,15 +125,10 @@ const TodaysSnapshot: React.FC = () => {
   );
 };
 
-const JUMP_TAB_OPTIONS = OPS_JUMP_SECTIONS.map((s) => ({
-  key: s.id,
-  label: s.label,
-}));
-
 /**
  * Ops home — due recaps, clock, what needs you, then program
- * performance (pace / KPIs / map) on the same page, with a sticky Ops Jump
- * Rail and persisted Ops-only cockpit collapse for peak weekend dispatch.
+ * performance (pace / KPIs / map) on the same page, with a compact header
+ * Ops-only cockpit toggle for peak weekend dispatch.
  */
 function DashboardInner() {
   const { tenantId, tenantMeta, tenantSlug } = useAuthStore();
@@ -146,8 +138,6 @@ function DashboardInner() {
   const { view, choose: chooseView } = useBrandView();
   const comparing = view === "compare" && !!tenantId;
 
-  const [activeSection, setActiveSection] =
-    useState<OpsJumpSectionId>("ops-triage");
   const [analyticsCollapsed, setAnalyticsCollapsed] = useState<boolean>(() =>
     readOpsAnalyticsCollapsed(),
   );
@@ -157,24 +147,20 @@ function DashboardInner() {
     writeOpsAnalyticsCollapsed(next);
   }, []);
 
-  const jumpToSection = useCallback(
-    (sectionId: OpsJumpSectionId) => {
-      setActiveSection(sectionId);
-      if (sectionId === "performance" && analyticsCollapsed) {
-        setCollapsedPersisted(false);
-        requestAnimationFrame(() => {
-          document
-            .getElementById("performance")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-        return;
-      }
-      document
-        .getElementById(sectionId)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    },
-    [analyticsCollapsed, setCollapsedPersisted],
-  );
+  const jumpToPerformance = useCallback(() => {
+    if (analyticsCollapsed) {
+      setCollapsedPersisted(false);
+      requestAnimationFrame(() => {
+        document
+          .getElementById("performance")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+    document
+      .getElementById("performance")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [analyticsCollapsed, setCollapsedPersisted]);
 
   const linkedSheetUrl = tenantId
     ? (() => {
@@ -188,7 +174,7 @@ function DashboardInner() {
       })()
     : "";
 
-  const showOpsJumpRail = !comparing && !isClient && program !== "field";
+  const showOpsOnlySwitch = !comparing && !isClient && program !== "field";
 
   return (
     <div className="spark-dash spark-scale">
@@ -223,10 +209,19 @@ function DashboardInner() {
                   <ArrowUpRight size={14} strokeWidth={1.75} />
                 </a>
               ) : null}
+              {showOpsOnlySwitch ? (
+                <InkSwitch
+                  checked={analyticsCollapsed}
+                  onChange={(next) => setCollapsedPersisted(next)}
+                  label="Ops-only"
+                  ariaLabel="Collapse program analytics for zero-scroll ops cockpit"
+                  className="text-xs font-medium px-1"
+                />
+              ) : null}
               {comparing ? null : (
                 <button
                   type="button"
-                  onClick={() => jumpToSection("performance")}
+                  onClick={jumpToPerformance}
                   className="px-3 py-1.5 rounded-[8px] text-sm font-medium inline-flex items-center gap-1.5 cursor-pointer"
                   style={{
                     background: "transparent",
@@ -241,34 +236,6 @@ function DashboardInner() {
             </div>
           }
         />
-
-        {showOpsJumpRail ? (
-          <nav
-            aria-label="Ops cockpit navigation"
-            className="sticky top-12 z-20 rounded-xl px-3 py-2 flex items-center justify-between gap-3 flex-wrap print:hidden"
-            style={{
-              background:
-                "color-mix(in srgb, var(--spark-surface) 90%, transparent)",
-              backdropFilter: "blur(14px)",
-              WebkitBackdropFilter: "blur(14px)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            <LeafTabs
-              ariaLabel="Dashboard sections"
-              value={activeSection}
-              onChange={jumpToSection}
-              options={JUMP_TAB_OPTIONS}
-            />
-            <InkSwitch
-              checked={analyticsCollapsed}
-              onChange={(next) => setCollapsedPersisted(next)}
-              label="Ops-only cockpit"
-              ariaLabel="Collapse program analytics for zero-scroll ops cockpit"
-              className="text-xs font-medium"
-            />
-          </nav>
-        ) : null}
 
         {comparing && tenantId ? (
           <BrandComparePanel tenantId={tenantId} canManageAccess={isAdmin} />
