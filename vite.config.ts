@@ -1,8 +1,56 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import packageJson from "./package.json";
+
+const DEFAULT_API_ORIGIN = "https://spark-api-new-490085168610.us-central1.run.app";
+
+/**
+ * Emit `<link rel="preconnect">` (and `dns-prefetch` fallback) for the active
+ * GraphQL API origin so DNS + TCP + TLS start during HTML parsing rather than
+ * waiting for the JS bundle to execute. Reads `VITE_GRAPHQL_ENDPOINT` via
+ * `configResolved` so prod, staging, and custom API domains always preconnect
+ * accurately while keeping `vite.config.ts` a plain object for `mergeConfig`.
+ */
+function apiOriginPreconnect(): Plugin {
+  let origin = DEFAULT_API_ORIGIN;
+  return {
+    name: "spark-api-preconnect",
+    configResolved(config) {
+      const endpoint =
+        process.env.VITE_GRAPHQL_ENDPOINT ||
+        (config.env?.VITE_GRAPHQL_ENDPOINT as string | undefined);
+      if (!endpoint) return;
+      try {
+        const parsed = new URL(endpoint);
+        if (
+          (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+          parsed.hostname !== "localhost" &&
+          parsed.hostname !== "127.0.0.1"
+        ) {
+          origin = parsed.origin;
+        }
+      } catch {
+        // keep DEFAULT_API_ORIGIN
+      }
+    },
+    transformIndexHtml() {
+      return [
+        {
+          tag: "link",
+          attrs: { rel: "preconnect", href: origin, crossorigin: "" },
+          injectTo: "head-prepend",
+        },
+        {
+          tag: "link",
+          attrs: { rel: "dns-prefetch", href: origin },
+          injectTo: "head-prepend",
+        },
+      ];
+    },
+  };
+}
 
 // macOS resolves TenantLogo.tsx and tenantLogo.ts as the same stem and
 // Vite then prefers .ts, so the component import never reaches the tsx.
@@ -36,6 +84,7 @@ function caseSensitiveTenantLogo() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    apiOriginPreconnect(),
     caseSensitiveTenantLogo(),
     react({ babel: { plugins: ["relay"] } }),
     tailwindcss(),

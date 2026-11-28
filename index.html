@@ -9,7 +9,16 @@
     <!-- Brand fonts — Space Grotesk for display, JetBrains Mono for
          labels/ASCII, Bungee for the stencil mark. SELF-HOSTED
          (public/fonts/) so first paint makes zero third-party
-         requests; woff2s are immutable-cached like other assets. -->
+         requests; woff2s are immutable-cached like other assets.
+         Preload the latin Space Grotesk face in parallel with HTML/CSS
+         so headings and body paint without waiting on fonts.css. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/V8mDoQDjQSkFtoMM3T6r8E7mPbF4C_k3HqU.woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/fonts/fonts.css" />
 
     <script>
