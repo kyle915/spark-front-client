@@ -57,6 +57,10 @@ import {
 } from "./jumpRecents";
 import { tenantMatchesQuery } from "./tenantPickerPrefs";
 import { switchWorkspace } from "./workspaceSwitch";
+import {
+  resolveCommandCopyUrl,
+  splitHighlightSegments,
+} from "./commandHighlight";
 
 /**
  * Spark v2 — Command Palette (⌘K).
@@ -721,6 +725,26 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (filtered[active]) select(filtered[active]);
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+      const el = inputRef.current;
+      const hasSelection =
+        el != null &&
+        el.selectionStart != null &&
+        el.selectionEnd != null &&
+        el.selectionStart !== el.selectionEnd;
+      if (!hasSelection && filtered[active]) {
+        const copyUrl = resolveCommandCopyUrl(
+          filtered[active],
+          window.location.origin,
+        );
+        if (copyUrl) {
+          e.preventDefault();
+          void copyLinkToClipboard(
+            copyUrl,
+            `Copied link to ${filtered[active].label}.`,
+          );
+        }
+      }
     }
   };
 
@@ -838,7 +862,23 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {entry.label}
+                            {splitHighlightSegments(entry.label, query).map(
+                              (seg, sIdx) =>
+                                seg.match ? (
+                                  <mark
+                                    key={sIdx}
+                                    className="bg-transparent font-semibold underline decoration-2 underline-offset-2"
+                                    style={{
+                                      color: "var(--spark-text)",
+                                      textDecorationColor: "var(--spark-lime)",
+                                    }}
+                                  >
+                                    {seg.text}
+                                  </mark>
+                                ) : (
+                                  <span key={sIdx}>{seg.text}</span>
+                                ),
+                            )}
                           </p>
                           <p
                             className="text-xs truncate"
@@ -846,7 +886,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                               color: "var(--spark-text-meta)",
                             }}
                           >
-                            {entry.hint}
+                            {splitHighlightSegments(entry.hint, query).map(
+                              (seg, sIdx) =>
+                                seg.match ? (
+                                  <mark
+                                    key={sIdx}
+                                    className="bg-transparent font-medium"
+                                    style={{ color: "var(--spark-text)" }}
+                                  >
+                                    {seg.text}
+                                  </mark>
+                                ) : (
+                                  <span key={sIdx}>{seg.text}</span>
+                                ),
+                            )}
                           </p>
                         </div>
                         {on && (
@@ -889,6 +942,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 ↵
               </kbd>
               <span>Select</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--spark-border)]">
+                ⌘C
+              </kbd>
+              <span>Copy link</span>
             </span>
             <span className="inline-flex items-center gap-1">
               <kbd className="mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--spark-border)]">

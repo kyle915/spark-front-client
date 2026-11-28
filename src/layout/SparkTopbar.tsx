@@ -16,11 +16,8 @@ import {
   markWhatsNewSeen,
 } from "./whatsNew";
 import { useLocation, useNavigate } from "react-router";
-import {
-  ArrowRightEndOnRectangleIcon,
-  Bars3Icon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
+import { LogOut, Menu, Search } from "lucide-react";
+import { LeafTabs } from "@/motion/LeafTabs";
 import { useAuthStore } from "@/store/authStore";
 import NotificationBell from "./NotificationBell";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -111,33 +108,10 @@ function PublicLinkMenuItem({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Recessed 8px segmented toggle (Admin / Client preview). */
-const PillGroup: React.FC<{
-  options: { value: string; label: string; icon?: string }[];
-  value: string;
-  onChange: (v: string) => void;
-}> = ({ options, value, onChange }) => (
-  <div className="pill-group">
-    {options.map((o) => {
-      const on = o.value === value;
-      return (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={`pill-btn flex items-center gap-1.5 !py-1 !px-2.5 !text-xs ${on ? "on" : ""}`}
-        >
-          {o.icon && (
-            <span className="text-[11px]" aria-hidden>
-              {o.icon}
-            </span>
-          )}
-          <span>{o.label}</span>
-        </button>
-      );
-    })}
-  </div>
-);
+const ROLE_TAB_OPTIONS = [
+  { key: "admin" as const, label: "Admin", title: "Ignite admin workspace view" },
+  { key: "client" as const, label: "Client", title: "Preview brand client view" },
+] as const;
 
 export const SparkTopbar: React.FC = () => {
   const { user, tenantMeta, tenantSlug } = useAuthStore();
@@ -232,7 +206,7 @@ export const SparkTopbar: React.FC = () => {
           aria-label="Open menu"
           onClick={toggleNav}
         >
-          <Bars3Icon className="w-5 h-5" />
+          <Menu size={19} strokeWidth={1.85} />
         </button>
         {isClient ? (
           <TenantLogo
@@ -326,7 +300,7 @@ export const SparkTopbar: React.FC = () => {
           }}
           aria-label="Jump to a page or recap"
         >
-          <MagnifyingGlassIcon className="w-3.5 h-3.5" />
+          <Search size={14} strokeWidth={1.85} />
           <span className="hidden sm:inline">Jump</span>
           <span
             className="hidden lg:inline ml-2 mono-code text-[10px] px-1.5 py-0.5 rounded-[5px]"
@@ -342,14 +316,12 @@ export const SparkTopbar: React.FC = () => {
 
         {canToggleRole ? (
           <div className="hidden xl:block">
-          <PillGroup
-            value={role}
-            onChange={(v) => onRole(v as Role)}
-            options={[
-              { value: "admin", label: "Admin", icon: "⚒" },
-              { value: "client", label: "Client", icon: "◐" },
-            ]}
-          />
+            <LeafTabs
+              ariaLabel="Workspace role view"
+              value={role}
+              onChange={(v) => onRole(v)}
+              options={ROLE_TAB_OPTIONS}
+            />
           </div>
         ) : null}
 
@@ -420,16 +392,14 @@ export const SparkTopbar: React.FC = () => {
                   >
                     View as
                   </p>
-                  <PillGroup
+                  <LeafTabs
+                    ariaLabel="Workspace role view"
                     value={role}
                     onChange={(v) => {
                       setMenuOpen(false);
-                      onRole(v as Role);
+                      onRole(v);
                     }}
-                    options={[
-                      { value: "admin", label: "Admin" },
-                      { value: "client", label: "Client" },
-                    ]}
+                    options={ROLE_TAB_OPTIONS}
                   />
                 </div>
               ) : null}
@@ -509,7 +479,7 @@ export const SparkTopbar: React.FC = () => {
                 className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm hover:text-error"
                 style={{ border: "1px solid var(--spark-border)" }}
               >
-                <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
+                <LogOut size={15} strokeWidth={1.85} />
                 Log out
               </button>
             </div>

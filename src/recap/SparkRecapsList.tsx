@@ -7,6 +7,7 @@ import { fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkConfirm from "@/shared/SparkConfirm";
+import SparkPromptOverlay from "@/shared/SparkPromptOverlay";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import { thumbUrl } from "@/utils/thumb";
@@ -3189,17 +3190,19 @@ export default function SparkRecapsList() {
       return [];
     }
   });
+  const [pinViewPromptOpen, setPinViewPromptOpen] = useState(false);
   const persistViews = (next: SavedView[]) => {
     setSavedViews(next);
     localStorage.setItem(viewsKey, JSON.stringify(next));
   };
   const pinCurrentView = () => {
-    const name = window.prompt("Name this filter view (e.g. Girl Beer CA this week)");
-    if (!name?.trim()) return;
+    setPinViewPromptOpen(true);
+  };
+  const confirmPinCurrentView = (name: string) => {
     persistViews([
-      ...savedViews.filter((v) => v.name !== name.trim()),
+      ...savedViews.filter((v) => v.name !== name),
       {
-        name: name.trim(),
+        name,
         search,
         retailerFilter,
         stateFilter,
@@ -3210,6 +3213,8 @@ export default function SparkRecapsList() {
         dateTo,
       },
     ]);
+    setPinViewPromptOpen(false);
+    showAlert(`Pinned filter view “${name}”.`, "success");
   };
   const applyView = (v: SavedView) => {
     setSearch(v.search);
@@ -3369,7 +3374,7 @@ export default function SparkRecapsList() {
       window.setTimeout(() => setRecapCopyState("idle"), 2000);
     } catch {
       setRecapCopyState("idle");
-      window.alert("Couldn't reach the clipboard. Try the CSV download.");
+      showAlert("Couldn't reach the clipboard. Try the CSV download.", "warning");
     }
   };
 
@@ -4588,6 +4593,16 @@ export default function SparkRecapsList() {
           </div>
         </div>
       )}
+      <SparkPromptOverlay
+        open={pinViewPromptOpen}
+        kicker="Pin view"
+        title="Name this filter view"
+        description="Save your active search, retailer, state, status, and date filters for one-click reuse."
+        placeholder="e.g. Girl Beer CA this week"
+        confirmLabel="Pin view"
+        onConfirm={confirmPinCurrentView}
+        onCancel={() => setPinViewPromptOpen(false)}
+      />
       {(() => {
         const peekIdx = peekUuid
           ? visibleRecaps.findIndex((r) => r.uuid === peekUuid)
@@ -4628,6 +4643,15 @@ export default function SparkRecapsList() {
                 peekIdx >= 0 &&
                 peekIdx < visibleRecaps.length - 1
               ) {
+                const nxt = visibleRecaps[peekIdx + 1];
+                if (nxt) setPeekUuid(nxt.uuid);
+              }
+            }}
+            onApproveAndNext={(item) => {
+              const target = visibleRecaps.find((r) => r.uuid === item.uuid);
+              if (!target) return;
+              commitApproveTargets([target]);
+              if (peekIdx >= 0 && peekIdx < visibleRecaps.length - 1) {
                 const nxt = visibleRecaps[peekIdx + 1];
                 if (nxt) setPeekUuid(nxt.uuid);
               }

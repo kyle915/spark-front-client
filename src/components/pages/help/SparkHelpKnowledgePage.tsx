@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkConfirm from "@/shared/SparkConfirm";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAlertStore } from "@/store/alertStore";
@@ -96,6 +97,10 @@ const KnowledgeConsoleBody: React.FC<{
   const [audienceFilter, setAudienceFilter] = useState<"" | HelpAudience>("");
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<DraftArticle | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    uuid: string;
+    title: string;
+  } | null>(null);
 
   // Simulator state (Preview as Brand Client vs Ignite Admin)
   const [simQuestion, setSimQuestion] = useState("");
@@ -224,10 +229,16 @@ const KnowledgeConsoleBody: React.FC<{
   };
 
   const handleDelete = (uuid: string, title: string) => {
-    if (!window.confirm(`Delete "${title}" from Spark Knowledge?`)) return;
+    setPendingDelete({ uuid, title });
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete || deletingArticle) return;
+    const { uuid } = pendingDelete;
     commitDelete({
       variables: { uuid },
       onCompleted: (res) => {
+        setPendingDelete(null);
         if (res.deleteSparkHelpArticle.ok) {
           showAlert("Article deleted.", "success");
           onRefresh();
@@ -235,7 +246,10 @@ const KnowledgeConsoleBody: React.FC<{
           showAlert(res.deleteSparkHelpArticle.reason || "Delete failed.", "error");
         }
       },
-      onError: () => showAlert("Delete failed.", "error"),
+      onError: () => {
+        setPendingDelete(null);
+        showAlert("Delete failed.", "error");
+      },
     });
   };
 
@@ -979,6 +993,19 @@ const KnowledgeConsoleBody: React.FC<{
             </form>
           </div>
         </div>
+      ) : null}
+
+      {pendingDelete ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Delete article"
+          title={`Delete “${pendingDelete.title}”?`}
+          body="This permanently removes the article and its vector embedding from Spark Knowledge."
+          confirmLabel="Hold to delete"
+          busy={deletingArticle}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
       ) : null}
     </div>
   );

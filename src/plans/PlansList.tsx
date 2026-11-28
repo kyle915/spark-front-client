@@ -2,7 +2,7 @@
  * Leadership Activation Plans portfolio — card-first, calm hierarchy.
  */
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import {
   useLazyLoadQuery,
@@ -60,11 +60,18 @@ const healthRank: Record<string, number> = {
   done: 4,
 };
 
+type PlanPreset = {
+  name: string;
+  brief: string;
+  markets?: string;
+};
+
 const CreatePlanSheet: React.FC<{
   open: boolean;
+  initialPreset?: PlanPreset | null;
   onClose: () => void;
   onCreated: (uuid?: string | null) => void;
-}> = ({ open, onClose, onCreated }) => {
+}> = ({ open, initialPreset = null, onClose, onCreated }) => {
   const { tenantId } = useAuthStore();
   const { showAlert } = useAlertStore();
   const [commit, inFlight] =
@@ -75,6 +82,14 @@ const CreatePlanSheet: React.FC<{
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [markets, setMarkets] = useState("");
+
+  useEffect(() => {
+    if (!open || !initialPreset) return;
+    setName(initialPreset.name);
+    setBrief(initialPreset.brief);
+    setMarkets(initialPreset.markets ?? "");
+    setStep(2);
+  }, [open, initialPreset]);
 
   const reset = () => {
     setStep(1);
@@ -270,7 +285,11 @@ const PlanCard: React.FC<{ plan: PlanRow }> = ({ plan }) => {
   );
 };
 
-const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
+const PortfolioInner: React.FC<{
+  refreshKey: number;
+  isAdmin: boolean;
+  onStartPreset?: (preset: PlanPreset) => void;
+}> = ({ refreshKey, isAdmin, onStartPreset }) => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<ActivationPlansQueryType>(
     ActivationPlansQuery,
@@ -357,6 +376,45 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
       <SparkEmptyState
         title="No plans yet"
         body="Create a named slate for a quarter or market, then add requests from the plan or Master Tracker."
+        presets={
+          isAdmin && onStartPreset
+            ? [
+                {
+                  label: "Quarterly Retail Sampling Slate",
+                  description:
+                    "12-week retail velocity & demo wave across priority grocery chains.",
+                  onClick: () =>
+                    onStartPreset({
+                      name: "Quarterly Retail Sampling Slate",
+                      brief:
+                        "Priority retail sampling slate tracking planned vs. staffed vs. verified recaps.",
+                    }),
+                },
+                {
+                  label: "New Chain Launch Wave",
+                  description:
+                    "First-30-days support blitz across newly authorized retail doors.",
+                  onClick: () =>
+                    onStartPreset({
+                      name: "New Chain Launch Wave",
+                      brief:
+                        "New retail authorization launch wave driving early velocity and buyer reorder.",
+                    }),
+                },
+                {
+                  label: "Seasonal On-Premise Push",
+                  description:
+                    "Targeted tastings and staff education activations for peak season.",
+                  onClick: () =>
+                    onStartPreset({
+                      name: "Seasonal On-Premise Push",
+                      brief:
+                        "Key account tastings and seasonal on-premise activation slate.",
+                    }),
+                },
+              ]
+            : undefined
+        }
       />
     );
   }
@@ -536,6 +594,7 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
 export default function PlansList() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [initialPreset, setInitialPreset] = useState<PlanPreset | null>(null);
   const environment = useRelayEnvironment();
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isAdmin } = useSparkRole();
@@ -567,7 +626,12 @@ export default function PlansList() {
           support="Proposed vs staffed vs done across every activation slate."
           action={
             isAdmin && !createOpen ? (
-              <SparkPrimaryButton onClick={() => setCreateOpen(true)}>
+              <SparkPrimaryButton
+                onClick={() => {
+                  setInitialPreset(null);
+                  setCreateOpen(true);
+                }}
+              >
                 New plan
               </SparkPrimaryButton>
             ) : null
@@ -578,8 +642,13 @@ export default function PlansList() {
           {createOpen ? (
             <CreatePlanSheet
               open={createOpen}
-              onClose={() => setCreateOpen(false)}
+              initialPreset={initialPreset}
+              onClose={() => {
+                setInitialPreset(null);
+                setCreateOpen(false);
+              }}
               onCreated={(uuid) => {
+                setInitialPreset(null);
                 bump();
                 if (uuid) navigate(`/plans/${uuid}`);
               }}
@@ -598,7 +667,14 @@ export default function PlansList() {
               </div>
             }
           >
-            <PortfolioInner refreshKey={refreshKey} />
+            <PortfolioInner
+              refreshKey={refreshKey}
+              isAdmin={isAdmin}
+              onStartPreset={(preset) => {
+                setInitialPreset(preset);
+                setCreateOpen(true);
+              }}
+            />
           </Suspense>
         </ErrorBoundary>
       </div>

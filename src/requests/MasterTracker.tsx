@@ -23,6 +23,7 @@ import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__gene
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
@@ -477,14 +478,19 @@ const TrackerTable: React.FC<{
         });
         void refreshSidebarCounts(environment, tenantId);
       } else {
-        window.alert(
-          json.errors?.[0]?.message ||
-            json?.data?.approveRequest?.message ||
-            "Couldn't approve — please try again.",
-        );
+        useAlertStore
+          .getState()
+          .showAlert(
+            json.errors?.[0]?.message ||
+              json?.data?.approveRequest?.message ||
+              "Couldn't approve — please try again.",
+            "error",
+          );
       }
     } catch {
-      window.alert("Couldn't approve — please try again.");
+      useAlertStore
+        .getState()
+        .showAlert("Couldn't approve — please try again.", "error");
     } finally {
       setApprovingId(null);
     }
@@ -1954,7 +1960,7 @@ export default function MasterTracker() {
   // filter + date so kyle gets a self-describing download.
   const exportCsv = () => {
     if (visibleRows.length === 0) {
-      window.alert("Nothing to export.");
+      useAlertStore.getState().showAlert("Nothing to export.", "info");
       return;
     }
     const header = [
@@ -2089,9 +2095,12 @@ export default function MasterTracker() {
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
       setCopyState("idle");
-      window.alert(
-        "Couldn't access the clipboard. Try the CSV download instead.",
-      );
+      useAlertStore
+        .getState()
+        .showAlert(
+          "Couldn't access the clipboard. Try the CSV download instead.",
+          "warning",
+        );
     }
   };
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -2154,7 +2163,7 @@ export default function MasterTracker() {
   const saveLinkedSheet = async (raw: string) => {
     const res = await persistLinkedSheet(raw);
     if (!res.ok && res.message) {
-      window.alert(res.message);
+      useAlertStore.getState().showAlert(res.message, "error");
     }
   };
 

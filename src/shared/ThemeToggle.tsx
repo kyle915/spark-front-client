@@ -1,4 +1,5 @@
-import { MoonIcon, SunIcon } from "@heroicons/react/24/solid";
+import { Moon, Sun } from "lucide-react";
+import { InkSwitch } from "@/motion/InkSwitch";
 import { type TenantColorScheme } from "@utils/tenantThemeConfig";
 
 type Props = {
@@ -9,27 +10,37 @@ type Props = {
 const ThemeToggle = ({ value, onChange }: Props) => {
   const isDark = value === "dark";
 
-  const toggleTheme = () => {
-    onChange(isDark ? "light" : "dark");
-  };
-
   return (
-    <label className="flex cursor-pointer gap-2 items-center bg-base-100/20 backdrop-blur-sm px-3 py-2 rounded-full">
-      <span className="text-sm text-base-content">
-        <SunIcon className="h-5 w-5" />
-      </span>
-
-      <input
-        type="checkbox"
-        className="toggle toggle-primary"
-        checked={isDark}
-        onChange={toggleTheme}
+    <div
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-sm"
+      style={{
+        background: "var(--spark-surface-2)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+      }}
+    >
+      <Sun
+        size={15}
+        strokeWidth={1.85}
+        style={{
+          color: !isDark ? "var(--spark-text)" : "var(--spark-text-meta)",
+        }}
+        aria-hidden
       />
-
-      <span className="text-sm text-base-content">
-        <MoonIcon className="h-5 w-4" />
-      </span>
-    </label>
+      <InkSwitch
+        checked={isDark}
+        onChange={(nextDark) => onChange(nextDark ? "dark" : "light")}
+        ariaLabel={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      />
+      <Moon
+        size={15}
+        strokeWidth={1.85}
+        style={{
+          color: isDark ? "var(--spark-text)" : "var(--spark-text-meta)",
+        }}
+        aria-hidden
+      />
+    </div>
   );
 };
 

@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import CampaignReportView from "@/reports/CampaignReportView";
 import type { CampaignReportData } from "@/reports/CampaignReportView";
+import { computeCampaignConversionPct } from "@/reports/campaignFunnel";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { CopyMorphButton } from "@/motion/CopyMorphButton";
 
 /**
  * Public, no-login campaign report — /report/:token.
@@ -79,6 +81,14 @@ const PublicCampaignReport: React.FC = () => {
   const [report, setReport] = useState<ReportPayload | null>(null);
   const [loadErr, setLoadErr] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 240);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Public pages own their theme: force spark-v2 so the brand tokens
   // resolve even when the visitor has never set a theme (no admin shell to
@@ -165,29 +175,130 @@ const PublicCampaignReport: React.FC = () => {
     );
   }
 
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const convPct = computeCampaignConversionPct(report.kpis);
+
   return (
-    <Shell
-      brandName={report.brandName}
-      status="APPROVED"
-      actions={
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="px-3.5 py-2 rounded-lg text-xs font-semibold transition hover:opacity-90"
+    <>
+      {scrolled ? (
+        <div
+          role="region"
+          aria-label="Campaign report summary bar"
+          className="fixed top-0 inset-x-0 z-40 px-4 py-2.5 transition-all"
           style={{
-            background: "#14160f",
-            color: "#f6f6f2",
-            textDecoration: "none",
+            background: "rgba(255, 255, 255, 0.92)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            borderBottom: "1px solid var(--recap-border, #e2e4d8)",
+            color: "var(--recap-text, #14160f)",
           }}
-          title="Download this report as a PDF"
         >
-          ↓ Download PDF
-        </a>
-      }
-    >
-      <CampaignReportView report={report} />
-    </Shell>
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold truncate">
+                {report.brandName ? `${report.brandName} · ` : ""}
+                {report.title}
+              </p>
+              {report.dateRange ? (
+                <p
+                  className="text-[11px] truncate"
+                  style={{ color: "var(--recap-muted, #5c6154)" }}
+                >
+                  {report.dateRange}
+                </p>
+              ) : null}
+            </div>
+            <div className="hidden md:flex items-center gap-4 tab-num text-xs">
+              <div className="flex items-baseline gap-1.5">
+                <span style={{ color: "var(--recap-muted, #5c6154)" }}>Events</span>
+                <span className="font-semibold">
+                  {report.kpis.events.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span style={{ color: "var(--recap-muted, #5c6154)" }}>Sampled</span>
+                <span className="font-semibold">
+                  {report.kpis.samplesDistributed.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <span style={{ color: "var(--recap-muted, #5c6154)" }}>Sold</span>
+                <span className="font-semibold">
+                  {report.kpis.productsSold.toLocaleString()}
+                </span>
+              </div>
+              {convPct ? (
+                <div className="flex items-baseline gap-1.5">
+                  <span style={{ color: "var(--recap-muted, #5c6154)" }}>Conv</span>
+                  <span className="font-semibold">{convPct}</span>
+                </div>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <CopyMorphButton
+                text={shareUrl}
+                label="Copy link"
+                copiedLabel="Copied"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  border: "1px solid var(--recap-border, #e2e4d8)",
+                  background: "transparent",
+                  color: "var(--recap-text, #14160f)",
+                }}
+              />
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-90"
+                style={{
+                  background: "#14160f",
+                  color: "#f6f6f2",
+                  textDecoration: "none",
+                }}
+              >
+                ↓ PDF
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <Shell
+        brandName={report.brandName}
+        status="APPROVED"
+        actions={
+          <div className="flex items-center gap-2">
+            <CopyMorphButton
+              text={shareUrl}
+              label="Copy link"
+              copiedLabel="Copied"
+              className="px-3 py-2 rounded-lg text-xs font-semibold"
+              style={{
+                border: "1px solid var(--recap-border, #e2e4d8)",
+                background: "transparent",
+                color: "var(--recap-text, #14160f)",
+              }}
+            />
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3.5 py-2 rounded-lg text-xs font-semibold transition hover:opacity-90"
+              style={{
+                background: "#14160f",
+                color: "#f6f6f2",
+                textDecoration: "none",
+              }}
+              title="Download this report as a PDF"
+            >
+              ↓ Download PDF
+            </a>
+          </div>
+        }
+      >
+        <CampaignReportView report={report} />
+      </Shell>
+    </>
   );
 };
 

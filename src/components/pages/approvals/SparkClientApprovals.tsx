@@ -982,6 +982,7 @@ const ClientApprovalsMerged: React.FC<{
             allowClientApprove
             approving={peekApproving}
             onApprove={approveFromPeek}
+            onApproveAndNext={approveFromPeek}
             onOpenFull={(item) => {
               setPeekIndex(null);
               navigate(

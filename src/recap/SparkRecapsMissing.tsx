@@ -483,7 +483,7 @@ const Inner: React.FC<{
   // (empty BA columns) so the count matches the on-screen list.
   const exportCsv = () => {
     if (rows.length === 0) {
-      window.alert("Nothing to export.");
+      useAlertStore.getState().showAlert("Nothing to export.", "info");
       return;
     }
     const esc = (raw: string | number | null | undefined) => {

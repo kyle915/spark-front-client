@@ -8,6 +8,7 @@ import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import {
   applyRequestDecisionToStore,
@@ -131,14 +132,19 @@ const Inner: React.FC = () => {
         });
         void refreshSidebarCounts(environment, tenantId);
       } else {
-        window.alert(
-          json.errors?.[0]?.message ||
-            json?.data?.approveRequest?.message ||
-            "Couldn't approve — please try again.",
-        );
+        useAlertStore
+          .getState()
+          .showAlert(
+            json.errors?.[0]?.message ||
+              json?.data?.approveRequest?.message ||
+              "Couldn't approve — please try again.",
+            "error",
+          );
       }
     } catch {
-      window.alert("Couldn't approve — please try again.");
+      useAlertStore
+        .getState()
+        .showAlert("Couldn't approve — please try again.", "error");
     } finally {
       setBusyId(null);
     }

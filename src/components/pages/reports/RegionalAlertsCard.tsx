@@ -32,6 +32,7 @@ import type { RetentionAutomationMutationsSendTestRegionalAlertMutation as TestT
 import { parseCsvTokens } from "./regionalAlertsHelpers";
 import { BellToggle, InkSwitch } from "@/motion/InkSwitch";
 import { ChipInput } from "@/motion/ChipInput";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 
 const TEXT = { color: "var(--spark-text)" } as const;
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -101,6 +102,31 @@ export const RegionalAlertsCard: React.FC<{
     setAlertMissingTag(true);
     setTargetMsrp(activeTargetMsrp ? activeTargetMsrp.toFixed(2) : "");
     setDriftThresholdPct("5.0");
+    setNotifyEmail(true);
+    setRecipientEmails(workspace?.defaultEmail ?? "");
+    setNotifyWebhook(false);
+    setWebhookUrl("");
+    setIsActive(true);
+    setNotice(null);
+    setEditorOpen(true);
+  };
+
+  const openPreset = (preset: {
+    name: string;
+    oos: boolean;
+    missingTag: boolean;
+    priceDrift: boolean;
+    threshold?: string;
+  }) => {
+    setEditingUuid(null);
+    setName(preset.name);
+    setStatesText(suggestedStates.slice(0, 2).join(", "));
+    setChainsText("");
+    setAlertOos(preset.oos);
+    setAlertMissingTag(preset.missingTag);
+    setAlertPriceDrift(preset.priceDrift);
+    setTargetMsrp(activeTargetMsrp ? activeTargetMsrp.toFixed(2) : "");
+    setDriftThresholdPct(preset.threshold ?? "5.0");
     setNotifyEmail(true);
     setRecipientEmails(workspace?.defaultEmail ?? "");
     setNotifyWebhook(false);
@@ -715,23 +741,51 @@ export const RegionalAlertsCard: React.FC<{
           ))}
         </div>
       ) : !editorOpen ? (
-        <div
-          className="rounded-xl px-4 py-3 text-xs flex items-center justify-between gap-3 flex-wrap"
-          style={{ background: "var(--spark-surface-2)", ...BORDER }}
-        >
-          <span style={META}>
-            No regional alert rules yet. Example: alert your Texas manager immediately
-            whenever any H-E-B logs an out-of-stock, &gt;5% MSRP drift, or missing price tag.
-          </span>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="text-xs font-semibold underline underline-offset-2 cursor-pointer"
-            style={{ ...TEXT, background: "transparent", border: "none", padding: 0 }}
-          >
-            Create your first rule
-          </button>
-        </div>
+        <SparkEmptyState
+          className="!py-6"
+          title="No regional alert rules yet"
+          body="Start from a 1-click shelf-watch preset or configure custom state and retail chain triggers."
+          presets={[
+            {
+              label: "OOS + Missing Tag Watch",
+              description:
+                "Instant email whenever a shelf audit logs out-of-stock or a missing price tag.",
+              onClick: () =>
+                openPreset({
+                  name: "Shelf Availability & Tag Watch",
+                  oos: true,
+                  missingTag: true,
+                  priceDrift: false,
+                }),
+            },
+            {
+              label: ">5% MSRP Drift Watch",
+              description:
+                "Alert when observed shelf pricing drifts more than 5% from target MSRP.",
+              onClick: () =>
+                openPreset({
+                  name: "MSRP Drift >5% Watch",
+                  oos: false,
+                  missingTag: false,
+                  priceDrift: true,
+                  threshold: "5.0",
+                }),
+            },
+            {
+              label: "Full Retail Audit Guardrail",
+              description:
+                "Out-of-stock, missing price tag, and >5% MSRP drift across your territory.",
+              onClick: () =>
+                openPreset({
+                  name: "Full Retail Audit Guardrail",
+                  oos: true,
+                  missingTag: true,
+                  priceDrift: true,
+                  threshold: "5.0",
+                }),
+            },
+          ]}
+        />
       ) : null}
     </section>
   );

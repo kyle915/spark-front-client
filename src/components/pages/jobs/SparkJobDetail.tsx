@@ -3,6 +3,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkConfirm from "@/shared/SparkConfirm";
+import SparkPromptOverlay from "@/shared/SparkPromptOverlay";
 import WalkupCodePanel from "@/requests/WalkupCodePanel";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
@@ -531,6 +532,8 @@ const BABriefingCard: React.FC<{
   // Snapshot the job's saved briefing into a named, reusable tenant
   // template. The backend reads the persisted briefing, so unsaved edits
   // must be saved first.
+  const [templatePromptOpen, setTemplatePromptOpen] = useState(false);
+
   const saveAsTemplate = () => {
     if (savingTemplate) return;
     if (dirty) {
@@ -541,12 +544,10 @@ const BABriefingCard: React.FC<{
       showAlert("Add a title or body before saving a template.", "warning");
       return;
     }
-    const name = window.prompt(
-      "Name this briefing template (e.g. “Liquid Death sampling — standard”):",
-      title || "",
-    );
-    if (name == null) return; // cancelled
-    const trimmed = name.trim();
+    setTemplatePromptOpen(true);
+  };
+
+  const confirmSaveBriefingTemplate = (trimmed: string) => {
     if (!trimmed) {
       showAlert("A template name is required.", "warning");
       return;
@@ -554,6 +555,7 @@ const BABriefingCard: React.FC<{
     commitSaveTemplate({
       variables: { input: { jobId, name: trimmed } },
       onCompleted: (res) => {
+        setTemplatePromptOpen(false);
         if (res.saveJobBriefingAsTemplate?.success) {
           showAlert(
             res.saveJobBriefingAsTemplate.message ||
@@ -570,7 +572,10 @@ const BABriefingCard: React.FC<{
           );
         }
       },
-      onError: (e) => showAlert(`Save template failed: ${e.message}`, "error"),
+      onError: (e) => {
+        setTemplatePromptOpen(false);
+        showAlert(`Save template failed: ${e.message}`, "error");
+      },
     });
   };
 
@@ -745,6 +750,18 @@ const BABriefingCard: React.FC<{
           )}
         </div>
       )}
+      <SparkPromptOverlay
+        open={templatePromptOpen}
+        kicker="Briefing template"
+        title="Name this briefing template"
+        description="Reusable pre-shift instructions for future gigs on this account."
+        placeholder="e.g. Liquid Death sampling — standard"
+        defaultValue={title || ""}
+        confirmLabel="Save template"
+        busy={savingTemplate}
+        onConfirm={confirmSaveBriefingTemplate}
+        onCancel={() => setTemplatePromptOpen(false)}
+      />
     </div>
   );
 };
@@ -1127,14 +1144,14 @@ const PostJobModal: React.FC<{
   // Save the CURRENT modal fields as a new tenant template (#265). Seeds
   // createGigTemplate (NOT saveJobPostAsGigTemplate) because the values are
   // in local state and the job isn't posted yet.
+  const [gigTemplatePromptOpen, setGigTemplatePromptOpen] = useState(false);
+
   const saveAsTemplate = () => {
     if (savingTemplate) return;
-    const name = window.prompt(
-      "Name this gig template (e.g. “LD sampling — 6h @ $28”):",
-      node.jobTitle?.name ?? "",
-    );
-    if (name == null) return; // cancelled
-    const trimmed = name.trim();
+    setGigTemplatePromptOpen(true);
+  };
+
+  const confirmSaveGigTemplate = (trimmed: string) => {
     if (!trimmed) {
       showAlert("A template name is required.", "warning");
       return;
@@ -1151,6 +1168,7 @@ const PostJobModal: React.FC<{
         },
       },
       onCompleted: (res) => {
+        setGigTemplatePromptOpen(false);
         if (res.createGigTemplate?.success) {
           showAlert(
             res.createGigTemplate.message || `Saved “${trimmed}” as a template.`,
@@ -1428,6 +1446,18 @@ const PostJobModal: React.FC<{
           </div>
         </div>
       </div>
+      <SparkPromptOverlay
+        open={gigTemplatePromptOpen}
+        kicker="Gig template"
+        title="Name this gig template"
+        description="Saves hours, hourly rate, uniform notes, and visibility for 1-click reuse."
+        placeholder="e.g. LD sampling — 6h @ $28"
+        defaultValue={node.jobTitle?.name ?? ""}
+        confirmLabel="Save template"
+        busy={savingTemplate}
+        onConfirm={confirmSaveGigTemplate}
+        onCancel={() => setGigTemplatePromptOpen(false)}
+      />
     </div>
   );
 };
@@ -1704,6 +1734,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [briefOpen, setBriefOpen] = useState(false);
   const [showPost, setShowPost] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [fallbackCopyUrl, setFallbackCopyUrl] = useState<string | null>(null);
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupDate, setDupDate] = useState("");
   // Bumped after a successful Post to force the job query to refetch so the
   // canonical lifecycleStatus / postedAt land (postJob returns only a
   // lifecycle response, not a full Job).
@@ -1793,17 +1826,14 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
       await navigator.clipboard.writeText(url);
       showAlert("Job link copied to clipboard.", "success");
     } catch {
-      // Clipboard blocked (e.g. insecure context) — fall back to a prompt.
-      window.prompt("Copy this job link:", url);
+      // Clipboard blocked (e.g. insecure context) — fall back to a Studio overlay.
+      setFallbackCopyUrl(url);
     }
   };
 
   // Duplicate this gig: clone the underlying request to a new date the admin
   // picks. The copy lands as a fresh request/event/job the admin can tweak.
   const sourceRequestId = node.event?.request?.id ?? null;
-  // Duplicate-to-date picker (replaces a typed YYYY-MM-DD browser prompt).
-  const [dupOpen, setDupOpen] = useState(false);
-  const [dupDate, setDupDate] = useState("");
   const duplicate = () => {
     if (cloning) return;
     if (!sourceRequestId) {
@@ -2408,6 +2438,17 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           onClose={() => setShowEdit(false)}
         />
       )}
+      <SparkPromptOverlay
+        open={fallbackCopyUrl !== null}
+        kicker="Share link"
+        title="Copy this job link"
+        description="Press ⌘C / Ctrl+C to copy the link below."
+        defaultValue={fallbackCopyUrl ?? ""}
+        confirmLabel="Done"
+        cancelLabel="Close"
+        onConfirm={() => setFallbackCopyUrl(null)}
+        onCancel={() => setFallbackCopyUrl(null)}
+      />
     </div>
   );
 };

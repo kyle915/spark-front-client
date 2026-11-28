@@ -14,7 +14,16 @@
 import ClientProgramSnapshot from "./ClientProgramSnapshot";
 import ClientFieldProofStrip from "./ClientFieldProofStrip";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import SparkEmptyState from "@/shared/SparkEmptyState";
@@ -409,6 +418,41 @@ const ClientInner: React.FC = () => {
   // dashboard chrome.
   const [activeTab, setActiveTab] = useState<TabKey>(readTabFromHash);
   const [approvalsOpen, setApprovalsOpen] = useState(false);
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const tabButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [tabIndicator, setTabIndicator] = useState<{
+    left: number;
+    width: number;
+    visible: boolean;
+  }>({ left: 0, width: 0, visible: false });
+
+  const measureTabIndicator = useCallback(() => {
+    const el = tabButtonRefs.current[activeTab];
+    if (!el || el.offsetWidth <= 0) {
+      setTabIndicator((prev) =>
+        prev.visible ? { ...prev, visible: false } : prev,
+      );
+      return;
+    }
+    setTabIndicator({
+      left: el.offsetLeft,
+      width: el.offsetWidth,
+      visible: true,
+    });
+  }, [activeTab]);
+
+  useLayoutEffect(() => {
+    measureTabIndicator();
+  }, [measureTabIndicator, counts.approvals, brandView]);
+
+  useEffect(() => {
+    const el = tabListRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measureTabIndicator);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measureTabIndicator]);
+
   useEffect(() => {
     const onHashChange = () => setActiveTab(readTabFromHash());
     window.addEventListener("hashchange", onHashChange);
@@ -462,10 +506,21 @@ const ClientInner: React.FC = () => {
 
       {/* Flush underline hub tabs — Overview / Performance / Approvals / Account map. */}
       <div
+        ref={tabListRef}
         role="tablist"
         aria-label="Dashboard views"
-        className="spark-hub-tabs max-w-full overflow-x-auto spark-scroll-fade"
+        className={`spark-hub-tabs ${tabIndicator.visible ? "has-hub-indicator " : ""}max-w-full overflow-x-auto spark-scroll-fade`}
       >
+        {tabIndicator.visible ? (
+          <span
+            aria-hidden="true"
+            className="spark-hub-indicator"
+            style={{
+              width: tabIndicator.width,
+              transform: `translateX(${tabIndicator.left}px)`,
+            }}
+          />
+        ) : null}
         {(
           [
             { key: "overview", label: "Overview" },
@@ -481,6 +536,9 @@ const ClientInner: React.FC = () => {
           return (
             <button
               key={t.key}
+              ref={(node) => {
+                tabButtonRefs.current[t.key] = node;
+              }}
               type="button"
               role="tab"
               aria-selected={active}

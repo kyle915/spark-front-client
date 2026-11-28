@@ -13,6 +13,8 @@ import { RecapComments } from "./RecapComments";
 import type { RecapCommentItem } from "./recapCommentValidation";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
+import { CopyMorphButton } from "@/motion/CopyMorphButton";
+import { DownloadRingButton } from "@/motion/FeedbackActionButton";
 import { thumbUrl } from "@/utils/thumb";
 import { recapFileKind, recapVideoPlayUrl } from "@/utils/recapFileUrl";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
@@ -132,12 +134,26 @@ const PublicRecap: React.FC = () => {
   const [signoffBusy, setSignoffBusy] = useState(false);
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [photoCategory, setPhotoCategory] = useState<string>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [playingVideo, setPlayingVideo] = useState<{
     url: string;
     name: string | null;
   } | null>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 240);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setPhotoCategory("all");
+    setLightboxIndex(null);
+  }, [endpoint]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -257,14 +273,16 @@ const PublicRecap: React.FC = () => {
     }
   };
 
-  const copyShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
-    }
+  const triggerPdfDownload = () => {
+    if (!pdfUrl) return;
+    setPdfBusy(true);
+    window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => setPdfBusy(false), 750);
+  };
+
+  const scrollToSignoff = () => {
+    const el = document.getElementById("public-recap-signoff");
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const shell = (children: React.ReactNode, actions?: React.ReactNode) => (
@@ -318,16 +336,110 @@ const PublicRecap: React.FC = () => {
   const allPhotos = recap.photos ?? [];
   const photos = allPhotos.filter((p) => recapFileKind(p.url) !== "video");
   const videos = allPhotos.filter((p) => recapFileKind(p.url) === "video");
-  const hero = photos[0];
-  const restPhotos = photos.slice(1);
-  const lightboxPhotos = photos.map((p) => ({
+  const categoryCounts = new Map<string, number>();
+  for (const p of photos) {
+    const cat = (p.category || "").trim();
+    if (cat) categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+  }
+  const photoCategories = Array.from(categoryCounts.entries()).map(
+    ([name, count]) => ({ name, count }),
+  );
+  const visiblePhotos =
+    photoCategory === "all"
+      ? photos
+      : photos.filter((p) => (p.category || "").trim() === photoCategory);
+  const hero = visiblePhotos[0];
+  const restPhotos = visiblePhotos.slice(1);
+  const lightboxPhotos = visiblePhotos.map((p) => ({
     name: p.name ?? p.category ?? "Photo",
     url: p.url,
     caption: p.category || undefined,
   }));
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
   return (
     <>
+      {scrolled ? (
+        <div
+          role="region"
+          aria-label="Recap summary bar"
+          className="fixed top-0 inset-x-0 z-40 px-4 py-2.5 transition-all"
+          style={{
+            background: "rgba(255, 255, 255, 0.92)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            borderBottom: "1px solid var(--recap-border, #e2e4d8)",
+            color: "var(--recap-text, #14160f)",
+          }}
+        >
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold truncate">
+                {recap.retailer || recap.name}
+              </p>
+              <p
+                className="text-[11px] truncate"
+                style={{ color: "var(--recap-muted, #5c6154)" }}
+              >
+                {fmtDate(recap.date)}
+                {recap.city && recap.state ? ` · ${recap.city}, ${recap.state}` : ""}
+              </p>
+            </div>
+            {kpis.length > 0 ? (
+              <div className="hidden md:flex items-center gap-4 tab-num text-xs">
+                {kpis.slice(0, 3).map((k) => (
+                  <div key={k.label} className="flex items-baseline gap-1.5">
+                    <span style={{ color: "var(--recap-muted, #5c6154)" }}>
+                      {k.label}
+                    </span>
+                    <span className="font-semibold">
+                      {typeof k.value === "number" && k.label.includes("$")
+                        ? `$${k.value.toFixed(2)}`
+                        : fmtNum(k.value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2 shrink-0">
+              {!recap.clientSignoff?.status ? (
+                <button
+                  type="button"
+                  onClick={scrollToSignoff}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                  style={{
+                    border: "1px solid var(--recap-border, #e2e4d8)",
+                    background: "transparent",
+                    color: "var(--recap-text, #14160f)",
+                  }}
+                >
+                  Sign off
+                </button>
+              ) : null}
+              <CopyMorphButton
+                text={shareUrl}
+                label="Copy link"
+                copiedLabel="Copied"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  border: "1px solid var(--recap-border, #e2e4d8)",
+                  background: "transparent",
+                  color: "var(--recap-text, #14160f)",
+                }}
+              />
+              <DownloadRingButton
+                busy={pdfBusy}
+                idleLabel="PDF"
+                busyLabel="Opening…"
+                doneLabel="Opened"
+                onClick={triggerPdfDownload}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                style={recapBrandBtn()}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
       {shell(
         <div className="space-y-6">
           {/* Editorial title + venue/date dateline (co-branded mark sits in sticky header) */}
@@ -372,6 +484,64 @@ const PublicRecap: React.FC = () => {
               <div className="order-1 w-full xl:order-2 xl:w-[min(42%,32rem)] xl:shrink-0 xl:sticky xl:top-4 space-y-4">
                 {photos.length > 0 ? (
                   <section aria-label="Recap photos">
+                    {photoCategories.length >= 2 ? (
+                      <div
+                        role="tablist"
+                        aria-label="Filter photos by category"
+                        className="flex items-center gap-1.5 flex-wrap mb-3"
+                      >
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={photoCategory === "all"}
+                          onClick={() => {
+                            setPhotoCategory("all");
+                            setLightboxIndex(null);
+                          }}
+                          className="px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition"
+                          style={{
+                            background:
+                              photoCategory === "all"
+                                ? "var(--recap-text, #14160f)"
+                                : "transparent",
+                            color:
+                              photoCategory === "all"
+                                ? "#f6f6f2"
+                                : "var(--recap-muted, #5c6154)",
+                            border: "1px solid var(--recap-border, #e2e4d8)",
+                          }}
+                        >
+                          All ({photos.length})
+                        </button>
+                        {photoCategories.map((cat) => {
+                          const active = photoCategory === cat.name;
+                          return (
+                            <button
+                              key={cat.name}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => {
+                                setPhotoCategory(cat.name);
+                                setLightboxIndex(null);
+                              }}
+                              className="px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition"
+                              style={{
+                                background: active
+                                  ? "var(--recap-text, #14160f)"
+                                  : "transparent",
+                                color: active
+                                  ? "#f6f6f2"
+                                  : "var(--recap-muted, #5c6154)",
+                                border: "1px solid var(--recap-border, #e2e4d8)",
+                              }}
+                            >
+                              {cat.name} ({cat.count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     {hero && (
                       <button
                         type="button"
@@ -426,7 +596,7 @@ const PublicRecap: React.FC = () => {
                         color: "var(--recap-muted, #5c6154)",
                       }}
                     >
-                      {photos.length} PHOTO{photos.length === 1 ? "" : "S"} · TAP TO ENLARGE
+                      {visiblePhotos.length} PHOTO{visiblePhotos.length === 1 ? "" : "S"} · TAP TO ENLARGE
                     </p>
                   </section>
                 ) : null}
@@ -496,13 +666,15 @@ const PublicRecap: React.FC = () => {
               />
 
               <div className="md:col-span-2 space-y-6">
-                <RecapClientSignoff
-                  existingStatus={recap.clientSignoff?.status}
-                  existingComment={recap.clientSignoff?.comment}
-                  existingAt={recap.clientSignoff?.at}
-                  busy={signoffBusy}
-                  onSubmit={submitSignoff}
-                />
+                <div id="public-recap-signoff">
+                  <RecapClientSignoff
+                    existingStatus={recap.clientSignoff?.status}
+                    existingComment={recap.clientSignoff?.comment}
+                    existingAt={recap.clientSignoff?.at}
+                    busy={signoffBusy}
+                    onSubmit={submitSignoff}
+                  />
+                </div>
 
                 {recap.approved ? (
                   <RecapComments
@@ -517,28 +689,27 @@ const PublicRecap: React.FC = () => {
           </div>
         </div>,
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={copyShare}
+          <CopyMorphButton
+            text={shareUrl}
+            label="Share"
+            copiedLabel="Copied"
             className="px-4 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "transparent",
               border: "1px solid var(--recap-border, #e2e4d8)",
               color: "var(--recap-text, #14160f)",
             }}
-          >
-            {copied ? "Copied" : "Share"}
-          </button>
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ ...recapBrandBtn(), textDecoration: "none" }}
+          />
+          <DownloadRingButton
+            busy={pdfBusy}
+            idleLabel="Download PDF"
+            busyLabel="Opening PDF…"
+            doneLabel="PDF opened"
+            onClick={triggerPdfDownload}
+            className="px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer"
+            style={recapBrandBtn()}
             title="Download branded PDF matching this recap"
-          >
-            Download PDF
-          </a>
+          />
         </div>,
       )}
 

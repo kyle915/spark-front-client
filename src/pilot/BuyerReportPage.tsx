@@ -33,6 +33,7 @@ import { BuyerPitchDeckShareCard } from "./BuyerPitchDeckShareCard";
 import { SavedViewsDigestBar } from "./SavedViewsDigestBar";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
+import PresentModeControl from "@/shared/PresentModeControl";
 import { REPORTS_HUB_TABS, STORE_BUYER_SUBTABS } from "@/shared/sparkHubNav";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import PilotPeriodBar from "./PilotPeriodBar";
@@ -202,6 +203,7 @@ const BuyerReportBody: React.FC<{
         }
         action={
           <div className="flex items-center gap-2 flex-wrap">
+            <PresentModeControl />
             <button
               type="button"
               disabled={exportingFormat !== null || report.planGated}
@@ -788,7 +790,7 @@ export const BuyerReportPage: React.FC = () => {
 
   return (
     <div className="space-y-5 max-w-7xl spark-scale">
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-present-hide="true" className="flex flex-wrap items-center gap-2">
         <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
         <SparkHubTabs tabs={STORE_BUYER_SUBTABS} ariaLabel="Store & buyer views" />
       </div>

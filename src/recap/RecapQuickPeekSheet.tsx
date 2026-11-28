@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import SparkSheet from "@/shared/SparkSheet";
 import useBaLabel from "@/hooks/useBaLabel";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
@@ -14,6 +15,7 @@ import { NeedsEyesWhy } from "./NeedsEyesWhy";
 import { RecapReviewFlagBadges } from "./RecapReviewFlagBadges";
 import type { ReviewFlagSummary } from "./reviewCheckDisplay";
 import { resolveRecapQuickPeekKey } from "./recapQuickPeek";
+import { useQuickPeekPhotos } from "./useQuickPeekPhotos";
 
 export interface RecapQuickPeekItem {
   kind: "legacy" | "custom";
@@ -75,6 +77,7 @@ export function RecapQuickPeekSheet({
   forceApproved = false,
   approving = false,
   onApprove,
+  onApproveAndNext,
   onCopyShareLink,
   onOpenShareModal,
   onOpenFull,
@@ -94,6 +97,7 @@ export function RecapQuickPeekSheet({
   forceApproved?: boolean;
   approving?: boolean;
   onApprove?: (recap: RecapQuickPeekItem) => void;
+  onApproveAndNext?: (recap: RecapQuickPeekItem) => void;
   onCopyShareLink?: (recap: RecapQuickPeekItem) => Promise<void> | void;
   onOpenShareModal?: (recap: RecapQuickPeekItem) => void;
   onOpenFull: (recap: RecapQuickPeekItem) => void;
@@ -104,10 +108,14 @@ export function RecapQuickPeekSheet({
   const baLabel = useBaLabel();
   const [copiedShare, setCopiedShare] = useState(false);
   const [heroFailed, setHeroFailed] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
+
+  const { photos, loadingPhotos } = useQuickPeekPhotos(recap, open);
 
   useEffect(() => {
     setCopiedShare(false);
     setHeroFailed(false);
+    setPhotoIndex(0);
   }, [recap?.uuid]);
 
   const emptyShell = recap ? recapIsEmptyShell(recap) : false;
@@ -121,6 +129,7 @@ export function RecapQuickPeekSheet({
       !approving,
   );
   const canShare = Boolean(recap?.shareToken && onCopyShareLink);
+  const hasMultiplePhotos = photos.length > 1;
 
   const handleCopyShare = useCallback(async () => {
     if (!recap || !onCopyShareLink || !recap.shareToken) return;
@@ -128,6 +137,20 @@ export function RecapQuickPeekSheet({
     setCopiedShare(true);
     window.setTimeout(() => setCopiedShare(false), 1800);
   }, [recap, onCopyShareLink]);
+
+  const handleApproveAndNext = useCallback(
+    (item: RecapQuickPeekItem) => {
+      if (onApproveAndNext) {
+        onApproveAndNext(item);
+        return;
+      }
+      if (onApprove) {
+        onApprove(item);
+        if (index < total - 1) onNext();
+      }
+    },
+    [onApproveAndNext, onApprove, index, total, onNext],
+  );
 
   useEffect(() => {
     if (!open || !recap) return;
@@ -144,17 +167,24 @@ export function RecapQuickPeekSheet({
     const onKey = (e: KeyboardEvent) => {
       const action = resolveRecapQuickPeekKey({
         key: e.key,
+        shiftKey: e.shiftKey,
         metaKey: e.metaKey,
         ctrlKey: e.ctrlKey,
         altKey: e.altKey,
         isTypingTarget: isTypingTarget(e.target),
         canApprove,
         canShare,
+        hasMultiplePhotos,
       });
       if (!action) return;
       e.preventDefault();
       if (action === "next") onNext();
       else if (action === "prev") onPrev();
+      else if (action === "photo_prev") {
+        setPhotoIndex((cur) => (cur <= 0 ? photos.length - 1 : cur - 1));
+      } else if (action === "photo_next") {
+        setPhotoIndex((cur) => (cur >= photos.length - 1 ? 0 : cur + 1));
+      } else if (action === "approve_and_next") handleApproveAndNext(recap);
       else if (action === "approve" && onApprove) onApprove(recap);
       else if (action === "share") void handleCopyShare();
       else if (action === "open_full") onOpenFull(recap);
@@ -166,9 +196,12 @@ export function RecapQuickPeekSheet({
     recap,
     canApprove,
     canShare,
+    hasMultiplePhotos,
+    photos.length,
     onNext,
     onPrev,
     onApprove,
+    handleApproveAndNext,
     handleCopyShare,
     onOpenFull,
   ]);
@@ -195,6 +228,12 @@ export function RecapQuickPeekSheet({
       ? `$${recap.accountSpendAmount.toFixed(2)} spend`
       : null,
   ].filter(Boolean);
+
+  const safePhotoIndex =
+    photos.length > 0 ? Math.min(photoIndex, photos.length - 1) : 0;
+  const activePhoto = photos[safePhotoIndex] ?? null;
+  const displayHeroUrl = activePhoto?.url ?? recap.heroImage;
+  const totalPhotoDisplay = Math.max(photos.length, recap.fileCount);
 
   return (
     <SparkSheet
@@ -277,21 +316,134 @@ export function RecapQuickPeekSheet({
             </div>
           ) : null}
 
-          {recap.heroImage && !heroFailed ? (
-            <div
-              className="relative overflow-hidden rounded-xl"
-              style={{
-                aspectRatio: "16 / 10",
-                border: "1px solid var(--spark-border)",
-                background: "rgba(var(--spark-ink-rgb),0.04)",
-              }}
-            >
-              <img
-                src={recap.heroImage}
-                alt={recap.name}
-                className="w-full h-full object-cover"
-                onError={() => setHeroFailed(true)}
-              />
+          {displayHeroUrl && !heroFailed ? (
+            <div className="space-y-2">
+              <div
+                className="relative overflow-hidden rounded-xl group"
+                style={{
+                  aspectRatio: "16 / 10",
+                  border: "1px solid var(--spark-border)",
+                  background: "rgba(var(--spark-ink-rgb),0.04)",
+                }}
+              >
+                <img
+                  src={displayHeroUrl}
+                  alt={activePhoto?.label || recap.name}
+                  className="w-full h-full object-cover"
+                  onError={() => setHeroFailed(true)}
+                />
+                {activePhoto?.category ? (
+                  <span
+                    className="absolute left-2.5 bottom-2.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium"
+                    style={{
+                      background: "rgba(15, 19, 16, 0.72)",
+                      color: "#f6f6f2",
+                      backdropFilter: "blur(6px)",
+                    }}
+                  >
+                    {activePhoto.category}
+                  </span>
+                ) : null}
+                {totalPhotoDisplay > 1 ? (
+                  <span
+                    className="absolute right-2.5 top-2.5 px-2 py-0.5 rounded-md text-[10.5px] font-semibold tab-num"
+                    style={{
+                      background: "rgba(15, 19, 16, 0.72)",
+                      color: "#f6f6f2",
+                      backdropFilter: "blur(6px)",
+                    }}
+                  >
+                    {safePhotoIndex + 1} / {totalPhotoDisplay}
+                  </span>
+                ) : null}
+                {hasMultiplePhotos ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Previous photo"
+                      title="Previous photo (←)"
+                      onClick={() =>
+                        setPhotoIndex((cur) =>
+                          cur <= 0 ? photos.length - 1 : cur - 1,
+                        )
+                      }
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition opacity-85 hover:opacity-100"
+                      style={{
+                        background: "rgba(15, 19, 16, 0.68)",
+                        color: "#f6f6f2",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                      }}
+                    >
+                      <ChevronLeft size={15} strokeWidth={2.1} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Next photo"
+                      title="Next photo (→)"
+                      onClick={() =>
+                        setPhotoIndex((cur) =>
+                          cur >= photos.length - 1 ? 0 : cur + 1,
+                        )
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center cursor-pointer transition opacity-85 hover:opacity-100"
+                      style={{
+                        background: "rgba(15, 19, 16, 0.68)",
+                        color: "#f6f6f2",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                      }}
+                    >
+                      <ChevronRight size={15} strokeWidth={2.1} />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+
+              {hasMultiplePhotos ? (
+                <div
+                  role="listbox"
+                  aria-label="Recap photo filmstrip"
+                  className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scroll"
+                >
+                  {photos.map((p, idx) => {
+                    const selected = idx === safePhotoIndex;
+                    return (
+                      <button
+                        key={`${p.url}-${idx}`}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => {
+                          setHeroFailed(false);
+                          setPhotoIndex(idx);
+                        }}
+                        title={p.category || `Photo ${idx + 1}`}
+                        className="relative shrink-0 w-14 h-10 rounded-lg overflow-hidden cursor-pointer transition"
+                        style={{
+                          border: selected
+                            ? "2px solid var(--spark-lime)"
+                            : "1px solid var(--spark-border)",
+                          opacity: selected ? 1 : 0.68,
+                          padding: 0,
+                          background: "var(--spark-surface-2)",
+                        }}
+                      >
+                        <img
+                          src={p.thumb}
+                          alt={p.label}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : loadingPhotos && recap.fileCount > 1 ? (
+                <p
+                  className="text-[11px] mono"
+                  style={{ color: "var(--spark-text-meta)" }}
+                >
+                  Loading {recap.fileCount} photos…
+                </p>
+              ) : null}
             </div>
           ) : emptyShell ? (
             <div
@@ -417,21 +569,42 @@ export function RecapQuickPeekSheet({
           }}
         >
           {(!isClient || allowClientApprove) && !approved && !emptyShell && onApprove ? (
-            <button
-              type="button"
-              disabled={approving}
-              onClick={() => onApprove(recap)}
-              className="px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-2 transition disabled:opacity-50"
-              style={{
-                background: "var(--spark-lime)",
-                color: "var(--spark-on-accent)",
-              }}
-            >
-              <span>{approving ? "Approving…" : "Approve"}</span>
-              <kbd className="mono text-[10px] opacity-75 px-1.5 py-0.5 rounded bg-black/15">
-                A
-              </kbd>
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={approving}
+                onClick={() => onApprove(recap)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-2 transition disabled:opacity-50"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "var(--spark-on-accent)",
+                }}
+              >
+                <span>{approving ? "Approving…" : "Approve"}</span>
+                <kbd className="mono text-[10px] opacity-75 px-1.5 py-0.5 rounded bg-black/15">
+                  A
+                </kbd>
+              </button>
+              {total > 1 && index < total - 1 ? (
+                <button
+                  type="button"
+                  disabled={approving}
+                  onClick={() => handleApproveAndNext(recap)}
+                  title="Approve this recap and jump to the next in queue (Shift+A)"
+                  className="px-3.5 py-2 rounded-lg text-sm font-semibold inline-flex items-center gap-2 transition disabled:opacity-50"
+                  style={{
+                    border: "1px solid var(--spark-lime)",
+                    color: "var(--spark-text)",
+                    background: "rgba(var(--spark-accent-rgb), 0.12)",
+                  }}
+                >
+                  <span>Approve &amp; next</span>
+                  <kbd className="mono text-[10px] opacity-75 px-1.5 py-0.5 rounded border border-[var(--spark-border)]">
+                    ⇧A
+                  </kbd>
+                </button>
+              ) : null}
+            </>
           ) : null}
 
           {recap.shareToken && onCopyShareLink ? (

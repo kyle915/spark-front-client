@@ -86,6 +86,24 @@ const SavedViewsInner: React.FC<{
     setEditorOpen(true);
   };
 
+  const openDigestPreset = (preset: {
+    name: string;
+    scheduleEnabled: boolean;
+    cadence: string;
+    dayOfWeek: number;
+    exportFormat: string;
+  }) => {
+    setEditingUuid(null);
+    setName(preset.name);
+    setScheduleEnabled(preset.scheduleEnabled);
+    setCadence(preset.cadence);
+    setDayOfWeek(preset.dayOfWeek);
+    setExportFormat(preset.exportFormat);
+    setRecipients("");
+    setNotice(null);
+    setEditorOpen(true);
+  };
+
   const openEdit = (v: (typeof views)[number]) => {
     setEditingUuid(v.uuid);
     setName(v.name);
@@ -220,6 +238,54 @@ const SavedViewsInner: React.FC<{
           {editorOpen ? "Close" : "Save current slice"}
         </button>
       </div>
+
+      {views.length === 0 && !editorOpen ? (
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <span className="text-[11px] font-medium mr-1" style={META}>
+            1-click templates:
+          </span>
+          {[
+            {
+              label: "Friday Weekly Executive CSV",
+              name: defaultPlaceholder || "Friday Weekly Executive CSV",
+              scheduleEnabled: true,
+              cadence: "weekly",
+              dayOfWeek: 4,
+              exportFormat: "csv",
+            },
+            {
+              label: "Monday Regional Summary",
+              name: "Monday Regional Summary",
+              scheduleEnabled: true,
+              cadence: "weekly",
+              dayOfWeek: 0,
+              exportFormat: "summary",
+            },
+            {
+              label: "Monthly Buyer Rollup",
+              name: "Monthly Buyer Rollup",
+              scheduleEnabled: true,
+              cadence: "monthly",
+              dayOfWeek: 0,
+              exportFormat: "csv",
+            },
+          ].map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => openDigestPreset(preset)}
+              className="px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer transition hover:opacity-90"
+              style={{
+                background: "var(--spark-surface-2)",
+                color: "var(--spark-text)",
+                ...BORDER,
+              }}
+            >
+              + {preset.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {views.length > 0 && (
         <div className="flex flex-wrap gap-2">

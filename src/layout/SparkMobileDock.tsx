@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Link, useLocation } from "react-router";
 import {
   BarChart3,
@@ -7,7 +7,9 @@ import {
   LayoutDashboard,
   Sparkles,
 } from "lucide-react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import useSparkRole from "@/hooks/useSparkRole";
+import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { useAuthStore } from "@/store/authStore";
 import { dispatchOpenAskSpark } from "@/lib/askSparkEvent";
 import { useMobileNav } from "./MobileNavContext";
@@ -28,6 +30,32 @@ const DOCK_ICONS: Record<
   ask: Sparkles,
 };
 
+const MobileDockBadgeDot: React.FC<{
+  dockKey: MobileDockKey;
+  isClient: boolean;
+}> = ({ dockKey, isClient }) => {
+  const counts = useSidebarCounts();
+  let count = 0;
+  if (dockKey === "home") {
+    count = isClient
+      ? counts.approvals
+      : counts.approvals + counts.pendingWalkups;
+  } else if (dockKey === "recaps") {
+    count = isClient ? 0 : counts.recapsNeedsReview + counts.recapsDue;
+  }
+  if (count <= 0) return null;
+  return (
+    <span
+      aria-label={`${count} pending`}
+      className="absolute top-1.5 right-[calc(50%-14px)] w-2 h-2 rounded-full"
+      style={{
+        background: "var(--spark-orange)",
+        boxShadow: "0 0 0 2px var(--spark-surface)",
+      }}
+    />
+  );
+};
+
 export const SparkMobileDock: React.FC = () => {
   const location = useLocation();
   const { isClient } = useSparkRole();
@@ -36,6 +64,7 @@ export const SparkMobileDock: React.FC = () => {
 
   const items = buildMobileDockItems(isClient);
   const activeKey = activeMobileDockKey(location.pathname);
+  const activeIndex = items.findIndex((item) => item.key === activeKey);
 
   return (
     <nav
@@ -49,7 +78,28 @@ export const SparkMobileDock: React.FC = () => {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="grid grid-cols-5 h-14 px-1">
+      <div className="relative grid grid-cols-5 h-14 px-1">
+        {activeIndex >= 0 ? (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0 left-1 right-1 h-0.5"
+          >
+            <span
+              className="block h-full px-3 transition-transform duration-200"
+              style={{
+                width: `${100 / items.length}%`,
+                transform: `translateX(${activeIndex * 100}%)`,
+                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              <span
+                className="block w-full h-full rounded-b"
+                style={{ background: "var(--spark-text)" }}
+              />
+            </span>
+          </span>
+        ) : null}
+
         {items.map((item) => {
           const Icon = DOCK_ICONS[item.key];
           const on = activeKey === item.key;
@@ -86,14 +136,17 @@ export const SparkMobileDock: React.FC = () => {
               }`}
               style={{ color }}
             >
-              {on ? (
-                <span
-                  aria-hidden
-                  className="absolute top-0 left-3 right-3 h-0.5 rounded-b"
-                  style={{ background: "var(--spark-text)" }}
-                />
-              ) : null}
               <Icon size={18} strokeWidth={on ? 2.1 : 1.75} />
+              {(item.key === "home" || item.key === "recaps") && tenantId ? (
+                <ErrorBoundary fallback={null}>
+                  <Suspense fallback={null}>
+                    <MobileDockBadgeDot
+                      dockKey={item.key}
+                      isClient={isClient}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
+              ) : null}
               <span>{item.label}</span>
             </Link>
           );

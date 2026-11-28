@@ -1336,9 +1336,9 @@ const RecapCustomViewInner = ({
   );
 
   // Delete this custom recap (admin-only on the backend; tenant-scoped).
-  // Confirms first, then navigates back to the recaps list on success —
-  // freeing the event for a fresh recap. window.confirm keeps this a
-  // one-file change; the recaps list refetches on mount (store-or-network)
+  // Confirms via SparkConfirm first, then navigates back to the recaps list —
+  // freeing the event for a fresh recap; the recaps list refetches on mount
+  // (store-or-network)
   // so the deleted row is gone when we land there.
   const backToListUrl = useMemo(
     () =>

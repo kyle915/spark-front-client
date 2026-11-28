@@ -21,6 +21,7 @@ import { thumbUrl } from "@/utils/thumb";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkHubTabs from "@/shared/SparkHubTabs";
+import PresentModeControl from "@/shared/PresentModeControl";
 import SparkSheet from "@/shared/SparkSheet";
 import { REPORTS_HUB_TABS } from "@/shared/sparkHubNav";
 import MonthHighlight from "@/components/explain/MonthHighlight";
@@ -799,7 +800,7 @@ export default function SparkReports() {
             <SparkMark height={22} />
           </header>
 
-          <div className="print:hidden">
+          <div data-present-hide="true" className="print:hidden">
             <SparkHubTabs tabs={REPORTS_HUB_TABS} ariaLabel="Analytics views" />
           </div>
 
@@ -810,6 +811,7 @@ export default function SparkReports() {
               infoTip="Approved recap metrics, photos, and consumer feedback for the selected window. Consumers counted are sampled — not reach or total samples handed out."
               action={
                 <>
+                  <PresentModeControl />
                   {isStaffView ? (
                     <SparkGhostLink
                       to={`/reports/client-recap?start=${ymdLocal(range.start)}&end=${ymdLocal(range.end)}`}

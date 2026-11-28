@@ -712,6 +712,21 @@
   animation: spark-kpi-pulse 1.5s ease-in-out infinite;
 }
 
+/* 14. Present Mode (⌘⇧P boardroom / QBR view) */
+html[data-spark-present="true"] .spark-sidebar,
+html[data-spark-present="true"] .spark-app-shell > aside,
+html[data-spark-present="true"] .spark-studio-frame > header,
+html[data-spark-present="true"] nav[aria-label="Mobile quick navigation"],
+html[data-spark-present="true"] [data-present-hide="true"] {
+  display: none !important;
+}
+html[data-spark-present="true"] .spark-studio-frame > main .max-w-7xl,
+html[data-spark-present="true"] .spark-studio-frame > main .max-w-6xl {
+  max-width: 92rem !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spark-ops-spinner,
   .spark-ops-check-path,

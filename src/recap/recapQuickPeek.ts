@@ -2,17 +2,22 @@ export type RecapQuickPeekAction =
   | "next"
   | "prev"
   | "approve"
+  | "approve_and_next"
   | "share"
-  | "open_full";
+  | "open_full"
+  | "photo_prev"
+  | "photo_next";
 
 export function resolveRecapQuickPeekKey(input: {
   key: string;
+  shiftKey?: boolean;
   metaKey?: boolean;
   ctrlKey?: boolean;
   altKey?: boolean;
   isTypingTarget?: boolean;
   canApprove: boolean;
   canShare: boolean;
+  hasMultiplePhotos?: boolean;
 }): RecapQuickPeekAction | null {
   if (input.isTypingTarget || input.metaKey || input.ctrlKey || input.altKey) {
     return null;
@@ -24,9 +29,14 @@ export function resolveRecapQuickPeekKey(input: {
     case "k":
     case "ArrowUp":
       return "prev";
+    case "ArrowLeft":
+      return input.hasMultiplePhotos ? "photo_prev" : null;
+    case "ArrowRight":
+      return input.hasMultiplePhotos ? "photo_next" : null;
     case "a":
     case "A":
-      return input.canApprove ? "approve" : null;
+      if (!input.canApprove) return null;
+      return input.shiftKey ? "approve_and_next" : "approve";
     case "s":
     case "S":
       return input.canShare ? "share" : null;
