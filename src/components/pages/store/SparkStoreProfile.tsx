@@ -28,7 +28,7 @@ import { SaveStoreLogisticsNotesMutation } from "@/api/mutations/SaveStoreLogist
 import type { SaveStoreLogisticsNotesMutation as SaveStoreLogisticsNotesMutationType } from "@api/mutations/__generated__/SaveStoreLogisticsNotesMutation.graphql";
 import { barSeries, chartOptions } from "@/lib/sparkChart";
 import { useAppearance } from "@/theme/appearance";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, handleThumbError } from "@/utils/thumb";
 import {
   activationLabel,
   buildStoreScheduleHref,
@@ -447,7 +447,8 @@ export const StoreProfileContent: React.FC<{
                   }}
                 >
                   <img
-                    src={thumbUrl(p.url, 400)}
+                    src={directThumbUrl(p.url, 400)}
+                    onError={(e) => handleThumbError(e.currentTarget, p.url, 400)}
                     alt={captionText || "Store field photo"}
                     loading="lazy"
                     className="w-full aspect-[4/3] object-cover block transition duration-200 group-hover:scale-[1.03]"
@@ -733,7 +734,8 @@ export const StoreProfileContent: React.FC<{
                   className="block w-full text-left cursor-zoom-in group"
                 >
                   <img
-                    src={thumbUrl(p.url, 400)}
+                    src={directThumbUrl(p.url, 400)}
+                    onError={(e) => handleThumbError(e.currentTarget, p.url, 400)}
                     alt={
                       [p.category, dayLabel(p.eventDate)].filter(Boolean).join(", ") ||
                       "Recap photo"
@@ -832,7 +834,7 @@ export const StoreProfileContent: React.FC<{
         <PhotoLightbox
           photos={store.photos.map((p) => ({
             url: p.url,
-            thumb: thumbUrl(p.url, 400),
+            thumb: directThumbUrl(p.url, 400),
             name: store.name || undefined,
             caption:
               [p.category, dayLabel(p.eventDate)].filter(Boolean).join(" · ") ||

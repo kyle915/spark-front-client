@@ -12,7 +12,7 @@ import type { ClientRecapDraftQuery as DraftQueryType } from "@api/queries/__gen
 import type { ClientRecapDraftQueryListQuery as DraftsQueryType } from "@api/queries/__generated__/ClientRecapDraftQueryListQuery.graphql";
 import { UpdateClientRecapDraftMutation } from "@/api/mutations/ClientRecapDraftMutations";
 import type { ClientRecapDraftMutationsUpdateMutation as UpdateType } from "@api/mutations/__generated__/ClientRecapDraftMutationsUpdateMutation.graphql";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, handleThumbError } from "@/utils/thumb";
 import { photoCaption, type GalleryPhoto } from "./photoGallery";
 import {
   EMPTY_LIBRARY_FILTERS,
@@ -324,7 +324,8 @@ export const LibraryGrid: React.FC<{
                   className="block w-full text-left cursor-zoom-in"
                 >
                   <img
-                    src={thumbUrl(p.url, 400)}
+                    src={directThumbUrl(p.url, 400)}
+                    onError={(e) => handleThumbError(e.currentTarget, p.url, 400)}
                     alt={p.caption || tags || "Field photo"}
                     loading="lazy"
                     className="w-full aspect-[4/3] object-cover block transition duration-200 group-hover:scale-[1.02]"

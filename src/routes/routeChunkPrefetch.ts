@@ -29,6 +29,7 @@ const ROUTE_CHUNK_LOADERS: Record<string, ChunkLoader> = {
   "/photos": () => import("@/components/pages/photos/SparkPhotoGallery"),
   "/weekly-summaries": () =>
     import("@/components/pages/weekly-summaries/SparkWeeklySummaries"),
+  "/calendar": () => import("@/components/pages/calendar/SparkCalendar"),
   "/upcoming": () => import("@/components/pages/upcoming/SparkUpcomingEvents"),
   "/plans": () => import("@/plans/PlansList"),
   "/walkups": () => import("@/components/pages/walkups/SparkWalkups"),

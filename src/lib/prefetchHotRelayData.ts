@@ -1,6 +1,7 @@
 /**
- * Idle Relay data warmup after auth + tenant are known.
- * Complements prefetchHotRoutes + sidebar hover chunk prefetching.
+ * Idle & pointer-intent Relay data warmup after auth + tenant are known.
+ * Loaded dynamically via `import("@/lib/prefetchHotRelayData")` so none of
+ * these Relay query ASTs sit in the cold-boot entry chunk.
  */
 import { fetchQuery } from "relay-runtime";
 import type { Environment } from "relay-runtime";
@@ -22,8 +23,48 @@ import {
   programReportsRollupVariables,
   trackerDefaultPrefetchVariables,
 } from "./hotPrefetchVariables";
+import {
+  getWarmedHotRelayKey,
+  hasWarmedIntentKey,
+  markWarmedIntentKey,
+  resetHotRelayDataPrefetch,
+  setWarmedHotRelayKey,
+} from "./hotRelayPrefetchState";
 
-let warmedKey: string | null = null;
+export { resetHotRelayDataPrefetch };
+
+function warmRecapsListForTenant(environment: Environment, tenantId: string): void {
+  const filters = { tenantId };
+  void fetchQuery<RecapListKindsQueryType>(
+    environment,
+    RecapListKindsQuery,
+    { tenantId },
+  )
+    .toPromise()
+    .then((data) => {
+      const kinds = data?.recapListKinds;
+      const hasLegacy = Boolean(kinds?.hasLegacy);
+      const hasCustom = Boolean(kinds?.hasCustom);
+      const fetchLegacy = hasLegacy || (!hasLegacy && !hasCustom);
+      const fetchCustom = hasCustom || (!hasLegacy && !hasCustom);
+      const page = unifiedRecapsPageVariables(null);
+      void fetchUnifiedRecapsPage(environment, {
+        fetchLegacy,
+        fetchCustom,
+        legacyVariables: {
+          ...page.legacy,
+          q: null,
+          filters,
+        },
+        customVariables: {
+          ...page.custom,
+          q: null,
+          filters: { ...filters, needsStoreMap: null },
+        },
+      }).catch(() => {});
+    })
+    .catch(() => {});
+}
 
 export function prefetchHotRelayData(
   environment: Environment,
@@ -33,41 +74,11 @@ export function prefetchHotRelayData(
   if (!tenantId) return;
   const isClient = Boolean(opts?.isClient);
   const key = `${tenantId}:${isClient ? "client" : "admin"}`;
-  if (warmedKey === key) return;
-  warmedKey = key;
+  if (getWarmedHotRelayKey() === key) return;
+  setWarmedHotRelayKey(key);
 
   const warm = () => {
-    const filters = { tenantId };
-    void fetchQuery<RecapListKindsQueryType>(
-      environment,
-      RecapListKindsQuery,
-      { tenantId },
-    )
-      .toPromise()
-      .then((data) => {
-        const kinds = data?.recapListKinds;
-        const hasLegacy = Boolean(kinds?.hasLegacy);
-        const hasCustom = Boolean(kinds?.hasCustom);
-        // Empty probe → warm both so first paint still hits the store.
-        const fetchLegacy = hasLegacy || (!hasLegacy && !hasCustom);
-        const fetchCustom = hasCustom || (!hasLegacy && !hasCustom);
-        const page = unifiedRecapsPageVariables(null);
-        void fetchUnifiedRecapsPage(environment, {
-          fetchLegacy,
-          fetchCustom,
-          legacyVariables: {
-            ...page.legacy,
-            q: null,
-            filters,
-          },
-          customVariables: {
-            ...page.custom,
-            q: null,
-            filters: { ...filters, needsStoreMap: null },
-          },
-        }).catch(() => {});
-      })
-      .catch(() => {});
+    warmRecapsListForTenant(environment, tenantId);
 
     // Exact default Master Tracker / My Requests variables (guaranteed cache hit).
     void fetchQuery(
@@ -130,6 +141,87 @@ export function prefetchHotRelayData(
   }
 }
 
-export function resetHotRelayDataPrefetch(): void {
-  warmedKey = null;
+/**
+ * Immediate Relay data warmup triggered on sidebar pointer-enter / focus,
+ * before the 2–5s idle timer has fired (or right after a workspace switch).
+ */
+export function prefetchRouteDataOnIntent(
+  environment: Environment,
+  tenantId: string | null | undefined,
+  rawPath: string | null | undefined,
+  opts?: { isClient?: boolean },
+): void {
+  if (!tenantId || !rawPath) return;
+  if (typeof navigator !== "undefined") {
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } })
+      .connection;
+    if (conn?.saveData) return;
+  }
+  const path = rawPath.split(/[?#]/, 1)[0].replace(/\/+$/, "") || "/";
+  const isClient = Boolean(opts?.isClient);
+  const intentKey = `${tenantId}:${isClient ? "client" : "admin"}:${path}`;
+  if (hasWarmedIntentKey(intentKey)) return;
+  markWarmedIntentKey(intentKey);
+
+  if (path === "/requests/list") {
+    void fetchQuery(
+      environment,
+      TrackerListQuery,
+      trackerDefaultPrefetchVariables(tenantId),
+    )
+      .toPromise()
+      .catch(() => {});
+    return;
+  }
+
+  if (path === "/approvals") {
+    void fetchQuery(
+      environment,
+      ApprovalsListQuery,
+      approvalsQueuePrefetchVariables(tenantId),
+    )
+      .toPromise()
+      .catch(() => {});
+    void fetchQuery(
+      environment,
+      ApprovalsListQuery,
+      approvalsDecidedPrefetchVariables(tenantId),
+    )
+      .toPromise()
+      .catch(() => {});
+    return;
+  }
+
+  if (path === "/recaps/list" || path === "/my-approvals") {
+    warmRecapsListForTenant(environment, tenantId);
+    return;
+  }
+
+  if (path === "/client-dashboard") {
+    void fetchQuery(
+      environment,
+      TenantRequestsRollupQuery,
+      clientDashboardRollupVariables(tenantId),
+    )
+      .toPromise()
+      .catch(() => {});
+    return;
+  }
+
+  if (path === "/reports") {
+    void fetchQuery(
+      environment,
+      TenantRequestsRollupQuery,
+      programReportsRollupVariables(tenantId),
+    )
+      .toPromise()
+      .catch(() => {});
+    void fetchQuery(
+      environment,
+      TenantConversionKpisQuery,
+      programReportsConversionVariables(tenantId),
+    )
+      .toPromise()
+      .catch(() => {});
+  }
 }

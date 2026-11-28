@@ -4,7 +4,7 @@ import PublicDeadLink from "@/public/PublicDeadLink";
 import { RecapDocument } from "@/recap/RecapDocument";
 import { RecapKpiStrip } from "@/recap/RecapDetailShell";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, handleThumbError } from "@/utils/thumb";
 import { programStats, type ProgramSharePayload } from "./programShare";
 
 function apiOrigin(): string {
@@ -127,7 +127,7 @@ const PublicProgram: React.FC = () => {
 
   const lightboxItems = data.photos.map((p) => ({
     url: p.url,
-    thumb: thumbUrl(p.url, 400) || p.url,
+    thumb: directThumbUrl(p.url, 400) || p.url,
     caption: p.caption || undefined,
   }));
 
@@ -199,7 +199,8 @@ const PublicProgram: React.FC = () => {
                     title={p.caption || "Inspect field photo"}
                   >
                     <img
-                      src={thumbUrl(p.url, 800) || p.url}
+                      src={directThumbUrl(p.url, 800) || p.url}
+                      onError={(e) => handleThumbError(e.currentTarget, p.url, 800)}
                       alt={p.caption || "Field photo"}
                       loading="lazy"
                       className="w-full aspect-[4/3] object-cover transition-transform duration-200 group-hover:scale-[1.02] block"

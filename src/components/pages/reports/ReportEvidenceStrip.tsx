@@ -13,7 +13,7 @@ import { recapsLabel } from "@/lib/feedbackThemes";
 import { leadThemes } from "@/lib/reportEvidence";
 import { topBrands } from "@/lib/commentInsights";
 import { shelfFigures } from "@/lib/shelfSummary";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, handleThumbError } from "@/utils/thumb";
 
 const META = { color: "var(--spark-text-meta)" } as const;
 const TEXT = { color: "var(--spark-text)" } as const;
@@ -132,7 +132,8 @@ const ShotsCard: React.FC<Window> = ({ tenantId, startDate, endDate }) => {
         {photos.map((photo) => (
           <li key={photo.id} className="min-w-0">
             <img
-              src={thumbUrl(photo.url, 400) || photo.url}
+              src={directThumbUrl(photo.url, 400) || photo.url}
+              onError={(e) => handleThumbError(e.currentTarget, photo.url, 400)}
               alt={photo.caption || photo.store || "Field photo"}
               className="w-full aspect-square object-cover rounded-lg"
               style={{ border: "1px solid var(--spark-border)" }}

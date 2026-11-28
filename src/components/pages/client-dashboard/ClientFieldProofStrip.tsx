@@ -13,7 +13,7 @@ import { buildPublicRecapShareUrl } from "@/recap/recapQuickPeek";
 import { useAlertStore } from "@/store/alertStore";
 import { cleanEventName, formatEventDate } from "@/utils/eventLabel";
 import { pickFieldPhoto } from "@/utils/fieldPhoto";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, thumbSources } from "@/utils/thumb";
 import {
   buildClientProofQuickPeekItem,
   loadLocalPinnedUrls,
@@ -124,7 +124,7 @@ export function ClientFieldProofStrip({ tenantId }: { tenantId: string }) {
       candidates.push({
         recapId: String(node.id),
         uuid: String(node.uuid),
-        url: thumbUrl(src, 800) || src,
+        url: directThumbUrl(src, 800) || src,
         original: src,
         retailerName: cleanStore || "Field activation",
         stateCode: node.eventState ?? null,
@@ -288,7 +288,7 @@ export function ClientFieldProofStrip({ tenantId }: { tenantId: string }) {
     () =>
       frames.map((f) => ({
         url: f.original,
-        thumb: thumbUrl(f.original, 400) || f.url,
+        thumb: directThumbUrl(f.original, 400) || f.url,
         name: f.storeLabel,
         caption: [f.storeLabel, f.dateLabel, f.categoryLabel]
           .filter(Boolean)
@@ -363,7 +363,7 @@ export function ClientFieldProofStrip({ tenantId }: { tenantId: string }) {
                     className="block w-full h-full p-0 border-0 bg-transparent cursor-zoom-in"
                   >
                     <SparkThumb
-                      sources={[frame.url, frame.original]}
+                      sources={thumbSources(frame.original, 800)}
                       alt={`${frame.storeLabel}${frame.dateLabel ? ` on ${frame.dateLabel}` : ""}`}
                       className="transition-transform duration-300 ease-out group-hover:scale-[1.025]"
                     />

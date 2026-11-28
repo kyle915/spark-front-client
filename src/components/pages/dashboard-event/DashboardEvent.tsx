@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Layout from "@/layout/Layout";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
@@ -11,7 +11,12 @@ import TodayAttentionPanels, {
 import TodayAttentionStrip from "@/components/dashboard/TodayAttentionStrip";
 import StaffingGlanceCard from "@/components/dashboard/StaffingGlanceCard";
 import SetupChecklistCard from "@/components/dashboard/SetupChecklistCard";
-import { InsightsBody } from "@/components/pages/insights/SparkInsights";
+
+const loadInsightsBody = () =>
+  import("@/components/pages/insights/SparkInsights").then((m) => ({
+    default: m.InsightsBody,
+  }));
+const LazyInsightsBody = lazy(loadInsightsBody);
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { showsMissingRecaps } from "@/field/missingRecaps";
 import { isTorchTenant } from "@/field/torch";
@@ -141,13 +146,61 @@ function DashboardInner() {
   const [analyticsCollapsed, setAnalyticsCollapsed] = useState<boolean>(() =>
     readOpsAnalyticsCollapsed(),
   );
+  // Defer below-the-fold Program Analytics (6+ heavy Relay queries + Chart.js)
+  // until `#performance` nears the viewport, the user clicks `Performance ↓` /
+  // `Expand Program Analytics`, or initial Ops Triage + Live Clock settle.
+  const [insightsUnlocked, setInsightsUnlocked] = useState<boolean>(
+    () => isClient || typeof IntersectionObserver === "undefined",
+  );
+  const performanceGateRef = useRef<HTMLDivElement | null>(null);
 
   const setCollapsedPersisted = useCallback((next: boolean) => {
     setAnalyticsCollapsed(next);
     writeOpsAnalyticsCollapsed(next);
+    if (!next) {
+      setInsightsUnlocked(true);
+      void loadInsightsBody().catch(() => {});
+    }
   }, []);
 
+  useEffect(() => {
+    if (comparing || (!isClient && analyticsCollapsed) || insightsUnlocked) {
+      return;
+    }
+    const unlock = () => {
+      setInsightsUnlocked(true);
+    };
+    const node = performanceGateRef.current;
+    let observer: IntersectionObserver | null = null;
+    if (node && typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) {
+            unlock();
+            observer?.disconnect();
+          }
+        },
+        { rootMargin: "350px 0px" },
+      );
+      observer.observe(node);
+    }
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(unlock, { timeout: 3500 });
+      return () => {
+        observer?.disconnect();
+        window.cancelIdleCallback?.(idleId);
+      };
+    }
+    const timer = globalThis.setTimeout(unlock, 2200);
+    return () => {
+      observer?.disconnect();
+      globalThis.clearTimeout(timer);
+    };
+  }, [comparing, isClient, analyticsCollapsed, insightsUnlocked]);
+
   const jumpToPerformance = useCallback(() => {
+    setInsightsUnlocked(true);
+    void loadInsightsBody().catch(() => {});
     if (analyticsCollapsed) {
       setCollapsedPersisted(false);
       requestAnimationFrame(() => {
@@ -327,10 +380,18 @@ function DashboardInner() {
                 <ArrowDown size={13} strokeWidth={2} />
               </button>
             </section>
-          ) : (
+          ) : insightsUnlocked ? (
             <Suspense fallback={<DashboardSkeleton />}>
-              <InsightsBody embedded />
+              <LazyInsightsBody embedded />
             </Suspense>
+          ) : (
+            <div
+              id="performance"
+              ref={performanceGateRef}
+              style={{ scrollMarginTop: 84 }}
+            >
+              <DashboardSkeleton />
+            </div>
           )}
         </div>
       )}

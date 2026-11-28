@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { login as loginService } from "@api/auth/login";
 import { fetchMe, type MeUser } from "@api/auth/me";
-import { themes } from "@/utils";
-import { resetHotRelayDataPrefetch } from "@/lib/prefetchHotRelayData";
+import { themes } from "@/theme/themes";
+import { resetHotRelayDataPrefetch } from "@/lib/hotRelayPrefetchState";
 import { clearAllAdminAskThreads } from "@/components/ai/adminAskThreadStorage";
+import { clearCachedLegalAcceptance } from "@/legal/acceptance/legalAcceptanceCache";
 
 type TenantMeta = {
   logo?: string | null;
@@ -28,7 +29,7 @@ interface AuthState {
   socialLogin: (token: string, refreshToken: string) => Promise<void>;
   logout: () => void;
   setRefreshToken: (token: string) => void;
-  loadFromStorage: () => void;
+  loadFromStorage: () => Promise<void>;
   setTenantUuid: (uuid: string | null) => void;
   setTenantId: (id: string | null) => void;
   setWorkspaceMembership: (
@@ -46,17 +47,112 @@ interface AuthState {
   clearTenant: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  refreshToken: null,
-  tenantUuid: null,
-  tenantId: null,
-  tenantSlug: null,
-  membershipUuid: null,
-  workspaceRole: null,
-  tenantMeta: null,
-  isAuthenticated: false,
+const USER_SNAPSHOT_KEY = "@userSnapshot";
+
+function safeGetItem(key: string): string | null {
+  if (typeof localStorage === "undefined" || typeof localStorage.getItem !== "function") {
+    return null;
+  }
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  if (typeof localStorage === "undefined" || typeof localStorage.setItem !== "function") {
+    return;
+  }
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* ignore storage quota / private mode */
+  }
+}
+
+function safeRemoveItem(key: string): void {
+  if (typeof localStorage === "undefined" || typeof localStorage.removeItem !== "function") {
+    return;
+  }
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+function parseUserSnapshot(raw: string | null): MeUser | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<NonNullable<MeUser>> | null;
+    if (parsed && typeof parsed === "object" && typeof parsed.id === "string") {
+      return parsed as MeUser;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function persistUserSnapshot(me: MeUser): void {
+  if (!me) {
+    safeRemoveItem(USER_SNAPSHOT_KEY);
+    return;
+  }
+  try {
+    safeSetItem(USER_SNAPSHOT_KEY, JSON.stringify(me));
+  } catch {
+    /* ignore */
+  }
+}
+
+function applyStoredTheme(): void {
+  if (typeof document === "undefined" || !document.documentElement) return;
+  const theme = safeGetItem("@theme") || themes.light;
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+export function readHydratedAuthSnapshot() {
+  applyStoredTheme();
+  const token = safeGetItem("@token");
+  if (!token) {
+    return {
+      user: null as MeUser | null,
+      token: null as string | null,
+      refreshToken: null as string | null,
+      tenantUuid: null as string | null,
+      tenantId: null as string | null,
+      tenantSlug: null as string | null,
+      membershipUuid: null as string | null,
+      workspaceRole: null as string | null,
+      tenantMeta: null as TenantMeta | null,
+      isAuthenticated: false,
+    };
+  }
+
+  return {
+    user: parseUserSnapshot(safeGetItem(USER_SNAPSHOT_KEY)),
+    token,
+    refreshToken: safeGetItem("@refreshToken"),
+    tenantUuid: safeGetItem("@tenantUuid"),
+    tenantId: safeGetItem("@tenantId"),
+    tenantSlug: safeGetItem("@tenantSlug"),
+    membershipUuid: safeGetItem("@membershipUuid"),
+    workspaceRole: safeGetItem("@workspaceRole"),
+    tenantMeta: {
+      logo: safeGetItem("@tenantLogo"),
+      requestUrlName: safeGetItem("@tenantRequestUrlName"),
+      checkinCode: safeGetItem("@tenantCheckinCode"),
+    } as TenantMeta,
+    isAuthenticated: true,
+  };
+}
+
+const initialSnapshot = readHydratedAuthSnapshot();
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  ...initialSnapshot,
   loading: false,
   error: null,
 
@@ -66,13 +162,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { token } = await loginService(username, password);
       const authToken = token.token;
       const refreshToken = token.refreshToken;
-      localStorage.setItem("@token", authToken);
+      safeSetItem("@token", authToken);
       if (refreshToken) {
-        localStorage.setItem("@refreshToken", refreshToken);
+        safeSetItem("@refreshToken", refreshToken);
       }
-      localStorage.removeItem("@tenantUuid");
-      localStorage.removeItem("@tenantSlug");
+      safeRemoveItem("@tenantUuid");
+      safeRemoveItem("@tenantSlug");
       const me = await fetchMe();
+      persistUserSnapshot(me);
 
       set({
         user: me,
@@ -97,13 +194,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   socialLogin: async (token: string, refreshToken: string) => {
     set({ loading: true, error: null });
     try {
-      localStorage.setItem("@token", token);
+      safeSetItem("@token", token);
       if (refreshToken) {
-        localStorage.setItem("@refreshToken", refreshToken);
+        safeSetItem("@refreshToken", refreshToken);
       }
-      localStorage.removeItem("@tenantUuid");
-      localStorage.removeItem("@tenantSlug");
+      safeRemoveItem("@tenantUuid");
+      safeRemoveItem("@tenantSlug");
       const me = await fetchMe();
+      persistUserSnapshot(me);
 
       set({
         user: me,
@@ -124,21 +222,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem("@token");
-    localStorage.removeItem("@refreshToken");
+    safeRemoveItem("@token");
+    safeRemoveItem("@refreshToken");
+    safeRemoveItem(USER_SNAPSHOT_KEY);
 
-    localStorage.removeItem("@tenantUuid");
-    localStorage.removeItem("@tenantId");
-    localStorage.removeItem("@tenantSlug");
-    localStorage.removeItem("@membershipUuid");
-    localStorage.removeItem("@workspaceRole");
-    localStorage.removeItem("@tenantLogo");
-    localStorage.removeItem("@tenantRequestUrlName");
-    localStorage.removeItem("@tenantCheckinCode");
+    safeRemoveItem("@tenantUuid");
+    safeRemoveItem("@tenantId");
+    safeRemoveItem("@tenantSlug");
+    safeRemoveItem("@membershipUuid");
+    safeRemoveItem("@workspaceRole");
+    safeRemoveItem("@tenantLogo");
+    safeRemoveItem("@tenantRequestUrlName");
+    safeRemoveItem("@tenantCheckinCode");
 
-    // Allow idle Relay warmup again after the next login, and drop any
-    // session-persisted Admin Ask Spark threads from the prior user.
+    // Allow idle Relay warmup again after the next login, clear cached legal
+    // status, and drop session-persisted Admin Ask Spark threads.
     resetHotRelayDataPrefetch();
+    clearCachedLegalAcceptance();
     clearAllAdminAskThreads();
 
     set({
@@ -157,54 +257,69 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   loadFromStorage: async () => {
-    const token = localStorage.getItem("@token");
-    const refreshToken = localStorage.getItem("@refreshToken");
-    const tenantUuid = localStorage.getItem("@tenantUuid");
-    const tenantId = localStorage.getItem("@tenantId");
-    const tenantSlugFromStorage = localStorage.getItem("@tenantSlug");
-    const membershipUuid = localStorage.getItem("@membershipUuid");
-    const workspaceRole = localStorage.getItem("@workspaceRole");
-    const logo = localStorage.getItem("@tenantLogo");
-    const requestUrlName = localStorage.getItem("@tenantRequestUrlName");
-    const checkinCode = localStorage.getItem("@tenantCheckinCode");
+    const hydrated = readHydratedAuthSnapshot();
+    if (!hydrated.token) {
+      return;
+    }
 
-    const theme = localStorage.getItem("@theme") || themes.light;
-    document.documentElement.setAttribute("data-theme", theme);
-    if (token) {
-      try {
-        const me = await fetchMe();
-        set({
-          user: me,
-          token,
-          refreshToken,
-          tenantUuid,
-          tenantSlug: tenantSlugFromStorage,
-          membershipUuid,
-          workspaceRole,
-          isAuthenticated: true,
-          tenantId,
-          tenantMeta: {
-            logo,
-            requestUrlName,
-            checkinCode,
-          },
-        });
-      } catch (err) {
-        const error = err as Error;
-        console.error("Error loading user from storage:", error.message);
-        localStorage.removeItem("@token");
-        localStorage.removeItem("@refreshToken");
-        set({
-          user: null,
-          token: null,
-          refreshToken: null,
-          tenantUuid: null,
-          tenantSlug: null,
-          tenantMeta: null,
-          tenantId: null,
-          isAuthenticated: false,
-        });
-      }
+    // Ensure synchronous hydration even when tests populate localStorage after
+    // store creation, without clobbering an already-loaded `user` object.
+    set((prev) => ({
+      user: prev.user ?? hydrated.user,
+      token: hydrated.token,
+      refreshToken: hydrated.refreshToken,
+      tenantUuid: prev.tenantUuid ?? hydrated.tenantUuid,
+      tenantId: prev.tenantId ?? hydrated.tenantId,
+      tenantSlug: prev.tenantSlug ?? hydrated.tenantSlug,
+      membershipUuid: prev.membershipUuid ?? hydrated.membershipUuid,
+      workspaceRole: prev.workspaceRole ?? hydrated.workspaceRole,
+      tenantMeta: prev.tenantMeta ?? hydrated.tenantMeta,
+      isAuthenticated: true,
+    }));
+
+    const expectedToken = hydrated.token;
+    try {
+      const me = await fetchMe();
+      // Ignore stale response if the user signed out or switched accounts while
+      // `fetchMe()` was in flight.
+      const currentToken = safeGetItem("@token") ?? get().token;
+      if (currentToken !== expectedToken) return;
+
+      persistUserSnapshot(me);
+      const latest = get();
+      set({
+        user: me,
+        token: currentToken,
+        refreshToken: latest.refreshToken ?? safeGetItem("@refreshToken"),
+        tenantUuid: latest.tenantUuid ?? safeGetItem("@tenantUuid"),
+        tenantId: latest.tenantId ?? safeGetItem("@tenantId"),
+        tenantSlug: latest.tenantSlug ?? safeGetItem("@tenantSlug"),
+        membershipUuid: latest.membershipUuid ?? safeGetItem("@membershipUuid"),
+        workspaceRole: latest.workspaceRole ?? safeGetItem("@workspaceRole"),
+        tenantMeta: latest.tenantMeta ?? {
+          logo: safeGetItem("@tenantLogo"),
+          requestUrlName: safeGetItem("@tenantRequestUrlName"),
+          checkinCode: safeGetItem("@tenantCheckinCode"),
+        },
+        isAuthenticated: true,
+      });
+    } catch (err) {
+      const error = err as Error;
+      console.error("Error loading user from storage:", error.message);
+      safeRemoveItem("@token");
+      safeRemoveItem("@refreshToken");
+      safeRemoveItem(USER_SNAPSHOT_KEY);
+      clearCachedLegalAcceptance();
+      set({
+        user: null,
+        token: null,
+        refreshToken: null,
+        tenantUuid: null,
+        tenantSlug: null,
+        tenantMeta: null,
+        tenantId: null,
+        isAuthenticated: false,
+      });
     }
   },
 
@@ -216,21 +331,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     tenantSlug?: string | null,
     checkinCode?: string | null
   ) => {
-    localStorage.setItem("@tenantUuid", tenantUuid);
-    localStorage.setItem("@tenantId", tenantId);
+    safeSetItem("@tenantUuid", tenantUuid);
+    safeSetItem("@tenantId", tenantId);
     if (tenantSlug) {
-      localStorage.setItem("@tenantSlug", tenantSlug);
+      safeSetItem("@tenantSlug", tenantSlug);
     } else {
-      localStorage.removeItem("@tenantSlug");
+      safeRemoveItem("@tenantSlug");
     }
 
-    if (logo) localStorage.setItem("@tenantLogo", logo);
-    else localStorage.removeItem("@tenantLogo");
-    if (requestUrlName)
-      localStorage.setItem("@tenantRequestUrlName", requestUrlName);
-    else localStorage.removeItem("@tenantRequestUrlName");
-    if (checkinCode) localStorage.setItem("@tenantCheckinCode", checkinCode);
-    else localStorage.removeItem("@tenantCheckinCode");
+    if (logo) safeSetItem("@tenantLogo", logo);
+    else safeRemoveItem("@tenantLogo");
+    if (requestUrlName) safeSetItem("@tenantRequestUrlName", requestUrlName);
+    else safeRemoveItem("@tenantRequestUrlName");
+    if (checkinCode) safeSetItem("@tenantCheckinCode", checkinCode);
+    else safeRemoveItem("@tenantCheckinCode");
 
     set({
       tenantUuid,
@@ -246,14 +360,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setWorkspaceMembership: (membershipUuid, workspaceRole = null) => {
     if (membershipUuid) {
-      localStorage.setItem("@membershipUuid", membershipUuid);
+      safeSetItem("@membershipUuid", membershipUuid);
     } else {
-      localStorage.removeItem("@membershipUuid");
+      safeRemoveItem("@membershipUuid");
     }
     if (workspaceRole) {
-      localStorage.setItem("@workspaceRole", workspaceRole);
+      safeSetItem("@workspaceRole", workspaceRole);
     } else {
-      localStorage.removeItem("@workspaceRole");
+      safeRemoveItem("@workspaceRole");
     }
     set({
       membershipUuid,
@@ -262,14 +376,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearTenant: () => {
-    localStorage.removeItem("@tenantUuid");
-    localStorage.removeItem("@tenantId");
-    localStorage.removeItem("@tenantSlug");
-    localStorage.removeItem("@membershipUuid");
-    localStorage.removeItem("@workspaceRole");
-    localStorage.removeItem("@tenantLogo");
-    localStorage.removeItem("@tenantRequestUrlName");
-    localStorage.removeItem("@tenantCheckinCode");
+    safeRemoveItem("@tenantUuid");
+    safeRemoveItem("@tenantId");
+    safeRemoveItem("@tenantSlug");
+    safeRemoveItem("@membershipUuid");
+    safeRemoveItem("@workspaceRole");
+    safeRemoveItem("@tenantLogo");
+    safeRemoveItem("@tenantRequestUrlName");
+    safeRemoveItem("@tenantCheckinCode");
 
     set({
       tenantUuid: null,
@@ -284,17 +398,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   setTenantUuid: (uuid) => {
     const prevUuid = useAuthStore.getState().tenantUuid;
     if (uuid) {
-      localStorage.setItem("@tenantUuid", uuid);
+      safeSetItem("@tenantUuid", uuid);
     } else {
-      localStorage.removeItem("@tenantUuid");
+      safeRemoveItem("@tenantUuid");
     }
 
     if (uuid !== prevUuid) {
-      localStorage.removeItem("@tenantId");
-      localStorage.removeItem("@tenantSlug");
-      localStorage.removeItem("@tenantLogo");
-      localStorage.removeItem("@tenantRequestUrlName");
-      localStorage.removeItem("@tenantCheckinCode");
+      safeRemoveItem("@tenantId");
+      safeRemoveItem("@tenantSlug");
+      safeRemoveItem("@tenantLogo");
+      safeRemoveItem("@tenantRequestUrlName");
+      safeRemoveItem("@tenantCheckinCode");
       set({
         tenantUuid: uuid,
         tenantId: null,
@@ -309,16 +423,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setTenantId: (id) => {
     if (id) {
-      localStorage.setItem("@tenantId", id);
+      safeSetItem("@tenantId", id);
     } else {
-      localStorage.removeItem("@tenantId");
+      safeRemoveItem("@tenantId");
     }
 
     set({ tenantId: id });
   },
 
   setRefreshToken: (token) => {
-    localStorage.setItem("@refreshToken", token);
+    safeSetItem("@refreshToken", token);
     set({ refreshToken: token });
   },
 }));

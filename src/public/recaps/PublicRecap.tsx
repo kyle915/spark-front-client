@@ -15,7 +15,7 @@ import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
 import { CopyMorphButton } from "@/motion/CopyMorphButton";
 import { DownloadRingButton } from "@/motion/FeedbackActionButton";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, handleThumbError } from "@/utils/thumb";
 import { recapFileKind, recapVideoPlayUrl } from "@/utils/recapFileUrl";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
 
@@ -555,7 +555,8 @@ const PublicRecap: React.FC = () => {
                         }}
                       >
                         <img
-                          src={thumbUrl(hero.url, 800) || hero.url}
+                          src={directThumbUrl(hero.url, 800) || hero.url}
+                          onError={(e) => handleThumbError(e.currentTarget, hero.url, 800)}
                           alt={hero.name ?? "Recap photo"}
                           className="w-full object-cover"
                           style={{
@@ -581,7 +582,8 @@ const PublicRecap: React.FC = () => {
                             }}
                           >
                             <img
-                              src={thumbUrl(p.url, 400) || p.url}
+                              src={directThumbUrl(p.url, 400) || p.url}
+                              onError={(e) => handleThumbError(e.currentTarget, p.url, 400)}
                               alt={p.name ?? "Recap photo"}
                               className="w-full h-32 md:h-36 object-cover"
                             />

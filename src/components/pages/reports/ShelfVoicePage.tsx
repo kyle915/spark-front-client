@@ -27,7 +27,7 @@ import {
   StudioKpiSkeleton,
 } from "@/motion/StudioKpiCard";
 import SparkThumb from "@/shared/SparkThumb";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, thumbSources } from "@/utils/thumb";
 import ChartBlock from "@/components/charts/ChartBlock";
 import { CompetitorMentions } from "@/components/charts/CommentInsights";
 import PilotPeriodBar from "@/pilot/PilotPeriodBar";
@@ -207,7 +207,7 @@ const ShelfVoiceBody: React.FC<{
         ].filter(Boolean);
         return {
           url: p.photoUrl,
-          thumb: thumbUrl(p.photoUrl, 400) || p.photoUrl,
+          thumb: directThumbUrl(p.photoUrl, 400) || p.photoUrl,
           caption: metaParts.join(" · "),
           name: p.storeName,
         };
@@ -789,10 +789,7 @@ const ShelfVoiceBody: React.FC<{
                       >
                         <div className="relative aspect-[4/3]">
                           <SparkThumb
-                            sources={[
-                              thumbUrl(photo.photoUrl, 400),
-                              photo.photoUrl,
-                            ]}
+                            sources={thumbSources(photo.photoUrl, 400)}
                             alt={`${tag} shelf at ${pair.storeName}`}
                           />
                           <span
@@ -879,7 +876,7 @@ const ShelfVoiceBody: React.FC<{
                     style={{ background: "var(--spark-surface-2)" }}
                   >
                     <SparkThumb
-                      sources={[thumbUrl(p.photoUrl, 400), p.photoUrl]}
+                      sources={thumbSources(p.photoUrl, 400)}
                       alt={`Shelf photo at ${p.storeName}`}
                     />
                     <span

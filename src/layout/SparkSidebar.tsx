@@ -480,14 +480,33 @@ const NavRow: React.FC<{
       </button>
     );
   }
+  const warmTarget = () => {
+    prefetchRouteChunk(effectiveTo);
+    const tenantId = useAuthStore.getState().tenantId;
+    if (!tenantId) return;
+    void Promise.all([
+      import("@/api/relay/environment"),
+      import("@/lib/prefetchHotRelayData"),
+    ])
+      .then(([envMod, prefetchMod]) => {
+        prefetchMod.prefetchRouteDataOnIntent(
+          envMod.default,
+          tenantId,
+          effectiveTo,
+          { isClient },
+        );
+      })
+      .catch(() => {});
+  };
   return (
     <Link
       to={effectiveTo}
       className={cls}
       title={label}
       aria-label={label}
-      onMouseEnter={() => prefetchRouteChunk(effectiveTo)}
-      onFocus={() => prefetchRouteChunk(effectiveTo)}
+      onPointerEnter={warmTarget}
+      onMouseEnter={warmTarget}
+      onFocus={warmTarget}
     >
       {content}
     </Link>

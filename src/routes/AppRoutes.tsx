@@ -129,6 +129,17 @@ const loadSparkApprovals = () =>
 const loadSparkRequestCreate = () => import("@/requests/SparkRequestCreate");
 const loadSparkRecapsList = () => import("@/recap/SparkRecapsList");
 const loadRecapCustomView = () => import("@/recap/RecapCustomView");
+const loadSparkClientDashboard = () =>
+  import("@/components/pages/client-dashboard/SparkClientDashboard");
+const loadSparkClientApprovals = () =>
+  import("@/components/pages/approvals/SparkClientApprovals");
+const loadSparkCalendar = () =>
+  import("@/components/pages/calendar/SparkCalendar");
+const loadSparkReports = () =>
+  import("@/components/pages/reports/SparkReports");
+const loadSparkInbox = () => import("@/components/pages/inbox/SparkInbox");
+const loadSparkPhotoGallery = () =>
+  import("@/components/pages/photos/SparkPhotoGallery");
 
 const DashboardEvents = lazyDefault(loadDashboardEvents);
 const MasterTracker = lazyDefault(loadMasterTracker);
@@ -143,14 +154,25 @@ const SparkRequestCreate = lazyDefault(loadSparkRequestCreate);
  * AFTER first paint — failures are irrelevant (the route falls back to
  * loading on demand). */
 export function prefetchHotRoutes(): void {
+  if (typeof navigator !== "undefined") {
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } })
+      .connection;
+    if (conn?.saveData) return;
+  }
   const warm = () => {
     loadDashboardEvents().catch(() => {});
+    loadSparkClientDashboard().catch(() => {});
     loadMasterTracker().catch(() => {});
     loadSparkRequestEdit().catch(() => {});
     loadSparkApprovals().catch(() => {});
+    loadSparkClientApprovals().catch(() => {});
     loadSparkRequestCreate().catch(() => {});
     loadSparkRecapsList().catch(() => {});
     loadRecapCustomView().catch(() => {});
+    loadSparkCalendar().catch(() => {});
+    loadSparkReports().catch(() => {});
+    loadSparkInbox().catch(() => {});
+    loadSparkPhotoGallery().catch(() => {});
   };
   if ("requestIdleCallback" in window) {
     window.requestIdleCallback(warm, { timeout: 4000 });
@@ -269,10 +291,7 @@ const SparkRecapCreate = lazyDefault(() => import("@/recap/SparkRecapCreate"));
 const SparkRecapTemplates = lazyDefault(
   () => import("@/recap/SparkRecapTemplates"),
 );
-const SparkClientDashboard = lazyDefault(
-  () =>
-    import("@/components/pages/client-dashboard/SparkClientDashboard"),
-);
+const SparkClientDashboard = lazyDefault(loadSparkClientDashboard);
 const SparkRecapTemplateCreate = lazyDefault(
   () =>
     import(
@@ -291,14 +310,10 @@ const RecapCustomView = lazyDefault(loadRecapCustomView);
 // Client-facing recap sign-off list (/my-approvals). The clean counterpart
 // to the admin /approvals ops queue — see SparkClientApprovals for why it's
 // list-only and how it's tenant-scoped.
-const SparkClientApprovals = lazyDefault(
-  () => import("@/components/pages/approvals/SparkClientApprovals"),
-);
+const SparkClientApprovals = lazyDefault(loadSparkClientApprovals);
 
 // Calendar / Scheduling
-const SparkCalendar = lazyDefault(
-  () => import("@/components/pages/calendar/SparkCalendar"),
-);
+const SparkCalendar = lazyDefault(loadSparkCalendar);
 
 // Settings + admin
 const SparkSettings = lazyDefault(
@@ -308,21 +323,15 @@ const SparkJobs = lazyDefault(
   () => import("@/components/pages/jobs/SparkJobs"),
 );
 const SparkBulkUpload = lazyDefault(() => import("@/requests/SparkBulkUpload"));
-const SparkReports = lazyDefault(
-  () => import("@/components/pages/reports/SparkReports"),
-);
+const SparkReports = lazyDefault(loadSparkReports);
 const SparkInsights = lazyDefault(
   () => import("@/components/pages/insights/SparkInsights"),
 );
-const SparkInbox = lazyDefault(
-  () => import("@/components/pages/inbox/SparkInbox"),
-);
+const SparkInbox = lazyDefault(loadSparkInbox);
 const SparkEmailPreferences = lazyDefault(
   () => import("@/components/pages/email-preferences/SparkEmailPreferences"),
 );
-const SparkPhotoGallery = lazyDefault(
-  () => import("@/components/pages/photos/SparkPhotoGallery"),
-);
+const SparkPhotoGallery = lazyDefault(loadSparkPhotoGallery);
 const SparkClientRecapDraft = lazyDefault(
   () => import("@/components/pages/client-recap/SparkClientRecapDraft"),
 );

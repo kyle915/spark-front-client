@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { noteLegalGate } from "@/legal/acceptance/legalGateStore";
-import { resetHotRelayDataPrefetch } from "@/lib/prefetchHotRelayData";
+import { resetHotRelayDataPrefetch } from "@/lib/hotRelayPrefetchState";
 import {
   findGuardrailError,
   guardrailFromStatus,

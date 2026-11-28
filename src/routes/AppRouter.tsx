@@ -30,19 +30,45 @@ import {
   type ViewTransitionHandle,
 } from "@/layout/routeViewTransition";
 import environment, { useWorkspaceEpoch } from "@/api/relay/environment";
-import { prefetchHotRelayData } from "@/lib/prefetchHotRelayData";
 import useSparkRole from "@/hooks/useSparkRole";
 
 const rootPath = "/";
 
 const RouteFallback = () => <AppShellSkeleton />;
 
-/** Idle-warm tracker / recaps / role-appropriate Relay data once tenant is known. */
+/**
+ * Idle-warm tracker / recaps / role-appropriate Relay data once tenant is known.
+ * Dynamically imports `prefetchHotRelayData` inside an idle callback so 6 large
+ * Relay GraphQL ASTs stay out of the cold-boot entry chunk.
+ */
 const HotRelayPrefetch = () => {
   const tenantId = useAuthStore((s) => s.tenantId);
   const { isClient } = useSparkRole();
   useEffect(() => {
-    prefetchHotRelayData(environment, tenantId, { isClient });
+    if (!tenantId) return;
+    let cancelled = false;
+    const warm = () => {
+      if (cancelled) return;
+      void import("@/lib/prefetchHotRelayData")
+        .then((m) => {
+          if (!cancelled) {
+            m.prefetchHotRelayData(environment, tenantId, { isClient });
+          }
+        })
+        .catch(() => {});
+    };
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback?.(id);
+      };
+    }
+    const timer = globalThis.setTimeout(warm, 1500);
+    return () => {
+      cancelled = true;
+      globalThis.clearTimeout(timer);
+    };
   }, [tenantId, isClient]);
   return null;
 };

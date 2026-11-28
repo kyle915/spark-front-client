@@ -16,6 +16,8 @@ import MyShiftsCard from "./MyShiftsCard";
 import ProductQuestionsBox from "./ProductQuestionsBox";
 import { StorePrepKitCard } from "./StorePrepKitCard";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -158,8 +160,10 @@ import { RecapPreviewButton, RecapPreviewSheet } from "./RecapPreview";
 import { previewFromContext } from "./recapPreviewModel";
 import PayableMileageStep from "./PayableMileageStep";
 import IdentifyStep from "./IdentifyStep";
-import RecapForm from "./RecapForm";
 import LiveShiftCounterCard from "./LiveShiftCounterCard";
+
+const loadRecapFormChunk = () => import("./RecapForm");
+const LazyRecapForm = lazy(loadRecapFormChunk);
 import {
   clearLiveShiftCounter,
   hasSavedLiveCounterActivity,
@@ -508,6 +512,22 @@ export default function SparkCheckin() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Pre-warm the split RecapForm chunk during idle *after* the check-in shell
+  // has loaded its context so Step 1 (Identify / Clock In) gets 100% of 1-bar
+  // store LTE bandwidth first, while RecapForm is ready before "File recap".
+  useEffect(() => {
+    if (!ctx) return;
+    const warm = () => {
+      void loadRecapFormChunk().catch(() => {});
+    };
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(warm, { timeout: 2500 });
+      return () => window.cancelIdleCallback?.(id);
+    }
+    const timer = globalThis.setTimeout(warm, 900);
+    return () => globalThis.clearTimeout(timer);
+  }, [ctx]);
 
   // No live session but this phone remembers who they are: ask the server
   // whether that number is on the clock today and, if so, put them straight
@@ -1819,51 +1839,59 @@ function CheckedInFlow({
     return (
       <>
         <CheckinSyncPill state={syncPill} />
-        <RecapForm
-        key={`recap-${recapFormKey}-${programEpoch}`}
-        onDraftAdopted={() => setRecapFormKey((k) => k + 1)}
-        code={code}
-        token={token}
-        template={ctx.template ?? null}
-        coBrands={ctx.coBrands ?? null}
-        photoBuckets={ctx.photoBuckets}
-        storeIdentity={ctx.storeIdentity ?? null}
-        accent={accent}
-        brandName={ctx.brand.name || ""}
-        eventDate={ctx.event?.date}
-        forceNew={(recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"}
-        serverDraft={
-          (recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"
-            ? (ctx.session?.additionalRecapDraft ?? null)
-            : (ctx.session?.recapDraft ?? null)
-        }
-        payableMiles={
-          confirmedPayableMiles ??
-          (recapAsNew ? null : activePayable?.claim?.payableMiles) ??
-          null
-        }
-        onCancel={() => {
-          if (leftover) {
-            setShowMileageStep(false);
-            setShowRecap(false);
-            return;
+        <Suspense
+          fallback={
+            <div style={card}>
+              <p style={{ ...helperText, margin: 0 }}>Opening recap form…</p>
+            </div>
           }
-          if (ctx.recapOnly && !hasRecap) {
-            // Blocked (a saved recap is still sending): just close the form.
-            if (!requestStartAnother()) setShowRecap(false);
-          } else setShowRecap(false);
-        }}
-        onSubmitted={async () => {
-          if (!recapAsNew) clearLiveShiftCounter(code, token);
-          setShowRecap(false);
-          setQueuedRecap(null);
-          await onRefresh();
-        }}
-        onQueued={() => {
-          setShowRecap(false);
-          setQueuedRecap(readPendingRecap(code));
-        }}
-      />
+        >
+          <LazyRecapForm
+            key={`recap-${recapFormKey}-${programEpoch}`}
+            onDraftAdopted={() => setRecapFormKey((k) => k + 1)}
+            code={code}
+            token={token}
+            template={ctx.template ?? null}
+            coBrands={ctx.coBrands ?? null}
+            photoBuckets={ctx.photoBuckets}
+            storeIdentity={ctx.storeIdentity ?? null}
+            accent={accent}
+            brandName={ctx.brand.name || ""}
+            eventDate={ctx.event?.date}
+            forceNew={(recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"}
+            serverDraft={
+              (recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"
+                ? (ctx.session?.additionalRecapDraft ?? null)
+                : (ctx.session?.recapDraft ?? null)
+            }
+            payableMiles={
+              confirmedPayableMiles ??
+              (recapAsNew ? null : activePayable?.claim?.payableMiles) ??
+              null
+            }
+            onCancel={() => {
+              if (leftover) {
+                setShowMileageStep(false);
+                setShowRecap(false);
+                return;
+              }
+              if (ctx.recapOnly && !hasRecap) {
+                // Blocked (a saved recap is still sending): just close the form.
+                if (!requestStartAnother()) setShowRecap(false);
+              } else setShowRecap(false);
+            }}
+            onSubmitted={async () => {
+              if (!recapAsNew) clearLiveShiftCounter(code, token);
+              setShowRecap(false);
+              setQueuedRecap(null);
+              await onRefresh();
+            }}
+            onQueued={() => {
+              setShowRecap(false);
+              setQueuedRecap(readPendingRecap(code));
+            }}
+          />
+        </Suspense>
       </>
     );
   }

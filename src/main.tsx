@@ -25,9 +25,25 @@ async function mount() {
     window.location.replace(moveTo);
     return;
   }
-  const Root = isPublicFieldPath(window.location.pathname)
-    ? (await import("./public/PublicFieldApp")).default
-    : (await import("./App")).default;
+  const pathname = window.location.pathname;
+  let Root: (typeof import("./App"))["default"];
+  if (isPublicFieldPath(pathname)) {
+    // Preload the primary field route chunk concurrently with PublicFieldApp
+    // so 1-bar store LTE phones collapse the 2-step JS waterfall.
+    if (/^\/checkin\/[^/]+\/?$/.test(pathname)) {
+      void import("@/components/pages/checkin/SparkCheckin").catch(() => {});
+    } else if (/^\/r\/[^/]+/.test(pathname)) {
+      void import("@/public/recaps/PublicRecap").catch(() => {});
+    }
+    Root = (await import("./public/PublicFieldApp")).default;
+  } else {
+    // Download the target route's lazy chunk concurrently with App shell so
+    // signed-in deep links don't wait on App -> AppRouter -> Outlet mount.
+    void import("./routes/routeChunkPrefetch")
+      .then((m) => m.prefetchRouteChunk(pathname))
+      .catch(() => {});
+    Root = (await import("./App")).default;
+  }
 
   createRoot(document.getElementById("root")!).render(
     <StrictMode>

@@ -11,7 +11,7 @@ import type { PitchDeckQueriesPhotoWallQuery as PhotoWallQueryType } from "@/api
 import { PitchDeckMutationsTogglePinMutation } from "@/api/mutations/PitchDeckMutations";
 import type { PitchDeckMutationsTogglePinMutation as TogglePinType } from "@/api/mutations/__generated__/PitchDeckMutationsTogglePinMutation.graphql";
 import { PhotoLightbox, type PhotoLightboxItem } from "@/shared/PhotoLightbox";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, thumbSources } from "@/utils/thumb";
 import SparkThumb from "@/shared/SparkThumb";
 import { cleanEventName, formatEventDate, joinDistinct } from "@/utils/eventLabel";
 
@@ -108,7 +108,7 @@ const PhotoWallBody: React.FC<{
     () =>
       photos.map((p) => ({
         url: p.url,
-        thumb: thumbUrl(p.url, 400) || p.url,
+        thumb: directThumbUrl(p.url, 400) || p.url,
         caption: [photoTitle(p), p.category, p.caption].filter(Boolean).join(" · "),
         name: p.store || p.category,
       })),
@@ -217,7 +217,7 @@ const PhotoWallBody: React.FC<{
                 onClick={() => setLightboxIndex(idx)}
               >
                 <SparkThumb
-                  sources={[thumbUrl(photo.url, 400), photo.url]}
+                  sources={thumbSources(photo.url, 400)}
                   alt={photo.caption || photo.store || "In-store photo"}
                 />
               </button>

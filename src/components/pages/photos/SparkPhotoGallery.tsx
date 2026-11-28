@@ -14,7 +14,7 @@ import type { TenantPhotoGalleryQuery as QueryType } from "@api/queries/__genera
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { tenantDisplayName } from "@/utils/tenantDisplayName";
-import { thumbUrl } from "@/utils/thumb";
+import { directThumbUrl, handleThumbError } from "@/utils/thumb";
 import {
   DATE_RANGES,
   DECK_LAYOUTS,
@@ -203,7 +203,8 @@ const Grid: React.FC<{
                   className="block w-full text-left cursor-zoom-in"
                 >
                   <img
-                    src={thumbUrl(p.url, 400)}
+                    src={directThumbUrl(p.url, 400)}
+                    onError={(e) => handleThumbError(e.currentTarget, p.url, 400)}
                     alt={p.caption || p.category || "Field photo"}
                     loading="lazy"
                     className="w-full aspect-[4/3] object-cover block transition duration-200 group-hover:scale-[1.02]"
@@ -755,7 +756,8 @@ const SparkPhotoGallery: React.FC = () => {
                     aria-label={`Preview selected photo ${idx + 1}`}
                   >
                     <img
-                      src={thumbUrl(p.url, 400)}
+                      src={directThumbUrl(p.url, 400)}
+                      onError={(e) => handleThumbError(e.currentTarget, p.url, 400)}
                       alt={p.caption || p.category || "Selected photo"}
                       className="w-full h-full object-cover block"
                     />
@@ -816,7 +818,7 @@ const SparkPhotoGallery: React.FC = () => {
             <PhotoLightbox
               photos={preview.photos.map((p) => ({
                 url: p.url,
-                thumb: thumbUrl(p.url, 400),
+                thumb: directThumbUrl(p.url, 400),
                 name: photoCaption(p) || p.category || undefined,
                 caption: p.caption || p.category || undefined,
               }))}
