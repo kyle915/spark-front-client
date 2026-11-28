@@ -1280,7 +1280,8 @@ const TrackerStatusCountsLoader: React.FC<{
     const next: Record<string, number> = {};
     for (const b of buckets) {
       if (!b?.slug) continue;
-      next[b.slug.toLowerCase()] = b.count ?? 0;
+      const slug = b.slug.toLowerCase();
+      next[slug] = (next[slug] ?? 0) + (b.count ?? 0);
     }
     onCounts(next, data?.trackerStatusCounts?.total ?? 0);
     onMarkets(
