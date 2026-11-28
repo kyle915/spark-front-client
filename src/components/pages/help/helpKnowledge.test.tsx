@@ -52,7 +52,14 @@ describe("Spark Help Knowledge Base, Chat AI Assist & Client/Admin Boundaries", 
       resolve(__dirname, "../../../layout/SparkSidebar.tsx"),
       "utf8",
     );
-    expect(sidebar).toContain('to: "/help-knowledge", adminOnly: true');
+    // Keep the System sidebar lean — Help Knowledge lives contextually inside /chat for admins
+    expect(sidebar).not.toContain('to: "/help-knowledge"');
+
+    const chatPage = readFileSync(
+      resolve(__dirname, "../../../chat/SparkChatPage.tsx"),
+      "utf8",
+    );
+    expect(chatPage).toContain('to="/help-knowledge"');
 
     // BrandChatPanel (client Ask Spark) must NEVER expose knowledge-creation UI or admin console links
     const brandChatPanel = readFileSync(

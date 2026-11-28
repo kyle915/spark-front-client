@@ -20,7 +20,7 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     staffOnly: true,
     items: [
       "Inside /chat, Ignite admins can click Draft AI to draft BA replies from shift context, brand product knowledge, and Spark Help docs (always editable before sending), and click Teach Spark on any admin reply to distill a PII-scrubbed product FAQ into Spark Knowledge.",
-      "Open System → Help Knowledge (/help-knowledge) to review Knowledge Gaps, publish/edit audience-scoped product articles, sync OpenAI embeddings (text-embedding-3-small), and test Client vs. Admin visibility side by side (internal Ignite financials and processes are strictly blocked).",
+      "Open Help Knowledge from the /chat header (/help-knowledge) to review Knowledge Gaps, publish/edit audience-scoped product articles, sync OpenAI embeddings (text-embedding-3-small), and test Client vs. Admin visibility side by side (internal Ignite financials and processes are strictly blocked).",
     ],
   },
   {

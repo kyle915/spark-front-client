@@ -319,7 +319,6 @@ const SECTIONS: NavSection[] = [
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
       { label: "Billing", Icon: DollarSign, to: "/billing" },
-      { label: "Help Knowledge", Icon: BookOpen, to: "/help-knowledge", adminOnly: true },
       { label: "Help", Icon: HelpCircle, to: "/help" },
     ],
   },
