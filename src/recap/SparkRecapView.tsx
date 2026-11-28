@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, useTransition } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
@@ -51,6 +51,11 @@ import {
   recapsListHrefFromReturn,
   recapsListNavState,
 } from "./recapListFilters";
+import {
+  applyRecapApprovalToStore,
+  notifyRecapApprovalChanged,
+  subscribeRecapApprovalChanged,
+} from "./recapApprovalSync";
 import {
   getRecapQueueNeighbors,
   markRecapOpenedInQueue,
@@ -498,11 +503,20 @@ const SparkRecapInner: React.FC<{
     // refreshKey lives ABOVE Suspense so a network refetch that suspends
     // doesn't remount this tree and reset the key (re-serving stale store).
     {
-      // store-or-network paints a recap that Next already prefetched,
-      // instead of waiting on a second network round trip.
-      fetchPolicy: refreshKey === 0 ? "store-or-network" : "network-only",
+      // store-and-network paints prefetched store data instantaneously while
+      // reconciling fresh approval / sign-off status from the server.
+      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
       fetchKey: refreshKey,
     },
+  );
+
+  useEffect(
+    () =>
+      subscribeRecapApprovalChanged(() => onRefresh(), {
+        matchUuid: uuid || null,
+        ignoreSource: "recap-detail",
+      }),
+    [uuid, onRefresh],
   );
 
   const recap = data?.recap;
@@ -885,9 +899,28 @@ const SparkRecapInner: React.FC<{
           acceptRetailerProposal: (approved && acceptStoreOnApprove) || null,
         },
       },
+      optimisticUpdater: (store) => {
+        applyRecapApprovalToStore(store, [recap.id], approved);
+      },
+      updater: (store, res) => {
+        if (res?.approveRecap?.success) {
+          applyRecapApprovalToStore(
+            store,
+            [recap.id],
+            approved,
+            res.approveRecap.recap?.approvedAt ?? null,
+          );
+        }
+      },
       onCompleted: (res) => {
         if (res.approveRecap?.success) {
           markRecapReviewedInQueue(uuid, { approved });
+          notifyRecapApprovalChanged({
+            ids: [recap.id],
+            uuids: uuid ? [uuid] : [],
+            approved,
+            source: "recap-detail",
+          });
           void refreshSidebarCounts(environment, authTenantId);
           showAlert(
             approved ? "Recap approved." : "Recap marked not approved.",
@@ -1357,6 +1390,7 @@ const SparkRecapInner: React.FC<{
               onCompleted: (res) => {
                 if (res.submitRecapClientSignoff?.success) {
                   showAlert("Sign-off saved.", "success");
+                  onRefresh();
                 } else {
                   showAlert(
                     res.submitRecapClientSignoff?.message ?? "Couldn't save sign-off.",
@@ -2841,13 +2875,14 @@ export default function SparkRecapView() {
   // Keep refreshKey above Suspense so a suspending refetch can't remount
   // the inner tree and reset the key back to 0 (stale store).
   const [refreshKey, setRefreshKey] = useState(0);
+  const handleRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
   return (
     <Layout>
       <Suspense fallback={<RecapDetailSkeleton />}>
         <SparkRecapInner
           uuid={uuid ?? ""}
           refreshKey={refreshKey}
-          onRefresh={() => setRefreshKey((k) => k + 1)}
+          onRefresh={handleRefresh}
         />
       </Suspense>
     </Layout>

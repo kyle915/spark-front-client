@@ -77,6 +77,11 @@ import {
   recapsListNavState,
 } from "./recapListFilters";
 import {
+  applyRecapApprovalToStore,
+  notifyRecapApprovalChanged,
+  subscribeRecapApprovalChanged,
+} from "./recapApprovalSync";
+import {
   getRecapQueueNeighbors,
   markRecapOpenedInQueue,
   markRecapReviewedInQueue,
@@ -554,11 +559,21 @@ const RecapCustomViewInner = ({
     GetCustomRecapQuery,
     { uuid: uuid ?? "" },
     {
-      // First paint can use a warm store; bumping refreshKey after
-      // approve/save forces a network refetch.
-      fetchPolicy: refreshKey === 0 ? "store-or-network" : "network-only",
+      // Paint immediately from warm store while always reconciling fresh
+      // approval/sign-off state from the network; bumping refreshKey forces
+      // a network-only reload.
+      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
       fetchKey: refreshKey,
     },
+  );
+
+  useEffect(
+    () =>
+      subscribeRecapApprovalChanged(() => onRefresh(), {
+        matchUuid: uuid ?? null,
+        ignoreSource: "recap-detail",
+      }),
+    [uuid, onRefresh],
   );
 
   const recap = data?.customRecap;
@@ -1073,18 +1088,38 @@ const RecapCustomViewInner = ({
           ...recapQueueWarmTargets(nextUnapproved.uuid),
         ]);
       }
+      const recapId = recap.id as string;
       commitApprove({
         variables: {
           input: {
-            id: recap.id as string,
+            id: recapId,
             approved: true,
             acceptRetailerProposal: acceptStoreOnApprove || null,
           },
+        },
+        optimisticUpdater: (store) => {
+          applyRecapApprovalToStore(store, [recapId], true);
+        },
+        updater: (store, res) => {
+          if (res?.approveCustomRecap?.success) {
+            applyRecapApprovalToStore(
+              store,
+              [recapId],
+              true,
+              res.approveCustomRecap.customRecap?.approvedAt ?? null,
+            );
+          }
         },
         onCompleted: (res) => {
           const payload = res.approveCustomRecap;
           if (payload?.success) {
             markRecapReviewedInQueue(uuid, { approved: true });
+            notifyRecapApprovalChanged({
+              ids: [recapId],
+              uuids: uuid ? [uuid] : [],
+              approved: true,
+              source: "recap-detail",
+            });
             void refreshSidebarCounts(environment, tenantId);
             showAlert(
               "Recap approved — the requestor and mapped RMM have been emailed.",
@@ -3249,7 +3284,7 @@ const RecapCustomViewInner = ({
               existingAt={recap.clientSignoffAt}
               busy={isSigningOff}
               approved={recap.approved}
-              onApprove={handleApprove}
+              onApprove={() => handleApprove(false)}
               approving={isApproving || approvePhase !== "idle"}
               onSubmit={(status, comment) => {
                 commitSignoff({
@@ -3649,7 +3684,7 @@ const RecapCustomViewInner = ({
                   existingAt={recap.clientSignoffAt}
                   busy={isSigningOff}
                   approved={recap.approved}
-                  onApprove={handleApprove}
+                  onApprove={() => handleApprove(false)}
                   approving={isApproving || approvePhase !== "idle"}
                   onSubmit={(status, comment) => {
                     commitSignoff({
@@ -3720,12 +3755,13 @@ export default function RecapCustomView() {
   // Keep refreshKey above Suspense so a suspending refetch can't remount
   // the inner tree and reset the key back to 0 (stale store).
   const [refreshKey, setRefreshKey] = useState(0);
+  const handleRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
   return (
     <Layout>
       <Suspense fallback={<RecapDetailSkeleton />}>
         <RecapCustomViewInner
           refreshKey={refreshKey}
-          onRefresh={() => setRefreshKey((k) => k + 1)}
+          onRefresh={handleRefresh}
         />
       </Suspense>
     </Layout>

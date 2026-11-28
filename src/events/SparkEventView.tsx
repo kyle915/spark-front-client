@@ -18,7 +18,8 @@
 
 import RequestActivityTimeline from "@/requests/RequestActivityTimeline";
 import { clientSafeBaName } from "@/utils/clientSafeBaName";
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
+import { subscribeRecapApprovalChanged } from "@/recap/recapApprovalSync";
 import { displayBaCount } from "@/public/form/eventActivationSchedule";
 import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery } from "react-relay/hooks";
@@ -262,6 +263,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   const location = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
   const load = () => setRefreshKey((k) => k + 1);
+  useEffect(() => subscribeRecapApprovalChanged(() => setRefreshKey((k) => k + 1)), []);
   const data = useLazyLoadQuery<EventUuidQueryType>(
     EventUuidQuery,
     { uuid },

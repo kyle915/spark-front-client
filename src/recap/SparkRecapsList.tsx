@@ -97,10 +97,17 @@ import {
 import { prefetchRecapDetails } from "./prefetchRecapDetail";
 import {
   markRecapOpenedInQueue,
+  markRecapReviewedInQueue,
   pickNextReviewItem,
   recapQueueWarmTargets,
   saveRecapReviewQueue,
 } from "./recapReviewQueue";
+import {
+  applyRecapApprovalToStore,
+  notifyRecapApprovalChanged,
+  subscribeRecapApprovalChanged,
+} from "./recapApprovalSync";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import {
   recapActivationFilterLabel,
   recapMatchesActivationFilter,
@@ -1229,14 +1236,14 @@ const RecapsListInner: React.FC<{
     RecapListKindsQuery,
     { tenantId: tenantId || null },
     {
-      fetchPolicy: refreshKey === 0 ? "store-or-network" : "network-only",
+      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
       fetchKey: refreshKey,
     },
   );
   const enableLegacy = Boolean(kinds.recapListKinds?.hasLegacy);
   const enableCustom = Boolean(kinds.recapListKinds?.hasCustom);
   const listFetchPolicy: RecapsListFetchPolicy =
-    refreshKey === 0 ? "store-or-network" : "network-only";
+    refreshKey === 0 ? "store-and-network" : "network-only";
 
   const legacyVars = {
     first: unifiedPage1.legacy.first,
@@ -2819,6 +2826,21 @@ export default function SparkRecapsList() {
     if (nav?.refreshRecaps || consumeRecapsListNeedsRefresh()) return 1;
     return 0;
   });
+  // Keep an already-mounted Recaps list fresh whenever a recap is approved
+  // from another tab, Quick Peek, Approvals, or returning via navigation.
+  useEffect(() => {
+    const nav = location.state as RecapsListNavState | null;
+    if (nav?.refreshRecaps || consumeRecapsListNeedsRefresh()) {
+      setRefreshKey((k) => k + 1);
+    }
+  }, [location.key, location.state]);
+  useEffect(
+    () =>
+      subscribeRecapApprovalChanged(() => setRefreshKey((k) => k + 1), {
+        ignoreSource: "recaps-list",
+      }),
+    [],
+  );
   // Type chip counts read every other list filter, never the type itself.
   const typeCountVariables = useMemo(
     () =>
@@ -2919,6 +2941,8 @@ export default function SparkRecapsList() {
     const approvedNow = new Set(targets.map((r) => r.id));
     const requested = targets.length;
     const byKind = idsByKind(targets);
+    const allTargetIds = [...byKind.recapIds, ...byKind.customRecapIds];
+    const allTargetUuids = targets.map((r) => r.uuid).filter(Boolean);
     commitBulkApprove({
       variables: {
         input: {
@@ -2926,6 +2950,15 @@ export default function SparkRecapsList() {
           customRecapIds: byKind.customRecapIds,
           approved: true,
         },
+      },
+      optimisticUpdater: (store) => {
+        applyRecapApprovalToStore(store, allTargetIds, true);
+      },
+      updater: (store, res) => {
+        const payload = res?.bulkApproveRecaps;
+        if (payload?.success && (payload.updatedCount ?? 0) === requested) {
+          applyRecapApprovalToStore(store, allTargetIds, true);
+        }
       },
       onCompleted: (res) => {
         const payload = res.bulkApproveRecaps;
@@ -2942,6 +2975,16 @@ export default function SparkRecapsList() {
           reason: payload?.message,
         });
         if (payload?.success && approvedCount === requested) {
+          for (const uuid of allTargetUuids) {
+            markRecapReviewedInQueue(uuid, { approved: true });
+          }
+          notifyRecapApprovalChanged({
+            ids: allTargetIds,
+            uuids: allTargetUuids,
+            approved: true,
+            source: "recaps-list",
+          });
+          void refreshSidebarCounts(environment, tenantId);
           showAlert(toast.text, toast.tone);
           setJustApprovedIds(approvedNow);
           setApprovePhase("success");
@@ -2956,7 +2999,16 @@ export default function SparkRecapsList() {
           // selection for a retry, and reload so approved rows move on.
           setApprovePhase("idle");
           showAlert(toast.text, toast.tone);
-          if (approvedCount > 0) setRefreshKey((k) => k + 1);
+          if (approvedCount > 0) {
+            notifyRecapApprovalChanged({
+              ids: allTargetIds,
+              uuids: allTargetUuids,
+              approved: true,
+              source: "recaps-list",
+            });
+            void refreshSidebarCounts(environment, tenantId);
+            setRefreshKey((k) => k + 1);
+          }
         }
       },
       onError: (err) => {

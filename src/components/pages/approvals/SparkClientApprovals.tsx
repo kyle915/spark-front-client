@@ -1,14 +1,21 @@
 import {
   Suspense,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import { Link, useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { commitMutation } from "relay-runtime";
+import { commitLocalUpdate, commitMutation } from "relay-runtime";
 import environment from "@/api/relay/environment";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
+import {
+  applyRecapApprovalToStore,
+  notifyRecapApprovalChanged,
+  subscribeRecapApprovalChanged,
+} from "@/recap/recapApprovalSync";
 import Layout from "@/layout/Layout";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import SparkEmptyState from "@/shared/SparkEmptyState";
@@ -421,12 +428,13 @@ const ApprovalRow: React.FC<{
 
 const ApprovalsLegacyLive: React.FC<{
   variables: RecapsListQueryType["variables"];
+  fetchKey: number;
   children: (data: RecapsListQueryType["response"]) => ReactNode;
-}> = ({ variables, children }) => {
+}> = ({ variables, fetchKey, children }) => {
   const data = useLazyLoadQuery<RecapsListQueryType>(
     RecapsListQuery,
     variables,
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: fetchKey === 0 ? "store-and-network" : "network-only", fetchKey },
   );
   return <>{children(data)}</>;
 };
@@ -434,22 +442,26 @@ const ApprovalsLegacyLive: React.FC<{
 const ApprovalsLegacyGate: React.FC<{
   enabled: boolean;
   variables: RecapsListQueryType["variables"];
+  fetchKey: number;
   children: (data: RecapsListQueryType["response"]) => ReactNode;
-}> = ({ enabled, variables, children }) => {
+}> = ({ enabled, variables, fetchKey, children }) => {
   if (!enabled) return <>{children(EMPTY_LEGACY_PAGE)}</>;
   return (
-    <ApprovalsLegacyLive variables={variables}>{children}</ApprovalsLegacyLive>
+    <ApprovalsLegacyLive variables={variables} fetchKey={fetchKey}>
+      {children}
+    </ApprovalsLegacyLive>
   );
 };
 
 const ApprovalsCustomLive: React.FC<{
   variables: CustomRecapsListQueryType["variables"];
+  fetchKey: number;
   children: (data: CustomRecapsListQueryType["response"]) => ReactNode;
-}> = ({ variables, children }) => {
+}> = ({ variables, fetchKey, children }) => {
   const data = useLazyLoadQuery<CustomRecapsListQueryType>(
     CustomRecapsListQuery,
     variables,
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: fetchKey === 0 ? "store-and-network" : "network-only", fetchKey },
   );
   return <>{children(data)}</>;
 };
@@ -457,11 +469,14 @@ const ApprovalsCustomLive: React.FC<{
 const ApprovalsCustomGate: React.FC<{
   enabled: boolean;
   variables: CustomRecapsListQueryType["variables"];
+  fetchKey: number;
   children: (data: CustomRecapsListQueryType["response"]) => ReactNode;
-}> = ({ enabled, variables, children }) => {
+}> = ({ enabled, variables, fetchKey, children }) => {
   if (!enabled) return <>{children(EMPTY_CUSTOM_PAGE)}</>;
   return (
-    <ApprovalsCustomLive variables={variables}>{children}</ApprovalsCustomLive>
+    <ApprovalsCustomLive variables={variables} fetchKey={fetchKey}>
+      {children}
+    </ApprovalsCustomLive>
   );
 };
 
@@ -469,6 +484,7 @@ const ApprovalsCustomGate: React.FC<{
 
 const ClientApprovalsInner: React.FC = () => {
   const { tenantId } = useAuthStore();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Rows the client just signed off — hidden immediately for snappy feedback.
   // The approved=false queries also prune them on their next network refresh
@@ -476,13 +492,36 @@ const ClientApprovalsInner: React.FC = () => {
   const [approvedKeys, setApprovedKeys] = useState<Set<string>>(
     () => new Set(),
   );
-  const handleApproved = useCallback((key: string) => {
-    setApprovedKeys((prev) => {
-      const next = new Set(prev);
-      next.add(key);
-      return next;
-    });
-  }, []);
+  useEffect(
+    () =>
+      subscribeRecapApprovalChanged(() => setRefreshKey((k) => k + 1), {
+        ignoreSource: "client-approvals",
+      }),
+    [],
+  );
+  const handleApproved = useCallback(
+    (key: string) => {
+      setApprovedKeys((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+      const sep = key.indexOf(":");
+      const id = sep >= 0 ? key.slice(sep + 1) : key;
+      if (id) {
+        commitLocalUpdate(environment, (store) => {
+          applyRecapApprovalToStore(store, [id], true);
+        });
+      }
+      notifyRecapApprovalChanged({
+        ids: id ? [id] : [],
+        approved: true,
+        source: "client-approvals",
+      });
+      void refreshSidebarCounts(environment, tenantId);
+    },
+    [tenantId],
+  );
 
   // Kind gate (same as SparkRecapsList) — skip the unused GraphQL
   // pipeline when the tenant only has legacy or only custom rows.
@@ -502,11 +541,13 @@ const ClientApprovalsInner: React.FC = () => {
     <ApprovalsLegacyGate
       enabled={enableLegacy}
       variables={{ first: APPROVALS_FIRST, filters: listFilters }}
+      fetchKey={refreshKey}
     >
       {(data) => (
         <ApprovalsCustomGate
           enabled={enableCustom}
           variables={{ first: APPROVALS_FIRST, filters: listFilters }}
+          fetchKey={refreshKey}
         >
           {(customData) => (
             <ClientApprovalsMerged

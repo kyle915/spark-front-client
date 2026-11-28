@@ -72,3 +72,25 @@ export function prefetchRecapDetails(
     }
   }
 }
+
+/** Drop retained detail prefetches after an approval/archive so next open fetches fresh data. */
+export function invalidatePrefetchedRecaps(
+  uuids?: readonly string[],
+): void {
+  if (!uuids || uuids.length === 0) {
+    for (const sub of retained.values()) sub.unsubscribe();
+    retained.clear();
+    return;
+  }
+  for (const uuid of uuids) {
+    if (!uuid) continue;
+    for (const prefix of ["c:", "r:"]) {
+      const key = `${prefix}${uuid}`;
+      const sub = retained.get(key);
+      if (sub) {
+        sub.unsubscribe();
+        retained.delete(key);
+      }
+    }
+  }
+}
