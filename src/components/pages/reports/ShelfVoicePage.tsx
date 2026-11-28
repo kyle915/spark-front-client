@@ -24,7 +24,6 @@ import { PhotoLightbox, type PhotoLightboxItem } from "@/shared/PhotoLightbox";
 import { TideProgress } from "@/motion/PlanAndTideMoments";
 import {
   KpiDeltaBadge,
-  MiniSparkline,
   StudioKpiSkeleton,
 } from "@/motion/StudioKpiCard";
 import SparkThumb from "@/shared/SparkThumb";
@@ -319,24 +318,15 @@ const ShelfVoiceBody: React.FC<{
             <span className="text-xs font-medium" style={META}>
               On-Shelf Availability (OSA)
             </span>
-            {marketOsaRows.length >= 2 ? (
-              <MiniSparkline
-                points={marketOsaRows.map((m) => m.osaRatePct)}
-                tone={(hub.osaRatePct ?? 100) >= 85 ? "positive" : "negative"}
-                width={52}
-                height={18}
-              />
-            ) : (
-              <CheckCircle2
-                size={15}
-                style={{
-                  color:
-                    (hub.osaRatePct ?? 100) >= 85
-                      ? "var(--spark-ok-ink)"
-                      : "var(--spark-flag-ink, #a8340f)",
-                }}
-              />
-            )}
+            <CheckCircle2
+              size={15}
+              style={{
+                color:
+                  (hub.osaRatePct ?? 100) >= 85
+                    ? "var(--spark-ok-ink)"
+                    : "var(--spark-flag-ink, #a8340f)",
+              }}
+            />
           </div>
           <div className="flex items-baseline justify-between gap-2 flex-wrap">
             <p className="display text-3xl font-bold tab-num" style={TEXT}>

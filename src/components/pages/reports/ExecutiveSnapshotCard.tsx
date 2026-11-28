@@ -29,7 +29,6 @@ import {
 } from "@/motion/FeedbackActionButton";
 import {
   KpiDeltaBadge,
-  MiniSparkline,
   type KpiDirection,
 } from "@/motion/StudioKpiCard";
 import { ExecutiveSnapshotQuery } from "@/api/queries/RetentionAutomationQueries";
@@ -524,15 +523,6 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
               : kpi.direction === "down"
                 ? "down"
                 : "flat";
-          const kKey = kpi.key.toLowerCase();
-          const sparkPts =
-            snap.topDoors.length >= 2
-              ? kKey.includes("sold") || kKey.includes("unit")
-                ? [...snap.topDoors].reverse().map((d) => d.unitsSold)
-                : kKey.includes("sample") || kKey.includes("consumer")
-                  ? [...snap.topDoors].reverse().map((d) => d.consumersSampled)
-                  : []
-              : [];
           return (
             <div
               key={kpi.key}
@@ -542,19 +532,9 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
                 ...BORDER,
               }}
             >
-              <div className="flex items-center justify-between gap-1.5">
-                <span className="text-[11px] font-medium block truncate" style={META}>
-                  {kpi.label}
-                </span>
-                {sparkPts.length >= 2 ? (
-                  <MiniSparkline
-                    points={sparkPts}
-                    tone={dir === "down" ? "negative" : "positive"}
-                    width={46}
-                    height={16}
-                  />
-                ) : null}
-              </div>
+              <span className="text-[11px] font-medium block leading-snug" style={META}>
+                {kpi.label}
+              </span>
               <p className="display text-lg font-bold tab-num" style={TEXT}>
                 {kpi.formattedValue}
               </p>

@@ -65,7 +65,6 @@ import {
 import { useConsumerBreakdown } from "@/hooks/useConsumerBreakdown";
 import {
   KpiDeltaBadge,
-  MiniSparkline,
   StudioKpiSkeleton,
 } from "@/motion/StudioKpiCard";
 import { ofAsked } from "@/lib/consumerBreakdown";
@@ -500,17 +499,13 @@ const ConsumersSummary: React.FC<{
       ? everyRecap
       : null;
   const priorWin = comparePrior ? computePriorDateWindow(startDate, endDate) : null;
-  const weeklyPts = breakdown.byWeek.map((w) => w.consumers);
   return (
     <div className="min-w-0">
       <dt
-        className="flex items-center justify-between gap-2 text-[13px] font-medium"
+        className="text-[13px] font-medium"
         style={{ color: "var(--spark-text-secondary)" }}
       >
-        <span className="truncate">Consumers sampled</span>
-        {weeklyPts.length >= 2 ? (
-          <MiniSparkline points={weeklyPts} tone="positive" width={54} height={18} />
-        ) : null}
+        Consumers sampled
       </dt>
       <dd
         className="display tab-num m-0 mt-1 text-3xl font-semibold truncate"

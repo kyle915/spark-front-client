@@ -187,11 +187,17 @@ describe("Wave 2 UI Moments & BoardUI-inspired enhancements (Relay-free)", () =>
     expect(read("requests/MasterTracker.tsx")).toContain("<ActiveFilterStrip");
     expect(read("recap/SparkRecapsList.tsx")).toContain("<ActiveFilterStrip");
 
-    // 9. Unified KPI Card Anatomy (Delta + Sparkline + Skeletons)
+    // 9. Unified KPI Card Anatomy (Delta + Skeletons, no header sparkline clutter)
     expect(read("components/pages/reports/ExecutiveSnapshotCard.tsx")).toContain(
       "<KpiDeltaBadge",
     );
-    expect(read("components/pages/reports/SparkReports.tsx")).toContain(
+    expect(
+      read("components/pages/reports/ExecutiveSnapshotCard.tsx"),
+    ).not.toContain("<MiniSparkline");
+    expect(read("components/pages/reports/SparkReports.tsx")).not.toContain(
+      "<MiniSparkline",
+    );
+    expect(read("components/pages/reports/ShelfVoicePage.tsx")).not.toContain(
       "<MiniSparkline",
     );
     expect(read("components/pages/reports/SparkReports.tsx")).toContain(
