@@ -1,7 +1,7 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { fetchQuery, useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
-import type { IEnvironment } from "relay-runtime";
+import { commitLocalUpdate, type IEnvironment } from "relay-runtime";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { ApprovalsListQuery } from "@/api/queries/ApprovalsListQuery";
@@ -15,6 +15,11 @@ import { useStoreSheetStore } from "@/store/storeSheetStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
+import {
+  applyRequestDecisionToStore,
+  notifyRequestApprovalChanged,
+  subscribeRequestApprovalChanged,
+} from "@/requests/requestApprovalSync";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkOverlay from "@/shared/SparkOverlay";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -360,7 +365,12 @@ function refreshAfterDecision(
     decidedVariables(tenantId),
     copyQueueVariables(tenantId),
   ]) {
-    fetchQuery<ApprovalsListQueryType>(environment, ApprovalsListQuery, variables)
+    fetchQuery<ApprovalsListQueryType>(
+      environment,
+      ApprovalsListQuery,
+      variables,
+      { fetchPolicy: "network-only" },
+    )
       .toPromise()
       .catch(() => undefined);
   }
@@ -373,15 +383,22 @@ const ApprovalsInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const environment = useRelayEnvironment();
+  const [refreshKey, setRefreshKey] = useState(0);
   const queueData = useLazyLoadQuery<ApprovalsListQueryType>(
     ApprovalsListQuery,
     queueVariables(tenantId),
-    { fetchPolicy: "store-or-network" },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: `approvals-queue:${tenantId ?? ""}:${refreshKey}`,
+    },
   );
   const decidedData = useLazyLoadQuery<ApprovalsListQueryType>(
     ApprovalsListQuery,
     decidedVariables(tenantId),
-    { fetchPolicy: "store-or-network" },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: `approvals-decided:${tenantId ?? ""}:${refreshKey}`,
+    },
   );
 
   const { pendingRows, recentlyDecided, stats } = useMemo(() => {
@@ -517,6 +534,15 @@ const ApprovalsInner: React.FC = () => {
   // Local removal so we don't have to round-trip the page after each
   // decision — the row simply disappears with a tiny fade.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    return subscribeRequestApprovalChanged(
+      () => {
+        setRemovedIds(new Set());
+        setRefreshKey((k) => k + 1);
+      },
+      { ignoreSource: "approvals-queue" },
+    );
+  }, []);
   const activePendingRows = useMemo(
     () => pendingRows.filter((r) => !removedIds.has(r.id)),
     [pendingRows, removedIds],
@@ -601,6 +627,8 @@ const ApprovalsInner: React.FC = () => {
     // Run sequentially to avoid hammering the backend and to give the
     // user a clean success/fail count. 20-30 requests typical max.
     let okCount = 0;
+    const okIds: string[] = [];
+    const okUuids: string[] = [];
     const failures: string[] = [];
     for (const r of targets) {
       try {
@@ -609,6 +637,8 @@ const ApprovalsInner: React.FC = () => {
         });
         if (result.success) {
           okCount += 1;
+          okIds.push(r.id);
+          if (r.uuid) okUuids.push(r.uuid);
           setRemovedIds((prev) => {
             const next = new Set(prev);
             next.add(r.id);
@@ -621,7 +651,18 @@ const ApprovalsInner: React.FC = () => {
         failures.push(`${r.reqId}: ${(e as Error).message}`);
       }
     }
-    if (okCount > 0) refreshAfterDecision(environment, tenantId);
+    if (okCount > 0) {
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, okIds, "approved"),
+      );
+      notifyRequestApprovalChanged({
+        ids: okIds,
+        uuids: okUuids,
+        decision: "approved",
+        source: "approvals-queue",
+      });
+      refreshAfterDecision(environment, tenantId);
+    }
     setBulkBusy(false);
     setBulkConfirm(false);
     clearSelection();
@@ -662,6 +703,8 @@ const ApprovalsInner: React.FC = () => {
     }
     setBulkBusy(true);
     let okCount = 0;
+    const okIds: string[] = [];
+    const okUuids: string[] = [];
     const failures: string[] = [];
     for (const r of targets) {
       try {
@@ -670,6 +713,8 @@ const ApprovalsInner: React.FC = () => {
         });
         if (result.success) {
           okCount += 1;
+          okIds.push(r.id);
+          if (r.uuid) okUuids.push(r.uuid);
           setRemovedIds((prev) => {
             const next = new Set(prev);
             next.add(r.id);
@@ -682,7 +727,20 @@ const ApprovalsInner: React.FC = () => {
         failures.push(`${r.reqId}: ${(e as Error).message}`);
       }
     }
-    if (okCount > 0) refreshAfterDecision(environment, tenantId);
+    if (okCount > 0) {
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, okIds, "declined", {
+          declineReason: reason,
+        }),
+      );
+      notifyRequestApprovalChanged({
+        ids: okIds,
+        uuids: okUuids,
+        decision: "declined",
+        source: "approvals-queue",
+      });
+      refreshAfterDecision(environment, tenantId);
+    }
     setBulkBusy(false);
     setBulkDeclineOpen(false);
     setBulkDeclineReason("");
@@ -719,6 +777,15 @@ const ApprovalsInner: React.FC = () => {
         next.add(r.id);
         return next;
       });
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, [r.id], "approved"),
+      );
+      notifyRequestApprovalChanged({
+        ids: [r.id],
+        uuids: r.uuid ? [r.uuid] : [],
+        decision: "approved",
+        source: "approvals-queue",
+      });
       refreshAfterDecision(environment, tenantId);
     } catch (e) {
       showAlert(`Couldn't approve: ${(e as Error).message}`, "error");
@@ -745,8 +812,9 @@ const ApprovalsInner: React.FC = () => {
     }
     setBusyId(declining.id);
     try {
+      const reason = declineReason.trim();
       const result = await callApprovalMutation("declineRequest", {
-        input: { id: declining.id, declineReason: declineReason.trim() },
+        input: { id: declining.id, declineReason: reason },
       });
       if (!result.success) throw new Error(result.message || "Decline failed.");
       showAlert(`Declined ${declining.reqId} — requestor notified.`, "success");
@@ -754,6 +822,17 @@ const ApprovalsInner: React.FC = () => {
         const next = new Set(prev);
         next.add(declining.id);
         return next;
+      });
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, [declining.id], "declined", {
+          declineReason: reason,
+        }),
+      );
+      notifyRequestApprovalChanged({
+        ids: [declining.id],
+        uuids: declining.uuid ? [declining.uuid] : [],
+        decision: "declined",
+        source: "approvals-queue",
       });
       refreshAfterDecision(environment, tenantId);
       setDeclining(null);
@@ -1904,10 +1983,19 @@ const ApprovalsInner: React.FC = () => {
  */
 const ApprovalsCopyQueueButtonInner: React.FC = () => {
   const { tenantId } = useAuthStore();
+  const [refreshKey, setRefreshKey] = useState(0);
+  useEffect(() => {
+    return subscribeRequestApprovalChanged(() => {
+      setRefreshKey((k) => k + 1);
+    });
+  }, []);
   const data = useLazyLoadQuery<ApprovalsListQueryType>(
     ApprovalsListQuery,
     copyQueueVariables(tenantId),
-    { fetchPolicy: "store-or-network" },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: `approvals-copy:${tenantId ?? ""}:${refreshKey}`,
+    },
   );
   const showAlert = useAlertStore((s) => s.showAlert);
   const [copying, setCopying] = useState(false);

@@ -574,6 +574,24 @@ const SparkRecapInner: React.FC<{
     fileId: string;
     label: string;
   } | null>(null);
+  const queueInfo = useMemo(() => getRecapQueueNeighbors(uuid), [uuid]);
+  const [queueNavPending, startQueueNav] = useTransition();
+  useEffect(() => {
+    if (!recap) return;
+    markRecapOpenedInQueue(uuid);
+    prefetchRecapDetails(environment, recapQueueWarmTargets(uuid));
+  }, [recap, uuid, environment]);
+  const [acceptStoreChoice, setAcceptStoreChoice] = useState<boolean | null>(
+    null,
+  );
+  const backToListUrl = useMemo(
+    () =>
+      recapsListHrefFromReturn({
+        searchParams,
+        fallbackStatus: recap?.approved ? "approved" : "needs_review",
+      }),
+    [searchParams, recap?.approved],
+  );
 
   if (!recap) {
     // The uuid may belong to a custom-template recap (a separate model the
@@ -853,17 +871,11 @@ const SparkRecapInner: React.FC<{
     });
   };
 
-  const queueInfo = useMemo(() => getRecapQueueNeighbors(uuid), [uuid]);
-  const [queueNavPending, startQueueNav] = useTransition();
   const goToQueueRecap = (href: string) => {
     startQueueNav(() => {
       navigate(href);
     });
   };
-  useEffect(() => {
-    markRecapOpenedInQueue(uuid);
-    prefetchRecapDetails(environment, recapQueueWarmTargets(uuid));
-  }, [uuid, environment]);
 
   // Approve / decline the recap itself (distinct from request approval).
   // After success, return to the list with a forced network refetch —
@@ -872,7 +884,6 @@ const SparkRecapInner: React.FC<{
   // Spark's suggested store, when the event has none. null = follow the
   // default for this suggestion (ticked unless it is only a guess).
   const retailerProposal = recap.retailerProposal ?? null;
-  const [acceptStoreChoice, setAcceptStoreChoice] = useState<boolean | null>(null);
   const acceptStoreOnApprove = retailerProposal
     ? (acceptStoreChoice ?? tickedByDefault(retailerProposal))
     : false;
@@ -1012,15 +1023,6 @@ const SparkRecapInner: React.FC<{
   // Confirms first, then navigates back to the recaps list — which frees
   // the event for a fresh recap. The list refetches on mount so the row
   // is gone when we land there.
-  const backToListUrl = useMemo(
-    () =>
-      recapsListHrefFromReturn({
-        searchParams,
-        fallbackStatus: recap?.approved ? "approved" : "needs_review",
-      }),
-    [searchParams, recap?.approved],
-  );
-
   const deleteRecap = () => {
     if (isDeleting) return;
     setConfirmDeleteRecap(true);

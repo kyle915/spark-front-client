@@ -1,11 +1,19 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRelayEnvironment } from "react-relay/hooks";
+import { commitLocalUpdate } from "relay-runtime";
 import { useAllConnectionPages } from "@/hooks/useAllConnectionPages";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import {
+  applyRequestDecisionToStore,
+  notifyRequestApprovalChanged,
+  subscribeRequestApprovalChanged,
+} from "@/requests/requestApprovalSync";
 
 type RecentRow = NonNullable<
   NonNullable<RequestsQueryType["response"]["requests"]["edges"][number]>["node"]
@@ -73,8 +81,20 @@ const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const { isAdmin } = useSparkRole();
+  const environment = useRelayEnvironment();
+  const [refreshKey, setRefreshKey] = useState(0);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return subscribeRequestApprovalChanged(
+      () => {
+        setApprovedIds(new Set());
+        setRefreshKey((k) => k + 1);
+      },
+      { ignoreSource: "recent-submissions" },
+    );
+  }, []);
 
   // Inline request approval. Clients (and admins) can approve a PENDING
   // request straight from this list — the backend `approveRequest` enforces
@@ -100,6 +120,16 @@ const Inner: React.FC = () => {
       const ok = !json.errors?.length && json?.data?.approveRequest?.success;
       if (ok) {
         setApprovedIds((prev) => new Set(prev).add(row.uuid));
+        commitLocalUpdate(environment, (store) =>
+          applyRequestDecisionToStore(store, [row.id], "approved"),
+        );
+        notifyRequestApprovalChanged({
+          ids: [row.id],
+          uuids: row.uuid ? [row.uuid] : [],
+          decision: "approved",
+          source: "recent-submissions",
+        });
+        void refreshSidebarCounts(environment, tenantId);
       } else {
         window.alert(
           json.errors?.[0]?.message ||
@@ -127,6 +157,10 @@ const Inner: React.FC = () => {
       },
     },
     (response) => response.requests,
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: refreshKey,
+    },
   );
 
   const rows: Row[] = useMemo(() => {

@@ -1,9 +1,16 @@
 import { Suspense, useState } from "react";
-import { useMutation } from "react-relay/hooks";
+import { useMutation, useRelayEnvironment } from "react-relay/hooks";
+import { commitLocalUpdate } from "relay-runtime";
 import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassadorMutation";
 import type { BulkAssignAmbassadorMutation as BulkAssignType } from "@api/mutations/__generated__/BulkAssignAmbassadorMutation.graphql";
 import { BulkBaPicker } from "@/components/pages/staffing/SparkStaffingBoard";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import { useAlertStore } from "@/store/alertStore";
+import { useAuthStore } from "@/store/authStore";
+import {
+  applyRequestDecisionToStore,
+  notifyRequestApprovalChanged,
+} from "./requestApprovalSync";
 import { bulkTargets, type BulkRow } from "./trackerBulkTargets";
 
 const APPROVE_MUTATION =
@@ -47,6 +54,8 @@ export const TrackerBulkBar: React.FC<{
 }> = ({ rows, onDone }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const showUndoable = useAlertStore((s) => s.showUndoable);
+  const { tenantId } = useAuthStore();
+  const environment = useRelayEnvironment();
   const { approvable, assignable } = bulkTargets(rows);
   const [approving, setApproving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -55,10 +64,11 @@ export const TrackerBulkBar: React.FC<{
   );
 
   const runApprove = async (targets: typeof approvable) => {
-    let ok = 0;
+    const approvedIds: string[] = [];
     for (const r of targets) {
-      if (await approveOne(r.id)) ok += 1;
+      if (await approveOne(r.id)) approvedIds.push(r.id);
     }
+    const ok = approvedIds.length;
     setApproving(false);
     const failed = targets.length - ok;
     showAlert(
@@ -67,7 +77,18 @@ export const TrackerBulkBar: React.FC<{
         : `Approved ${ok}. ${failed} could not be approved — try those again.`,
       failed === 0 ? "success" : "error",
     );
-    if (ok > 0) onDone();
+    if (ok > 0) {
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, approvedIds, "approved"),
+      );
+      notifyRequestApprovalChanged({
+        ids: approvedIds,
+        decision: "approved",
+        source: "tracker-bulk",
+      });
+      void refreshSidebarCounts(environment, tenantId);
+      onDone();
+    }
   };
 
   const runAssign = (ambassadorId: string, name: string) => {

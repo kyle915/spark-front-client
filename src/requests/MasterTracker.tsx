@@ -11,7 +11,7 @@ import TrackerSavedViews, {
   type TrackerViewSnapshot,
 } from "./TrackerSavedViews";
 import { useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
-import { fetchQuery } from "relay-runtime";
+import { commitLocalUpdate, fetchQuery } from "relay-runtime";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { TrackerListQuery } from "@/api/queries/TrackerListQuery";
@@ -25,7 +25,13 @@ import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/Us
 import { useAuthStore } from "@/store/authStore";
 import { useStoreSheetStore } from "@/store/storeSheetStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
+import {
+  applyRequestDecisionToStore,
+  notifyRequestApprovalChanged,
+  subscribeRequestApprovalChanged,
+} from "./requestApprovalSync";
 import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
 import TrackerPlanAttachBar from "@/plans/TrackerPlanAttachBar";
 import TrackerBulkBar from "./TrackerBulkBar";
@@ -219,7 +225,7 @@ type Row = {
   rmmLabel: string;
 };
 
-export const parseCalendarDate = (
+const parseCalendarDate = (
   iso: string | null | undefined,
 ): Date | null => {
   if (!iso) return null;
@@ -426,6 +432,8 @@ const TrackerTable: React.FC<{
 }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
+  const { tenantId } = useAuthStore();
+  const environment = useRelayEnvironment();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -454,6 +462,16 @@ const TrackerTable: React.FC<{
       const json = await res.json();
       if (!json.errors?.length && json?.data?.approveRequest?.success) {
         setApprovedIds((prev) => new Set(prev).add(row.uuid));
+        commitLocalUpdate(environment, (store) =>
+          applyRequestDecisionToStore(store, [row.id], "approved"),
+        );
+        notifyRequestApprovalChanged({
+          ids: [row.id],
+          uuids: row.uuid ? [row.uuid] : [],
+          decision: "approved",
+          source: "tracker-inline",
+        });
+        void refreshSidebarCounts(environment, tenantId);
       } else {
         window.alert(
           json.errors?.[0]?.message ||
@@ -1270,7 +1288,7 @@ const TrackerStatusCountsLoader: React.FC<{
       q: reqNeedle ? null : search || null,
     },
     {
-      fetchPolicy: refreshKey > 0 ? "network-only" : "store-or-network",
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
       fetchKey: filterKey,
     },
   );
@@ -1421,7 +1439,7 @@ const MasterTrackerInner: React.FC<{
       filters: serverFilters,
     },
     {
-      fetchPolicy: listRefreshKey > 0 ? "network-only" : "store-or-network",
+      fetchPolicy: listRefreshKey > 0 ? "network-only" : "store-and-network",
       fetchKey: filterKey,
     },
   );
@@ -1903,9 +1921,15 @@ export default function MasterTracker() {
     id: string;
     label: string;
   } | null>(null);
-  // Bump to force MasterTrackerInner to refetch after a successful
-  // clone so the new requests show up immediately.
+  // Bump to force MasterTrackerInner + TrackerStatusCounts to refetch after a
+  // clone, inline/bulk approval, or request decision in another view/tab.
   const [refetchTick, setRefetchTick] = useState(0);
+  useEffect(() => {
+    return subscribeRequestApprovalChanged(
+      () => setRefetchTick((t) => t + 1),
+      { ignoreSource: "tracker-bulk" },
+    );
+  }, []);
   // Multi-select for Add to plan / Remove from plan.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   useEffect(() => {

@@ -9,10 +9,11 @@
  * - Up to 4 best approved field photos
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState, useTransition } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import {
   AlertTriangle,
+  Calendar,
   CalendarClock,
   ChevronDown,
   ChevronUp,
@@ -34,6 +35,10 @@ import type { RetentionAutomationQueriesExecutiveSnapshotQuery as QueryType } fr
 import type { RetentionAutomationMutationsUpdateExecutiveSnapshotConfigMutation as UpdateType } from "@/api/mutations/__generated__/RetentionAutomationMutationsUpdateExecutiveSnapshotConfigMutation.graphql";
 import type { RetentionAutomationMutationsSendExecutiveSnapshotNowMutation as SendNowType } from "@/api/mutations/__generated__/RetentionAutomationMutationsSendExecutiveSnapshotNowMutation.graphql";
 import type { RetentionAutomationMutationsExportExecutiveSnapshotPdfMutation as ExportPdfType } from "@/api/mutations/__generated__/RetentionAutomationMutationsExportExecutiveSnapshotPdfMutation.graphql";
+import {
+  parseSnapshotMonthKey,
+  recentSnapshotMonths,
+} from "./executiveSnapshotHelpers";
 
 const TEXT = { color: "var(--spark-text)" } as const;
 const META = { color: "var(--spark-text-meta)" } as const;
@@ -65,13 +70,26 @@ function downloadBase64Pdf(base64: string, filename: string) {
 export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
   tenantId,
 }) => {
+  const monthOptions = useMemo(() => recentSnapshotMonths(6), []);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    () => monthOptions[0]?.key ?? "",
+  );
+  const [isSwitchingMonth, startMonthTransition] = useTransition();
+  const selectedPeriod = useMemo(
+    () => parseSnapshotMonthKey(selectedMonthKey),
+    [selectedMonthKey],
+  );
   const [fetchKey, setFetchKey] = useState(0);
   const data = useLazyLoadQuery<QueryType>(
     ExecutiveSnapshotQuery,
-    { tenantId, year: null, month: null },
+    {
+      tenantId,
+      year: selectedPeriod?.year ?? null,
+      month: selectedPeriod?.month ?? null,
+    },
     {
       fetchPolicy: "store-and-network",
-      fetchKey: `exec-snap:${tenantId}:${fetchKey}`,
+      fetchKey: `exec-snap:${tenantId}:${selectedMonthKey}:${fetchKey}`,
     },
   );
 
@@ -244,6 +262,14 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
     });
   };
 
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextKey = e.target.value;
+    startMonthTransition(() => {
+      setSelectedMonthKey(nextKey);
+      setNotice(null);
+    });
+  };
+
   const recipientSummary =
     snap.config.effectiveRecipients.length > 0
       ? snap.config.effectiveRecipients.join(", ")
@@ -253,7 +279,8 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
     <section
       id="report-executive-snapshot"
       aria-label="Automated 1st-of-the-Month Executive Snapshot"
-      className="spark-card p-5 sm:p-6 space-y-4 print:hidden"
+      aria-busy={isSwitchingMonth}
+      className={`spark-card p-5 sm:p-6 space-y-4 print:hidden transition-opacity ${isSwitchingMonth ? "opacity-75" : ""}`}
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -275,7 +302,9 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
               {enabled ? "Auto-sends on the 1st" : "1st-of-month brief · Off"}
             </span>
             <span className="text-xs" style={META}>
-              {snap.monthLabel} vs. {snap.priorMonthLabel}
+              {isSwitchingMonth
+                ? "Loading month…"
+                : `${snap.monthLabel} vs. ${snap.priorMonthLabel}`}
             </span>
           </div>
           <h3
@@ -292,6 +321,36 @@ export const ExecutiveSnapshotCard: React.FC<{ tenantId: string }> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <label
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium"
+            style={FIELD}
+            title="Preview, download PDF, or re-send any of the last 6 months"
+          >
+            <Calendar size={12.5} strokeWidth={1.9} style={META} />
+            <span className="sr-only">Snapshot month</span>
+            <select
+              aria-label="Snapshot month"
+              value={selectedMonthKey}
+              onChange={handleMonthChange}
+              disabled={isSwitchingMonth}
+              className="bg-transparent outline-none text-xs font-semibold cursor-pointer pr-1"
+              style={{ color: "var(--spark-text)" }}
+            >
+              {monthOptions.map((opt) => (
+                <option
+                  key={opt.key}
+                  value={opt.key}
+                  style={{
+                    background: "var(--spark-surface)",
+                    color: "var(--spark-text)",
+                  }}
+                >
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           {snap.canManage ? (
             <label
               className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer select-none"

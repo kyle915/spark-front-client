@@ -1600,6 +1600,14 @@ const RecapCustomViewInner = ({
   }, [recap]);
   useRecapPageCrumb(crumbTitle);
 
+  const openShare = useCallback(() => {
+    if (!recap?.shareToken) {
+      showAlert("Share link isn't ready yet.", "warning");
+      return;
+    }
+    setShareOpen(true);
+  }, [recap?.shareToken, showAlert]);
+
   if (!recap) {
     return (
       <div
@@ -1628,14 +1636,6 @@ const RecapCustomViewInner = ({
     }
   }
   const place = placeParts.join(" · ");
-
-  const openShare = useCallback(() => {
-    if (!recap.shareToken) {
-      showAlert("Share link isn't ready yet.", "warning");
-      return;
-    }
-    setShareOpen(true);
-  }, [recap.shareToken, showAlert]);
 
   const videoModal = playingVideo ? (
     <RecapVideoPlayer

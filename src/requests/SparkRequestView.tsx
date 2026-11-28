@@ -2,7 +2,7 @@ import RequestActivityTimeline from "./RequestActivityTimeline";
 import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 import { useAdoptRecordTenant } from "@/hooks/useAdoptRecordTenant";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { fetchQuery } from "relay-runtime";
+import { commitLocalUpdate, fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import AskAiButton from "@/components/ai/AskAiButton";
@@ -10,7 +10,13 @@ import LocationMap from "@shared/LocationMap";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import environment from "@/api/relay/environment";
+import {
+  applyRequestDecisionToStore,
+  notifyRequestApprovalChanged,
+  subscribeRequestApprovalChanged,
+} from "./requestApprovalSync";
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import { RequestFieldReportsQuery } from "@api/queries/RequestFieldReportsQuery";
@@ -420,18 +426,24 @@ const ContactLine: React.FC<{
 const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
-  const { tenantSlug } = useAuthStore();
+  const { tenantId, tenantSlug } = useAuthStore();
   const role = useSparkRole();
   const [refreshKey, setRefreshKey] = useState(0);
   const load = () => setRefreshKey((k) => k + 1);
+  useEffect(() => {
+    return subscribeRequestApprovalChanged(
+      () => setRefreshKey((k) => k + 1),
+      { matchUuid: uuid, ignoreSource: "request-detail" },
+    );
+  }, [uuid]);
   const data = useLazyLoadQuery<RequestUuidQueryType>(
     RequestUuidQuery,
     { uuid },
     {
-      // Cold open: serve the Relay store when warm (e.g. navigated from
-      // the tracker) instead of refetching; explicit refresh (load())
-      // still goes network-only via refreshKey / fetchKey.
-      fetchPolicy: refreshKey > 0 ? "network-only" : "store-or-network",
+      // Render immediately from Relay's store when warm, while verifying
+      // current approval/status in the background; explicit refresh (load())
+      // forces network-only via refreshKey / fetchKey.
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
       fetchKey: refreshKey,
     },
   );
@@ -819,6 +831,16 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         input: { id: request.id },
       });
       if (!result.success) throw new Error(result.message || "Approve failed.");
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, [request.id], "approved"),
+      );
+      notifyRequestApprovalChanged({
+        ids: [request.id],
+        uuids: uuid ? [uuid] : [],
+        decision: "approved",
+        source: "request-detail",
+      });
+      void refreshSidebarCounts(environment, tenantId);
       showAlert(`Approved ${reqId} — event queued for staffing.`, "success");
       setApproveOpen(false);
       load();
@@ -839,10 +861,23 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     }
     setBusy(true);
     try {
+      const reason = declineReason.trim();
       const result = await callApprovalMutation("declineRequest", {
-        input: { id: request.id, declineReason: declineReason.trim() },
+        input: { id: request.id, declineReason: reason },
       });
       if (!result.success) throw new Error(result.message || "Decline failed.");
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, [request.id], "declined", {
+          declineReason: reason,
+        }),
+      );
+      notifyRequestApprovalChanged({
+        ids: [request.id],
+        uuids: uuid ? [uuid] : [],
+        decision: "declined",
+        source: "request-detail",
+      });
+      void refreshSidebarCounts(environment, tenantId);
       showAlert(`Declined ${reqId} — requestor notified.`, "success");
       setDecliningOpen(false);
       setDeclineReason("");

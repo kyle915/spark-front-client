@@ -16,6 +16,12 @@ import {
   notifyRecapApprovalChanged,
   subscribeRecapApprovalChanged,
 } from "@/recap/recapApprovalSync";
+import {
+  applyRequestDecisionToStore,
+  notifyRequestApprovalChanged,
+  subscribeRequestApprovalChanged,
+  type RequestDecision,
+} from "@/requests/requestApprovalSync";
 import Layout from "@/layout/Layout";
 import { PanelSkeleton } from "@/layout/PageSkeletons";
 import SparkEmptyState from "@/shared/SparkEmptyState";
@@ -1045,7 +1051,11 @@ const ageLabel = (h: number | null): string | null => {
 
 const RequestApprovalRow: React.FC<{
   row: PendingRequest;
-  onDecided: (id: string) => void;
+  onDecided: (
+    row: PendingRequest,
+    decision: RequestDecision,
+    declineReason?: string | null,
+  ) => void;
 }> = ({ row, onDecided }) => {
   const [commitApprove, approving] =
     useMutation<ApproveRequestMutationType>(ApproveRequestMutation);
@@ -1066,25 +1076,26 @@ const RequestApprovalRow: React.FC<{
       variables: { input: { id: row.id } },
       onCompleted: (res) =>
         res.approveRequest?.success
-          ? onDecided(row.id)
+          ? onDecided(row, "approved")
           : fail(res.approveRequest?.message),
       onError: () => fail(),
     });
-  }, [commitApprove, row.id, onDecided]);
+  }, [commitApprove, row, onDecided]);
 
   const decline = useCallback(() => {
     setError(null);
+    const trimmed = reason.trim() || null;
     commitDecline({
       variables: {
-        input: { id: row.id, declineReason: reason.trim() || null },
+        input: { id: row.id, declineReason: trimmed },
       },
       onCompleted: (res) =>
         res.declineRequest?.success
-          ? onDecided(row.id)
+          ? onDecided(row, "declined", trimmed)
           : fail(res.declineRequest?.message),
       onError: () => fail(),
     });
-  }, [commitDecline, row.id, reason, onDecided]);
+  }, [commitDecline, row, reason, onDecided]);
 
   const age = ageLabel(row.pendingHours);
   const breached = (row.pendingHours ?? 0) >= 72;
@@ -1292,14 +1303,43 @@ const RequestApprovalRow: React.FC<{
 
 const ClientRequestApprovalsInner: React.FC = () => {
   const { tenantId } = useAuthStore();
+  const [refreshKey, setRefreshKey] = useState(0);
   const [decidedIds, setDecidedIds] = useState<Set<string>>(() => new Set());
-  const handleDecided = useCallback((id: string) => {
-    setDecidedIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
+  useEffect(() => {
+    return subscribeRequestApprovalChanged(
+      () => {
+        setDecidedIds(new Set());
+        setRefreshKey((k) => k + 1);
+      },
+      { ignoreSource: "client-request-approvals" },
+    );
   }, []);
+  const handleDecided = useCallback(
+    (
+      row: PendingRequest,
+      decision: RequestDecision,
+      declineReason?: string | null,
+    ) => {
+      setDecidedIds((prev) => {
+        const next = new Set(prev);
+        next.add(row.id);
+        return next;
+      });
+      commitLocalUpdate(environment, (store) =>
+        applyRequestDecisionToStore(store, [row.id], decision, {
+          declineReason,
+        }),
+      );
+      notifyRequestApprovalChanged({
+        ids: [row.id],
+        uuids: row.uuid ? [row.uuid] : [],
+        decision,
+        source: "client-request-approvals",
+      });
+      void refreshSidebarCounts(environment, tenantId);
+    },
+    [tenantId],
+  );
 
   // Only pending requests are listed, so ask the server for just those
   // (statusSlug) rather than the newest-dated 300 of everything. Brand users
@@ -1314,7 +1354,10 @@ const ClientRequestApprovalsInner: React.FC = () => {
       filters: { ...(tenantId ? { tenantId } : {}), statusSlug: "pending" },
     },
     (response) => response.requests,
-    { fetchPolicy: "store-and-network" },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: refreshKey,
+    },
   );
 
   const rows: PendingRequest[] = useMemo(() => {
