@@ -19,6 +19,7 @@ export interface SnapshotHorizonWindow {
   spanDays: number;
   heading: string;
   priorLabel: string;
+  priorRangeDisplay: string;
   upcomingEndDate: string;
 }
 
@@ -27,6 +28,26 @@ const fmtYmd = (d: Date): string => {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+};
+
+const fmtShortCalendarSpan = (startYmd: string, endYmd: string): string => {
+  const [sy, sm, sd] = startYmd.split("-").map(Number);
+  const [ey, em, ed] = endYmd.split("-").map(Number);
+  if (!sy || !sm || !sd || !ey || !em || !ed) return "";
+  const s = new Date(sy, sm - 1, sd);
+  const e = new Date(ey, em - 1, ed);
+  const sameYear = sy === ey;
+  const sStr = s.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+  const eStr = e.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+  return `${sStr} – ${eStr}`;
 };
 
 export function computeSnapshotHorizon(
@@ -63,6 +84,7 @@ export function computeSnapshotHorizon(
       spanDays: 30,
       heading,
       priorLabel: "prior window",
+      priorRangeDisplay: "",
       upcomingEndDate: fmtYmd(upcomingEnd),
     };
   }
@@ -76,6 +98,23 @@ export function computeSnapshotHorizon(
     heading,
     priorLabel:
       horizon === "ytd" ? `prior ${prior.spanDays}d` : `prior ${horizon}`,
+    priorRangeDisplay: fmtShortCalendarSpan(prior.startDate, prior.endDate),
     upcomingEndDate: fmtYmd(upcomingEnd),
   };
+}
+
+export function formatPriorCount(value: number | null | undefined): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return `prior ${Math.round(value).toLocaleString("en-US")}`;
+}
+
+export function formatPriorRate(pct: number | null | undefined): string | null {
+  if (typeof pct !== "number" || !Number.isFinite(pct) || pct < 0) {
+    return null;
+  }
+  const rounded = Math.round(pct * 10) / 10;
+  const formatted = Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+  return `prior ${formatted}`;
 }

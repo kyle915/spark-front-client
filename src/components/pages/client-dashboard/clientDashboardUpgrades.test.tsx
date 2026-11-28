@@ -4,8 +4,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   computeSnapshotHorizon,
+  formatPriorCount,
+  formatPriorRate,
   SNAPSHOT_HORIZON_OPTIONS,
 } from "./clientSnapshotHelpers";
+import { splitDeltaLabel } from "@/motion/sparklineMath";
 import {
   buildClientProofQuickPeekItem,
   loadLocalPinnedUrls,
@@ -43,6 +46,19 @@ describe("Brand Client Dashboard Upgrades", () => {
     expect(wYtd.startDate).toBe("2026-01-01");
     expect(wYtd.endDate).toBe("2026-11-28");
     expect(wYtd.priorEnd).toBe("2025-12-31");
+    expect(w30.priorRangeDisplay.length).toBeGreaterThan(0);
+
+    // Delta badges split figure from comparison context so pills never truncate "vs pri..."
+    expect(splitDeltaLabel("+489% vs prior 30d")).toEqual({
+      figure: "+489%",
+      context: "vs prior 30d",
+    });
+    expect(splitDeltaLabel("-40.8 pts vs prior 30d")).toEqual({
+      figure: "-40.8 pts",
+      context: "vs prior 30d",
+    });
+    expect(formatPriorCount(1814)).toBe("prior 1,814");
+    expect(formatPriorRate(23.34)).toBe("prior 23.3%");
   });
 
   it("persists local deck pins and builds RecapQuickPeekItem payloads for ClientFieldProofStrip", () => {

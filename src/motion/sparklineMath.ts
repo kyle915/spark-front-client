@@ -45,3 +45,22 @@ export function buildSparklinePath(
     lastPoint: last,
   };
 }
+
+/**
+ * Splits a combined delta string like `"-56% vs prior 30d"` into
+ * `{ figure: "-56%", context: "vs prior 30d" }` so the colored badge only wraps
+ * the crisp number and the comparison context never gets clipped into `"vs pri..."`.
+ */
+export function splitDeltaLabel(label: string): {
+  figure: string;
+  context: string | null;
+} {
+  const idx = label.indexOf(" vs ");
+  if (idx <= 0) {
+    return { figure: label, context: null };
+  }
+  return {
+    figure: label.slice(0, idx).trim(),
+    context: label.slice(idx + 1).trim() || null,
+  };
+}

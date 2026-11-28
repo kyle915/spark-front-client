@@ -1,18 +1,19 @@
 import React, { useId } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { buildSparklinePath } from "./sparklineMath";
+import { buildSparklinePath, splitDeltaLabel } from "./sparklineMath";
 
 export type KpiDirection = "up" | "down" | "flat";
 
 /**
- * Standardized compact delta pill across Executive Snapshot, Reports, and
- * Shelf & Voice KPI cards.
+ * High-contrast, zero-truncation KPI delta badge across Client Home,
+ * Executive Snapshot, Reports, and Shelf & Voice KPI cards.
  */
 export const KpiDeltaBadge: React.FC<{
   direction: KpiDirection;
   label: React.ReactNode;
+  sublabel?: React.ReactNode;
   invertGood?: boolean;
-}> = ({ direction, label, invertGood = false }) => {
+}> = ({ direction, label, sublabel, invertGood = false }) => {
   const isPositive =
     direction === "flat"
       ? null
@@ -23,34 +24,53 @@ export const KpiDeltaBadge: React.FC<{
   const style: React.CSSProperties =
     isPositive === true
       ? {
-          background: "var(--spark-ok-bg, rgba(148, 224, 64, 0.12))",
+          background: "var(--spark-ok-bg, rgba(148, 224, 64, 0.15))",
           color: "var(--spark-ok-ink)",
-          border: "1px solid var(--spark-ok-border, rgba(148, 224, 64, 0.28))",
+          border: "1px solid var(--spark-ok-border, rgba(148, 224, 64, 0.34))",
         }
       : isPositive === false
         ? {
-            background: "rgba(239, 90, 42, 0.11)",
+            background: "rgba(210, 72, 27, 0.13)",
             color: "var(--spark-flag-ink, var(--spark-orange, #ef5a2a))",
-            border: "1px solid rgba(239, 90, 42, 0.28)",
+            border: "1px solid rgba(210, 72, 27, 0.34)",
           }
         : {
             background: "var(--spark-surface)",
-            color: "var(--spark-text-meta)",
+            color: "var(--spark-text-secondary)",
             border: "1px solid var(--spark-hairline, var(--spark-border))",
           };
 
+  const parsed =
+    typeof label === "string" && sublabel === undefined
+      ? splitDeltaLabel(label)
+      : null;
+
+  const badgeContent = parsed ? parsed.figure : label;
+  const trailingContext =
+    sublabel !== undefined ? sublabel : (parsed?.context ?? null);
+
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tab-num max-w-full"
-      style={style}
-    >
-      {direction === "up" ? (
-        <TrendingUp size={10.5} strokeWidth={2.2} className="shrink-0" />
+    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 max-w-full">
+      <span
+        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold tab-num whitespace-nowrap"
+        style={style}
+      >
+        {direction === "up" ? (
+          <TrendingUp size={11.5} strokeWidth={2.3} className="shrink-0" />
+        ) : null}
+        {direction === "down" ? (
+          <TrendingDown size={11.5} strokeWidth={2.3} className="shrink-0" />
+        ) : null}
+        <span>{badgeContent}</span>
+      </span>
+      {trailingContext ? (
+        <span
+          className="text-xs font-medium tab-num whitespace-nowrap"
+          style={{ color: "var(--spark-text-secondary)" }}
+        >
+          {trailingContext}
+        </span>
       ) : null}
-      {direction === "down" ? (
-        <TrendingDown size={10.5} strokeWidth={2.2} className="shrink-0" />
-      ) : null}
-      <span className="truncate">{label}</span>
     </span>
   );
 };
@@ -119,38 +139,44 @@ export const StudioKpiSkeleton: React.FC<{
 }> = ({ variant = "card", label }) => {
   if (variant === "inline") {
     return (
-      <div className="min-w-0 space-y-2" aria-busy="true">
-        {label ? (
-          <dt
-            className="text-[13px] font-medium"
-            style={{ color: "var(--spark-text-secondary)" }}
-          >
-            {label}
-          </dt>
-        ) : (
-          <div className="spark-kpi-skeleton-bar h-3.5 w-24 rounded-md" />
-        )}
-        <dd className="m-0">
-          <div className="spark-kpi-skeleton-bar h-8 w-20 rounded-lg" />
-        </dd>
-        <div className="spark-kpi-skeleton-bar h-4 w-28 rounded-full" />
+      <div
+        className="min-w-0 space-y-2 py-0.5"
+        aria-busy="true"
+        aria-label={label ? `Loading ${label}` : "Loading metric"}
+      >
+        <div
+          className="h-3.5 w-28 rounded animate-pulse"
+          style={{ background: "var(--spark-surface-2)" }}
+        />
+        <div
+          className="h-8 w-24 rounded-md animate-pulse"
+          style={{ background: "var(--spark-surface-2)" }}
+        />
+        <div
+          className="h-4 w-32 rounded-full animate-pulse"
+          style={{ background: "var(--spark-surface-2)" }}
+        />
       </div>
     );
   }
-
   return (
     <div
+      className="spark-card p-5 space-y-2.5"
       aria-busy="true"
-      className="spark-card p-5 space-y-3"
-      style={{ minHeight: 146 }}
+      aria-label={label ? `Loading ${label}` : "Loading metric card"}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="spark-kpi-skeleton-bar h-3.5 w-28 rounded-md" />
-        <div className="spark-kpi-skeleton-bar h-5 w-14 rounded-md" />
-      </div>
-      <div className="spark-kpi-skeleton-bar h-8 w-24 rounded-lg" />
-      <div className="spark-kpi-skeleton-bar h-2 w-full rounded-full" />
-      <div className="spark-kpi-skeleton-bar h-3.5 w-36 rounded-md" />
+      <div
+        className="h-3.5 w-32 rounded animate-pulse"
+        style={{ background: "var(--spark-surface-2)" }}
+      />
+      <div
+        className="h-8 w-24 rounded-md animate-pulse"
+        style={{ background: "var(--spark-surface-2)" }}
+      />
+      <div
+        className="h-4 w-28 rounded-full animate-pulse"
+        style={{ background: "var(--spark-surface-2)" }}
+      />
     </div>
   );
 };

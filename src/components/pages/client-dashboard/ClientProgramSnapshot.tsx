@@ -9,6 +9,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { ofAsked } from "@/lib/consumerBreakdown";
 import { LeafTabs } from "@/motion/LeafTabs";
 import { KpiDeltaBadge, type KpiDirection } from "@/motion/StudioKpiCard";
+import { splitDeltaLabel } from "@/motion/sparklineMath";
 import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
 import type { TenantConversionKpisQuery as TenantConversionKpisQueryType } from "@api/queries/__generated__/TenantConversionKpisQuery.graphql";
 import { TenantRequestsRollupQuery } from "@/api/queries/TenantRequestsRollupQuery";
@@ -20,6 +21,8 @@ import {
 } from "@/components/pages/reports/programReportHelpers";
 import {
   computeSnapshotHorizon,
+  formatPriorCount,
+  formatPriorRate,
   SNAPSHOT_HORIZON_OPTIONS,
   type ClientSnapshotHorizon,
 } from "./clientSnapshotHelpers";
@@ -30,17 +33,24 @@ const fmtNum = (v: number | null | undefined) =>
 /**
  * Brand Client Program Snapshot — 30d / 90d / YTD LeafTabs, 5 buyer-critical
  * KPIs (Events Run, Consumers Sampled, Units Sold, Sample-to-Sale Conversion %,
- * and Purchase Intent) with KpiDeltaBadge prior-window comparisons, plus a
- * welcoming "Launch in progress" onboarding card when a newly launched brand
- * has 0 completed recaps yet.
+ * and Purchase Intent) with crisp unclipped KpiDeltaBadge pills + exact prior
+ * figures, plus a welcoming "Launch in progress" onboarding card when a newly
+ * launched brand has 0 completed recaps yet.
  */
 export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
   tenantId,
 }) => {
   const [horizon, setHorizon] = useState<ClientSnapshotHorizon>("30d");
   const windowInfo = useMemo(() => computeSnapshotHorizon(horizon), [horizon]);
-  const { startDate, endDate, priorStart, priorEnd, heading, priorLabel } =
-    windowInfo;
+  const {
+    startDate,
+    endDate,
+    priorStart,
+    priorEnd,
+    heading,
+    priorLabel,
+    priorRangeDisplay,
+  } = windowInfo;
 
   const { isClient } = useSparkRole();
   const filters: DashboardFilters = useMemo(
@@ -234,6 +244,7 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
     value: string;
     sub: string;
     delta: { text: string; direction: KpiDirection } | null;
+    priorFigure: string | null;
   }> = [
     {
       key: "events",
@@ -241,6 +252,7 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
       value: fmtNum(m.totalEvents),
       sub: "approved recaps",
       delta: eventsDelta,
+      priorFigure: hasPriorActivity ? formatPriorCount(prior.totalEvents) : null,
     },
     {
       key: "sampled",
@@ -248,6 +260,9 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
       value: fmtNum(m.consumersSampled),
       sub: "field engagements",
       delta: sampledDelta,
+      priorFigure: hasPriorActivity
+        ? formatPriorCount(prior.consumersSampled)
+        : null,
     },
     {
       key: "sold",
@@ -255,6 +270,9 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
       value: sold > 0 || convSampled > 0 ? fmtNum(sold) : "—",
       sub: "retail & on-premise",
       delta: soldDelta,
+      priorFigure: hasPriorConv
+        ? formatPriorCount(convKpis?.previousSold)
+        : null,
     },
     {
       key: "conversion",
@@ -265,6 +283,9 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
           ? `${sold.toLocaleString()} ÷ ${convSampled.toLocaleString()} sampled`
           : "sample-to-sale",
       delta: convDelta,
+      priorFigure: hasPriorConv
+        ? formatPriorRate(convKpis?.previousPct)
+        : null,
     },
     {
       key: "intent",
@@ -272,8 +293,13 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
       value: intent ? intent.rate : "—",
       sub: intent?.asked ? `${intent.asked} asked` : "said they'd buy",
       delta: intentDelta,
+      priorFigure: hasPriorActivity
+        ? formatPriorRate(prior.purchaseIntent)
+        : null,
     },
   ];
+
+  const showComparisonSubtitle = hasPriorActivity || hasPriorConv;
 
   return (
     <section
@@ -294,6 +320,15 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
             onChange={setHorizon}
             options={SNAPSHOT_HORIZON_OPTIONS}
           />
+          {showComparisonSubtitle ? (
+            <span
+              className="text-xs font-medium tab-num"
+              style={{ color: "var(--spark-text-meta)" }}
+            >
+              vs {priorLabel}
+              {priorRangeDisplay ? ` (${priorRangeDisplay})` : ""}
+            </span>
+          ) : null}
         </div>
         <Link
           to="/reports"
@@ -308,46 +343,53 @@ export const ClientProgramSnapshot: React.FC<{ tenantId: string }> = ({
       </div>
 
       <dl className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-        {tiles.map((t) => (
-          <div
-            key={t.key}
-            className="rounded-xl p-3 flex flex-col justify-between gap-1.5 min-w-0"
-            style={{
-              background: "var(--spark-surface-2)",
-              border: "1px solid var(--spark-hairline, var(--spark-border))",
-            }}
-          >
-            <dt
-              className="text-xs font-medium truncate"
-              style={{ color: "var(--spark-text-secondary)" }}
+        {tiles.map((t) => {
+          const shortDelta = t.delta ? splitDeltaLabel(t.delta.text).figure : null;
+          return (
+            <div
+              key={t.key}
+              className="rounded-xl p-3.5 flex flex-col justify-between gap-2 min-w-0"
+              style={{
+                background: "var(--spark-surface-2)",
+                border: "1px solid var(--spark-hairline, var(--spark-border))",
+              }}
             >
-              {t.label}
-            </dt>
-            <dd className="m-0 space-y-1">
-              <div
-                className="text-2xl font-bold tab-num leading-none"
-                style={{ letterSpacing: "-0.03em", color: "var(--spark-text)" }}
+              <dt
+                className="text-xs font-medium leading-snug"
+                style={{ color: "var(--spark-text-secondary)" }}
               >
-                {t.value}
-              </div>
-              {t.delta ? (
-                <div>
-                  <KpiDeltaBadge
-                    direction={t.delta.direction}
-                    label={t.delta.text}
-                  />
-                </div>
-              ) : (
-                <p
-                  className="text-[11px] truncate m-0"
-                  style={{ color: "var(--spark-text-meta)" }}
+                {t.label}
+              </dt>
+              <dd className="m-0 space-y-1.5">
+                <div
+                  className="text-2xl font-bold tab-num leading-none"
+                  style={{
+                    letterSpacing: "-0.03em",
+                    color: "var(--spark-text)",
+                  }}
                 >
-                  {t.sub}
-                </p>
-              )}
-            </dd>
-          </div>
-        ))}
+                  {t.value}
+                </div>
+                {t.delta && shortDelta ? (
+                  <div title={t.delta.text}>
+                    <KpiDeltaBadge
+                      direction={t.delta.direction}
+                      label={shortDelta}
+                      sublabel={t.priorFigure ?? `vs ${priorLabel}`}
+                    />
+                  </div>
+                ) : (
+                  <p
+                    className="text-xs leading-snug m-0"
+                    style={{ color: "var(--spark-text-meta)" }}
+                  >
+                    {t.sub}
+                  </p>
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
 
       <WhatChangedLine
