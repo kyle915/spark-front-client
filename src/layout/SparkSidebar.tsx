@@ -11,6 +11,7 @@ import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
 import { useMobileNav } from "./MobileNavContext";
+import { prefetchRouteChunk } from "@/routes/routeChunkPrefetch";
 import {
   Activity,
   LayoutDashboard,
@@ -480,7 +481,14 @@ const NavRow: React.FC<{
     );
   }
   return (
-    <Link to={effectiveTo} className={cls} title={label} aria-label={label}>
+    <Link
+      to={effectiveTo}
+      className={cls}
+      title={label}
+      aria-label={label}
+      onMouseEnter={() => prefetchRouteChunk(effectiveTo)}
+      onFocus={() => prefetchRouteChunk(effectiveTo)}
+    >
       {content}
     </Link>
   );

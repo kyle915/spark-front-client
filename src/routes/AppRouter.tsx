@@ -22,6 +22,7 @@ import { LayoutChrome } from "@/layout/Layout";
 import { LayoutShellContext } from "@/layout/LayoutShellContext";
 import environment, { useWorkspaceEpoch } from "@/api/relay/environment";
 import { prefetchHotRelayData } from "@/lib/prefetchHotRelayData";
+import useSparkRole from "@/hooks/useSparkRole";
 
 const rootPath = "/";
 
@@ -33,12 +34,13 @@ const rootPath = "/";
 // dashboard / recaps navigations.
 const RouteFallback = () => <AppShellSkeleton />;
 
-/** Idle-warm tracker / recaps / approvals Relay data once tenant is known. */
+/** Idle-warm tracker / recaps / role-appropriate Relay data once tenant is known. */
 const HotRelayPrefetch = () => {
   const tenantId = useAuthStore((s) => s.tenantId);
+  const { isClient } = useSparkRole();
   useEffect(() => {
-    prefetchHotRelayData(environment, tenantId);
-  }, [tenantId]);
+    prefetchHotRelayData(environment, tenantId, { isClient });
+  }, [tenantId, isClient]);
   return null;
 };
 

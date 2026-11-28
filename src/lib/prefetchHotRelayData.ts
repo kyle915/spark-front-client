@@ -1,26 +1,40 @@
 /**
  * Idle Relay data warmup after auth + tenant are known.
- * Complements prefetchHotRoutes (JS chunks only).
+ * Complements prefetchHotRoutes + sidebar hover chunk prefetching.
  */
 import { fetchQuery } from "relay-runtime";
 import type { Environment } from "relay-runtime";
 import { TrackerListQuery } from "@/api/queries/TrackerListQuery";
 import { RecapListKindsQuery } from "@/api/queries/RecapListKindsQuery";
-import type { RecapListKindsQuery as RecapListKindsQueryType } from "@/api/queries/__generated__/RecapListKindsQuery.graphql";
+import type { RecapListKindsQuery as RecapListKindsQueryType } from "@api/queries/__generated__/RecapListKindsQuery.graphql";
 import { ApprovalsListQuery } from "@/api/queries/ApprovalsListQuery";
+import { TenantRequestsRollupQuery } from "@/api/queries/TenantRequestsRollupQuery";
+import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
 import {
   fetchUnifiedRecapsPage,
   unifiedRecapsPageVariables,
 } from "@/recap/unifiedRecapsFetch";
+import {
+  approvalsDecidedPrefetchVariables,
+  approvalsQueuePrefetchVariables,
+  clientDashboardRollupVariables,
+  programReportsConversionVariables,
+  programReportsRollupVariables,
+  trackerDefaultPrefetchVariables,
+} from "./hotPrefetchVariables";
 
-let warmedForTenant: string | null = null;
+let warmedKey: string | null = null;
 
 export function prefetchHotRelayData(
   environment: Environment,
   tenantId: string | null | undefined,
+  opts?: { isClient?: boolean },
 ): void {
-  if (!tenantId || warmedForTenant === tenantId) return;
-  warmedForTenant = tenantId;
+  if (!tenantId) return;
+  const isClient = Boolean(opts?.isClient);
+  const key = `${tenantId}:${isClient ? "client" : "admin"}`;
+  if (warmedKey === key) return;
+  warmedKey = key;
 
   const warm = () => {
     const filters = { tenantId };
@@ -55,24 +69,58 @@ export function prefetchHotRelayData(
       })
       .catch(() => {});
 
-    void fetchQuery(environment, TrackerListQuery, {
-      first: 50,
-      after: null,
-      q: null,
-      filters: {
-        tenantId,
-        statusSlugs: ["scheduled", "approved", "staffed", "confirmed"],
-      },
-    })
+    // Exact default Master Tracker / My Requests variables (guaranteed cache hit).
+    void fetchQuery(
+      environment,
+      TrackerListQuery,
+      trackerDefaultPrefetchVariables(tenantId),
+    )
       .toPromise()
       .catch(() => {});
 
-    void fetchQuery(environment, ApprovalsListQuery, {
-      first: 100,
-      filters: { tenantId, statusSlug: "pending" },
-    })
-      .toPromise()
-      .catch(() => {});
+    if (isClient) {
+      // Client Home 30-day schedule rollup + Program Reports 90-day rollups.
+      void fetchQuery(
+        environment,
+        TenantRequestsRollupQuery,
+        clientDashboardRollupVariables(tenantId),
+      )
+        .toPromise()
+        .catch(() => {});
+
+      void fetchQuery(
+        environment,
+        TenantRequestsRollupQuery,
+        programReportsRollupVariables(tenantId),
+      )
+        .toPromise()
+        .catch(() => {});
+
+      void fetchQuery(
+        environment,
+        TenantConversionKpisQuery,
+        programReportsConversionVariables(tenantId),
+      )
+        .toPromise()
+        .catch(() => {});
+    } else {
+      // Admin Approvals queue + recently decided (exact variable match).
+      void fetchQuery(
+        environment,
+        ApprovalsListQuery,
+        approvalsQueuePrefetchVariables(tenantId),
+      )
+        .toPromise()
+        .catch(() => {});
+
+      void fetchQuery(
+        environment,
+        ApprovalsListQuery,
+        approvalsDecidedPrefetchVariables(tenantId),
+      )
+        .toPromise()
+        .catch(() => {});
+    }
   };
 
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -83,5 +131,5 @@ export function prefetchHotRelayData(
 }
 
 export function resetHotRelayDataPrefetch(): void {
-  warmedForTenant = null;
+  warmedKey = null;
 }
